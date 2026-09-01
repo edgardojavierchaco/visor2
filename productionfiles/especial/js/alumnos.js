@@ -451,11 +451,7 @@
 
     function bindAlumnoSectionTable(table) {
         var root = table.closest(".cef-panel-body, .cef-panel") || document;
-        var search = root.querySelector("[data-cef-table-search]");
-        var size = root.querySelector("[data-cef-page-size]");
         var pagination = root.querySelector("[data-cef-table-pagination]");
-        if (search) search.addEventListener("input", function () { resetAlumnoSectionTable(table); });
-        if (size) size.addEventListener("change", function () { resetAlumnoSectionTable(table); });
         if (pagination) pagination.addEventListener("click", function () { resetAlumnoSectionTable(table); });
 
         if (window.jQuery && window.jQuery.fn) {

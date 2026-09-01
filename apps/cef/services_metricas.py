@@ -155,6 +155,14 @@ def _dimension_snapshot(snapshot, fallback, orden="texto"):
     }
 
 
+def _dimension_snapshot_ordenada(snapshot, fallback, campo_orden):
+    return {
+        "key": lambda campo_orden=campo_orden: F(campo_orden),
+        "label": lambda snapshot=snapshot, fallback=fallback: _snapshot(snapshot, fallback),
+        "sort": "numero",
+    }
+
+
 def _dimension_texto(campo, orden="texto"):
     return {
         "key": lambda campo=campo: _texto_campo(campo),
@@ -254,40 +262,49 @@ def _dimension_codigo_ra(prefijo):
 def _dimension_dia(prefijo):
     return {
         "key": lambda prefijo=prefijo: F(
-            f"{prefijo}dias_funcionamiento__dia_semana_id"
+            f"{prefijo}dias_funcionamiento__dia_semana__numero"
         ),
         "label": lambda prefijo=prefijo: F(
             f"{prefijo}dias_funcionamiento__dia_semana__nombre"
         ),
-        "sort": "texto",
+        "sort": "numero",
     }
+
+
+def _dimension_turno(prefijo):
+    return _dimension_snapshot_ordenada(
+        f"{prefijo}turno_nombre_snapshot",
+        f"{prefijo}turno__nombre",
+        f"{prefijo}turno__orden",
+    )
 
 
 def _dimensiones_grupo(prefijo):
     return {
         "ciclo": _dimension_ciclo(f"{prefijo}ciclo__anio"),
         "cef": _dimension_campo(f"{prefijo}cueanexo"),
-        "actividad": _dimension_snapshot(
+        "actividad": _dimension_snapshot_ordenada(
             f"{prefijo}actividad_nombre_snapshot",
             f"{prefijo}actividad__nombre",
+            f"{prefijo}actividad__orden",
         ),
-        "eje": _dimension_snapshot(
+        "eje": _dimension_snapshot_ordenada(
             f"{prefijo}eje_nombre_snapshot",
             f"{prefijo}actividad__eje__nombre",
+            f"{prefijo}actividad__eje__orden",
         ),
         "codigo_ra": _dimension_codigo_ra(prefijo),
-        "nivel": _dimension_snapshot(
+        "nivel": _dimension_snapshot_ordenada(
             f"{prefijo}nivel_nombre_snapshot",
             f"{prefijo}nivel__nombre",
+            f"{prefijo}nivel__orden",
         ),
-        "rango_etario": _dimension_snapshot(
+        "rango_etario": _dimension_snapshot_ordenada(
             f"{prefijo}rango_etario_nombre_snapshot",
             f"{prefijo}rango_etario__nombre",
+            f"{prefijo}rango_etario__orden",
         ),
-        "turno": _dimension_snapshot(
-            f"{prefijo}turno_nombre_snapshot",
-            f"{prefijo}turno__nombre",
-        ),
+        "turno": _dimension_turno(prefijo),
         "grupo": _dimension_grupo(prefijo),
         "estado": _dimension_campo(f"{prefijo}estado"),
         "dia": _dimension_dia(prefijo),
@@ -344,11 +361,12 @@ _DIMENSIONES_GRUPOS = _dimensiones_grupo("")
 _DIMENSIONES_INVENTARIO = {
     "ciclo": _dimension_ciclo("inventario_material__ciclo__anio"),
     "cef": _dimension_campo("inventario_material__cueanexo"),
-    "material": _dimension_snapshot(
+    "material": _dimension_snapshot_ordenada(
         "inventario_material__material_nombre_snapshot",
         "inventario_material__material__nombre",
+        "inventario_material__material__orden",
     ),
-    "estado": _dimension_campo("estado__nombre"),
+    "estado": _dimension_campo("estado__orden", "estado__nombre", "numero"),
 }
 
 _DIMENSIONES_ASISTENCIA = _dimensiones_grupo("jornada__grupo__")
@@ -416,7 +434,7 @@ FUENTES = {
             "edad": ("edad", "fecha_inscripcion", "alumno__fecha_nacimiento"),
             "fecha": ("fecha", "fecha_inscripcion"),
         },
-        "filter_labels": {"fecha": "Fecha de inscripción"},
+        "filter_labels": {"fecha": "Fecha de incorporación al grupo"},
     },
     "docentes_banco": {
         "model": CefDocenteCef,
@@ -664,7 +682,7 @@ AREAS = {
                 ),
                 unit="alumnos",
                 notes=(
-                    "La edad se calcula en años completos a la fecha de inscripción; "
+                    "La edad se calcula en años completos a la fecha de incorporación al grupo; "
                     "si falta la fecha de nacimiento se informa por separado.",
                 ),
                 fixed_q=Q(estado=CefInscripcion.Estado.ACTIVO),
@@ -727,7 +745,7 @@ AREAS = {
                 (*DIMENSIONES_GRUPO_TERRITORIO, "edad", "sexo"),
                 unit="inscripciones",
                 notes=(
-                    "La edad se calcula en años completos a la fecha de inscripción.",
+                    "La edad se calcula en años completos a la fecha de incorporación al grupo.",
                 ),
             ),
             "inscripciones_activas": _indicador(
@@ -744,7 +762,7 @@ AREAS = {
                 + ("edad", "sexo"),
                 unit="inscripciones",
                 notes=(
-                    "La edad se calcula en años completos a la fecha de inscripción.",
+                    "La edad se calcula en años completos a la fecha de incorporación al grupo.",
                 ),
                 fixed_q=Q(estado=CefInscripcion.Estado.ACTIVO),
             ),
@@ -762,7 +780,7 @@ AREAS = {
                 + ("edad", "sexo"),
                 unit="inscripciones",
                 notes=(
-                    "La edad se calcula en años completos a la fecha de inscripción.",
+                    "La edad se calcula en años completos a la fecha de incorporación al grupo.",
                 ),
                 fixed_q=Q(estado=CefInscripcion.Estado.BAJA),
                 filter_overrides={"fecha": ("fecha", "fecha_baja")},
@@ -902,8 +920,9 @@ AREAS = {
                 "grupos",
                 {"kind": "count", "field": "pk", "distinct": True},
                 "Cantidad de grupos del alcance, contados sin unir inscripciones, docentes ni días.",
-                (*FILTROS_GRUPO, "cupo"),
-                (*DIMENSIONES_GRUPO_TERRITORIO, "dia"),
+                tuple(f for f in FILTROS_GRUPO if f != "estado") + ("cupo",),
+                tuple(d for d in DIMENSIONES_GRUPO_TERRITORIO if d != "estado")
+                + ("dia",),
                 unit="grupos",
             ),
             "grupos_activos": _indicador(
@@ -933,26 +952,26 @@ AREAS = {
                 "grupos",
                 {"kind": "active_students"},
                 (
-                    "Suma de inscripciones activas por grupo. El conteo de cada grupo "
-                    "se calcula en una subconsulta independiente para evitar productos "
-                    "con docentes o días."
+                    "Cantidad de alumnos con inscripción activa en los grupos activos. "
+                    "Si un alumno está en más de un grupo, cuenta una vez en cada grupo."
                 ),
-                (*FILTROS_GRUPO, "cupo"),
-                (*DIMENSIONES_GRUPO_TERRITORIO, "dia"),
+                tuple(f for f in FILTROS_GRUPO if f != "estado") + ("cupo",),
+                tuple(d for d in DIMENSIONES_GRUPO_TERRITORIO if d != "estado")
+                + ("dia",),
                 unit="alumnos",
+                fixed_q=Q(estado=CefGrupo.Estado.ACTIVO),
             ),
             "promedio_alumnos_grupo": _indicador(
                 "Promedio de alumnos por grupo activo",
                 "grupos",
                 {"kind": "average_active_students"},
-                (
-                    "Promedio de inscripciones activas por grupo incluido. Cada grupo "
-                    "pesa una vez y su cantidad se obtiene mediante una subconsulta."
-                ),
-                (*FILTROS_GRUPO, "cupo"),
-                (*DIMENSIONES_GRUPO_TERRITORIO, "dia"),
-                comparisons=("ciclo", "cef", "actividad", "turno", "estado"),
+                "Promedio de alumnos con inscripción activa por cada grupo activo incluido.",
+                tuple(f for f in FILTROS_GRUPO if f != "estado") + ("cupo",),
+                tuple(d for d in DIMENSIONES_GRUPO_TERRITORIO if d != "estado")
+                + ("dia",),
+                comparisons=("ciclo", "cef", "actividad", "turno"),
                 unit="alumnos por grupo",
+                fixed_q=Q(estado=CefGrupo.Estado.ACTIVO),
             ),
             "cupo_total": _indicador(
                 "Cupo total informado",
@@ -968,16 +987,15 @@ AREAS = {
                 "grupos",
                 {"kind": "occupancy"},
                 (
-                    "Inscripciones activas de los grupos con cupo válido, divididas por "
-                    "la suma de esos cupos. Es una ocupación ponderada, no un promedio "
-                    "simple de porcentajes."
+                    "Porcentaje de vacantes ocupadas en los grupos activos que tienen "
+                    "un cupo máximo informado."
                 ),
                 tuple(f for f in FILTROS_GRUPO if f != "estado") + ("cupo",),
                 tuple(d for d in DIMENSIONES_GRUPO_TERRITORIO if d != "estado")
                 + ("dia",),
                 comparisons=("ciclo", "cef", "actividad", "turno"),
                 unit="%",
-                notes=("Los grupos sin cupo máximo informado quedan fuera del denominador.",),
+                notes=("Los grupos sin cupo máximo informado no se incluyen en el cálculo.",),
                 fixed_q=Q(
                     estado=CefGrupo.Estado.ACTIVO,
                     cupo_maximo__gt=0,
@@ -993,16 +1011,10 @@ AREAS = {
                 "Unidades de material",
                 "inventario",
                 {"kind": "sum", "field": "cantidad"},
-                (
-                    "Suma de cantidades de la distribución vigente por estado de material, "
-                    "considerando solamente filas asociadas al catálogo de estados."
-                ),
+                "Cantidad total registrada de materiales, según su estado actual.",
                 ("material", "estado", *FILTROS_TERRITORIO),
                 ("ciclo", "cef", "material", "estado", *FILTROS_TERRITORIO),
                 unit="unidades",
-                notes=(
-                    "No se utiliza el campo de cantidad heredado de la cabecera de inventario.",
-                ),
             ),
         },
     },
@@ -1101,7 +1113,7 @@ for _clave, _label, _estado in (
     ("porcentaje_ausentes", "Porcentaje de registros ausentes", CefAsistencia.Estado.AUSENTE),
     (
         "porcentaje_justificadas",
-        "Porcentaje de ausencias justificadas",
+        "Porcentaje de registros justificados",
         CefAsistencia.Estado.JUSTIFICADA,
     ),
 ):
@@ -1110,8 +1122,8 @@ for _clave, _label, _estado in (
         "asistencia",
         {"kind": "state_ratio", "state": _estado},
         (
-            f"{_label} sobre el total de registros de asistencia incluidos en la consulta. "
-            "La ausencia de una fila no integra el denominador."
+            f"{_label} sobre todos los registros de asistencia incluidos en la consulta. "
+            "Si no existe un registro de asistencia, no se cuenta en el cálculo."
         ),
         tuple(f for f in _FILTROS_ASISTENCIA if f != "estado"),
         tuple(d for d in _DIMENSIONES_ASISTENCIA_PUBLICAS if d != "estado"),
@@ -1143,7 +1155,7 @@ AREAS["relevamiento"]["indicators"].update(
             "Relevamientos registrados",
             "relevamiento",
             {"kind": "count", "field": "pk"},
-            "Cantidad de snapshots de relevamiento por CEF y ciclo.",
+            "Cantidad de relevamientos registrados para los CEF y ciclos seleccionados.",
             _FILTROS_RELEVAMIENTO,
             _DIMENSIONES_RELEVAMIENTO_PUBLICAS,
             unit="relevamientos",
@@ -1165,6 +1177,170 @@ AREAS["relevamiento"]["indicators"].update(
             ),
         ),
     }
+    )
+
+
+EXPLORACIONES = (
+    {
+        "key": "alumnos",
+        "label": "Alumnos",
+        "description": "Consultá alumnos según su inscripción y sus características.",
+        "icon": "fa-solid fa-user-group",
+        "area": "alumnos",
+        "default_group": "actividad",
+        "filters": ("actividad", "turno", "sexo", "edad", "rango_etario", "dia"),
+        "variants": (
+            {
+                "indicator": "alumnos_inscriptos_activos",
+                "label": "Con inscripción activa",
+                "result_label": "Alumnos encontrados",
+            },
+            {
+                "indicator": "alumnos_banco_activos",
+                "label": "Activos en el banco CEF",
+                "result_label": "Alumnos encontrados",
+                "default_group": "sexo",
+            },
+            {
+                "indicator": "alumnos_banco_baja",
+                "label": "Dados de baja del banco CEF",
+                "result_label": "Alumnos encontrados",
+                "default_group": "sexo",
+            },
+        ),
+    },
+    {
+        "key": "profesores",
+        "label": "Profesores",
+        "description": "Consultá profesores registrados o asignados a grupos.",
+        "icon": "fa-solid fa-person-chalkboard",
+        "area": "profesores",
+        "default_group": "actividad",
+        "filters": ("actividad", "turno", "rol", "grupo", "dia", "fecha"),
+        "variants": (
+            {
+                "indicator": "profesores_asignados_activos",
+                "label": "Con asignación activa",
+                "result_label": "Profesores encontrados",
+            },
+            {
+                "indicator": "profesores_banco_activos",
+                "label": "Activos en el banco CEF",
+                "result_label": "Profesores encontrados",
+                "default_group": "cef",
+            },
+            {
+                "indicator": "profesores_banco_baja",
+                "label": "Dados de baja del banco CEF",
+                "result_label": "Profesores encontrados",
+                "default_group": "cef",
+            },
+        ),
+    },
+    {
+        "key": "grupos",
+        "label": "Grupos",
+        "description": "Consultá grupos por actividad, turno, nivel o cupo.",
+        "icon": "fa-solid fa-people-group",
+        "area": "grupos",
+        "default_group": "actividad",
+        "filters": ("actividad", "turno", "nivel", "rango_etario", "dia", "cupo"),
+        "variants": (
+            {
+                "indicator": "grupos_activos",
+                "label": "Grupos activos",
+                "result_label": "Grupos encontrados",
+            },
+            {
+                "indicator": "grupos_total",
+                "label": "Todos los grupos",
+                "result_label": "Grupos encontrados",
+            },
+            {
+                "indicator": "grupos_baja",
+                "label": "Grupos dados de baja",
+                "result_label": "Grupos encontrados",
+            },
+            {
+                "indicator": "ocupacion",
+                "label": "Ocupación de los grupos activos",
+                "result_label": "Ocupación encontrada",
+            },
+        ),
+    },
+    {
+        "key": "materiales",
+        "label": "Materiales",
+        "description": "Consultá cantidades por material y estado.",
+        "icon": "fa-solid fa-boxes-stacked",
+        "area": "inventario",
+        "default_group": "material",
+        "filters": ("material", "estado"),
+        "variants": (
+            {
+                "indicator": "unidades",
+                "label": "Unidades registradas",
+                "result_label": "Unidades encontradas",
+            },
+        ),
+    },
+    {
+        "key": "asistencia",
+        "label": "Asistencia",
+        "description": "Consultá jornadas, registros y porcentajes de asistencia.",
+        "icon": "fa-solid fa-clipboard-user",
+        "area": "asistencia",
+        "default_group": "mes",
+        "filters": ("actividad", "turno", "grupo", "fecha", "mes", "dia"),
+        "variants": (
+            {
+                "indicator": "porcentaje_presentes",
+                "label": "Porcentaje de presentes",
+                "result_label": "Presentismo encontrado",
+            },
+            {
+                "indicator": "jornadas",
+                "label": "Jornadas con asistencia",
+                "result_label": "Jornadas encontradas",
+            },
+            {
+                "indicator": "registros",
+                "label": "Registros de asistencia",
+                "result_label": "Registros encontrados",
+            },
+            {
+                "indicator": "ausentes",
+                "label": "Registros ausentes",
+                "result_label": "Ausencias encontradas",
+            },
+            {
+                "indicator": "justificadas",
+                "label": "Ausencias justificadas",
+                "result_label": "Justificaciones encontradas",
+            },
+        ),
+    },
+    {
+        "key": "relevamientos",
+        "label": "Relevamientos",
+        "description": "Consultá la información relevada para cada CEF.",
+        "icon": "fa-solid fa-list-check",
+        "area": "relevamiento",
+        "default_group": "prestacion",
+        "filters": ("beneficio", "financiamiento", "prestacion", "espacio_comedor", "orientacion"),
+        "variants": (
+            {
+                "indicator": "relevamientos",
+                "label": "Relevamientos registrados",
+                "result_label": "Relevamientos encontrados",
+            },
+            {
+                "indicator": "cef_relevados",
+                "label": "CEF con relevamiento",
+                "result_label": "CEF encontrados",
+            },
+        ),
+    },
 )
 
 
@@ -1242,7 +1418,7 @@ def _cargar_cefs():
 
 
 def _opciones_modelo(modelo, etiqueta="nombre"):
-    filas = modelo.objects.order_by("pk").values("pk", etiqueta)
+    filas = modelo.objects.values("pk", etiqueta)
     opciones = []
     for fila in filas:
         label = _texto_limpio(fila.get(etiqueta)) or str(fila["pk"])
@@ -1448,6 +1624,7 @@ def construir_configuracion_metricas():
         "areas": areas,
         "ciclos": ciclos,
         "cefs": list(cef_map.values()),
+        "exploraciones": list(EXPLORACIONES),
         "defaults": {
             "ciclos": [ciclo_actual["value"]] if ciclo_actual else [],
             "cefs": [],
@@ -2057,7 +2234,7 @@ def _orden_dimension(clave, key, label, fuente):
     tipo = spec.get("sort", "texto")
     if clave in {"ciclo", "mes"} or tipo == "numero":
         try:
-            return (0, float(key), "")
+            return (0, float(key), str(label).casefold())
         except (TypeError, ValueError):
             return (1, 0, str(label).casefold())
     if clave == "edad" or tipo == "edad":
@@ -2259,16 +2436,24 @@ def _tabla_resultado(filas, consulta, indicador):
             {"key": "comparacion", "label": DIMENSIONES_META[consulta.comparar]}
         )
     columnas.append({"key": "valor", "label": indicador["label"]})
-    if indicador["metric"]["kind"] in {
+    kind = indicador["metric"]["kind"]
+    if kind in {
         "average_active_students",
         "occupancy",
         "state_ratio",
         "distribution_ratio",
     }:
+        etiquetas_componentes = {
+            "average_active_students": ("Alumnos activos", "Grupos incluidos"),
+            "occupancy": ("Inscripciones activas", "Vacantes informadas"),
+            "state_ratio": ("Registros del estado", "Registros de asistencia"),
+            "distribution_ratio": ("Relevamientos de la categoría", "Relevamientos incluidos"),
+        }
+        numerador_label, denominador_label = etiquetas_componentes[kind]
         columnas.extend(
             (
-                {"key": "numerador", "label": "Numerador"},
-                {"key": "denominador", "label": "Denominador"},
+                {"key": "numerador", "label": numerador_label},
+                {"key": "denominador", "label": denominador_label},
             )
         )
 
@@ -2296,6 +2481,251 @@ def _tabla_resultado(filas, consulta, indicador):
             row["denominador"] = _valor_json(fila["denominator"])
         rows.append(row)
     return {"columns": columnas, "rows": rows}
+
+
+def _filas_limitadas(qs, limite):
+    if limite is None:
+        return list(qs), False
+    filas = list(qs[: limite + 1])
+    return filas[:limite], len(filas) > limite
+
+
+def _nombre_persona(apellidos="", nombres="", snapshot=""):
+    snapshot = _texto_limpio(snapshot)
+    if snapshot:
+        return snapshot
+    apellidos = _texto_limpio(apellidos)
+    nombres = _texto_limpio(nombres)
+    if apellidos and nombres:
+        return f"{apellidos}, {nombres}"
+    return apellidos or nombres or SIN_INFORMACION
+
+
+def _cef_resultado(cueanexo, cef_map):
+    cueanexo = str(cueanexo or "")
+    return cef_map.get(cueanexo, {}).get("label", cueanexo or SIN_INFORMACION)
+
+
+def _tabla_registros(qs, consulta, cef_map, limite):
+    indicador = consulta.indicador
+
+    if indicador == "alumnos_inscriptos_activos":
+        sexo_map = _opciones_sexo_mapa({})
+        consulta_filas = (
+            qs.values(
+                "alumno_id",
+                "alumno__apellidos",
+                "alumno__nombres",
+                "alumno__nro_doc",
+                "alumno__cuil",
+                "alumno__sexo_id",
+                "grupo__ciclo__anio",
+                "grupo__cueanexo",
+            )
+            .order_by(
+                "alumno__apellidos",
+                "alumno__nombres",
+                "alumno_id",
+                "grupo__ciclo__anio",
+                "grupo__cueanexo",
+            )
+            .distinct()
+        )
+        registros, limitado = _filas_limitadas(consulta_filas, limite)
+        filas = [
+            {
+                "alumno": _nombre_persona(
+                    fila.get("alumno__apellidos"),
+                    fila.get("alumno__nombres"),
+                ),
+                "documento": fila.get("alumno__nro_doc") or SIN_INFORMACION,
+                "cuil": fila.get("alumno__cuil") or SIN_INFORMACION,
+                "sexo": sexo_map.get(str(fila.get("alumno__sexo_id")), SIN_INFORMACION),
+                "ciclo": fila.get("grupo__ciclo__anio"),
+                "cef": _cef_resultado(fila.get("grupo__cueanexo"), cef_map),
+            }
+            for fila in registros
+        ]
+        return {
+            "kind": "records",
+            "title": "Listado de alumnos",
+            "columns": [
+                {"key": "alumno", "label": "Alumno"},
+                {"key": "documento", "label": "Documento"},
+                {"key": "cuil", "label": "CUIL"},
+                {"key": "sexo", "label": "Sexo"},
+                {"key": "ciclo", "label": "Ciclo"},
+                {"key": "cef", "label": "CEF"},
+            ],
+            "rows": filas,
+            "limited": limitado,
+        }
+
+    if indicador in {"alumnos_banco_activos", "alumnos_banco_baja"}:
+        sexo_map = _opciones_sexo_mapa({})
+        consulta_filas = (
+            qs.values(
+                "alumno_nombre_snapshot",
+                "alumno_documento_snapshot",
+                "alumno_cuil_snapshot",
+                "alumno__sexo_id",
+                "ciclo__anio",
+                "cueanexo",
+            )
+            .order_by("alumno_nombre_snapshot", "ciclo__anio", "cueanexo")
+            .distinct()
+        )
+        registros, limitado = _filas_limitadas(consulta_filas, limite)
+        filas = [
+            {
+                "alumno": _nombre_persona(snapshot=fila.get("alumno_nombre_snapshot")),
+                "documento": fila.get("alumno_documento_snapshot") or SIN_INFORMACION,
+                "cuil": fila.get("alumno_cuil_snapshot") or SIN_INFORMACION,
+                "sexo": sexo_map.get(str(fila.get("alumno__sexo_id")), SIN_INFORMACION),
+                "ciclo": fila.get("ciclo__anio"),
+                "cef": _cef_resultado(fila.get("cueanexo"), cef_map),
+            }
+            for fila in registros
+        ]
+        return {
+            "kind": "records",
+            "title": "Listado de alumnos",
+            "columns": [
+                {"key": "alumno", "label": "Alumno"},
+                {"key": "documento", "label": "Documento"},
+                {"key": "cuil", "label": "CUIL"},
+                {"key": "sexo", "label": "Sexo"},
+                {"key": "ciclo", "label": "Ciclo"},
+                {"key": "cef", "label": "CEF"},
+            ],
+            "rows": filas,
+            "limited": limitado,
+        }
+
+    if indicador == "profesores_asignados_activos":
+        consulta_filas = (
+            qs.values(
+                "docente_cuil",
+                "docente_nombre_snapshot",
+                "docente_dni_snapshot",
+                "grupo__ciclo__anio",
+                "grupo__cueanexo",
+            )
+            .order_by(
+                "docente_nombre_snapshot",
+                "docente_cuil",
+                "grupo__ciclo__anio",
+                "grupo__cueanexo",
+            )
+            .distinct()
+        )
+        registros, limitado = _filas_limitadas(consulta_filas, limite)
+        filas = [
+            {
+                "profesor": _nombre_persona(snapshot=fila.get("docente_nombre_snapshot")),
+                "documento": fila.get("docente_dni_snapshot") or SIN_INFORMACION,
+                "cuil": fila.get("docente_cuil") or SIN_INFORMACION,
+                "ciclo": fila.get("grupo__ciclo__anio"),
+                "cef": _cef_resultado(fila.get("grupo__cueanexo"), cef_map),
+            }
+            for fila in registros
+        ]
+        return {
+            "kind": "records",
+            "title": "Listado de profesores",
+            "columns": [
+                {"key": "profesor", "label": "Profesor"},
+                {"key": "documento", "label": "Documento"},
+                {"key": "cuil", "label": "CUIL"},
+                {"key": "ciclo", "label": "Ciclo"},
+                {"key": "cef", "label": "CEF"},
+            ],
+            "rows": filas,
+            "limited": limitado,
+        }
+
+    if indicador in {"profesores_banco_activos", "profesores_banco_baja"}:
+        consulta_filas = (
+            qs.values(
+                "docente_nombre_snapshot",
+                "docente_dni_snapshot",
+                "docente_cuil",
+                "ciclo__anio",
+                "cueanexo",
+            )
+            .order_by("docente_nombre_snapshot", "docente_cuil", "ciclo__anio", "cueanexo")
+            .distinct()
+        )
+        registros, limitado = _filas_limitadas(consulta_filas, limite)
+        filas = [
+            {
+                "profesor": _nombre_persona(snapshot=fila.get("docente_nombre_snapshot")),
+                "documento": fila.get("docente_dni_snapshot") or SIN_INFORMACION,
+                "cuil": fila.get("docente_cuil") or SIN_INFORMACION,
+                "ciclo": fila.get("ciclo__anio"),
+                "cef": _cef_resultado(fila.get("cueanexo"), cef_map),
+            }
+            for fila in registros
+        ]
+        return {
+            "kind": "records",
+            "title": "Listado de profesores",
+            "columns": [
+                {"key": "profesor", "label": "Profesor"},
+                {"key": "documento", "label": "Documento"},
+                {"key": "cuil", "label": "CUIL"},
+                {"key": "ciclo", "label": "Ciclo"},
+                {"key": "cef", "label": "CEF"},
+            ],
+            "rows": filas,
+            "limited": limitado,
+        }
+
+    if indicador == "unidades":
+        consulta_filas = qs.values(
+            "inventario_material__material_nombre_snapshot",
+            "inventario_material__material__nombre",
+            "estado__nombre",
+            "cantidad",
+            "inventario_material__ciclo__anio",
+            "inventario_material__cueanexo",
+        ).order_by(
+            "inventario_material__material_nombre_snapshot",
+            "estado__nombre",
+            "inventario_material__ciclo__anio",
+            "inventario_material__cueanexo",
+            "pk",
+        )
+        registros, limitado = _filas_limitadas(consulta_filas, limite)
+        filas = [
+            {
+                "material": (
+                    fila.get("inventario_material__material_nombre_snapshot")
+                    or fila.get("inventario_material__material__nombre")
+                    or SIN_INFORMACION
+                ),
+                "estado": fila.get("estado__nombre") or SIN_INFORMACION,
+                "cantidad": fila.get("cantidad") or 0,
+                "ciclo": fila.get("inventario_material__ciclo__anio"),
+                "cef": _cef_resultado(fila.get("inventario_material__cueanexo"), cef_map),
+            }
+            for fila in registros
+        ]
+        return {
+            "kind": "records",
+            "title": "Listado de materiales",
+            "columns": [
+                {"key": "material", "label": "Material"},
+                {"key": "estado", "label": "Estado"},
+                {"key": "cantidad", "label": "Cantidad", "type": "number"},
+                {"key": "ciclo", "label": "Ciclo"},
+                {"key": "cef", "label": "CEF"},
+            ],
+            "rows": filas,
+            "limited": limitado,
+        }
+
+    return None
 
 
 def _grafico_resultado(filas, consulta, indicador):
@@ -2343,6 +2773,15 @@ def _grafico_resultado(filas, consulta, indicador):
                 continue
             comparaciones_vistas.add(identidad)
             comparaciones.append(identidad)
+        fuente = FUENTES[indicador["source"]]
+        comparaciones.sort(
+            key=lambda item: _orden_dimension(
+                consulta.comparar,
+                item[0],
+                item[1],
+                fuente,
+            )
+        )
         cantidad_puntos = len(claves_grupo) * len(comparaciones)
         if (
             len(claves_grupo) > max_categorias
@@ -2518,12 +2957,13 @@ def _notas_resultado(consulta, indicador, total):
     metrica = indicador["metric"]
     if metrica["kind"] == "distinct" and consulta.agrupar:
         notas.append(
-            "El total se calcula con un COUNT DISTINCT independiente sobre todo el alcance; "
-            "las categorías pueden no ser mutuamente excluyentes y su suma puede superar el total."
+            "Una misma persona puede aparecer en más de una categoría. Por eso, la suma "
+            "de las filas puede ser mayor que el total general."
         )
     if len(consulta.ciclos) > 1 and metrica["kind"] == "distinct":
         notas.append(
-            "En el total multi-ciclo, una misma entidad se deduplica entre los ciclos seleccionados."
+            "Si una misma persona aparece en más de un ciclo, se cuenta una sola vez en "
+            "el total general."
         )
     if total["empty"] and metrica["kind"] in {
         "occupancy",
@@ -2531,18 +2971,17 @@ def _notas_resultado(consulta, indicador, total):
         "state_ratio",
         "distribution_ratio",
     }:
-        notas.append("No hay un denominador válido para calcular el indicador con estos filtros.")
+        notas.append("No hay datos suficientes para calcular este resultado con los filtros elegidos.")
     if consulta.agrupar in CLAVES_TERRITORIO or consulta.comparar in CLAVES_TERRITORIO:
         notas.append(
-            "El territorio se obtuvo en bloque desde el Padrón actual y se aplicó por "
-            "CUE-Anexo, sin consultas por fila. Un cambio posterior en Padrón también "
-            "reclasifica los ciclos históricos."
+            "La región, el departamento y la localidad corresponden al Padrón actual. "
+            "Un cambio en el Padrón también puede modificar la clasificación de ciclos anteriores."
         )
     dimensiones_usadas = {consulta.agrupar, consulta.comparar, *consulta.filtros}
     if consulta.area == "alumnos" and dimensiones_usadas & {"edad", "sexo"}:
         notas.append(
-            "Fecha de nacimiento y sexo provienen del registro actual del alumno y no "
-            "de un snapshot histórico; una corrección posterior puede cambiar el resultado."
+            "La fecha de nacimiento y el sexo se toman de los datos actuales del alumno. "
+            "Una corrección posterior también puede cambiar resultados de ciclos anteriores."
         )
     if "dia" in {consulta.agrupar, consulta.comparar}:
         notas.append(
@@ -2552,7 +2991,7 @@ def _notas_resultado(consulta, indicador, total):
     return list(dict.fromkeys(notas))
 
 
-def ejecutar_consulta_metricas(params):
+def ejecutar_consulta_metricas(params, limite_detalle=500):
     """Valida un QueryDict GET y devuelve el único resultado canónico de la consulta.
 
     El diccionario resultante es serializable y alimenta el total, el gráfico, la tabla y la
@@ -2566,7 +3005,9 @@ def ejecutar_consulta_metricas(params):
     qs, fuente = _preparar_queryset(consulta, indicador, cef_map)
     total = _calcular_total(qs, indicador)
     filas = _filas_agrupadas(qs, consulta, indicador, fuente, cef_map, total)
-    tabla = _tabla_resultado(filas, consulta, indicador)
+    tabla = _tabla_registros(qs, consulta, cef_map, limite_detalle)
+    if tabla is None:
+        tabla = _tabla_resultado(filas, consulta, indicador)
     grafico = _grafico_resultado(filas, consulta, indicador)
     total_formateado = _formatear_numero(total["value"], indicador["unit"])
     if indicador["unit"] == "%" and total["value"] is not None:
@@ -2602,6 +3043,13 @@ def ejecutar_consulta_metricas(params):
                 f"{_formatear_numero(total['denominator'], '')} incluidos"
             )
 
+    notas = _notas_resultado(consulta, indicador, total)
+    if tabla.get("limited"):
+        notas.append(
+            f"En pantalla se muestran los primeros {limite_detalle} registros. "
+            "El archivo Excel incluye el listado completo."
+        )
+
     return {
         "ok": True,
         "query": _consulta_publica(consulta, ciclos_db, cef_map, indicador),
@@ -2609,7 +3057,7 @@ def ejecutar_consulta_metricas(params):
         "chart": grafico,
         "table": tabla,
         "definition": indicador["definition"],
-        "notes": _notas_resultado(consulta, indicador, total),
+        "notes": notas,
         "empty": bool(total["empty"]),
         "empty_message": (
             "No hay datos para los filtros seleccionados."

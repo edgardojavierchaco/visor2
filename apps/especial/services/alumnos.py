@@ -750,6 +750,79 @@ def asegurar_alumno_banco(
         return banco, True
 
 
+def reincorporar_alumno_banco(*, alumno_banco_id, cueanexo, ciclo, user):
+    """Crea un período activo nuevo a partir de un período histórico dado de baja."""
+    try:
+        alumno_banco_id = int(alumno_banco_id)
+    except (TypeError, ValueError):
+        raise ValidationError("El período histórico seleccionado no es válido.")
+
+    ciclo_id = getattr(ciclo, "pk", ciclo)
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not alumno_banco_id or not cueanexo or not ciclo_id:
+        raise ValidationError("El período histórico seleccionado no es válido.")
+
+    using = EspecialAlumnoBanco.objects.db
+    with transaction.atomic(using=using):
+        alumno_id = (
+            EspecialAlumnoBanco.objects.using(using)
+            .filter(
+                pk=alumno_banco_id,
+                cueanexo=cueanexo,
+                ciclo_id=ciclo_id,
+            )
+            .values_list("alumno_id", flat=True)
+            .first()
+        )
+        if not alumno_id:
+            raise ValidationError(
+                "El período seleccionado no pertenece al CUE-Anexo y ciclo actuales."
+            )
+
+        _bloquear_alumno(alumno_id, using=using)
+        try:
+            banco_baja = (
+                EspecialAlumnoBanco.objects.using(using)
+                .select_for_update()
+                .select_related("alumno")
+                .get(
+                    pk=alumno_banco_id,
+                    cueanexo=cueanexo,
+                    ciclo_id=ciclo_id,
+                )
+            )
+        except EspecialAlumnoBanco.DoesNotExist:
+            raise ValidationError(
+                "El período seleccionado no pertenece al CUE-Anexo y ciclo actuales."
+            )
+        if banco_baja.estado != EspecialAlumnoBanco.Estado.BAJA:
+            raise ValidationError("Solo se puede reincorporar un período dado de baja.")
+
+        if EspecialAlumnoBanco.objects.using(using).filter(
+            alumno_id=banco_baja.alumno_id,
+            cueanexo=cueanexo,
+            ciclo_id=ciclo_id,
+            estado=EspecialAlumnoBanco.Estado.ACTIVO,
+        ).exists():
+            raise ValidationError(
+                "El alumno ya se encuentra activo en este establecimiento y ciclo."
+            )
+
+        banco_nuevo, creado = asegurar_alumno_banco(
+            alumno=banco_baja.alumno,
+            cueanexo=cueanexo,
+            ciclo=ciclo,
+            user=user,
+            matricula_compartida=None,
+            validar_relacion=False,
+        )
+        if not creado:
+            raise ValidationError(
+                "El alumno ya se encuentra activo en este establecimiento y ciclo."
+            )
+        return banco_nuevo
+
+
 def actualizar_matricula_compartida(
     *,
     alumno_banco,

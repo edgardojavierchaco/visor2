@@ -3,13 +3,15 @@
 import logging
 import re
 import unicodedata
+from types import SimpleNamespace
 from urllib.parse import urlencode
 from django.apps import apps
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
-from django.db.models import CharField, Count, Exists, OuterRef, Q
+from django.db.models import CharField, Count, Exists, Min, OuterRef, Q
 from django.db.models.functions import Cast, Lower
 from django.http import Http404, JsonResponse
 from django.urls import NoReverseMatch, reverse
@@ -32,6 +34,7 @@ from .services.alumnos import (
     actualizar_matricula_compartida,
     asegurar_alumno_banco,
     dar_baja_alumno_banco,
+    reincorporar_alumno_banco,
 )
 from .views_contexto import contexto_base, render_especial
 from .views_inscripcion_seccion import crear_inscripcion_activa
@@ -40,6 +43,19 @@ logger = logging.getLogger(__name__)
 
 SECCION_SIN_ASIGNAR = "sin_seccion"
 CUEANEXO_AUTOCOMPLETE_PAGE_SIZE = 20
+ALUMNOS_POR_PAGINA = 10
+ALUMNOS_VISTA_DEFAULT = "actuales"
+ALUMNOS_BUSQUEDA_MAX_LENGTH = 100
+ALUMNOS_VISTAS = {"actuales", "historial"}
+
+ALUMNOS_BUSQUEDA_EQUIVALENCIAS = {
+    "a": "aáàäâãå",
+    "e": "eéèëê",
+    "i": "iíìïî",
+    "n": "nñ",
+    "o": "oóòöôõ",
+    "u": "uúùüû",
+}
 
 MSG_BANCO_ALUMNOS_PENDIENTE = (
     "El banco de alumnos de Educación Especial está pendiente de creación en base de datos."
@@ -91,12 +107,42 @@ def _url_carga_alumno(cuil, next_url, return_label="Volver a Alumnos"):
         params["return_label"] = return_label
     return f"{base}?{urlencode(params)}" if params else base
 
-def _url_modal_alumnos(especial_context, cuil="", *, seccion_id=None):
+def _alumnos_state_params(
+    especial_context,
+    *,
+    vista="actuales",
+    termino="",
+    pagina=None,
+):
     params = {}
     if especial_context.get("cueanexo"):
         params["cueanexo"] = especial_context["cueanexo"]
     if especial_context.get("ciclo"):
         params["ciclo"] = especial_context["ciclo"].pk
+    if vista in ALUMNOS_VISTAS:
+        params["vista"] = vista
+    if termino:
+        params["q"] = termino
+    if pagina and pagina > 1:
+        params["page"] = pagina
+    return params
+
+
+def _url_modal_alumnos(
+    especial_context,
+    cuil="",
+    *,
+    seccion_id=None,
+    vista="actuales",
+    termino="",
+    pagina=None,
+):
+    params = _alumnos_state_params(
+        especial_context,
+        vista=vista,
+        termino=termino,
+        pagina=pagina,
+    )
     params["abrir_modal_alumno"] = "1"
     if cuil:
         params["cuil"] = cuil
@@ -104,12 +150,20 @@ def _url_modal_alumnos(especial_context, cuil="", *, seccion_id=None):
         params["seccion"] = seccion_id
     return f"{reverse('especial:alumnos')}?{urlencode(params)}"
 
-def _url_alumnos(especial_context, *, seccion_id=None):
-    params = {}
-    if especial_context.get("cueanexo"):
-        params["cueanexo"] = especial_context["cueanexo"]
-    if especial_context.get("ciclo"):
-        params["ciclo"] = especial_context["ciclo"].pk
+def _url_alumnos(
+    especial_context,
+    *,
+    seccion_id=None,
+    vista="actuales",
+    termino="",
+    pagina=None,
+):
+    params = _alumnos_state_params(
+        especial_context,
+        vista=vista,
+        termino=termino,
+        pagina=pagina,
+    )
     if seccion_id:
         params["seccion"] = seccion_id
     querystring = urlencode(params)
@@ -118,6 +172,32 @@ def _url_alumnos(especial_context, *, seccion_id=None):
 
 def _errores_form(form):
     return " ".join(error for errors in form.errors.values() for error in errors)
+
+
+def _alumnos_vista_param(request):
+    vista = (request.GET.get("vista") or ALUMNOS_VISTA_DEFAULT).strip().lower()
+    return vista if vista in ALUMNOS_VISTAS else ALUMNOS_VISTA_DEFAULT
+
+
+def _alumnos_busqueda_param(request):
+    bruto = " ".join(str(request.GET.get("q") or "").split())
+    if not bruto:
+        return "", ""
+    if len(bruto) > ALUMNOS_BUSQUEDA_MAX_LENGTH:
+        return (
+            "",
+            f"El término de búsqueda no puede superar los {ALUMNOS_BUSQUEDA_MAX_LENGTH} caracteres.",
+        )
+
+    return bruto, ""
+
+
+def _pagina_alumnos_param(request):
+    try:
+        pagina = int(request.GET.get("page") or 1)
+    except (TypeError, ValueError):
+        pagina = 1
+    return max(pagina, 1)
 
 
 def _seccion_filtro_param(request):
@@ -543,7 +623,71 @@ def _alumnos_banco_queryset(especial_context):
     )
 
 
-def _alumnos_banco(especial_context, *, seccion_id=None):
+def _alumnos_busqueda_tokens(valor):
+    texto = unicodedata.normalize("NFD", str(valor or "")).casefold()
+    texto = "".join(
+        caracter
+        for caracter in texto
+        if unicodedata.category(caracter) != "Mn"
+    )
+    texto = re.sub(r"(\d)[,./-](?=\d)", r"\1", texto)
+    return [token for token in re.split(r"[\s,./-]+", texto) if token]
+
+
+def _alumnos_busqueda_patron_textual(token):
+    caracteres = []
+    for caracter in token:
+        equivalencias = ALUMNOS_BUSQUEDA_EQUIVALENCIAS.get(caracter)
+        caracteres.append(
+            f"[{equivalencias}]" if equivalencias else re.escape(caracter)
+        )
+    return "".join(caracteres)
+
+
+def _alumnos_busqueda_seccion_ids(especial_context, patron):
+    return AlumnoSeccion.objects.filter(
+        seccion__cueanexo=especial_context["cueanexo"],
+        seccion__ciclo=especial_context["ciclo"],
+        seccion__nombre_seccion__iregex=patron,
+    ).values("alumno_id")
+
+
+def _aplicar_busqueda_alumnos(queryset, especial_context, *, termino):
+    tokens = _alumnos_busqueda_tokens(termino)
+    if not tokens:
+        return queryset.none() if termino else queryset
+
+    filtros_globales = Q()
+    for token in tokens:
+        if token.isdigit():
+            patron = r"\D*".join(re.escape(digito) for digito in token)
+            filtros_token = (
+                Q(alumno__cuil__iregex=patron)
+                | Q(alumno_cuil_snapshot__iregex=patron)
+                | Q(alumno__nro_doc__iregex=patron)
+                | Q(alumno_documento_snapshot__iregex=patron)
+            )
+        else:
+            patron = _alumnos_busqueda_patron_textual(token)
+            filtros_token = (
+                Q(alumno__apellidos__iregex=patron)
+                | Q(alumno__nombres__iregex=patron)
+                | Q(alumno_nombre_snapshot__iregex=patron)
+            )
+        filtros_token = filtros_token | Q(
+            alumno_id__in=_alumnos_busqueda_seccion_ids(especial_context, patron)
+        )
+        filtros_globales &= filtros_token
+    return queryset.filter(filtros_globales)
+
+
+def _alumnos_banco(
+    especial_context,
+    *,
+    seccion_id=None,
+    vista=ALUMNOS_VISTA_DEFAULT,
+    termino="",
+):
     if not especial_context["puede_consultar"]:
         return EspecialAlumnoBanco.objects.none()
     queryset = (
@@ -552,6 +696,21 @@ def _alumnos_banco(especial_context, *, seccion_id=None):
             ciclo=especial_context["ciclo"],
         )
     )
+    if vista == "historial":
+        alumnos_con_movimientos = AlumnoSeccion.objects.filter(
+            seccion__cueanexo=especial_context["cueanexo"],
+            seccion__ciclo=especial_context["ciclo"],
+            estado=AlumnoSeccion.Estado.BAJA,
+        ).values("alumno_id")
+        queryset = queryset.filter(
+            Q(estado__in=[
+                EspecialAlumnoBanco.Estado.INACTIVO,
+                EspecialAlumnoBanco.Estado.BAJA,
+            ])
+            | Q(alumno_id__in=alumnos_con_movimientos)
+        )
+    else:
+        queryset = queryset.filter(estado=EspecialAlumnoBanco.Estado.ACTIVO)
     if seccion_id == SECCION_SIN_ASIGNAR:
         inscripciones_contexto = AlumnoSeccion.objects.filter(
             alumno_id=OuterRef("alumno_id"),
@@ -571,7 +730,12 @@ def _alumnos_banco(especial_context, *, seccion_id=None):
             alumno__secciones_especial__seccion__estado=SeccionEspecial.Estado.ACTIVO,
             alumno__secciones_especial__estado=AlumnoSeccion.Estado.ACTIVO,
         )
-    return queryset.select_related("alumno").distinct().order_by(
+    queryset = _aplicar_busqueda_alumnos(
+        queryset,
+        especial_context,
+        termino=termino,
+    )
+    return queryset.select_related("alumno", "ciclo").distinct().order_by(
         "alumno__apellidos",
         "alumno__nombres",
         "alumno_id",
@@ -624,6 +788,157 @@ def _inscripciones_por_alumno(especial_context, alumnos_banco):
         por_alumno.setdefault(inscripcion.alumno_id, []).append(inscripcion)
     return por_alumno
 
+
+def _inscripciones_historial_por_banco(especial_context, bancos):
+    if not bancos:
+        return {}
+    alumnos_ids = {banco.alumno_id for banco in bancos}
+    inscripciones = (
+        AlumnoSeccion.objects.filter(
+            seccion__cueanexo=especial_context["cueanexo"],
+            seccion__ciclo=especial_context["ciclo"],
+            alumno_id__in=alumnos_ids,
+        )
+        .select_related("seccion", "seccion__cd_tipo_seccion")
+        .order_by(
+            "alumno_id",
+            Lower("seccion__nombre_seccion"),
+            "seccion__nombre_seccion",
+            "-fecha_inscripcion",
+            "-pk",
+        )
+    )
+    por_alumno = {}
+    for inscripcion in inscripciones:
+        por_alumno.setdefault(inscripcion.alumno_id, []).append(inscripcion)
+    por_banco = {}
+    for banco in bancos:
+        inscripciones_banco = []
+        for inscripcion in por_alumno.get(banco.alumno_id, []):
+            if banco.fecha_baja and inscripcion.fecha_inscripcion > banco.fecha_baja:
+                continue
+            if inscripcion.fecha_baja and inscripcion.fecha_baja < banco.fecha_alta:
+                continue
+            inscripciones_banco.append(inscripcion)
+        por_banco[banco.pk] = inscripciones_banco
+    return por_banco
+
+
+def _historial_alumnos_paginado(especial_context, queryset, pagina):
+    """Pagina alumnos históricos y agrupa sus movimientos en una fila por alumno."""
+    alumnos_ids = (
+        queryset.order_by()
+        .values("alumno_id")
+        .annotate(
+            apellidos=Min("alumno__apellidos"),
+            nombres=Min("alumno__nombres"),
+        )
+        .order_by(
+            Lower("apellidos"),
+            "apellidos",
+            Lower("nombres"),
+            "nombres",
+            "alumno_id",
+        )
+        .values_list("alumno_id", flat=True)
+    )
+    page_obj = Paginator(alumnos_ids, ALUMNOS_POR_PAGINA).get_page(pagina)
+    page_ids = list(page_obj.object_list)
+    bancos = list(
+        EspecialAlumnoBanco.objects.filter(
+            cueanexo=especial_context["cueanexo"],
+            ciclo=especial_context["ciclo"],
+            alumno_id__in=page_ids,
+        )
+        .select_related("alumno", "ciclo")
+        .order_by("alumno_id", "-fecha_alta", "-pk")
+    )
+    bancos_por_alumno = {}
+    for banco in bancos:
+        bancos_por_alumno.setdefault(banco.alumno_id, []).append(banco)
+
+    inscripciones_por_banco = _inscripciones_historial_por_banco(
+        especial_context,
+        bancos,
+    )
+    items = []
+    for alumno_id in page_ids:
+        bancos_alumno = bancos_por_alumno.get(alumno_id, [])
+        if not bancos_alumno:
+            continue
+        ultimo_banco = bancos_alumno[0]
+        tiene_banco_activo = any(
+            banco.estado == EspecialAlumnoBanco.Estado.ACTIVO
+            for banco in bancos_alumno
+        )
+        periodos = [
+            SimpleNamespace(
+                banco=banco,
+                estado_label=(
+                    EspecialAlumnoBanco.Estado.ACTIVO.label
+                    if banco.estado == EspecialAlumnoBanco.Estado.ACTIVO
+                    else EspecialAlumnoBanco.Estado.BAJA.label
+                ),
+                inscripciones=inscripciones_por_banco.get(banco.pk, []),
+            )
+            for banco in bancos_alumno
+        ]
+        items.append(
+            SimpleNamespace(
+                alumno_id=alumno_id,
+                alumno=ultimo_banco.alumno,
+                alumno_nombre_snapshot=next(
+                    (
+                        banco.alumno_nombre_snapshot
+                        for banco in bancos_alumno
+                        if banco.alumno_nombre_snapshot
+                    ),
+                    "",
+                ),
+                alumno_cuil_snapshot=next(
+                    (
+                        banco.alumno_cuil_snapshot
+                        for banco in bancos_alumno
+                        if banco.alumno_cuil_snapshot
+                    ),
+                    "",
+                ),
+                alumno_documento_snapshot=next(
+                    (
+                        banco.alumno_documento_snapshot
+                        for banco in bancos_alumno
+                        if banco.alumno_documento_snapshot
+                    ),
+                    "",
+                ),
+                ciclo=ultimo_banco.ciclo,
+                estado=(
+                    EspecialAlumnoBanco.Estado.ACTIVO
+                    if tiene_banco_activo
+                    else EspecialAlumnoBanco.Estado.BAJA
+                ),
+                estado_label=(
+                    EspecialAlumnoBanco.Estado.ACTIVO.label
+                    if tiene_banco_activo
+                    else EspecialAlumnoBanco.Estado.BAJA.label
+                ),
+                banco_reincorporable=(
+                    next(
+                        (
+                            banco
+                            for banco in bancos_alumno
+                            if banco.estado == EspecialAlumnoBanco.Estado.BAJA
+                        ),
+                        None,
+                    )
+                    if not tiene_banco_activo
+                    else None
+                ),
+                historial_periodos=periodos,
+            )
+        )
+    return items, page_obj
+
 def _secciones_disponibles(especial_context):
     if not especial_context["puede_operar"]:
         return SeccionEspecial.objects.none()
@@ -671,8 +986,8 @@ def _orden_texto(valor):
     ).casefold()
 
 
-def _ordenar_alumnos_por_seccion(alumnos_banco, inscripciones_por_alumno):
-    """Arma la sección principal y ordena todo el listado en backend."""
+def _preparar_alumnos_actuales(alumnos_banco, inscripciones_por_alumno):
+    """Asocia inscripciones activas y ordena el banco por persona."""
     for item in alumnos_banco:
         inscripciones = sorted(
             inscripciones_por_alumno.get(item.alumno_id, []),
@@ -683,33 +998,17 @@ def _ordenar_alumnos_por_seccion(alumnos_banco, inscripciones_por_alumno):
             ),
         )
         item.inscripciones_seccion = inscripciones
-        principal = inscripciones[0].seccion if inscripciones else None
-        item.seccion_principal_label = (
-            principal.nombre_seccion if principal else "Sin sección asignada"
-        )
-        item.seccion_principal_key = (
-            _orden_texto(principal.nombre_seccion)
-            if principal
-            else "sin-seccion-asignada"
-        )
 
     return sorted(
         alumnos_banco,
         key=lambda item: (
-            0 if not item.inscripciones_seccion else 1,
-            item.seccion_principal_key,
-            _orden_texto(getattr(item.alumno, "apellidos", "")),
-            _orden_texto(getattr(item.alumno, "nombres", "")),
+            _orden_texto(
+                item.alumno_nombre_snapshot
+                or f"{getattr(item.alumno, 'apellidos', '')} {getattr(item.alumno, 'nombres', '')}"
+            ),
             item.alumno_id,
         ),
     )
-
-
-def _marcar_grupos_seccion(alumnos_banco):
-    grupo_anterior = object()
-    for item in alumnos_banco:
-        item.muestra_grupo_seccion = item.seccion_principal_key != grupo_anterior
-        grupo_anterior = item.seccion_principal_key
 
 def _alumno_en_banco_activo(alumno, especial_context):
     if not alumno or not especial_context["puede_operar"]:
@@ -747,14 +1046,74 @@ def _asegurar_alumno_banco(
 def alumnos(request):
     context = contexto_base(request, "alumnos")
     especial_context = context["especial_context"]
-    filtro_seccion_id, filtro_seccion_error = _seccion_filtro_param(request)
+    vista = _alumnos_vista_param(request)
+    termino_busqueda, busqueda_error = _alumnos_busqueda_param(request)
+    pagina_solicitada = _pagina_alumnos_param(request)
 
     if request.method == "POST" and especial_context.get("ciclo_cerrado"):
         messages.error(
             request,
             "El ciclo seleccionado está cerrado y sólo puede consultarse.",
         )
-        return redirect(request.get_full_path())
+        return redirect(
+            _url_alumnos(
+                especial_context,
+                vista=vista,
+                termino=termino_busqueda,
+                pagina=pagina_solicitada,
+            )
+        )
+
+    if request.method == "POST" and request.POST.get("accion") == "reincorporar_alumno":
+        if vista != "historial":
+            messages.error(request, "La reincorporación solo está disponible desde Historial.")
+        elif not especial_context["puede_operar"]:
+            messages.error(
+                request,
+                "Seleccioná un CUE-Anexo y un ciclo lectivo para reincorporar alumnos.",
+            )
+        else:
+            try:
+                reincorporar_alumno_banco(
+                    alumno_banco_id=request.POST.get("alumno_banco_id"),
+                    cueanexo=especial_context["cueanexo"],
+                    ciclo=especial_context["ciclo"],
+                    user=request.user,
+                )
+            except ValidationError as exc:
+                messages.error(request, "; ".join(exc.messages))
+            except (OperationalError, ProgrammingError):
+                logger.exception("No se pudo reincorporar el alumno en Especial.")
+                messages.error(request, "No se pudo reincorporar el alumno en este momento.")
+            except IntegrityError:
+                messages.error(
+                    request,
+                    "El alumno ya se encuentra activo en este establecimiento y ciclo.",
+                )
+            else:
+                messages.success(
+                    request,
+                    "Alumno reincorporado a Educación Especial correctamente.",
+                )
+        return redirect(
+            _url_alumnos(
+                especial_context,
+                vista="historial",
+                termino=termino_busqueda,
+                pagina=pagina_solicitada,
+            )
+        )
+
+    if request.method == "POST" and vista != ALUMNOS_VISTA_DEFAULT:
+        messages.error(request, "El historial es consultivo y no admite operaciones.")
+        return redirect(
+            _url_alumnos(
+                especial_context,
+                vista=vista,
+                termino=termino_busqueda,
+                pagina=pagina_solicitada,
+            )
+        )
     
     alumno = None
     cuil_buscado = ""
@@ -764,8 +1123,14 @@ def alumnos(request):
     # La pantalla general nunca decide ni valida matrícula compartida.
     matricula_compartida_habilitada = False
     mostrar_cueanexo_matricula = False
-    abrir_modal = request.GET.get("abrir_modal_alumno") == "1"
-    abrir_modal_baja = request.GET.get("abrir_modal_baja") == "1"
+    abrir_modal = (
+        vista == ALUMNOS_VISTA_DEFAULT
+        and request.GET.get("abrir_modal_alumno") == "1"
+    )
+    abrir_modal_baja = (
+        vista == ALUMNOS_VISTA_DEFAULT
+        and request.GET.get("abrir_modal_baja") == "1"
+    )
     baja_modal_alumno = None
     baja_form = EspecialBajaMotivoForm()
     baja_error = ""
@@ -780,7 +1145,12 @@ def alumnos(request):
                 "Seleccioná un CUE-Anexo y un ciclo lectivo para dar de baja alumnos.",
             )
             return redirect(
-                _url_alumnos(especial_context, seccion_id=filtro_seccion_id)
+                _url_alumnos(
+                    especial_context,
+                    vista=vista,
+                    termino=termino_busqueda,
+                    pagina=pagina_solicitada,
+                )
             )
         baja_ok, baja_message, baja_modal_alumno, baja_form = _dar_baja_alumno_especial(
             request,
@@ -789,7 +1159,12 @@ def alumnos(request):
         if baja_ok:
             messages.success(request, baja_message)
             return redirect(
-                _url_alumnos(especial_context, seccion_id=filtro_seccion_id)
+                _url_alumnos(
+                    especial_context,
+                    vista=vista,
+                    termino=termino_busqueda,
+                    pagina=pagina_solicitada,
+                )
             )
         baja_error = baja_message
     elif request.method == "POST":
@@ -825,7 +1200,9 @@ def alumnos(request):
                     return redirect(
                         _url_alumnos(
                             especial_context,
-                            seccion_id=filtro_seccion_id,
+                            vista=vista,
+                            termino=termino_busqueda,
+                            pagina=pagina_solicitada,
                         )
                     )
                 else:
@@ -863,109 +1240,138 @@ def alumnos(request):
                 request.GET.get("alumno_banco_id"),
             )
 
-    try:
-        secciones_filtro = list(_secciones_filtro(especial_context))
-    except (OperationalError, ProgrammingError):
-        logger.exception("No se pudieron consultar las secciones para el filtro de alumnos.")
-        secciones_filtro = []
-        filtro_seccion_error = "No se pudieron consultar las secciones disponibles."
-
-    secciones_filtro_ids = {seccion.pk for seccion in secciones_filtro}
-    filtro_seccion_invalido = bool(
-        filtro_seccion_id
-        and filtro_seccion_id != SECCION_SIN_ASIGNAR
-        and filtro_seccion_id not in secciones_filtro_ids
+    pagina_estado = pagina_solicitada if vista == "historial" else None
+    alumnos_state = _alumnos_state_params(
+        especial_context,
+        vista=vista,
+        termino=termino_busqueda,
+        pagina=pagina_estado,
     )
-    if filtro_seccion_invalido and not filtro_seccion_error:
-        filtro_seccion_error = "La sección seleccionada no pertenece al contexto actual."
-    filtro_seccion_aplicado = (
-        None if filtro_seccion_invalido else filtro_seccion_id
-    )
-    querystring_alumnos = ""
-    if especial_context.get("querystring"):
-        querystring_alumnos = especial_context["querystring"]
-    if filtro_seccion_aplicado:
-        querystring_alumnos = "&".join(
-            parte
-            for parte in (querystring_alumnos, urlencode({"seccion": filtro_seccion_aplicado}))
-            if parte
-        )
+    querystring_alumnos = urlencode(alumnos_state)
 
     next_url = _url_modal_alumnos(
         especial_context,
         cuil_buscado,
-        seccion_id=filtro_seccion_aplicado,
+        vista=vista,
+        termino=termino_busqueda,
+        pagina=pagina_estado,
     )
     url_alumnos = _url_alumnos(
         especial_context,
-        seccion_id=filtro_seccion_aplicado,
+        vista=vista,
+        termino=termino_busqueda,
+        pagina=pagina_estado,
     )
-    url_alumnos_sin_filtros = _url_alumnos(especial_context)
+    actuales_url = _url_alumnos(
+        especial_context,
+        vista=ALUMNOS_VISTA_DEFAULT,
+        termino=termino_busqueda,
+        pagina=1,
+    )
+    historial_url = _url_alumnos(
+        especial_context,
+        vista="historial",
+        termino=termino_busqueda,
+        pagina=1,
+    )
 
     alumnos_banco_tabla_pendiente = False
+    page_obj = Paginator([], ALUMNOS_POR_PAGINA).get_page(1)
+    alumnos_banco = []
+    inscripciones_por_alumno = {}
+    busqueda_server = vista == "historial"
     try:
-        if filtro_seccion_invalido:
-            alumnos_banco = []
-        elif filtro_seccion_aplicado:
-            alumnos_banco = list(
-                _alumnos_banco(
-                    especial_context,
-                    seccion_id=filtro_seccion_aplicado,
-                )
+        queryset_alumnos = (
+            EspecialAlumnoBanco.objects.none()
+            if busqueda_error and busqueda_server
+            else _alumnos_banco(
+                especial_context,
+                vista=vista,
+                termino=termino_busqueda if busqueda_server else "",
+            )
+        )
+        if vista == "historial":
+            alumnos_banco, page_obj = _historial_alumnos_paginado(
+                especial_context,
+                queryset_alumnos,
+                pagina_solicitada,
             )
         else:
-            alumnos_banco = list(_alumnos_banco(especial_context))
-        if alumno and not alumno_banco_actual:
-            alumno_banco_actual = next(
-                (
-                    item
-                    for item in alumnos_banco
-                    if item.alumno_id == alumno.pk
-                    and item.estado == EspecialAlumnoBanco.Estado.ACTIVO
-                ),
-                None,
+            alumnos_banco = list(queryset_alumnos)
+            if alumno and not alumno_banco_actual:
+                alumno_banco_actual = next(
+                    (
+                        item
+                        for item in alumnos_banco
+                        if item.alumno_id == alumno.pk
+                    ),
+                    None,
+                )
+            alumno_en_banco = bool(alumno_banco_actual)
+            inscripciones_por_alumno = _inscripciones_por_alumno(
+                especial_context,
+                alumnos_banco,
             )
-        alumno_en_banco = bool(alumno_banco_actual)
     except (OperationalError, ProgrammingError):
         alumnos_banco = []
         alumnos_banco_tabla_pendiente = True
 
     try:
-        inscripciones_por_alumno = _inscripciones_por_alumno(
-            especial_context,
-            alumnos_banco,
+        secciones_disponibles = (
+            list(_secciones_disponibles(especial_context))
+            if vista == ALUMNOS_VISTA_DEFAULT
+            else []
         )
-    except (OperationalError, ProgrammingError):
-        inscripciones_por_alumno = {}
-
-    try:
-        secciones_disponibles = list(_secciones_disponibles(especial_context))
     except (OperationalError, ProgrammingError):
         logger.exception("No se pudieron consultar las secciones disponibles para alumnos.")
         secciones_disponibles = []
-    
-    # Preparar datos para el template
-    alumnos_banco = _alumnos_banco_sin_duplicados(alumnos_banco)
-    alumnos_banco = _ordenar_alumnos_por_seccion(
-        alumnos_banco,
-        inscripciones_por_alumno,
-    )
-    for item in alumnos_banco:
-        secciones_activas_ids = {
-            inscripcion.seccion_id for inscripcion in item.inscripciones_seccion
-        }
-        item.secciones_asignables = [
-            sec
-            for sec in secciones_disponibles
-            if sec.pk not in secciones_activas_ids
-            and sec.alumnos_activos < sec.capacidad_total
-        ]
-        item.secciones_bloqueadas = item.inscripciones_seccion
-        item.url_editar_alumno = _url_carga_alumno(
-            item.alumno_cuil_snapshot or getattr(item.alumno, "cuil", ""),
-            url_alumnos,
+
+    if vista == ALUMNOS_VISTA_DEFAULT:
+        alumnos_banco = _alumnos_banco_sin_duplicados(alumnos_banco)
+        alumnos_banco = _preparar_alumnos_actuales(
+            alumnos_banco,
+            inscripciones_por_alumno,
         )
-    _marcar_grupos_seccion(alumnos_banco)
+        for item in alumnos_banco:
+            secciones_activas_ids = {
+                inscripcion.seccion_id for inscripcion in item.inscripciones_seccion
+            }
+            item.secciones_asignables = [
+                sec
+                for sec in secciones_disponibles
+                if sec.pk not in secciones_activas_ids
+                and sec.alumnos_activos < sec.capacidad_total
+            ]
+            item.secciones_bloqueadas = item.inscripciones_seccion
+            item.url_editar_alumno = _url_carga_alumno(
+                item.alumno_cuil_snapshot or getattr(item.alumno, "cuil", ""),
+                url_alumnos,
+            )
+        page_obj = Paginator(
+            alumnos_banco,
+            max(len(alumnos_banco), 1),
+        ).get_page(1)
+
+    pagina_anterior_url = (
+        _url_alumnos(
+            especial_context,
+            vista=vista,
+            termino=termino_busqueda,
+            pagina=page_obj.previous_page_number(),
+        )
+        if page_obj.has_previous()
+        else ""
+    )
+    pagina_siguiente_url = (
+        _url_alumnos(
+            especial_context,
+            vista=vista,
+            termino=termino_busqueda,
+            pagina=page_obj.next_page_number(),
+        )
+        if page_obj.has_next()
+        else ""
+    )
 
     context.update(
         {
@@ -973,11 +1379,16 @@ def alumnos(request):
             "alumno": alumno,
             "alumno_row": _alumno_row(alumno),
             "alumnos": alumnos_banco,
-            "secciones_filtro": secciones_filtro,
-            "filtro_seccion": filtro_seccion_aplicado,
-            "filtro_seccion_error": filtro_seccion_error,
             "alumnos_querystring": querystring_alumnos,
-            "alumnos_filtros_limpiar_url": url_alumnos_sin_filtros,
+            "actuales_url": actuales_url,
+            "historial_url": historial_url,
+            "modo_historial": vista == "historial",
+            "vista_alumnos": vista,
+            "termino_busqueda": termino_busqueda,
+            "busqueda_error": busqueda_error,
+            "page_obj": page_obj,
+            "pagina_anterior_url": pagina_anterior_url,
+            "pagina_siguiente_url": pagina_siguiente_url,
             "secciones_disponibles": secciones_disponibles,
             "alumnos_banco_tabla_pendiente": alumnos_banco_tabla_pendiente,
             "alumno_en_banco": alumno_en_banco,
@@ -989,7 +1400,9 @@ def alumnos(request):
             "modal_alumno_abierto": abrir_modal,
             "modal_action_url": _url_modal_alumnos(
                 especial_context,
-                seccion_id=filtro_seccion_aplicado,
+                vista=vista,
+                termino=termino_busqueda,
+                pagina=pagina_solicitada,
             ),
             "modal_volver_url": url_alumnos,
             "baja_action_url": url_alumnos,

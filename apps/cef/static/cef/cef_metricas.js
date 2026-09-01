@@ -20,18 +20,22 @@
     var clearCefsButton = document.getElementById("cefMetricasLimpiarCefs");
     var areaSelect = document.getElementById("cefMetricasArea");
     var indicatorSelect = document.getElementById("cefMetricasIndicador");
+    var variantSelect = document.getElementById("cefMetricasVariante");
     var indicatorHelp = document.getElementById("cefMetricasIndicadorAyuda");
     var groupSelect = document.getElementById("cefMetricasAgrupar");
     var compareSelect = document.getElementById("cefMetricasComparar");
     var chartTypeSelect = document.getElementById("cefMetricasGrafico");
     var filtersRoot = document.getElementById("cefMetricasFiltros");
-    var filtersSection = document.getElementById("cefMetricasFiltrosSection");
     var filtersCount = document.getElementById("cefMetricasFiltrosCount");
     var noFilters = document.getElementById("cefMetricasSinFiltros");
+    var explorationRoot = document.getElementById("cefMetricasTipos");
+    var characteristicsTitle = document.getElementById("cefMetricasCaracteristicasTitulo");
+    var selectedQueryNode = document.getElementById("cefMetricasConsultaSeleccionada");
     var applyButton = document.getElementById("cefMetricasAplicar");
     var clearButton = document.getElementById("cefMetricasLimpiar");
     var statusRoot = document.getElementById("cefMetricasEstado");
     var resultsRoot = document.getElementById("cefMetricasResultado");
+    var resultTitle = document.getElementById("cefMetricasResultadoTitulo");
     var summaryNode = document.getElementById("cefMetricasResumen");
     var exportLink = document.getElementById("cefMetricasExportar");
     var kpiLabel = document.getElementById("cefMetricasKpiLabel");
@@ -40,6 +44,7 @@
     var chartRoot = document.getElementById("cefMetricasChart");
     var chartBadge = document.getElementById("cefMetricasChartBadge");
     var tableRoot = document.getElementById("cefMetricasTabla");
+    var tableTitle = document.getElementById("cefMetricasTablaTitulo");
     var definitionNode = document.getElementById("cefMetricasDefinicion");
     var notesNode = document.getElementById("cefMetricasNotas");
 
@@ -47,6 +52,7 @@
     var requestVersion = 0;
     var lastResult = null;
     var lastParams = null;
+    var selectedExplorationKey = "";
     var ALL_SCOPE_VALUE = "__all__";
     var previousScopeSelections = new WeakMap();
     var colors = ["#2563eb", "#0f766e", "#d97706", "#7c3aed", "#dc2626", "#0891b2", "#4d7c0f", "#be185d"];
@@ -199,6 +205,25 @@
         return asList(config.areas);
     }
 
+    function explorations() {
+        return asList(config.exploraciones || config.explorations);
+    }
+
+    function currentExploration() {
+        return findByKey(explorations(), selectedExplorationKey) || explorations()[0] || null;
+    }
+
+    function explorationVariants(exploration) {
+        return asList(exploration && (exploration.variants || exploration.variantes));
+    }
+
+    function currentVariant() {
+        var wanted = String(variantSelect.value || "");
+        return explorationVariants(currentExploration()).find(function (variant) {
+            return String(variant.indicator || variant.indicador || "") === wanted;
+        }) || explorationVariants(currentExploration())[0] || null;
+    }
+
     function currentArea() {
         return findByKey(areas(), areaSelect.value) || areas()[0] || null;
     }
@@ -217,8 +242,8 @@
         var indicator = currentIndicator();
         var definition = indicator && (indicator.definition || indicator.definicion);
         indicatorHelp.textContent = definition
-            ? "Qué representa: " + definition
-            : "Elegí una medición para ver qué representa el número.";
+            ? definition
+            : "Elegí qué información querés ver.";
     }
 
     function areaDefinitions(area, name) {
@@ -245,7 +270,7 @@
         shell.className = "cef-field";
         shell.dataset.metricasFilter = itemKey(filter);
         var label = document.createElement("label");
-        label.textContent = "Incluir sólo: " + itemLabel(filter);
+        label.textContent = itemLabel(filter);
         shell.appendChild(label);
         return { shell: shell, label: label };
     }
@@ -299,11 +324,16 @@
         return parts.shell;
     }
 
-    function renderFilters(openFilters) {
+    function renderFilters() {
         var area = currentArea();
         var indicator = currentIndicator();
+        var exploration = currentExploration();
         var definitions = areaDefinitions(area, "filters");
-        var allowed = indicator && (indicator.filters || indicator.filtros);
+        var indicatorAllowed = asList(indicator && (indicator.filters || indicator.filtros)).map(itemKey);
+        var explorationAllowed = asList(exploration && (exploration.filters || exploration.filtros)).map(itemKey);
+        var allowed = explorationAllowed.filter(function (key) {
+            return indicatorAllowed.indexOf(key) !== -1;
+        });
         var visible = resolveDefinitions(definitions, allowed || []);
         var labelOverrides = indicator && (indicator.filter_labels || indicator.etiquetas_filtros) || {};
         destroySelects(filtersRoot);
@@ -319,14 +349,23 @@
                     : renderMultiFilter(filter)
             );
         });
-        filtersCount.textContent = visible.length + (visible.length === 1 ? " filtro" : " filtros");
         noFilters.hidden = visible.length > 0;
         filtersRoot.hidden = visible.length === 0;
-        if (filtersSection) filtersSection.hidden = visible.length === 0;
-        if (filtersSection && openFilters !== undefined) {
-            filtersSection.open = visible.length > 0 && openFilters;
-        }
         initSelects(filtersRoot);
+        updateFiltersCount();
+    }
+
+    function updateFiltersCount() {
+        var active = new Set();
+        filtersRoot.querySelectorAll("select[data-filter-key]").forEach(function (select) {
+            if (selectedValues(select).length) active.add(select.dataset.filterKey);
+        });
+        filtersRoot.querySelectorAll("input[data-filter-key]").forEach(function (input) {
+            if (input.value.trim()) active.add(input.dataset.filterKey);
+        });
+        filtersCount.textContent = active.size
+            ? active.size + (active.size === 1 ? " filtro" : " filtros")
+            : "Sin filtros";
     }
 
     function dimensionList(indicator, property) {
@@ -359,13 +398,134 @@
         populateCompare(preferredCompare || "");
     }
 
-    function populateIndicators(preferred, openFilters) {
+    function populateIndicators(preferred) {
         var indicators = areaIndicators(currentArea());
         var selected = findByKey(indicators, preferred) ? preferred : (indicators[0] ? itemKey(indicators[0]) : "");
         replaceOptions(indicatorSelect, indicators, selected);
         updateIndicatorHelp();
-        renderFilters(openFilters);
-        populateDimensions();
+        renderFilters();
+    }
+
+    function updateExplorationSelection(exploration) {
+        var key = exploration ? itemKey(exploration) : "";
+        explorationRoot.querySelectorAll("[data-metricas-exploration]").forEach(function (button) {
+            var selected = button.dataset.metricasExploration === key;
+            button.classList.toggle("is-selected", selected);
+            button.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+    }
+
+    function scopeCount(select, items) {
+        var values = selectedValues(select);
+        return values.indexOf(ALL_SCOPE_VALUE) !== -1 ? asList(items).length : values.length;
+    }
+
+    function scopeSummary(select, allLabel) {
+        var values = selectedValues(select);
+        if (values.indexOf(ALL_SCOPE_VALUE) !== -1) return allLabel;
+        var labels = Array.prototype.slice.call(select.selectedOptions || []).map(function (option) {
+            return option.textContent.trim();
+        }).filter(Boolean);
+        if (!labels.length) return "sin selección";
+        if (labels.length <= 2) return labels.join(" y ");
+        return labels.slice(0, 2).join(", ") + " y " + (labels.length - 2) + " más";
+    }
+
+    function chooseAutomaticDimensions() {
+        var exploration = currentExploration();
+        var indicator = currentIndicator();
+        var groups = dimensionList(indicator, "groupings").map(itemKey);
+        var comparisons = dimensionList(indicator, "comparisons").map(itemKey);
+        var cycleCount = scopeCount(cyclesSelect, config.ciclos || config.cycles || []);
+        var cefCount = scopeCount(cefsSelect, config.cefs || []);
+        var group = "";
+        var compare = "";
+
+        if (cycleCount > 1 && cefCount > 1 && groups.indexOf("cef") !== -1) {
+            group = "cef";
+            if (comparisons.indexOf("ciclo") !== -1) compare = "ciclo";
+        } else if (cycleCount > 1 && groups.indexOf("ciclo") !== -1) {
+            group = "ciclo";
+        } else if (cefCount > 1 && groups.indexOf("cef") !== -1) {
+            group = "cef";
+        } else {
+            var variant = currentVariant();
+            var preferred = String(
+                variant && (variant.default_group || variant.agrupacion_default)
+                || exploration && (exploration.default_group || exploration.agrupacion_default)
+                || ""
+            );
+            group = groups.indexOf(preferred) !== -1 ? preferred : (groups[0] || "");
+        }
+        populateDimensions(group, compare);
+        resetChartChoice();
+    }
+
+    function updateQuerySummary() {
+        var exploration = currentExploration();
+        var variant = currentVariant();
+        if (!exploration || !variant || !selectedQueryNode) return;
+        selectedQueryNode.textContent = itemLabel(exploration) + " · " + itemLabel(variant) + " · "
+            + scopeSummary(cyclesSelect, "Todos los ciclos") + " · "
+            + scopeSummary(cefsSelect, "Todos los CEF");
+    }
+
+    function applyVariant(indicatorKey) {
+        populateIndicators(indicatorKey);
+        chooseAutomaticDimensions();
+        resetChartChoice();
+        updateQuerySummary();
+    }
+
+    function applyExploration(exploration) {
+        if (!exploration) return;
+        selectedExplorationKey = itemKey(exploration);
+        areaSelect.value = String(exploration.area || "");
+        var variants = explorationVariants(exploration);
+        replaceOptions(variantSelect, variants.map(function (variant) {
+            return {key: variant.indicator || variant.indicador, label: itemLabel(variant)};
+        }), variants[0] && (variants[0].indicator || variants[0].indicador));
+        characteristicsTitle.replaceChildren();
+        var step = document.createElement("span");
+        step.textContent = "3";
+        var optional = document.createElement("small");
+        optional.textContent = " (opcional)";
+        characteristicsTitle.append(step, document.createTextNode(" Filtrá " + itemLabel(exploration).toLowerCase()), optional);
+        updateExplorationSelection(exploration);
+        applyVariant(variantSelect.value);
+        var applyLabel = applyButton.querySelector("span");
+        if (applyLabel) applyLabel.textContent = "Buscar " + itemLabel(exploration).toLowerCase();
+    }
+
+    function renderExplorations() {
+        explorationRoot.replaceChildren();
+        explorations().forEach(function (exploration) {
+            var button = document.createElement("button");
+            button.type = "button";
+            button.className = "cef-metricas-query-card";
+            button.dataset.metricasExploration = itemKey(exploration);
+            button.setAttribute("aria-pressed", "false");
+            button.setAttribute("aria-label", itemLabel(exploration));
+            button.title = String(exploration.description || exploration.descripcion || "");
+
+            var iconWrap = document.createElement("span");
+            iconWrap.className = "cef-metricas-query-card-icon";
+            var icon = document.createElement("i");
+            icon.className = String(exploration.icon || "fa-solid fa-chart-column");
+            icon.setAttribute("aria-hidden", "true");
+            iconWrap.appendChild(icon);
+
+            var content = document.createElement("span");
+            var title = document.createElement("strong");
+            title.textContent = itemLabel(exploration);
+            content.appendChild(title);
+            button.append(iconWrap, content);
+            button.addEventListener("click", function () {
+                applyExploration(exploration);
+                invalidatePendingRequest();
+            });
+            explorationRoot.appendChild(button);
+        });
     }
 
     function resetChartChoice() {
@@ -381,7 +541,16 @@
         var defaults = config.defaults || config.predeterminados || {};
         var cycleItems = config.ciclos || config.cycles || [];
         var defaultCycles = defaults.ciclos || defaults.cycles || [];
-        replaceOptions(cyclesSelect, scopeItems(cycleItems), defaultCycles.length ? defaultCycles : [ALL_SCOPE_VALUE]);
+        if (cycleItems.length) {
+            cyclesSelect.dataset.placeholder = "Todos";
+            replaceOptions(cyclesSelect, scopeItems(cycleItems), defaultCycles.length ? defaultCycles : [ALL_SCOPE_VALUE]);
+        } else {
+            cyclesSelect.dataset.placeholder = "No hay ciclos disponibles";
+            replaceOptions(cyclesSelect, [{key: "", label: "No hay ciclos disponibles"}], []);
+        }
+        cyclesSelect.disabled = cycleItems.length === 0;
+        clearCyclesButton.disabled = cycleItems.length === 0;
+        applyButton.disabled = cycleItems.length === 0;
         replaceOptions(cefsSelect, scopeItems(config.cefs || []), (defaults.cefs || []).length ? defaults.cefs : [ALL_SCOPE_VALUE]);
         rememberScopeSelection(cyclesSelect);
         rememberScopeSelection(cefsSelect);
@@ -390,9 +559,11 @@
         var areaItems = areas();
         var defaultArea = defaults.area || (areaItems[0] && itemKey(areaItems[0])) || "";
         replaceOptions(areaSelect, areaItems, defaultArea);
-        populateIndicators(defaults.indicador || defaults.indicator, false);
-        populateDimensions(defaults.agrupar || defaults.group, defaults.comparar || defaults.compare);
-        chartTypeSelect.value = defaults.grafico || defaults.chart || "auto";
+        renderExplorations();
+        applyExploration(explorations()[0] || null);
+        if (!cycleItems.length) {
+            setStatus("No hay ciclos disponibles para consultar.");
+        }
     }
 
     function appendRepeated(params, key, values) {
@@ -401,7 +572,7 @@
 
     function buildParams() {
         var cycles = scopeValues(cyclesSelect, config.ciclos || config.cycles || []);
-        if (!cycles.length) throw new Error("Seleccioná al menos un ciclo para realizar el análisis.");
+        if (!cycles.length) throw new Error("Seleccioná al menos un ciclo para realizar la consulta.");
         var params = new URLSearchParams();
         appendRepeated(params, "ciclos", cycles);
         var selectedCefs = selectedValues(cefsSelect);
@@ -435,11 +606,17 @@
         if (window.CEFLoading && typeof window.CEFLoading.startButton === "function") {
             if (busy) window.CEFLoading.startButton(applyButton);
             else window.CEFLoading.restoreButton(applyButton);
+            if (!busy && !(config.ciclos || config.cycles || []).length) applyButton.disabled = true;
             return;
         }
-        applyButton.disabled = busy;
+        applyButton.disabled = busy || !(config.ciclos || config.cycles || []).length;
         var label = applyButton.querySelector("span");
-        if (label) label.textContent = busy ? "Analizando…" : "Aplicar";
+        if (label) {
+            var exploration = currentExploration();
+            label.textContent = busy
+                ? "Buscando…"
+                : "Buscar " + (exploration ? itemLabel(exploration).toLowerCase() : "");
+        }
     }
 
     function setStatus(message, mode) {
@@ -467,7 +644,7 @@
     function announceStatus(message) {
         statusRoot.replaceChildren();
         var announcement = document.createElement("span");
-        announcement.className = "visually-hidden";
+        announcement.className = "cef-metricas-sr-only";
         announcement.textContent = message;
         statusRoot.appendChild(announcement);
     }
@@ -478,7 +655,7 @@
         requestController = null;
         setBusy(false);
         if (lastResult) {
-            setStatus("Hay cambios sin aplicar. Presioná Aplicar para actualizar el resultado.");
+            setStatus("Hay cambios sin aplicar. Presioná Ver resultado para actualizarlo.");
             exportLink.setAttribute("aria-disabled", "true");
         } else {
             setStatus("");
@@ -801,14 +978,14 @@
         var data = chartData(result);
         var type = normalizedChartType(requestedType && requestedType !== "auto" ? requestedType : data.type);
         chartBadge.textContent = chartLabels[type] || type;
-        chartRoot.setAttribute("aria-label", (chartLabels[type] || "Gráfico") + " del resultado de métricas");
+        chartRoot.setAttribute("aria-label", (chartLabels[type] || "Gráfico") + " del resultado de la consulta");
         if (data.omitted) {
             chartBadge.textContent = "Refiná los filtros";
             renderChartEmpty(data.message);
             return;
         }
         if (type === "kpi" || (!groupSelect.value && !data.labels.length)) {
-            renderChartEmpty("El total se representa en el indicador principal.");
+            renderChartEmpty("El total se muestra en el recuadro principal.");
             return;
         }
         if (chartIsEmpty(data)) {
@@ -824,6 +1001,10 @@
         var tableData = result.table || result.tabla || {};
         var columns = asList(tableData.columns || tableData.columnas);
         var rows = Array.isArray(tableData.rows || tableData.filas) ? (tableData.rows || tableData.filas) : [];
+        function isNumericColumn(column) {
+            return String(column.type || column.tipo || "") === "number"
+                || ["valor", "numerador", "denominador", "cantidad"].indexOf(itemKey(column)) !== -1;
+        }
         if (!rows.length || !columns.length) {
             var empty = document.createElement("div");
             empty.className = "cef-metricas-help";
@@ -866,7 +1047,7 @@
         search.type = "search";
         search.placeholder = "Buscar…";
         search.setAttribute("data-cef-table-search", "");
-        search.setAttribute("aria-label", "Buscar en la tabla de métricas");
+        search.setAttribute("aria-label", "Buscar en los resultados");
         var searchClear = document.createElement("button");
         searchClear.type = "button";
         searchClear.className = "cef-search-clear";
@@ -892,7 +1073,7 @@
             var th = document.createElement("th");
             th.scope = "col";
             th.textContent = itemLabel(column);
-            if (["valor", "numerador", "denominador"].indexOf(itemKey(column)) !== -1) {
+            if (isNumericColumn(column)) {
                 th.classList.add("is-numeric");
             }
             headerRow.appendChild(th);
@@ -906,7 +1087,7 @@
                 var key = itemKey(column);
                 var value = Array.isArray(row) ? row[index] : row[key];
                 td.textContent = displayValue(value);
-                if (["valor", "numerador", "denominador"].indexOf(key) !== -1) {
+                if (isNumericColumn(column)) {
                     td.classList.add("is-numeric");
                 }
                 tr.appendChild(td);
@@ -935,17 +1116,7 @@
     }
 
     function resultSummary(result) {
-        var query = result.query || result.consulta || {};
-        var summary = query.summary || query.resumen || result.summary || result.resumen;
-        if (!summary && Array.isArray(query.filter_summary)) {
-            var parts = query.filter_summary.slice();
-            parts.push("Mostrado por: " + (query.agrupar ? (query.agrupar_label || query.agrupar) : "total general"));
-            if (query.comparar) {
-                parts.push("Comparación: " + (query.comparar_label || query.comparar));
-            }
-            summary = parts.join(" · ");
-        }
-        return String(summary || "Consulta aplicada con los filtros seleccionados.");
+        return selectedQueryNode.textContent || "Consulta aplicada";
     }
 
     function renderNotes(result) {
@@ -982,10 +1153,23 @@
         lastResult = result;
         lastParams = new URLSearchParams(params.toString());
         resultsRoot.hidden = false;
+        var exploration = currentExploration();
+        var variant = currentVariant();
+        var query = result.query || result.consulta || {};
+        resultTitle.textContent = String(
+            variant && (variant.result_label || variant.etiqueta_resultado)
+            || (exploration ? itemLabel(exploration) + " encontrados" : "Resultados")
+        );
+        var tableData = result.table || result.tabla || {};
+        tableTitle.textContent = tableData.title || tableData.titulo || (
+            query.agrupar
+                ? (exploration ? itemLabel(exploration) : "Cantidad") + " por " + String(query.agrupar_label || query.agrupar)
+                : "Total general"
+        );
         summaryNode.textContent = resultSummary(result);
         announceStatus("Resultado actualizado. " + summaryNode.textContent);
         var total = result.total || result.kpi || {};
-        kpiLabel.textContent = String(total.label || total.etiqueta || "Total");
+        kpiLabel.textContent = String(variant && (variant.result_label || variant.etiqueta_resultado) || total.label || total.etiqueta || "Total");
         kpiValue.textContent = total.formatted !== undefined ? String(total.formatted) : formatNumber(total.value);
         var detail = total.detail || total.detalle || "";
         if (!detail && total.numerator !== undefined && total.denominator !== undefined) {
@@ -993,7 +1177,7 @@
         }
         if (!detail && total.unit) detail = String(total.unit);
         kpiDetail.textContent = detail;
-        definitionNode.textContent = String(result.definition || result.definicion || "El indicador se calculó para el alcance seleccionado.");
+        definitionNode.textContent = String(result.definition || result.definicion || "La información corresponde al alcance seleccionado.");
         renderNotes(result);
         updateChartOptions(result);
         renderChart(result, chartTypeSelect.value);
@@ -1032,7 +1216,11 @@
         }).catch(function (error) {
             if (error && error.name === "AbortError") return;
             if (version !== requestVersion) return;
-            setStatus(error && error.message ? error.message : "No se pudo calcular la consulta.", "error");
+            var message = error && error.message ? error.message : "No se pudo calcular la consulta.";
+            if (message === "Failed to fetch") {
+                message = "No se pudo conectar con el servidor. Volvé a intentarlo.";
+            }
+            setStatus(message, "error");
         }).finally(function () {
             if (requestController === controller) requestController = null;
             if (version === requestVersion) setBusy(false);
@@ -1047,39 +1235,34 @@
         }
     }
 
-    areaSelect.addEventListener("change", function () {
-        populateIndicators(undefined, false);
-        resetChartChoice();
+    variantSelect.addEventListener("change", function () {
+        applyVariant(variantSelect.value);
+        invalidatePendingRequest();
     });
-
-    indicatorSelect.addEventListener("change", function () {
-        renderFilters(false);
-        populateDimensions();
-        resetChartChoice();
-    });
-
-    groupSelect.addEventListener("change", function () {
-        populateCompare("");
-        resetChartChoice();
-    });
-
-    compareSelect.addEventListener("change", resetChartChoice);
 
     cyclesSelect.addEventListener("change", function () {
         normalizeScopeSelection(cyclesSelect);
+        chooseAutomaticDimensions();
+        updateQuerySummary();
     });
 
     cefsSelect.addEventListener("change", function () {
         normalizeScopeSelection(cefsSelect);
+        chooseAutomaticDimensions();
+        updateQuerySummary();
     });
 
     clearCyclesButton.addEventListener("click", function () {
         selectAllScope(cyclesSelect);
+        chooseAutomaticDimensions();
+        updateQuerySummary();
         invalidatePendingRequest();
     });
 
     clearCefsButton.addEventListener("click", function () {
         selectAllScope(cefsSelect);
+        chooseAutomaticDimensions();
+        updateQuerySummary();
         invalidatePendingRequest();
     });
 
@@ -1090,6 +1273,14 @@
 
     form.addEventListener("change", function (event) {
         if (event.target === chartTypeSelect) return;
+        if (event.target === groupSelect) {
+            populateCompare(compareSelect.value);
+            resetChartChoice();
+        } else if (event.target === compareSelect) {
+            resetChartChoice();
+        }
+        updateFiltersCount();
+        updateQuerySummary();
         invalidatePendingRequest();
     });
 
@@ -1106,7 +1297,7 @@
         exportLink.href = "#";
         exportLink.setAttribute("aria-disabled", "true");
         initializeForm();
-        submitCurrent();
+        if ((config.ciclos || config.cycles || []).length) setStatus("");
     });
 
     exportLink.addEventListener("click", function (event) {
@@ -1114,9 +1305,8 @@
     });
 
     initializeForm();
-    if (!areas().length) {
-        setStatus("No hay áreas de métricas configuradas.", "error");
+    if (!areas().length || !explorations().length) {
+        setStatus("No hay consultas configuradas.", "error");
         return;
     }
-    submitCurrent();
 })();

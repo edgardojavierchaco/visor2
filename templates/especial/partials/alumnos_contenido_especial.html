@@ -1,56 +1,37 @@
 <div class="cef-panel">
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">Alumnos <span>» Gestión de Alumnos</span></h2>
-        {% if especial_context.puede_operar %}
-            <div class="cef-panel-actions">
+        <div class="cef-panel-actions{% if not especial_context.puede_operar or modo_historial %} is-empty{% endif %}" data-especial-subview-actions>
+            {% if especial_context.puede_operar and not modo_historial %}
                 <button class="btn btn-primary" type="button" data-open-personas-modal>
                     <i class="fa-solid fa-user-plus"></i> Agregar alumno
                 </button>
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
 
-    <div class="cef-panel-body">
+    <div class="cef-panel-body" data-especial-search data-especial-search-view="{{ vista_alumnos }}" data-especial-search-view-param="vista" data-especial-search-term-param="q" data-especial-search-page-param="page" data-especial-search-reset-params="seccion" data-especial-search-results-selector="[data-especial-search-results]">
+        <div class="cef-alumnos-view-tabs" data-especial-view-tabs role="tablist" aria-label="Vista de alumnos">
+            <a class="cef-alumnos-view-tab{% if not modo_historial %} is-active{% endif %}" href="{{ actuales_url }}" data-especial-search-state-link data-especial-subview-link data-especial-target-selector="[data-especial-search-results]" data-especial-subview="actuales" data-especial-section="alumnos" role="tab" aria-selected="{% if not modo_historial %}true{% else %}false{% endif %}">Actuales</a>
+            <a class="cef-alumnos-view-tab{% if modo_historial %} is-active{% endif %}" href="{{ historial_url }}" data-especial-search-state-link data-especial-subview-link data-especial-target-selector="[data-especial-search-results]" data-especial-subview="historial" data-especial-section="alumnos" role="tab" aria-selected="{% if modo_historial %}true{% else %}false{% endif %}">Historial</a>
+            <span class="cef-alumnos-view-indicator" data-especial-view-indicator aria-hidden="true"></span>
+        </div>
+
         <div class="cef-tools">
             <div class="cef-tools-left">
-                <span class="cef-tools-label">Mostrar</span>
-                <select data-cef-page-size>
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                </select>
-                <span class="cef-tools-label">registros</span>
-            </div>
-            <div class="cef-tools-right">
                 <div class="cef-search-wrap">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input id="searchAlumnos" type="search" placeholder="Buscar…" data-cef-table-search>
-                    <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+                    <span class="especial-material-symbol cef-search-icon" aria-hidden="true">tab_search</span>
+                    <input id="searchAlumnos" type="text" value="{{ termino_busqueda }}" placeholder="Buscar por nombre, CUIL, DNI o sección..." maxlength="100" autocomplete="off" data-especial-search-input aria-label="Buscar alumnos por nombre, CUIL, DNI o sección">
                 </div>
             </div>
         </div>
 
-        <form method="get" action="{% url 'especial:alumnos' %}" class="cef-alumnos-section-filter" aria-label="Filtrar alumnos por sección">
-            {% if especial_context.cueanexo %}<input type="hidden" name="cueanexo" value="{{ especial_context.cueanexo }}">{% endif %}
-            {% if especial_context.ciclo %}<input type="hidden" name="ciclo" value="{{ especial_context.ciclo.pk }}">{% endif %}
-            <label class="cef-tools-label" for="id_filtro_seccion_alumnos">Sección</label>
-            <select id="id_filtro_seccion_alumnos" name="seccion" aria-describedby="filtro-seccion-alumnos-ayuda">
-                <option value="">Todas</option>
-                <option value="sin_seccion"{% if filtro_seccion == "sin_seccion" %} selected{% endif %}>Sin sección asignada</option>
-                {% for seccion in secciones_filtro %}
-                    <option value="{{ seccion.pk }}"{% if filtro_seccion == seccion.pk %} selected{% endif %}>{{ seccion.nombre_seccion }}</option>
-                {% endfor %}
-            </select>
-            <button class="btn btn-outline-primary btn-sm" type="submit">Aplicar filtros</button>
-            <a class="btn btn-outline-secondary btn-sm" href="{{ alumnos_filtros_limpiar_url }}">Limpiar filtros</a>
-            {% if filtro_seccion_error %}<small id="filtro-seccion-alumnos-ayuda" class="text-danger">{{ filtro_seccion_error }}</small>{% else %}<small id="filtro-seccion-alumnos-ayuda" class="text-muted">Se muestran alumnos inscriptos en la sección seleccionada.</small>{% endif %}
-        </form>
+        <div data-especial-search-results data-especial-search-mode="{% if modo_historial %}server{% else %}client{% endif %}">
+        {% if busqueda_error %}<div class="alert alert-danger mb-3" role="alert">{{ busqueda_error }}</div>{% endif %}
 
-        {% if alumnos %}
+        {% if alumnos and not modo_historial %}
             <div class="cef-table-wrap">
-                <table class="cef-dt cef-alumnos-table" data-cef-table data-cef-alumnos-seccion-groups>
+                <table class="cef-dt cef-alumnos-table" data-especial-search-table>
                     <thead>
                         <tr>
                             <th>Alumno</th>
@@ -64,30 +45,12 @@
                     </thead>
                     <tbody>
                         {% for item in alumnos %}
-                            {% if item.muestra_grupo_seccion %}
-                                <tr class="cef-alumno-seccion-grupo" data-cef-table-group-row="true" data-cef-table-group-key="{{ item.seccion_principal_key }}" data-cef-alumno-seccion-header>
-                                    <th colspan="7" scope="rowgroup">
-                                        <button class="cef-alumno-seccion-toggle" type="button" data-cef-alumno-seccion-toggle aria-expanded="false">
-                                            <span class="cef-alumno-seccion-arrow" data-cef-alumno-seccion-arrow aria-hidden="true"><i class="fa-solid fa-chevron-right"></i></span>
-                                            <span class="cef-alumno-seccion-label">{{ item.seccion_principal_label }}</span>
-                                            <span class="cef-alumno-seccion-count" data-cef-alumno-seccion-count></span>
-                                        </button>
-                                    </th>
-                                </tr>
-                            {% endif %}
-                            <tr class="{% if item.estado != 'activo' %}cef-row-inactive {% endif %}oculta-por-seccion" data-cef-table-data-row="true" data-cef-table-group-key="{{ item.seccion_principal_key }}" data-cef-alumno-seccion-row>
+                            <tr data-especial-search-row data-especial-search-text="{{ item.alumno.apellidos }} {{ item.alumno.nombres }} {{ item.alumno_nombre_snapshot }} {{ item.alumno_cuil_snapshot|default:item.alumno.cuil }} {{ item.alumno_documento_snapshot|default:item.alumno.nro_doc }} {% for inscripcion in item.inscripciones_seccion %}{{ inscripcion.seccion.nombre_seccion }} {% endfor %}">
                                 <td><strong>{{ item.alumno_nombre_snapshot|default:item.alumno }}</strong></td>
                                 <td>{{ item.alumno_cuil_snapshot|default:"-" }}</td>
-                                <td>{{ item.alumno_documento_snapshot|default:"-" }}</td>
+                                <td>{{ item.alumno_documento_snapshot|default:item.alumno.nro_doc|default:"-" }}</td>
                                 <td>
-                                    <span class="badge text-bg-{% if item.estado == 'activo' %}success{% elif item.estado == 'baja' %}secondary{% else %}primary{% endif %}">
-                                        {{ item.get_estado_display }}
-                                    </span>
-                                    {% if item.estado == 'baja' %}
-                                        <div class="small text-muted mt-1">
-                                            {{ item.fecha_baja|date:"d/m/Y"|default:"-" }} · {{ item.motivo_baja|default:"Sin motivo" }}
-                                        </div>
-                                    {% endif %}
+                                    <span class="badge text-bg-success">{{ item.get_estado_display }}</span>
                                 </td>
                                 <td>{{ item.fecha_alta|date:"d/m/Y" }}</td>
                                 <td>
@@ -136,6 +99,154 @@
                     </tbody>
                 </table>
             </div>
+        {% elif alumnos and modo_historial %}
+            <div class="cef-table-wrap">
+                <table class="cef-dt cef-alumnos-table cef-historial-table">
+                    <thead>
+                        <tr>
+                            <th>ALUMNO</th>
+                            <th>CUIL</th>
+                            <th>DOCUMENTO</th>
+                            <th>ESTADO ACTUAL</th>
+                            <th>ACCIÓN ACTUAL</th>
+                            <th>HISTORIAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in alumnos %}
+                            <tr class="cef-historial-summary-row" id="alumno-historial-resumen-{{ item.alumno_id }}">
+                                <td>
+                                    <div class="cef-historial-alumno">
+                                        <span class="especial-material-symbol cef-historial-summary-chevron" aria-hidden="true">chevron_right</span>
+                                        <span class="cef-historial-person" aria-hidden="true">
+                                            <span class="especial-material-symbol">person</span>
+                                        </span>
+                                        <strong>{{ item.alumno_nombre_snapshot|default:item.alumno }}</strong>
+                                    </div>
+                                </td>
+                                <td>{{ item.alumno_cuil_snapshot|default:"—" }}</td>
+                                <td>{{ item.alumno_documento_snapshot|default:"—" }}</td>
+                                <td>
+                                    <span class="cef-historial-status{% if item.estado == 'activo' %} is-active{% else %} is-closed{% endif %}">
+                                        {{ item.estado_label }}
+                                    </span>
+                                    <small class="cef-historial-status-context">en ciclo {{ item.ciclo.anio|default:"—" }}</small>
+                                </td>
+                                <td>
+                                    {% if item.estado == 'baja' and item.banco_reincorporable and especial_context.puede_operar %}
+                                        <form method="post" class="cef-historial-reincorporar-form" data-especial-reincorporar-form>
+                                            {% csrf_token %}
+                                            <input type="hidden" name="accion" value="reincorporar_alumno">
+                                            <input type="hidden" name="alumno_banco_id" value="{{ item.banco_reincorporable.pk }}">
+                                            <button class="btn btn-outline-success btn-sm cef-historial-reincorporar" type="button" data-especial-reincorporar-open data-alumno-nombre="{{ item.alumno_nombre_snapshot|default:item.alumno }}" aria-haspopup="dialog">
+                                                <span class="especial-material-symbol cef-historial-icon" aria-hidden="true">person_add</span>
+                                                Reincorporar
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <button class="btn btn-outline-primary btn-sm cef-historial-toggle" type="button" data-especial-historial-toggle data-especial-historial-detail="alumno-historial-detalle-{{ item.alumno_id }}" aria-expanded="false" aria-controls="alumno-historial-detalle-{{ item.alumno_id }}">
+                                        <span class="especial-material-symbol cef-historial-icon" aria-hidden="true">calendar_clock</span>
+                                        Historial ({{ item.historial_periodos|length }})
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="cef-historial-detail-row" id="alumno-historial-detalle-{{ item.alumno_id }}" data-especial-historial-detail-row hidden aria-hidden="true" aria-labelledby="alumno-historial-resumen-{{ item.alumno_id }}">
+                                <td colspan="6">
+                                    <section class="cef-historial-detail" aria-label="Historial del alumno en Educación Especial">
+                                        <header class="cef-historial-detail-head">
+                                            <strong>Historial del alumno en Educación Especial</strong>
+                                            <span>Registros: {{ item.historial_periodos|length }}</span>
+                                        </header>
+                                        <div class="cef-historial-timeline">
+                                            <div class="cef-historial-grid-head">
+                                                <span aria-hidden="true"></span>
+                                                <span>CICLO</span>
+                                                <span>ESTADO</span>
+                                                <span>FECHA DE ALTA</span>
+                                                <span>FECHA DE BAJA</span>
+                                                <span>MOTIVO</span>
+                                                <span>CUE-ANEXO ASOCIADO</span>
+                                                <span>SECCIONES / INSCRIPCIONES</span>
+                                            </div>
+                                            {% for periodo in item.historial_periodos %}
+                                                <article class="cef-historial-periodo{% if periodo.banco.estado == 'activo' %} is-active{% else %} is-closed{% endif %}">
+                                                    <div class="cef-historial-timeline-node" aria-hidden="true">
+                                                        <span class="especial-material-symbol cef-historial-node-icon">fiber_manual_record</span>
+                                                    </div>
+                                                    <div class="cef-historial-periodo-grid">
+                                                        <div class="cef-historial-periodo-calendar" aria-hidden="true">
+                                                            <span class="especial-material-symbol cef-historial-icon">calendar_month</span>
+                                                        </div>
+                                                        <div class="cef-historial-periodo-cell" data-label="Ciclo">{{ periodo.banco.ciclo.anio|default:"—" }}</div>
+                                                        <div class="cef-historial-periodo-cell" data-label="Estado">
+                                                            <span class="cef-historial-status{% if periodo.banco.estado == 'activo' %} is-active{% else %} is-closed{% endif %}">
+                                                                {{ periodo.estado_label }}
+                                                            </span>
+                                                        </div>
+                                                        <div class="cef-historial-periodo-cell" data-label="Fecha de alta">{{ periodo.banco.fecha_alta|date:"d/m/Y"|default:"—" }}</div>
+                                                        <div class="cef-historial-periodo-cell" data-label="Fecha de baja">{{ periodo.banco.fecha_baja|date:"d/m/Y"|default:"—" }}</div>
+                                                        <div class="cef-historial-periodo-cell" data-label="Motivo">{{ periodo.banco.motivo_baja|default:"—" }}</div>
+                                                        <div class="cef-historial-periodo-cell" data-label="CUE-Anexo asociado">{{ periodo.banco.matricula_compartida|default:"—" }}</div>
+                                                        <div class="cef-historial-periodo-cell cef-historial-inscripciones" data-label="Secciones / inscripciones">
+                                                            {% if periodo.inscripciones %}
+                                                                <ul>
+                                                                    {% for inscripcion in periodo.inscripciones %}
+                                                                        <li>
+                                                                            <div class="cef-alumno-seccion-item cef-historial-inscripcion-cabecera">
+                                                                                <span class="cef-alumno-seccion-icon" aria-hidden="true">
+                                                                                    <i class="fa-solid fa-layer-group"></i>
+                                                                                </span>
+                                                                                <span class="cef-alumno-seccion-text cef-historial-inscripcion-name">
+                                                                                    {{ inscripcion.seccion.nombre_seccion }}{% if inscripcion.seccion.cd_tipo_seccion %}<span class="cef-alumno-seccion-type"> · {{ inscripcion.seccion.cd_tipo_seccion }}</span>{% endif %}
+                                                                                </span>
+                                                                            </div>
+                                                                        </li>
+                                                                    {% endfor %}
+                                                                </ul>
+                                                            {% else %}
+                                                                <span>—</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                </article>
+                                            {% endfor %}
+                                        </div>
+                                    </section>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <dialog class="cef-historial-confirm-dialog" data-especial-reincorporar-dialog aria-labelledby="especial-reincorporar-titulo">
+                <form method="dialog">
+                    <h3 id="especial-reincorporar-titulo">Reincorporar a <span data-especial-reincorporar-nombre>este alumno</span></h3>
+                    <p>Se iniciará un nuevo período activo en Educación Especial para el establecimiento y ciclo seleccionados.</p>
+                    <div class="cef-historial-confirm-actions">
+                        <button class="btn btn-outline-secondary" type="button" data-especial-reincorporar-cancel>Cancelar</button>
+                        <button class="btn btn-success" type="button" data-especial-reincorporar-confirm>Reincorporar</button>
+                    </div>
+                </form>
+            </dialog>
+        {% elif busqueda_error %}
+            <div class="cef-empty-state">No se pudo aplicar la búsqueda solicitada.</div>
+        {% elif alumnos_banco_tabla_pendiente %}
+            <div class="cef-empty-state">No se pudo consultar el banco de alumnos en este momento.</div>
+        {% elif not especial_context.puede_consultar %}
+            <div class="cef-empty-state">
+                <i class="fa-solid fa-hand-pointer" style="font-size:1.5rem;color:var(--text-faint)"></i>
+                Seleccioná un CUE-Anexo y un ciclo para ver alumnos.
+            </div>
+        {% elif modo_historial and termino_busqueda %}
+            <div class="cef-empty-state">No se encontraron alumnos históricos para la búsqueda indicada.</div>
+        {% elif modo_historial %}
+            <div class="cef-empty-state">No hay registros históricos de alumnos para este establecimiento y ciclo.</div>
+        {% elif termino_busqueda %}
+            <div class="cef-empty-state">No se encontraron alumnos para la búsqueda indicada.</div>
         {% elif especial_context.puede_operar %}
             <div class="cef-empty-state">
                 <i class="fa-solid fa-user-magnifying-glass" style="font-size:1.5rem;color:var(--text-faint)"></i>
@@ -143,14 +254,26 @@
             </div>
         {% else %}
             <div class="cef-empty-state">
-                <i class="fa-solid fa-hand-pointer" style="font-size:1.5rem;color:var(--text-faint)"></i>
-                Seleccioná un CUE-Anexo y un ciclo para ver alumnos.
+                No hay alumnos vigentes para este establecimiento y ciclo.
             </div>
         {% endif %}
 
+        {% if not modo_historial and alumnos %}
+            <div class="cef-empty-state" data-especial-client-empty hidden>No se encontraron alumnos para la búsqueda indicada.</div>
+        {% endif %}
+
         <div class="cef-tfoot">
-            <span class="cef-tfoot-count" data-cef-table-count>{{ alumnos|length }} registros</span>
-            <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+            <span class="cef-tfoot-count" data-cef-table-count>{{ page_obj.paginator.count }} alumnos</span>
+            {% if modo_historial and page_obj.paginator.num_pages > 1 %}
+                <nav class="cef-tfoot-pagination" data-cef-table-pagination aria-label="Paginación de alumnos">
+                    {% if page_obj.has_previous %}<a class="btn btn-outline-primary btn-sm" href="{{ pagina_anterior_url }}" data-page-prev data-especial-section-link data-especial-section="alumnos">Anterior</a>{% endif %}
+                    <span class="page-num">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                    {% if page_obj.has_next %}<a class="btn btn-outline-primary btn-sm" href="{{ pagina_siguiente_url }}" data-page-next data-especial-section-link data-especial-section="alumnos">Siguiente</a>{% endif %}
+                </nav>
+            {% elif not modo_historial %}
+                <nav class="cef-tfoot-pagination" data-especial-client-pagination data-cef-table-pagination aria-label="Paginación de alumnos"></nav>
+            {% endif %}
+        </div>
         </div>
     </div>
 </div>
@@ -169,16 +292,495 @@
         vertical-align: middle;
     }
 
-    .cef-alumnos-table tbody tr[data-cef-table-data-row] {
+    .cef-alumnos-table tbody tr[data-especial-search-row] {
         background: #fff !important;
     }
 
-    .cef-alumnos-table tbody tr[data-cef-table-data-row]:hover {
+    .cef-alumnos-table tbody tr[data-especial-search-row]:hover {
         background: #fff !important;
     }
 
-    .oculta-por-seccion {
-        display: none !important;
+    .cef-historial-table thead tr {
+        background: var(--blue-900);
+        border-bottom: 2px solid var(--blue-800);
+    }
+
+    .cef-historial-table thead th {
+        color: var(--surface);
+        text-align: left;
+    }
+
+    .cef-historial-table th,
+    .cef-historial-table td {
+        vertical-align: middle;
+    }
+
+    .cef-historial-table th:nth-child(n + 2),
+    .cef-historial-table td:nth-child(n + 2) {
+        text-align: center;
+    }
+
+    .cef-historial-table .cef-historial-detail-row > td {
+        text-align: left;
+    }
+
+    .cef-historial-summary-row > td {
+        padding-bottom: .7rem;
+        padding-top: .7rem;
+    }
+
+    .cef-historial-alumno {
+        align-items: center;
+        display: flex;
+        gap: .55rem;
+        min-width: 0;
+        text-align: left;
+    }
+
+    .cef-historial-alumno > strong {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .cef-historial-summary-chevron {
+        color: var(--slate-600);
+        flex: 0 0 20px;
+        font-size: 20px;
+        transition: transform 150ms ease, color 150ms ease;
+    }
+
+    .cef-historial-summary-row:has([data-especial-historial-toggle][aria-expanded="true"]) .cef-historial-summary-chevron {
+        color: var(--primary);
+        transform: rotate(90deg);
+    }
+
+    .cef-historial-person {
+        align-items: center;
+        background: var(--blue-50);
+        border-radius: 50%;
+        color: var(--primary);
+        display: inline-flex;
+        flex: 0 0 36px;
+        height: 36px;
+        justify-content: center;
+        width: 36px;
+    }
+
+    .cef-historial-person .especial-material-symbol {
+        font-size: 23px;
+        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    }
+
+    .cef-historial-status {
+        align-items: center;
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: var(--fs-xs);
+        font-weight: 700;
+        gap: .35rem;
+        line-height: 1.15;
+        min-height: 24px;
+        padding: .25rem .55rem;
+        white-space: nowrap;
+    }
+
+    .cef-historial-status.is-active {
+        background: var(--green-100);
+        border: 1px solid currentColor;
+        color: var(--green-700);
+    }
+
+    .cef-historial-status.is-closed {
+        background: var(--red-100);
+        border: 1px solid currentColor;
+        color: var(--red-700);
+    }
+
+    .cef-historial-status.is-active:hover {
+        background: color-mix(in srgb, var(--green-100) 88%, var(--green-700));
+        cursor: default;
+    }
+
+    .cef-historial-status.is-closed:hover {
+        background: color-mix(in srgb, var(--red-100) 90%, var(--red-700));
+        cursor: default;
+    }
+
+    .cef-historial-status-context {
+        color: var(--text-faint);
+        display: block;
+        font-size: var(--fs-xs);
+        margin-top: .25rem;
+        text-align: center;
+    }
+
+    .cef-historial-toggle,
+    .cef-historial-reincorporar {
+        align-items: center;
+        display: inline-flex;
+        gap: .35rem;
+        justify-content: center;
+        line-height: 1;
+    }
+
+    .cef-historial-toggle {
+        background: var(--surface);
+        border: 1px solid currentColor;
+        color: var(--blue-800);
+        min-height: 36px;
+        padding: .3rem .65rem;
+    }
+
+    .cef-historial-toggle:hover,
+    .cef-historial-toggle:focus-visible {
+        background: var(--blue-50);
+        color: var(--blue-900);
+    }
+
+    .cef-historial-toggle:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+
+    .cef-historial-icon,
+    .cef-historial-node-icon {
+        font-size: 24px;
+        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+        line-height: 1;
+    }
+
+    .cef-historial-toggle .cef-historial-icon {
+        color: inherit;
+    }
+
+    .cef-historial-reincorporar {
+        background: var(--surface);
+        border: 1px solid currentColor;
+        color: var(--green-700);
+        min-height: 36px;
+        padding: .3rem .65rem;
+    }
+
+    .cef-historial-reincorporar .cef-historial-icon {
+        color: inherit;
+    }
+
+    .cef-historial-reincorporar:hover,
+    .cef-historial-reincorporar:focus-visible {
+        background: var(--green-100);
+        color: var(--green-700);
+    }
+
+    .cef-historial-reincorporar:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+
+    .cef-historial-detail-row > td {
+        background: var(--surface-muted);
+        padding: .5rem;
+    }
+
+    .cef-historial-detail {
+        background: var(--surface);
+        border: 1px solid var(--blue-200);
+        border-radius: var(--r-md);
+        box-shadow: var(--shadow-xs);
+        padding: .75rem 1rem 1rem;
+    }
+
+    .cef-historial-detail-head {
+        align-items: baseline;
+        border-bottom: 1px solid var(--blue-100);
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+        justify-content: space-between;
+        margin-bottom: .75rem;
+        padding-bottom: .6rem;
+    }
+
+    .cef-historial-detail-head strong {
+        color: var(--blue-900);
+    }
+
+    .cef-historial-detail-head span {
+        color: var(--text-faint);
+        font-size: var(--fs-xs);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .cef-historial-timeline {
+        border-left: 2px solid var(--slate-300);
+        margin-left: .7rem;
+        padding-left: 1.25rem;
+    }
+
+    .cef-historial-grid-head,
+    .cef-historial-periodo-grid {
+        display: grid;
+        gap: .65rem;
+        grid-template-columns:
+            minmax(2.75rem, .5fr)
+            minmax(0, .65fr)
+            minmax(0, .8fr)
+            minmax(0, 1fr)
+            minmax(0, 1fr)
+            minmax(0, 1.25fr)
+            minmax(0, 1.15fr)
+            minmax(10rem, 2.25fr);
+    }
+
+    .cef-historial-grid-head {
+        background: var(--blue-50);
+        border-bottom: 1px solid var(--blue-200);
+        color: var(--slate-700);
+        font-size: var(--fs-xs);
+        font-weight: 700;
+        letter-spacing: .04em;
+        line-height: 1.2;
+        padding: .5rem .65rem;
+        text-transform: uppercase;
+    }
+
+    .cef-historial-grid-head span:first-child {
+        visibility: hidden;
+    }
+
+    .cef-historial-periodo {
+        padding: .75rem .65rem;
+        position: relative;
+    }
+
+    .cef-historial-periodo + .cef-historial-periodo {
+        border-top: 1px solid var(--slate-200);
+    }
+
+    .cef-historial-periodo:last-child {
+        padding-bottom: 0;
+    }
+
+    .cef-historial-timeline-node {
+        background: var(--surface);
+        color: var(--slate-500);
+        left: -1.98rem;
+        line-height: 1;
+        position: absolute;
+        top: 1rem;
+    }
+
+    .cef-historial-periodo.is-active .cef-historial-timeline-node {
+        color: var(--green-600);
+    }
+
+    .cef-historial-periodo.is-closed .cef-historial-timeline-node {
+        color: var(--red-700);
+    }
+
+    .cef-historial-periodo-grid {
+        align-items: start;
+    }
+
+    .cef-historial-periodo-calendar {
+        align-items: center;
+        background: var(--slate-100);
+        border-radius: var(--r-sm);
+        color: var(--slate-600);
+        display: flex;
+        height: 36px;
+        justify-content: center;
+        width: 36px;
+    }
+
+    .cef-historial-periodo.is-active .cef-historial-periodo-calendar {
+        background: var(--green-100);
+        color: var(--green-700);
+    }
+
+    .cef-historial-periodo.is-closed .cef-historial-periodo-calendar {
+        background: var(--red-100);
+        color: var(--red-700);
+    }
+
+    .cef-historial-periodo-cell {
+        color: var(--slate-800);
+        line-height: 1.35;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        padding-top: .35rem;
+    }
+
+    .cef-historial-periodo-cell .cef-historial-status {
+        padding-left: .5rem;
+        padding-right: .5rem;
+    }
+
+    .cef-historial-inscripciones {
+        align-items: flex-start;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem;
+        min-width: 0;
+    }
+
+    .cef-historial-inscripciones ul {
+        align-items: flex-start;
+        display: flex;
+        flex: 1 1 100%;
+        flex-wrap: wrap;
+        gap: .4rem;
+        list-style: none;
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    .cef-historial-inscripciones li {
+        flex: 0 1 auto;
+        margin: 0;
+        max-width: 100%;
+        padding: 0;
+    }
+
+    .cef-alumno-seccion-item.cef-historial-inscripcion-cabecera,
+    .cef-alumno-seccion-item.cef-historial-inscripcion-cabecera:hover {
+        align-self: flex-start;
+        background: var(--surface);
+        border-color: var(--blue-200);
+        box-sizing: border-box;
+        box-shadow: none;
+        cursor: default;
+        max-width: 100%;
+        width: auto;
+    }
+
+    .cef-historial-inscripcion-name {
+        line-height: 1.3;
+    }
+
+    .cef-historial-confirm-dialog {
+        border: 0;
+        border-radius: var(--r-md);
+        box-shadow: var(--shadow-lg);
+        max-width: min(30rem, calc(100vw - 2rem));
+        padding: 1.25rem;
+        width: 100%;
+    }
+
+    .cef-historial-confirm-dialog::backdrop {
+        background: rgba(2, 6, 23, .4);
+    }
+
+    .cef-historial-confirm-dialog h3 {
+        font-size: var(--fs-md);
+        margin: 0 0 .65rem;
+    }
+
+    .cef-historial-confirm-dialog p {
+        color: var(--text-faint);
+        margin: 0 0 1rem;
+    }
+
+    .cef-historial-confirm-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+        justify-content: flex-end;
+    }
+
+    @media (max-width: 960px) {
+        .cef-historial-grid-head {
+            display: none;
+        }
+
+        .cef-historial-periodo-grid {
+            grid-template-columns: 2.75rem repeat(2, minmax(0, 1fr));
+        }
+
+        .cef-historial-periodo-calendar {
+            grid-column: 1;
+            grid-row: 1 / span 4;
+        }
+
+        .cef-historial-periodo-cell:nth-child(2),
+        .cef-historial-periodo-cell:nth-child(4),
+        .cef-historial-periodo-cell:nth-child(6) {
+            grid-column: 2;
+        }
+
+        .cef-historial-periodo-cell:nth-child(3),
+        .cef-historial-periodo-cell:nth-child(5),
+        .cef-historial-periodo-cell:nth-child(7) {
+            grid-column: 3;
+        }
+
+        .cef-historial-periodo-cell::before {
+            color: var(--text-faint);
+            content: attr(data-label);
+            display: block;
+            font-size: var(--fs-xs);
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: .15rem;
+            text-transform: uppercase;
+        }
+
+        .cef-historial-inscripciones::before {
+            flex: 0 0 100%;
+        }
+
+        .cef-historial-periodo-cell:nth-child(8) {
+            grid-column: 2 / -1;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .cef-historial-periodo-grid {
+            grid-template-columns: 2.75rem minmax(0, 1fr);
+        }
+
+        .cef-historial-periodo-calendar {
+            grid-column: 1;
+            grid-row: 1 / span 7;
+        }
+
+        .cef-historial-periodo-cell:nth-child(2),
+        .cef-historial-periodo-cell:nth-child(3),
+        .cef-historial-periodo-cell:nth-child(4),
+        .cef-historial-periodo-cell:nth-child(5),
+        .cef-historial-periodo-cell:nth-child(6),
+        .cef-historial-periodo-cell:nth-child(7),
+        .cef-historial-periodo-cell:nth-child(8) {
+            grid-column: 2;
+        }
+
+        .cef-historial-periodo-cell {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .cef-historial-detail-row > td {
+            padding-inline: .35rem;
+        }
+
+        .cef-historial-detail {
+            padding-inline: .65rem;
+        }
+
+        .cef-historial-timeline {
+            margin-left: .4rem;
+            padding-left: 1rem;
+        }
+
+        .cef-historial-timeline-node {
+            left: -1.7rem;
+        }
+
+        .cef-historial-reincorporar,
+        .cef-historial-toggle {
+            white-space: normal;
+        }
     }
 
     .cef-alumno-seccion-item {
@@ -207,6 +809,62 @@
         text-decoration: none;
     }
 
+    .cef-alumnos-view-tabs {
+        align-items: flex-end;
+        border-bottom: 1px solid var(--blue-100);
+        display: flex;
+        gap: 1.25rem;
+        margin: 0 0 1rem;
+        min-height: 2.25rem;
+        position: relative;
+        width: max-content;
+    }
+
+    .cef-alumnos-view-tab {
+        color: var(--slate-700);
+        font-size: var(--fs-sm);
+        font-weight: 500;
+        min-height: 2.25rem;
+        padding: .35rem .1rem .55rem;
+        text-decoration: none;
+        transition: color 150ms ease;
+    }
+
+    .cef-alumnos-view-tab:hover,
+    .cef-alumnos-view-tab:focus-visible,
+    .cef-alumnos-view-tab.is-active,
+    .cef-alumnos-view-tab.is-pending {
+        color: var(--primary-dark);
+    }
+
+    .cef-alumnos-view-tab.is-active,
+    .cef-alumnos-view-tab.is-pending {
+        font-weight: 700;
+    }
+
+    .cef-alumnos-view-indicator {
+        background: var(--primary-dark);
+        border-radius: 2px 2px 0 0;
+        bottom: -1px;
+        height: 3px;
+        left: 0;
+        pointer-events: none;
+        position: absolute;
+        transform: translateX(0);
+        transition: transform 180ms cubic-bezier(.2, 0, 0, 1);
+        width: 4.5rem;
+    }
+
+    .cef-panel-actions[data-especial-subview-actions] {
+        min-height: 40px;
+    }
+
+    @media (max-width: 575.98px) {
+        .cef-panel-actions[data-especial-subview-actions].is-empty {
+            min-height: 0;
+        }
+    }
+
     .cef-alumno-seccion-item:focus-visible {
         outline: 2px solid var(--primary);
         outline-offset: 2px;
@@ -229,87 +887,6 @@
     .cef-alumno-secciones-toggle:focus-visible {
         color: var(--blue-900);
         text-decoration: underline;
-    }
-
-    .cef-alumnos-section-filter {
-        align-items: center;
-        display: flex;
-        flex-wrap: wrap;
-        gap: .5rem;
-        margin: 0 0 1rem;
-    }
-
-    .cef-alumnos-section-filter select {
-        appearance: auto;
-        background: var(--surface);
-        border: 1.5px solid var(--border-strong);
-        border-radius: var(--r-sm);
-        color: var(--slate-800);
-        min-height: 34px;
-        min-width: 220px;
-        padding: .2rem .55rem;
-    }
-
-    .cef-alumnos-section-filter select:focus {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(45,125,210,.12);
-        outline: none;
-    }
-
-    .cef-alumnos-section-filter small {
-        flex-basis: 100%;
-    }
-
-    .cef-alumno-seccion-grupo th {
-        background: var(--blue-50);
-        border-bottom: 1px solid var(--blue-200);
-        border-top: 2px solid var(--blue-300);
-        padding: 0;
-    }
-
-    .cef-alumno-seccion-toggle {
-        align-items: center;
-        background: var(--blue-50);
-        border: 0;
-        color: var(--blue-900);
-        cursor: pointer;
-        display: flex;
-        font-size: var(--fs-sm);
-        font-weight: 700;
-        gap: .45rem;
-        letter-spacing: .02em;
-        padding: .55rem .75rem;
-        text-align: left;
-        width: 100%;
-    }
-
-    .cef-alumno-seccion-toggle:hover {
-        background: var(--blue-50);
-    }
-
-    .cef-alumno-seccion-toggle:focus-visible {
-        box-shadow: inset 0 0 0 2px var(--primary);
-        outline: none;
-    }
-
-    .cef-alumno-seccion-arrow {
-        align-items: center;
-        color: var(--primary);
-        display: inline-flex;
-        flex: 0 0 1rem;
-        justify-content: center;
-        width: 1rem;
-    }
-
-    .cef-alumno-seccion-label {
-        min-width: 0;
-        overflow-wrap: anywhere;
-    }
-
-    .cef-alumno-seccion-count {
-        color: var(--blue-700);
-        font-weight: 600;
-        margin-left: .15rem;
     }
 
     .cef-alumno-seccion-icon {

@@ -2,8 +2,6 @@
     "use strict";
 
     var changedButtons = [];
-    var pageLoadingNode = null;
-    var pageLoadingHost = null;
 
     function getSubmitLabel(text) {
         text = (text || "").trim().toLowerCase();
@@ -89,43 +87,6 @@
             && url.href !== window.location.href;
     }
 
-    function showPageLoading() {
-        if (pageLoadingNode && pageLoadingNode.isConnected) return;
-
-        var loading = document.createElement("div");
-        var spinner = document.createElement("span");
-        var label = document.createElement("span");
-        loading.className = "cef-page-loading";
-        loading.setAttribute("role", "status");
-        loading.setAttribute("aria-live", "polite");
-        spinner.className = "spinner-border spinner-border-sm";
-        spinner.setAttribute("aria-hidden", "true");
-        label.textContent = "Cargando...";
-        loading.append(spinner, label);
-        pageLoadingHost = document.getElementById("cef-content-region")
-            || document.querySelector(".padron-page-wrapper > .card")
-            || document.querySelector(".content-wrapper > .content");
-        if (pageLoadingHost) {
-            pageLoadingHost.classList.add("cef-page-loading-host");
-            pageLoadingHost.appendChild(loading);
-        } else {
-            loading.classList.add("is-fixed");
-            document.body.appendChild(loading);
-        }
-        pageLoadingNode = loading;
-    }
-
-    function hidePageLoading() {
-        if (pageLoadingNode && pageLoadingNode.isConnected) {
-            pageLoadingNode.remove();
-        }
-        if (pageLoadingHost) {
-            pageLoadingHost.classList.remove("cef-page-loading-host");
-        }
-        pageLoadingHost = null;
-        pageLoadingNode = null;
-    }
-
     function findSubmitter(event, form) {
         if (event.submitter) return event.submitter;
         if (document.activeElement && document.activeElement.form === form) return document.activeElement;
@@ -160,7 +121,12 @@
         document.addEventListener("click", function (event) {
             var target = event.target;
             var link = target && target.closest ? target.closest("[data-cef-page-loading-link]") : null;
-            if (isNormalNavigationClick(event, link)) showPageLoading();
+            if (!isNormalNavigationClick(event, link)) return;
+            var menuLink = link.closest(".cef-module-nav .nav-link");
+            if (menuLink && window.CEFPartialNavigation) {
+                window.CEFPartialNavigation.saveActiveMenuState();
+                window.CEFPartialNavigation.setActive(menuLink);
+            }
         }, true);
 
         document.addEventListener("submit", function (event) {
@@ -189,8 +155,6 @@
 
     window.CEFLoading = {
         hide: restore,
-        showPage: showPageLoading,
-        hidePage: hidePageLoading,
         restoreButton: restoreButton,
         startButton: setButtonLoading,
         submitForm: submitForm
@@ -201,8 +165,10 @@
     } else {
         init();
     }
-    window.addEventListener("pageshow", function () {
+    window.addEventListener("pageshow", function (event) {
         restore();
-        hidePageLoading();
+        if (event.persisted && window.CEFPartialNavigation) {
+            window.CEFPartialNavigation.restoreActiveMenuState();
+        }
     });
 })();

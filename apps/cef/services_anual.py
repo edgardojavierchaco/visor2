@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import defaultdict
+from datetime import date
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
@@ -1158,7 +1159,7 @@ def generar_ciclo_siguiente(ciclo_origen, user):
                     grupo=grupos_mapa[item.grupo_id],
                     alumno_id=item.alumno_id,
                     estado=CefInscripcion.Estado.ACTIVO,
-                    fecha_inscripcion=fecha_generacion,
+                    fecha_inscripcion=date(destino.anio, 1, 1),
                     fecha_baja=None,
                     motivo_baja="",
                     observaciones=item.observaciones,

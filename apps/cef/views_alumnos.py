@@ -194,6 +194,7 @@ def _inscribir_alumno_grupo_desde_banco(request, cef_context):
             grupo=grupo,
             alumno=alumno_banco.alumno,
             user=request.user,
+            fecha_inscripcion=request.POST.get("fecha_inscripcion"),
         )
         messages.success(request, "Alumno inscripto correctamente al grupo.")
     except ValidationError as exc:
@@ -251,6 +252,7 @@ def _inscribir_alumno_grupo_desde_historial(request, cef_context):
             grupo=grupo,
             alumno=periodo.alumno,
             user=request.user,
+            fecha_inscripcion=request.POST.get("fecha_inscripcion"),
         )
         messages.success(request, "Alumno inscripto correctamente al grupo actual.")
     except ValidationError as exc:

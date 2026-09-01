@@ -21,6 +21,9 @@
         if (window.EspecialTableControls && typeof window.EspecialTableControls.init === "function") {
             window.EspecialTableControls.init(root);
         }
+        if (window.EspecialBusqueda && typeof window.EspecialBusqueda.init === "function") {
+            window.EspecialBusqueda.init(root);
+        }
         if (window.EspecialContextSelector && typeof window.EspecialContextSelector.init === "function") {
             window.EspecialContextSelector.init(root);
         }
@@ -33,6 +36,9 @@
     }
 
     function destroy(root) {
+        if (window.EspecialBusqueda && typeof window.EspecialBusqueda.destroy === "function") {
+            window.EspecialBusqueda.destroy(root);
+        }
         if (window.EspecialContextSelector && typeof window.EspecialContextSelector.destroy === "function") {
             window.EspecialContextSelector.destroy(root);
         }
