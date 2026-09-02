@@ -48,6 +48,7 @@
 {% endblock %}
 {% block content %}
 {% include 'indicadoresie/seguimiento/nav_operativo_sge.html' %}
+<form id="comparativaExportCsrf" class="d-none" aria-hidden="true">{% csrf_token %}</form>
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
@@ -71,8 +72,20 @@
     .summary-value { color: #0f172a; display: block; font-size: 1.05rem; font-weight: 800; line-height: 1.2; margin-top: .15rem; }
     .control-panel { background: #fff; border: 1px solid #dee2e6; border-radius: .5rem; margin-bottom: 1.2rem; box-shadow: 0 2px 6px rgba(0,0,0,.04); }
     .control-block-filters { padding: 1.2rem; min-width: 0; }
-    .control-block-title { font-size: .88rem; font-weight: 800; color: #111827; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1rem; display: flex; align-items: center; gap: .4rem; }
+    .control-block-title { font-size: .88rem; font-weight: 800; color: #111827; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .5rem; }
+    .control-block-title-text { display: inline-flex; align-items: center; gap: .4rem; }
     .control-block-title i, .filter-item label i { color: #3b82f6; }
+    #btnAyudaComparativa { color: #3b82f6 !important; border: 1px solid #93c5fd !important; background-color: #fff !important; box-shadow: none !important; font-size: .7rem; font-weight: 600; padding: .2rem .7rem; text-transform: none; transition: all .2s ease-in-out !important; }
+    #btnAyudaComparativa:hover, #btnAyudaComparativa:focus { background-color: #eff6ff !important; color: #1d4ed8 !important; border-color: #93c5fd !important; box-shadow: none !important; }
+    #btnAyudaComparativa i { color: inherit !important; }
+    .ayuda-comparativa-content { border: 0; border-radius: 1rem; max-height: 90vh; overflow: hidden; }
+    .ayuda-comparativa-body { overflow-y: auto; padding: 1.5rem; }
+    .ayuda-comparativa-section + .ayuda-comparativa-section { margin-top: 1.5rem; }
+    .ayuda-comparativa-section h6 { color: #1e293b; font-weight: 800; margin-bottom: .75rem; }
+    .ayuda-comparativa-card { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; border-radius: .5rem; color: #334155; font-size: .88rem; height: 100%; padding: .85rem 1rem; }
+    .ayuda-comparativa-card strong { color: #1e3a8a; display: block; margin-bottom: .25rem; }
+    .ayuda-comparativa-card p:last-child, .ayuda-comparativa-card ul:last-child { margin-bottom: 0; }
+    .ayuda-comparativa-note { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: .5rem; color: #1e3a8a; font-size: .86rem; margin-top: .75rem; padding: .75rem .9rem; }
     .filter-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem .9rem; min-width: 0; }
     .filter-item { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
     .filter-item label { font-size: .74rem; font-weight: 800; color: #111827; text-transform: uppercase; margin: 0; display: flex; align-items: center; line-height: 1.3; }
@@ -364,7 +377,12 @@
 
     <div class="control-panel">
         <div class="control-block-filters">
-            <div class="control-block-title"><i class="fas fa-filter"></i> Filtros de la auditoría</div>
+            <div class="control-block-title">
+                <span class="control-block-title-text"><i class="fas fa-filter"></i> Filtros de la auditoría</span>
+                <button type="button" class="btn btn-sm btn-outline-info rounded-pill" id="btnAyudaComparativa" data-bs-toggle="modal" data-bs-target="#ayudaComparativaModal" aria-controls="ayudaComparativaModal">
+                    <i class="fas fa-question-circle me-1" aria-hidden="true"></i>Ayuda
+                </button>
+            </div>
             <div class="filter-grid">
                 <div class="filter-item quick-filter">
                     <label for="fEstado"><i class="fas fa-check-circle"></i>Resultado</label>
@@ -443,6 +461,109 @@
     </div>
 </div>
 
+<div class="modal fade" id="ayudaComparativaModal" tabindex="-1" aria-labelledby="ayudaComparativaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content ayuda-comparativa-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border: none;">
+                <h5 class="modal-title" id="ayudaComparativaModalLabel" style="color: #fff;">
+                    <i class="fas fa-question-circle me-2" aria-hidden="true"></i>Guía de uso — Comparativa RA-SGE
+                </h5>
+                <button type="button" class="btn-close btn-close-white opacity-75" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body ayuda-comparativa-body">
+                <section class="ayuda-comparativa-section">
+                    <h6><i class="fas fa-info-circle text-primary me-2" aria-hidden="true"></i>¿Para qué sirve esta pantalla?</h6>
+                    <div class="ayuda-comparativa-card">La Comparativa RA-SGE permite revisar por CUE-Anexo las diferencias y situaciones detectadas entre la información de RA 2026 y SGE 2026. La tabla muestra un resumen por establecimiento y la opción <strong class="d-inline">Ver detalle</strong> permite analizar qué informa cada sistema y la evidencia utilizada para la comparación.</div>
+                </section>
+
+                <section class="ayuda-comparativa-section">
+                    <h6><i class="fas fa-chart-bar text-primary me-2" aria-hidden="true"></i>Resumen de la auditoría</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4"><div class="ayuda-comparativa-card"><strong>CUE-Anexo según alcance y filtros</strong>Cantidad de CUE-Anexo que forman parte del resultado actual según el alcance del usuario y los filtros aplicados.</div></div>
+                        <div class="col-md-4"><div class="ayuda-comparativa-card" style="border-left-color: #f97316;"><strong>CUE-Anexo con hallazgos</strong>Cantidad de esos CUE-Anexo en los que la auditoría detectó al menos una situación para revisar.</div></div>
+                        <div class="col-md-4"><div class="ayuda-comparativa-card" style="border-left-color: #dc2626;"><strong>Hallazgos visibles</strong>Cantidad de hallazgos representados con los filtros actuales. Si se selecciona un Tipo de hallazgo, este número refleja ese tipo dentro del resultado filtrado.</div></div>
+                    </div>
+                    <div class="ayuda-comparativa-note"><strong>Importante:</strong> “Hallazgos visibles” no significa necesariamente que esos establecimientos sólo tengan esos hallazgos.</div>
+                </section>
+
+                <section class="ayuda-comparativa-section">
+                    <h6><i class="fas fa-filter text-primary me-2" aria-hidden="true"></i>¿Para qué sirve cada filtro?</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Resultado</strong><ul class="mb-0 ps-3"><li><b>Todos:</b> muestra todo el alcance disponible.</li><li><b>Con hallazgos:</b> muestra CUE-Anexo donde se detectaron situaciones para revisar.</li><li><b>Sin hallazgos:</b> muestra CUE-Anexo sin diferencias cuando la auditoría vigente permite determinarlo. Puede estar deshabilitado si la auditoría no es válida.</li></ul></div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Región</strong>Limita el resultado a una Región Educativa.</div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>CUE-Anexo</strong>Permite localizar uno o varios resultados escribiendo el código CUE-Anexo.</div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Establecimiento</strong>Permite buscar por el nombre del establecimiento.</div></div>
+                        <div class="col-12"><div class="ayuda-comparativa-card"><strong>Tipo de hallazgo</strong>Permite localizar los CUE-Anexo en los que está presente un tipo específico de hallazgo.<div class="ayuda-comparativa-note"><strong>Importante:</strong> este filtro selecciona establecimientos donde aparece ese hallazgo. No significa que esos establecimientos no puedan tener además otros hallazgos.</div></div></div>
+                    </div>
+                </section>
+
+                <section class="ayuda-comparativa-section">
+                    <h6><i class="fas fa-tags text-primary me-2" aria-hidden="true"></i>Filtros aplicados</h6>
+                    <div class="ayuda-comparativa-card">Los filtros activos aparecen como etiquetas o chips y cada uno puede quitarse individualmente. <strong class="d-inline">Limpiar filtros</strong> restaura la consulta sin esos filtros. Los resultados y contadores se actualizan según la selección.</div>
+                </section>
+
+                <section class="ayuda-comparativa-section">
+                    <h6><i class="fas fa-table text-primary me-2" aria-hidden="true"></i>Cómo leer la tabla</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Región</strong>Región Educativa del establecimiento.</div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>CUE-Anexo</strong>Unidad de servicio auditada.</div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Establecimiento</strong>Nombre del establecimiento.</div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Estado actual</strong>Estado vigente registrado para ese CUE-Anexo.</div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Hallazgos</strong>Cantidad de situaciones visibles según la consulta y los filtros actuales.</div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Resultado</strong>Indica de forma resumida si existen datos que requieren revisión.</div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Acción</strong>Desde aquí se accede a “Ver detalle”.</div></div>
+                    </div>
+                </section>
+
+                <section class="ayuda-comparativa-section">
+                    <h6><i class="fas fa-search-plus text-primary me-2" aria-hidden="true"></i>Ver detalle</h6>
+                    <div class="ayuda-comparativa-card" style="border-left-color: #1d4ed8;">
+                        <p>El botón <strong class="d-inline">Ver detalle</strong> abre la comparación específica del CUE-Anexo sin salir de la tabla.</p>
+                        <div class="row g-3">
+                            <div class="col-md-6"><div class="p-3 rounded-3 h-100" style="background: #fff7ed; border: 1px solid #fed7aa;"><strong style="color: #9a3412;">Sólo hallazgos</strong>Muestra de forma prioritaria los puntos donde la auditoría detectó diferencias o situaciones que requieren revisión.</div></div>
+                            <div class="col-md-6"><div class="p-3 rounded-3 h-100" style="background: #eff6ff; border: 1px solid #bfdbfe;"><strong>Ver todo</strong>Muestra la estructura completa disponible para el CUE-Anexo, incluyendo tanto diferencias como coincidencias entre RA y SGE.</div></div>
+                        </div>
+                        <div class="ayuda-comparativa-note">Si necesita comprender completamente cómo se compararon ambos sistemas, utilice <strong>Ver todo</strong>.</div>
+                    </div>
+                </section>
+
+                <section class="ayuda-comparativa-section">
+                    <h6><i class="fas fa-exchange-alt text-primary me-2" aria-hidden="true"></i>RA informa / SGE informa</h6>
+                    <div class="row g-3">
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>RA informa</strong>Valor o estructura encontrada en RA.</div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>SGE informa</strong>Valor o estructura encontrada en SGE.</div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card" style="border-left-color: #f59e0b;"><strong>Diferencia detectada</strong>Muestra dónde ambas fuentes no coinciden o existe una situación que requiere revisión.</div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card" style="border-left-color: #22c55e;"><strong>Coincidencias</strong>Son datos equivalentes encontrados en ambas fuentes y sirven como contexto de la comparación.</div></div>
+                    </div>
+                </section>
+
+                <section class="ayuda-comparativa-section">
+                    <h6><i class="fas fa-sitemap text-primary me-2" aria-hidden="true"></i>Evidencia auditada</h6>
+                    <div class="ayuda-comparativa-card"><p>Esta sección permite revisar la estructura utilizada para realizar la comparación. Puede incluir niveles, grados/años/salas, secciones, turnos, tipos y matrícula según la información disponible para el CUE-Anexo.</p><p>En <strong class="d-inline">Ver todo</strong> se muestra la estructura completa disponible; en <strong class="d-inline">Sólo hallazgos</strong> la interfaz prioriza las ramas relevantes para las situaciones detectadas.</p></div>
+                </section>
+
+                <section class="ayuda-comparativa-section">
+                    <h6><i class="fas fa-download text-primary me-2" aria-hidden="true"></i>Exportar e Imprimir</h6>
+                    <div class="ayuda-comparativa-card">
+                        <p>Los botones Excel, PDF e Imprimir respetan el resultado actual de la Comparativa. Los filtros y búsquedas determinan qué CUE-Anexo se incluyen.</p>
+                        <div class="ayuda-comparativa-note"><strong>Importante:</strong> la paginación no limita la exportación. Si el resultado contiene 40 CUE-Anexo y la tabla muestra 10 por página, se procesan los 40.</div>
+                        <ul class="mt-3 mb-0 ps-3"><li><b>Excel:</b> genera un archivo estructurado con el resumen y la información completa RA-SGE de los CUE-Anexo incluidos.</li><li><b>PDF:</b> genera un documento con cada CUE-Anexo y su detalle completo, incluyendo hallazgos, información RA, información SGE y evidencia disponible.</li><li><b>Imprimir:</b> abre una vista preparada para impresión con los mismos CUE-Anexo del resultado y sus detalles completos desplegados.</li></ul>
+                        <div class="ayuda-comparativa-note">El filtro Tipo de hallazgo determina qué establecimientos entran en el reporte, pero una vez incluido un CUE-Anexo el reporte contiene su detalle completo, no únicamente ese tipo de hallazgo.</div>
+                    </div>
+                </section>
+
+                <section class="ayuda-comparativa-section">
+                    <h6><i class="fas fa-calendar-alt text-primary me-2" aria-hidden="true"></i>Actualización de datos</h6>
+                    <div class="ayuda-comparativa-card">La fecha indica cuándo se actualizó la información utilizada por la Comparativa.{% if comparativa_is_admin %}<p class="mt-2 mb-0">Los usuarios habilitados pueden utilizar el icono de edición junto a la fecha para iniciar la actualización de los datos de la Comparativa.</p>{% endif %}</div>
+                </section>
+            </div>
+            <div class="modal-footer" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0;">
+                <button type="button" class="btn btn-primary fw-bold rounded-3 px-4" data-bs-dismiss="modal">Entendido</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% if comparativa_is_admin %}
 <div class="modal fade" id="comparativaSgeRaFechaModal" tabindex="-1" aria-labelledby="comparativaSgeRaFechaModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
@@ -514,6 +635,9 @@ $(function () {
     var exportLoadFailed = false;
     var detailCache = Object.create(null);
     var detailRequests = Object.create(null);
+    var bulkExportRequest = null;
+    var exportInProgress = false;
+    var exportProgressMessage = '';
     var detailIdSequence = 0;
     var detailIds = typeof WeakMap === 'function' ? new WeakMap() : null;
     var untrustedEnrollmentIdsKey = Symbol('untrustedEnrollmentIds');
@@ -2179,10 +2303,12 @@ $(function () {
             var button = $(this);
             var dependencyReady = !button.hasClass('buttons-excel') || excelReady;
             dependencyReady = dependencyReady && (!button.hasClass('buttons-pdf') || pdfReady);
-            var enabled = exportsEnabled && dependencyReady;
+            var enabled = exportsEnabled && dependencyReady && !exportInProgress;
             button.prop('disabled', !enabled).attr('aria-disabled', enabled ? 'false' : 'true');
         });
-        var status = exportsEnabled ? 'Exportaciones disponibles.' : 'Esperando que finalice la carga de datos.';
+        var status = exportInProgress && exportProgressMessage
+            ? exportProgressMessage
+            : (exportsEnabled ? 'Exportaciones disponibles.' : 'Esperando que finalice la carga de datos.');
         if (exportLoadFailed) status = 'Exportaciones no disponibles porque no se pudieron cargar los datos.';
         if (exportsEnabled && missing.length) status = 'No se pudo habilitar ' + missing.join(' ni ') + ': faltan componentes de exportación.';
         $('#exportStatus').text(status);
@@ -2307,6 +2433,13 @@ $(function () {
         detailRequests = Object.create(null);
     }
 
+    function abortBulkExportRequest() {
+        if (bulkExportRequest && typeof bulkExportRequest.abort === 'function') {
+            bulkExportRequest.abort();
+        }
+        bulkExportRequest = null;
+    }
+
     function cancelPostRefreshRetry() {
         if (postRefreshRetryTimer) {
             window.clearTimeout(postRefreshRetryTimer);
@@ -2326,6 +2459,7 @@ $(function () {
             textTimer = null;
         }
         clearDetailCache();
+        abortBulkExportRequest();
         if (currentRequest) {
             var requestToAbort = currentRequest;
             currentRequest = null;
@@ -2351,6 +2485,7 @@ $(function () {
             textTimer = null;
         }
         clearDetailCache();
+        abortBulkExportRequest();
         if (currentRequest) {
             var requestToAbort = currentRequest;
             currentRequest = null;
@@ -2380,6 +2515,7 @@ $(function () {
             textTimer = null;
         }
         clearDetailCache();
+        abortBulkExportRequest();
         if (currentRequest) {
             var requestToAbort = currentRequest;
             currentRequest = null;
@@ -2424,6 +2560,813 @@ $(function () {
             && (payload.arbol == null || isRecord(payload.arbol))
             && typeof payload.tiene_datos_ra === 'boolean'
             && typeof payload.tiene_datos_sge === 'boolean';
+    }
+
+    function exportRowsFromTable() {
+        return table.rows({
+            search: 'applied',
+            order: 'applied',
+            page: 'all'
+        }).data().toArray();
+    }
+
+    function setCompleteExportStatus(message, isError) {
+        $('#exportStatus')
+            .removeClass('visually-hidden text-danger text-muted')
+            .addClass(isError ? 'text-danger' : 'text-muted')
+            .text(message);
+    }
+
+    function beginCompleteExport() {
+        exportInProgress = true;
+        exportProgressMessage = 'Preparando exportación completa…';
+        syncExportAvailability();
+        setCompleteExportStatus(exportProgressMessage, false);
+    }
+
+    function finishCompleteExport(message, isError) {
+        exportInProgress = false;
+        exportProgressMessage = '';
+        syncExportAvailability();
+        setCompleteExportStatus(message, isError);
+    }
+
+    function comparisonCsrfToken() {
+        var tokenInput = document.querySelector('#comparativaExportCsrf [name=csrfmiddlewaretoken]');
+        if (tokenInput) return tokenInput.value;
+        var token = '';
+        (document.cookie || '').split(';').some(function (cookie) {
+            var trimmed = cookie.trim();
+            if (trimmed.substring(0, 10) !== 'csrftoken=') return false;
+            token = decodeURIComponent(trimmed.substring(10));
+            return true;
+        });
+        return token;
+    }
+
+    function loadFullDetailsBulk(rows) {
+        return new Promise(function (resolve, reject) {
+            var uniqueRows = [];
+            var cueanexos = [];
+            var seen = Object.create(null);
+            rows.forEach(function (rowData) {
+                var cueanexo = $.trim(textValue(rowData && rowData.cueanexo));
+                if (!cueanexo || seen[cueanexo]) return;
+                seen[cueanexo] = true;
+                cueanexos.push(cueanexo);
+                uniqueRows.push(rowData);
+            });
+            if (!cueanexos.length) {
+                resolve([]);
+                return;
+            }
+
+            var request = $.ajax({
+                url: "{% url 'indicsie:comparativa_sge_ra_json' %}",
+                method: 'POST',
+                contentType: 'application/json; charset=UTF-8',
+                dataType: 'json',
+                cache: false,
+                headers: { 'X-CSRFToken': comparisonCsrfToken() },
+                data: JSON.stringify({
+                    modo: 'export_bulk',
+                    cueanexos: cueanexos
+                })
+            });
+            bulkExportRequest = request;
+
+            request.done(function (response) {
+                var details = response && response.detalles;
+                if (!Array.isArray(details) || details.length !== cueanexos.length) {
+                    reject({
+                        message: 'La respuesta masiva no contiene todos los detalles esperados.'
+                    });
+                    return;
+                }
+                var records = [];
+                for (var index = 0; index < details.length; index += 1) {
+                    var expectedCue = cueanexos[index];
+                    var item = details[index] || {};
+                    var payload = item.detalle_cue;
+                    if ($.trim(textValue(item.cueanexo)) !== expectedCue
+                        || !validDetailPayload(payload, expectedCue)) {
+                        reject({
+                            cueanexo: expectedCue,
+                            message: 'La respuesta masiva no conserva el detalle completo y ordenado.'
+                        });
+                        return;
+                    }
+                    records.push({
+                        rowData: uniqueRows[index],
+                        payload: payload
+                    });
+                }
+                resolve(records);
+            }).fail(function (xhr, status) {
+                var response = xhr && xhr.responseJSON;
+                reject({
+                    message: status === 'abort'
+                        ? 'La preparación masiva fue interrumpida.'
+                        : textValue(response && (response.error || response.message)) || 'No fue posible obtener los detalles completos.'
+                });
+            }).always(function () {
+                if (bulkExportRequest === request) bulkExportRequest = null;
+            });
+        });
+    }
+
+    function completeExportScalar(value) {
+        if (value === null || value === undefined || value === '') return '—';
+        if (value === true) return 'Sí';
+        if (value === false) return 'No';
+        return humanAuditSentence(textValue(value));
+    }
+
+    function completeExportRow(type, rowData, concept, ra, sge, detail) {
+        return {
+            tipo: type,
+            cueanexo: textValue(rowData && rowData.cueanexo),
+            establecimiento: textValue(rowData && rowData.establecimiento),
+            region: textValue(rowData && rowData.region),
+            estado: textValue(rowData && rowData.estado),
+            concepto: textValue(concept),
+            ra: textValue(ra),
+            sge: textValue(sge),
+            detalle: textValue(detail)
+        };
+    }
+
+    function completeExportReadableText(element) {
+        var clone = $(element).clone();
+        clone.find('[aria-hidden="true"], button, input, select').remove();
+        clone.find('br').replaceWith('\n');
+        clone.find('.situation-source-dimension').append(' ');
+        clone.find('.situation-card-context span, .situation-entry-context span').append(' · ');
+        clone.find('.situation-source-value-list span').append(', ');
+        clone.find([
+            'h4',
+            '.situation-source-label',
+            '.situation-source-row',
+            '.situation-card-scope',
+            '.dual-message',
+            '.dual-difference',
+            '.situation-quality-index',
+            '.dual-exclusive-explanation'
+        ].join(',')).append('\n');
+        return clone.text().replace(/\u00a0/g, ' ').split(/\n+/).map(function (line) {
+            return $.trim(line).replace(/\s+/g, ' ').replace(/[·,]\s*$/, '');
+        }).filter(Boolean).join('\n');
+    }
+
+    function completeExportFindingRows(record, output) {
+        var rowData = record.rowData;
+        var payload = record.payload;
+        var overview = $('<div>').html(dualDetailMarkup(payload, 'ver_todo'));
+        overview.find('.situation-overview .situation-card').each(function () {
+            var card = $(this);
+            var context = card.find('.situation-card-context, .situation-entry-context').map(function () {
+                return completeExportReadableText(this).replace(/\n/g, ' · ');
+            }).get().filter(Boolean).join(' · ');
+            var title = $.trim(card.find('h4').first().text()) || 'Hallazgo';
+            var sourceTexts = { RA: [], SGE: [] };
+            card.find('.situation-source').each(function () {
+                var sourceBlock = $(this);
+                var label = $.trim(sourceBlock.find('.situation-source-label').first().text()).toUpperCase();
+                if (/(^|\s)RA(\s|$)/.test(label)) sourceTexts.RA.push(completeExportReadableText(this));
+                if (/(^|\s)SGE(\s|$)/.test(label)) sourceTexts.SGE.push(completeExportReadableText(this));
+            });
+            var detailCard = card.clone();
+            detailCard.find('.situation-card-context, .situation-entry-context, h4').remove();
+            detailCard.find('.situation-source').filter(function () {
+                var label = $.trim($(this).find('.situation-source-label').first().text()).toUpperCase();
+                return /(^|\s)(RA|SGE)(\s|$)/.test(label);
+            }).remove();
+            output.push(completeExportRow(
+                'HALLAZGO',
+                rowData,
+                title + (context ? ' | ' + context : ''),
+                uniqueTexts(sourceTexts.RA).join('\n'),
+                uniqueTexts(sourceTexts.SGE).join('\n'),
+                completeExportReadableText(detailCard)
+            ));
+        });
+    }
+
+    function completeExportMessagesText(messages) {
+        return uniqueTexts(Array.isArray(messages) ? messages : []).map(function (message) {
+            return humanAuditSentence(message);
+        }).join('\n');
+    }
+
+    function completeExportEnrollmentText(rows) {
+        rows = Array.isArray(rows) ? rows : [];
+        if (!rows.length) return '—';
+        return rows.map(function (row) {
+            return enrollmentText(row && row.total);
+        }).join('\n');
+    }
+
+    function completeExportEvidenceRows(record, tree, path, source, output) {
+        if (!isRecord(tree)) return;
+        var rowData = record.rowData;
+        if (tree.dimension === 'matricula') {
+            var rowsRa = Array.isArray(tree.RA) ? tree.RA : [];
+            var rowsSge = Array.isArray(tree.SGE) ? tree.SGE : [];
+            if (Array.isArray(tree.filas)) {
+                if (source === 'RA') rowsRa = tree.filas;
+                if (source === 'SGE') rowsSge = tree.filas;
+            }
+            var details = [];
+            if (isTrustedEnrollmentComparison(tree) && numericValue(tree.diferencia_absoluta) !== null) {
+                details.push('Diferencia de matrícula: ' + enrollmentText(tree.diferencia_absoluta));
+                if (hasText(tree.resumen_diferencia)) details.push(humanAuditSentence(tree.resumen_diferencia));
+            }
+            var messages = completeExportMessagesText(tree.mensajes);
+            if (messages) details.push(messages);
+            output.push(completeExportRow(
+                'DETALLE_RA_SGE',
+                rowData,
+                path.concat(['Matrícula']).join(' > '),
+                completeExportEnrollmentText(rowsRa),
+                completeExportEnrollmentText(rowsSge),
+                details.join('\n')
+            ));
+            return;
+        }
+
+        var dimension = dualDimensionLabel(tree.dimension);
+        function visitNodes(nodes, nodeSource, relation) {
+            (Array.isArray(nodes) ? nodes : []).forEach(function (node) {
+                if (!isRecord(node)) return;
+                var value = humanContextValue(node.valor);
+                var nodePath = path.concat([
+                    dimension + ': ' + (hasText(value) ? value : '—')
+                ]);
+                output.push(completeExportRow(
+                    'EVIDENCIA',
+                    rowData,
+                    nodePath.join(' > '),
+                    nodeSource === 'SGE' ? '—' : (relation === 'comun' ? 'Coincide' : 'Sólo RA'),
+                    nodeSource === 'RA' ? '—' : (relation === 'comun' ? 'Coincide' : 'Sólo SGE'),
+                    completeExportMessagesText(node.mensajes)
+                ));
+                completeExportEvidenceRows(record, node.hijos, nodePath, nodeSource, output);
+            });
+        }
+
+        visitNodes(tree.comunes, null, 'comun');
+        visitNodes(tree.solo_ra, 'RA', 'exclusivo');
+        visitNodes(tree.solo_sge, 'SGE', 'exclusivo');
+        visitNodes(tree.nodos, source, 'exclusivo');
+    }
+
+    function completeExportRows(records) {
+        var output = [];
+        records.forEach(function (record, recordIndex) {
+            var rowData = record.rowData;
+            var payload = record.payload;
+            var situations = Array.isArray(payload.situaciones)
+                ? payload.situaciones
+                : [];
+            var summaryDetail = [
+                'Hallazgos totales: ' + situations.length,
+                'Estado actual: ' + completeExportScalar(rowData.estado_actual),
+                'Estado RA: ' + (payload.tiene_datos_ra ? 'Información encontrada' : 'Sin filas auditadas'),
+                'Estado SGE: ' + (payload.tiene_datos_sge ? 'Información encontrada' : 'Sin filas auditadas'),
+                'Período RA: ' + completeExportScalar(payload.periodo_ra),
+                'Período SGE: ' + completeExportScalar(payload.periodo_sge)
+            ];
+            if (Array.isArray(payload.situaciones_sin_nodo) && payload.situaciones_sin_nodo.length) {
+                summaryDetail.push(
+                    'Hallazgos sin nodo de evidencia: '
+                    + payload.situaciones_sin_nodo.map(textValue).join(', ')
+                );
+            }
+            output.push(completeExportRow(
+                'RESUMEN',
+                rowData,
+                'Resumen del CUE-Anexo',
+                dualSourceLabel(payload, 'RA'),
+                dualSourceLabel(payload, 'SGE'),
+                summaryDetail.join('\n')
+            ));
+            completeExportFindingRows(record, output);
+            completeExportEvidenceRows(record, payload.arbol, [], null, output);
+            if (recordIndex < records.length - 1) {
+                output.push(completeExportRow('', {}, '', '', '', ''));
+            }
+        });
+        return output;
+    }
+
+    function completeExportUpdateText() {
+        var badge = $('.fecha-badge').first().clone();
+        badge.find('button').remove();
+        return $.trim(badge.text().replace(/\s+/g, ' '));
+    }
+
+    function buildCompletePrintCue(record) {
+        var rowData = record.rowData;
+        var payload = record.payload;
+        var shell = $('<section>').addClass('export-print-cue');
+        var heading = $('<header>').addClass('export-print-cue-heading').html(
+            '<h2>CUE-Anexo ' + escapeHtml(rowData.cueanexo) + '</h2>'
+            + '<div class="export-print-meta">'
+             + '<div><strong>Establecimiento</strong><span>' + escapeHtml(rowData.establecimiento) + '</span></div>'
+             + '<div><strong>Región</strong><span>' + escapeHtml(rowData.region) + '</span></div>'
+             + '<div><strong>Estado actual</strong><span>' + escapeHtml(rowData.estado_actual) + '</span></div>'
+             + '<div><strong>Estado</strong><span>' + escapeHtml(rowData.estado) + '</span></div>'
+            + '<div><strong>Hallazgos</strong><span>' + formatNumber(payload.situaciones.length) + '</span></div>'
+            + '</div>'
+        );
+        var detailShell = $('<div>').addClass('detail-content')
+            .append('<div class="dual-detail-body" aria-busy="false"></div>');
+        renderDetailPayload(detailShell, payload, 'ver_todo');
+        detailShell.find('details').prop('open', true).attr('open', 'open');
+        detailShell.find('button, input, select, .detail-mode, .detail-load-status, .spinner-border').remove();
+        shell.append(heading).append(detailShell);
+        return shell[0].outerHTML;
+    }
+
+    function completePrintStyles() {
+        return [
+            '@page { size: landscape; margin: 12mm; }',
+            'body { background: #fff; color: #172033; font-family: Arial, sans-serif; margin: 0; }',
+            '.export-print-header { border-bottom: 2px solid #1d4ed8; margin-bottom: 16px; padding-bottom: 10px; }',
+            '.export-print-header h1 { font-size: 22px; margin: 0 0 6px; }',
+            '.export-print-header p { color: #475569; font-size: 11px; margin: 3px 0; }',
+            '.export-print-cue { break-before: page; page-break-before: always; }',
+            '.export-print-cue:first-child { break-before: auto; page-break-before: auto; }',
+            '.export-print-cue-heading { break-after: avoid; page-break-after: avoid; }',
+            '.export-print-cue-heading h2 { color: #1e3a8a; font-size: 18px; margin: 0 0 8px; }',
+            '.export-print-meta { display: grid; gap: 8px; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 12px; }',
+            '.export-print-meta > div { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 7px; }',
+            '.export-print-meta strong, .export-print-meta span { display: block; }',
+            '.export-print-meta strong { color: #64748b; font-size: 9px; text-transform: uppercase; }',
+            '.export-print-meta span { font-size: 11px; margin-top: 3px; }',
+            'details { display: block !important; }',
+            'details > summary { break-after: avoid; page-break-after: avoid; }',
+            'button, input, select, .dt-buttons, .dataTables_wrapper, .pagination, .detail-mode, .detail-toggle, .spinner-border { display: none !important; }',
+            '.dual-scroll { max-width: none !important; overflow: visible !important; }',
+            '.dual-comparison { min-width: 0 !important; width: 100% !important; }',
+            '.situation-card, .situation-quality-structure, .situation-source, .dual-exclusive-side, .dual-matricula-side { break-inside: avoid; page-break-inside: avoid; }',
+            '.dual-tree-row, .situation-overview-title, .evidence-heading { break-after: avoid; page-break-after: avoid; }'
+        ].join('\n');
+    }
+
+    function exportCompletePrint(records) {
+        return new Promise(function (resolve, reject) {
+            try {
+                var frame = document.createElement('iframe');
+                frame.setAttribute('aria-hidden', 'true');
+                frame.style.position = 'fixed';
+                frame.style.right = '0';
+                frame.style.bottom = '0';
+                frame.style.width = '1px';
+                frame.style.height = '1px';
+                frame.style.border = '0';
+                var styleText = Array.prototype.map.call(
+                    document.querySelectorAll('style'),
+                    function (style) { return style.textContent; }
+                ).join('\n');
+                var stylesheetLinks = Array.prototype.map.call(
+                    document.querySelectorAll('link[rel="stylesheet"]'),
+                    function (link) { return link.outerHTML; }
+                ).join('');
+                var cueMarkup = records.map(buildCompletePrintCue).join('');
+                document.body.appendChild(frame);
+                var printDocument = frame.contentDocument || frame.contentWindow.document;
+                printDocument.open();
+                printDocument.write(
+                    '<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Auditoría Comparativa RA / SGE</title>'
+                    + stylesheetLinks
+                    + '<style>' + styleText + '\n' + completePrintStyles() + '</style></head><body>'
+                    + '<header class="export-print-header"><h1>Auditoría Comparativa RA / SGE</h1>'
+                    + '<p>' + escapeHtml(completeExportUpdateText()) + '</p>'
+                    + '<p>' + exportSubtitleHtml() + '</p></header><main>'
+                    + cueMarkup + '</main></body></html>'
+                );
+                printDocument.close();
+                window.setTimeout(function () {
+                    try {
+                        frame.contentWindow.focus();
+                        frame.contentWindow.print();
+                        resolve();
+                    } catch (error) {
+                        reject(error);
+                    } finally {
+                        window.setTimeout(function () {
+                            if (frame.parentNode) frame.parentNode.removeChild(frame);
+                        }, 1000);
+                    }
+                }, 150);
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    function completeExportXml(value) {
+        return textValue(value)
+            .replace(/[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD]/g, '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+    }
+
+    function completeExportColumnName(index) {
+        var name = '';
+        var value = index + 1;
+        while (value > 0) {
+            var remainder = (value - 1) % 26;
+            name = String.fromCharCode(65 + remainder) + name;
+            value = Math.floor((value - 1) / 26);
+        }
+        return name;
+    }
+
+    function completeExportXlsxCell(value, columnIndex, rowIndex, styleIndex) {
+        var reference = completeExportColumnName(columnIndex) + rowIndex;
+        return '<c r="' + reference + '" t="inlineStr" s="' + styleIndex + '"><is><t xml:space="preserve">'
+            + completeExportXml(value) + '</t></is></c>';
+    }
+
+    function completeExportWorksheet(rows) {
+        var sheetRows = [];
+        var mergedCells = [];
+        var rowIndex = 0;
+        var hasCurrentCue = false;
+        var evidenceStarted = false;
+
+        function appendRow(values, styleIndex, height) {
+            rowIndex += 1;
+            var cells = values.map(function (value, columnIndex) {
+                return completeExportXlsxCell(value, columnIndex, rowIndex, styleIndex);
+            }).join('');
+            sheetRows.push('<row r="' + rowIndex + '" ht="' + height + '" customHeight="1">' + cells + '</row>');
+        }
+
+        function appendMergedRow(value, styleIndex, height) {
+            rowIndex += 1;
+            sheetRows.push('<row r="' + rowIndex + '" ht="' + height + '" customHeight="1">'
+                + completeExportXlsxCell(value, 0, rowIndex, styleIndex) + '</row>');
+            mergedCells.push('A' + rowIndex + ':D' + rowIndex);
+        }
+
+        appendMergedRow('Auditoría Comparativa RA / SGE', 1, 30);
+        appendMergedRow(completeExportUpdateText(), 2, 20);
+        appendMergedRow(exportSubtitle(), 2, 30);
+
+        rows.forEach(function (row) {
+            if (!row.tipo) {
+                appendRow(['', '', '', ''], 0, 10);
+                hasCurrentCue = false;
+                return;
+            }
+            if (row.tipo === 'RESUMEN') {
+                if (hasCurrentCue) appendRow(['', '', '', ''], 0, 10);
+                appendMergedRow('CUE-Anexo ' + row.cueanexo, 3, 26);
+                appendMergedRow(
+                    'Establecimiento: ' + row.establecimiento
+                    + '    |    Región: ' + row.region
+                    + '    |    Estado: ' + row.estado,
+                    2,
+                    28
+                );
+                appendRow(['Resumen del CUE-Anexo', 'RA', 'SGE', 'Detalle'], 5, 22);
+                appendRow([row.concepto, row.ra, row.sge, row.detalle], 6, 58);
+                appendMergedRow('RESUMEN PARA REVISAR', 4, 22);
+                evidenceStarted = false;
+                hasCurrentCue = true;
+                return;
+            }
+            if (row.tipo === 'HALLAZGO') {
+                appendRow([row.concepto, row.ra || '—', row.sge || '—', row.detalle || '—'], 6, 64);
+                return;
+            }
+            if (!evidenceStarted) {
+                appendMergedRow('EVIDENCIA AUDITADA', 4, 22);
+                appendRow(['Estructura', 'RA', 'SGE', 'Observación'], 5, 22);
+                evidenceStarted = true;
+            }
+            appendRow([row.concepto, row.ra || '—', row.sge || '—', row.detalle || '—'], 6, 48);
+        });
+
+        var lastRow = Math.max(1, rowIndex);
+        var mergeMarkup = mergedCells.length
+            ? '<mergeCells count="' + mergedCells.length + '">'
+                + mergedCells.map(function (reference) { return '<mergeCell ref="' + reference + '"/>'; }).join('')
+                + '</mergeCells>'
+            : '';
+        return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            + '<dimension ref="A1:D' + lastRow + '"/>'
+            + '<sheetViews><sheetView workbookViewId="0"><pane ySplit="3" topLeftCell="A4" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+            + '<sheetFormatPr defaultRowHeight="15"/>'
+            + '<cols>'
+            + '<col min="1" max="1" width="48" customWidth="1"/>'
+            + '<col min="2" max="3" width="38" customWidth="1"/>'
+            + '<col min="4" max="4" width="62" customWidth="1"/>'
+            + '</cols><sheetData>' + sheetRows.join('') + '</sheetData>'
+            + mergeMarkup
+            + '<pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>'
+            + '</worksheet>';
+    }
+
+    function saveCompleteExportBlob(blob, filename) {
+        var link = document.createElement('a');
+        var url = window.URL.createObjectURL(blob);
+        link.href = url;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.setTimeout(function () { window.URL.revokeObjectURL(url); }, 1000);
+    }
+
+    function exportCompleteExcel(records) {
+        if (typeof window.JSZip === 'undefined') {
+            return Promise.reject(new Error('No está disponible el componente requerido para Excel.'));
+        }
+        var rows = completeExportRows(records);
+        var createdAt = new Date().toISOString();
+        var zip = new window.JSZip();
+        zip.file('[Content_Types].xml',
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            + '<Default Extension="xml" ContentType="application/xml"/>'
+            + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+            + '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+            + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+            + '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'
+            + '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>'
+            + '</Types>');
+        zip.folder('_rels').file('.rels',
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+            + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+            + '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>'
+            + '</Relationships>');
+        zip.folder('docProps').file('core.xml',
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+            + '<dc:title>Auditoría Comparativa RA / SGE</dc:title><dc:creator>Indicadores IE</dc:creator>'
+            + '<dcterms:created xsi:type="dcterms:W3CDTF">' + completeExportXml(createdAt) + '</dcterms:created>'
+            + '</cp:coreProperties>');
+        zip.folder('docProps').file('app.xml',
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">'
+            + '<Application>Indicadores IE</Application></Properties>');
+        zip.folder('xl').file('workbook.xml',
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+            + '<sheets><sheet name="Comparativa completa" sheetId="1" r:id="rId1"/></sheets></workbook>');
+        zip.folder('xl').folder('_rels').file('workbook.xml.rels',
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+            + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+            + '</Relationships>');
+        zip.folder('xl').file('styles.xml',
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            + '<fonts count="4"><font><sz val="10"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="16"/><color rgb="FF1E3A8A"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="10"/><color rgb="FF1E3A8A"/><name val="Calibri"/><family val="2"/></font></fonts>'
+            + '<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1E3A8A"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEFF6FF"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF334155"/><bgColor indexed="64"/></patternFill></fill></fills>'
+            + '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFD8E0EA"/></left><right style="thin"><color rgb="FFD8E0EA"/></right><top style="thin"><color rgb="FFD8E0EA"/></top><bottom style="thin"><color rgb="FFD8E0EA"/></bottom><diagonal/></border></borders>'
+            + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+            + '<cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="3" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf></cellXfs>'
+            + '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+            + '</styleSheet>');
+        zip.folder('xl').folder('worksheets').file('sheet1.xml', completeExportWorksheet(rows));
+        return zip.generateAsync({
+            type: 'blob',
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }).then(function (blob) {
+            saveCompleteExportBlob(blob, exportFilename() + '.xlsx');
+        });
+    }
+
+    function completeExportPdfCue(record, index) {
+        var rowData = record.rowData;
+        var rows = completeExportRows([record]);
+        var summary = rows.find(function (row) { return row.tipo === 'RESUMEN'; });
+        var findings = rows.filter(function (row) { return row.tipo === 'HALLAZGO'; });
+        var evidence = rows.filter(function (row) {
+            return row.tipo === 'EVIDENCIA' || row.tipo === 'DETALLE_RA_SGE';
+        });
+        var stack = [
+            { text: 'CUE-Anexo ' + textValue(rowData.cueanexo), style: 'cueTitle' },
+            {
+                table: {
+                    widths: [70, '*', 70, '*'],
+                    body: [
+                        [
+                            { text: 'Establecimiento', style: 'metaLabel' },
+                            { text: textValue(rowData.establecimiento) || '—', style: 'metaValue' },
+                            { text: 'Región', style: 'metaLabel' },
+                            { text: textValue(rowData.region) || '—', style: 'metaValue' }
+                        ],
+                        [
+                            { text: 'Estado actual', style: 'metaLabel' },
+                            { text: textValue(rowData.estado_actual) || '—', style: 'metaValue' },
+                            { text: 'Estado', style: 'metaLabel' },
+                            { text: textValue(rowData.estado) || '—', style: 'metaValue' }
+                        ],
+                        [
+                            { text: 'Hallazgos', style: 'metaLabel' },
+                            { text: String(record.payload.situaciones.length), style: 'metaValue' },
+                            { text: 'Actualización', style: 'metaLabel' },
+                            { text: completeExportUpdateText() || '—', style: 'metaValue' }
+                        ]
+                    ]
+                },
+                layout: 'lightHorizontalLines',
+                margin: [0, 0, 0, 8]
+            }
+        ];
+
+        if (summary) {
+            stack.push({
+                table: {
+                    widths: ['*', '*'],
+                    body: [
+                        [
+                            { text: summary.ra || 'RA', style: 'sourceHeader' },
+                            { text: summary.sge || 'SGE', style: 'sourceHeader' }
+                        ],
+                        [
+                            {
+                                text: record.payload.tiene_datos_ra
+                                    ? 'Información encontrada'
+                                    : 'No se encontraron filas auditadas',
+                                style: 'sourceStatus'
+                            },
+                            {
+                                text: record.payload.tiene_datos_sge
+                                    ? 'Información encontrada'
+                                    : 'No se encontraron filas auditadas',
+                                style: 'sourceStatus'
+                            }
+                        ]
+                    ]
+                },
+                layout: 'lightHorizontalLines',
+                margin: [0, 0, 0, 8]
+            });
+        }
+
+        stack.push({ text: 'Resumen para revisar', style: 'sectionTitle' });
+        if (!findings.length) {
+            stack.push({ text: 'Sin hallazgos. Consulte la evidencia auditada completa.', style: 'emptyText' });
+        }
+        findings.forEach(function (row) {
+            var cardBody = [
+                [
+                    { text: row.concepto || 'Hallazgo', style: 'cardTitle', colSpan: 2 },
+                    {}
+                ],
+                [
+                    { stack: [{ text: 'RA', style: 'cardSourceLabel' }, { text: row.ra || '—', style: 'cardSourceValue' }] },
+                    { stack: [{ text: 'SGE', style: 'cardSourceLabel' }, { text: row.sge || '—', style: 'cardSourceValue' }] }
+                ]
+            ];
+            if (row.detalle) {
+                cardBody.push([{ text: row.detalle, style: 'cardDetail', colSpan: 2 }, {}]);
+            }
+            stack.push({
+                table: { widths: ['*', '*'], body: cardBody },
+                layout: {
+                    fillColor: function (rowIndex) { return rowIndex === 0 ? '#eff6ff' : '#ffffff'; },
+                    hLineColor: function () { return '#cbd5e1'; },
+                    vLineColor: function () { return '#cbd5e1'; },
+                    paddingLeft: function () { return 6; },
+                    paddingRight: function () { return 6; },
+                    paddingTop: function () { return 5; },
+                    paddingBottom: function () { return 5; }
+                },
+                margin: [0, 0, 0, 7]
+            });
+        });
+
+        stack.push({ text: 'Evidencia auditada', style: 'sectionTitle', margin: [0, 8, 0, 5] });
+        var evidenceBody = [[
+            { text: 'Estructura', style: 'tableHeader' },
+            { text: 'RA', style: 'tableHeader' },
+            { text: 'SGE', style: 'tableHeader' },
+            { text: 'Observación', style: 'tableHeader' }
+        ]];
+        evidence.forEach(function (row) {
+            evidenceBody.push([
+                { text: row.concepto || '—', style: 'tableCell' },
+                { text: row.ra || '—', style: 'tableCell' },
+                { text: row.sge || '—', style: 'tableCell' },
+                { text: row.detalle || '—', style: 'tableCell' }
+            ]);
+        });
+        stack.push({
+            table: {
+                headerRows: 1,
+                widths: [190, 105, 105, '*'],
+                body: evidenceBody
+            },
+            layout: {
+                fillColor: function (rowIndex) { return rowIndex === 0 ? '#334155' : null; },
+                hLineColor: function () { return '#cbd5e1'; },
+                vLineColor: function () { return '#cbd5e1'; },
+                paddingLeft: function () { return 4; },
+                paddingRight: function () { return 4; },
+                paddingTop: function () { return 3; },
+                paddingBottom: function () { return 3; }
+            }
+        });
+        return {
+            pageBreak: index > 0 ? 'before' : undefined,
+            stack: stack
+        };
+    }
+
+    function exportCompletePdf(records) {
+        if (!(window.pdfMake && window.pdfMake.vfs)) {
+            return Promise.reject(new Error('No está disponible el componente requerido para PDF.'));
+        }
+        var content = [
+            { text: 'Auditoría Comparativa RA / SGE', style: 'documentTitle' },
+            { text: completeExportUpdateText(), style: 'documentMeta' },
+            { text: exportSubtitle(), style: 'documentMeta', margin: [0, 0, 0, 10] }
+        ];
+        records.forEach(function (record, index) {
+            content.push(completeExportPdfCue(record, index));
+        });
+        var definition = {
+            pageSize: 'LEGAL',
+            pageOrientation: 'landscape',
+            pageMargins: [22, 24, 22, 24],
+            content: content,
+            defaultStyle: { fontSize: 7, color: '#172033' },
+            styles: {
+                documentTitle: { fontSize: 18, bold: true, color: '#1e3a8a', margin: [0, 0, 0, 4] },
+                documentMeta: { fontSize: 8, color: '#475569', margin: [0, 0, 0, 2] },
+                cueTitle: { fontSize: 13, bold: true, color: '#1e3a8a', margin: [0, 6, 0, 6] },
+                metaLabel: { fontSize: 7, bold: true, color: '#475569' },
+                metaValue: { fontSize: 7, color: '#172033' },
+                sourceHeader: { fontSize: 9, bold: true, color: '#ffffff', alignment: 'center', fillColor: '#111827' },
+                sourceStatus: { fontSize: 7, color: '#475569', alignment: 'center' },
+                sectionTitle: { fontSize: 8, bold: true, color: '#334155', characterSpacing: 0.4, margin: [0, 3, 0, 5] },
+                cardTitle: { fontSize: 8.5, bold: true, color: '#1e3a8a' },
+                cardSourceLabel: { fontSize: 7, bold: true, color: '#475569', margin: [0, 0, 0, 2] },
+                cardSourceValue: { fontSize: 7.5, color: '#111827' },
+                cardDetail: { fontSize: 7, color: '#475569' },
+                emptyText: { fontSize: 7.5, italics: true, color: '#64748b', margin: [0, 0, 0, 6] },
+                tableHeader: { fontSize: 7, bold: true, color: '#ffffff', alignment: 'center' },
+                tableCell: { fontSize: 6.5, color: '#172033' }
+            }
+        };
+        return new Promise(function (resolve, reject) {
+            try {
+                window.pdfMake.createPdf(definition).getBlob(function (blob) {
+                    saveCompleteExportBlob(blob, exportFilename() + '.pdf');
+                    resolve();
+                });
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    function runCompleteExport(type) {
+        if (exportInProgress) return;
+        var rows = exportRowsFromTable();
+        if (!rows.length) {
+            setCompleteExportStatus('No hay establecimientos en el resultado actual para exportar.', true);
+            return;
+        }
+        var labels = { excel: 'Excel', pdf: 'PDF', print: 'impresión' };
+        var label = labels[type] || 'archivo';
+        beginCompleteExport();
+        loadFullDetailsBulk(rows).then(function (records) {
+            exportProgressMessage = 'Generando ' + label + ' con el detalle completo…';
+            setCompleteExportStatus(exportProgressMessage, false);
+            if (type === 'excel') return exportCompleteExcel(records);
+            if (type === 'pdf') return exportCompletePdf(records);
+            if (type === 'print') return exportCompletePrint(records);
+            return Promise.reject(new Error('El formato solicitado no es válido.'));
+        }).then(function () {
+            finishCompleteExport('Exportación completa de ' + label + ' preparada correctamente.', false);
+        }).catch(function (error) {
+            var cue = error && error.cueanexo
+                ? ' para el CUE-Anexo ' + textValue(error.cueanexo)
+                : '';
+            var detail = textValue(error && error.message) || 'Ocurrió un error inesperado.';
+            finishCompleteExport(
+                'No se pudo generar la exportación completa' + cue + ': ' + detail + ' No se generó ningún archivo.',
+                true
+            );
+        });
     }
 
     function loadDetail(rowData, shell) {
@@ -2596,9 +3539,9 @@ $(function () {
             } }
         ],
         buttons: [
-            { extend: 'excelHtml5', text: '<i class="fas fa-file-excel me-1 text-success"></i>Excel resumen', className: 'btn-sm bg-white', title: 'Auditoría RA - SGE', filename: exportFilename, messageTop: exportSubtitle, exportOptions: { columns: [0, 1, 2, 3, 4, 5], modifier: { page: 'all' }, format: { body: plainText } } },
-            { extend: 'pdfHtml5', text: '<i class="fas fa-file-pdf me-1 text-danger"></i>PDF resumen', className: 'btn-sm bg-white', title: 'Auditoría RA - SGE', filename: exportFilename, messageTop: exportSubtitle, orientation: 'landscape', pageSize: 'LEGAL', exportOptions: { columns: [0, 1, 2, 3, 4, 5], modifier: { page: 'all' }, format: { body: plainText } } },
-            { extend: 'print', text: '<i class="fas fa-print me-1 text-dark"></i>Imprimir resumen', className: 'btn-sm bg-white', title: 'Auditoría RA - SGE', message: exportSubtitleHtml, exportOptions: { columns: [0, 1, 2, 3, 4, 5], modifier: { page: 'all' }, format: { body: safePrintText } } }
+            { extend: 'excelHtml5', text: '<i class="fas fa-file-excel me-1 text-success"></i>Excel', className: 'btn-sm bg-white', action: function () { runCompleteExport('excel'); } },
+            { extend: 'pdfHtml5', text: '<i class="fas fa-file-pdf me-1 text-danger"></i>PDF', className: 'btn-sm bg-white', action: function () { runCompleteExport('pdf'); } },
+            { extend: 'print', text: '<i class="fas fa-print me-1 text-dark"></i>Imprimir', className: 'btn-sm bg-white', action: function () { runCompleteExport('print'); } }
         ],
         initComplete: function () { placeExportButtons(); }
     });
@@ -2609,10 +3552,10 @@ $(function () {
         syncOuterTableScrollbar();
     });
     table.on('buttons-action.dt', function () {
-        $('#exportStatus').text('Solicitud de exportación recibida.');
+        if (!exportInProgress) $('#exportStatus').text('Solicitud de exportación recibida.');
     });
     table.on('buttons-processing.dt', function (event, processing) {
-        $('#exportStatus').text(processing ? 'Generando el archivo de exportación.' : 'Generación del archivo finalizada.');
+        if (!exportInProgress) $('#exportStatus').text(processing ? 'Generando el archivo de exportación.' : 'Generación del archivo finalizada.');
     });
     $('#comparativaTable').closest('.table-responsive').on('scroll', syncOuterTableScrollbar);
     $(window).on('resize orientationchange', scheduleOuterTableSync);
