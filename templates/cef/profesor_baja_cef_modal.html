@@ -1,0 +1,17 @@
+<div id="modalBajaProfesorCef" class="cef-docente-overlay{% if baja_modal_docente %} is-open{% endif %}" aria-hidden="{% if baja_modal_docente %}false{% else %}true{% endif %}">
+    <div class="cef-docente-modal" role="dialog" aria-modal="true" aria-labelledby="bajaProfesorCefTitulo">
+        <div class="cef-docente-modal-head">
+            <h2 id="bajaProfesorCefTitulo" class="cef-docente-modal-title">
+                <i class="fa-solid fa-user-slash me-2"></i>Profesores <span>» Baja del CEF</span>
+            </h2>
+            <button class="cef-docente-close" type="button" aria-label="Cerrar" data-cef-baja-close>
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="cef-docente-modal-body" data-cef-baja-content>
+            {% if baja_modal_docente %}
+                {% include "cef/profesor_baja_cef_contenido.html" %}
+            {% endif %}
+        </div>
+    </div>
+</div>

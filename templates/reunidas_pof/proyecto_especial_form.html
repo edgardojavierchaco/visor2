@@ -1,11 +1,16 @@
-{% extends 'archivos/base/layout.html' %}
+{% extends 'reunidas_pof/layout_pof.html' %}
 {% block content %}
 
 <div class="pof-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa="proyectos_especiales" %}
     <div class="pof-view-header">
-        <h1>{{ titulo }}</h1>
-        <p>Completá los datos reales del Proyecto Especial.</p>
+        <div class="pof-view-header-icon-box" aria-hidden="true">
+            <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">folder_special</span>
+        </div>
+        <div class="pof-view-header-copy">
+            <h1>{{ titulo }}</h1>
+            <p>Completá los datos reales del Proyecto Especial.</p>
+        </div>
     </div>
 
     <form method="post" class="pof-card pof-card-accent" novalidate>
@@ -42,7 +47,9 @@
 
             <div class="pof-field pof-col-6">
                 <label for="{{ form.proyecto_base_anterior.id_for_label }}">{{ form.proyecto_base_anterior.label }}</label>
-                {{ form.proyecto_base_anterior }}
+                <span class="pof-native-select-wrap">
+                    {{ form.proyecto_base_anterior }}
+                </span>
                 {% for error in form.proyecto_base_anterior.errors %}<div class="pof-form-error">{{ error }}</div>{% endfor %}
             </div>
 

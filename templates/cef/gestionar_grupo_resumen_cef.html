@@ -1,7 +1,7 @@
 <section class="cef-course-summary" aria-labelledby="cef-course-summary-title">
     <div class="cef-course-summary-head">
         <span class="cef-section-kicker">Resumen</span>
-        <h3 id="cef-course-summary-title">Datos del curso</h3>
+        <h3 id="cef-course-summary-title">Datos del grupo</h3>
     </div>
 
     <div class="cef-summary-grid">
@@ -9,20 +9,42 @@
             <h4 id="cef-summary-identificacion">Identificación</h4>
             <dl class="cef-definition-grid">
                 <div class="cef-definition-item">
+                    <dt>Ciclo</dt>
+                    <dd>{{ grupo.ciclo.anio|default:"-" }}</dd>
+                </div>
+                <div class="cef-definition-item">
                     <dt>Actividad</dt>
-                    <dd>{{ grupo.actividad|default:"-" }}</dd>
+                    <dd>{% if modo_historial %}{{ grupo.actividad_nombre_snapshot|default:grupo.actividad }}{% else %}{{ grupo.actividad|default:"-" }}{% endif %}</dd>
                 </div>
                 <div class="cef-definition-item">
                     <dt>Grupo</dt>
                     <dd>{{ grupo.nombre|default:"Sin nombre" }} · N° {{ grupo.numero|default:"-" }}</dd>
                 </div>
                 <div class="cef-definition-item">
+                    <dt>Estado</dt>
+                    <dd>
+                        <span class="badge text-bg-{% if grupo.estado == 'activo' %}success{% else %}secondary{% endif %}">
+                            {% if grupo.ciclo.cerrado and grupo.estado == 'activo' %}Activo al cierre{% else %}{{ grupo.get_estado_display }}{% endif %}
+                        </span>
+                    </dd>
+                </div>
+                {% if grupo.estado == 'baja' %}
+                    <div class="cef-definition-item">
+                        <dt>Fecha de baja</dt>
+                        <dd>{{ grupo.fecha_baja|date:"d/m/Y"|default:"-" }}</dd>
+                    </div>
+                    <div class="cef-definition-item">
+                        <dt>Motivo de baja</dt>
+                        <dd>{{ grupo.motivo_baja|default:"-" }}</dd>
+                    </div>
+                {% endif %}
+                <div class="cef-definition-item">
                     <dt>Nivel</dt>
-                    <dd>{{ grupo.nivel|default:"-" }}</dd>
+                    <dd>{% if modo_historial %}{{ grupo.nivel_nombre_snapshot|default:grupo.nivel }}{% else %}{{ grupo.nivel|default:"-" }}{% endif %}</dd>
                 </div>
                 <div class="cef-definition-item">
                     <dt>Rango etario</dt>
-                    <dd>{{ grupo.rango_etario|default:"-" }}</dd>
+                    <dd>{% if modo_historial %}{{ grupo.rango_etario_nombre_snapshot|default:grupo.rango_etario }}{% else %}{{ grupo.rango_etario|default:"-" }}{% endif %}</dd>
                 </div>
             </dl>
         </section>
@@ -32,7 +54,7 @@
             <dl class="cef-definition-grid is-three-col">
                 <div class="cef-definition-item">
                     <dt>Turno</dt>
-                    <dd>{{ grupo.turno|default:"-" }}</dd>
+                    <dd>{% if modo_historial or desde_historial or cef_context.ciclo.cerrado %}{{ grupo.turno_nombre_snapshot|default:grupo.turno }}{% else %}{{ grupo.turno|default:"-" }}{% endif %}</dd>
                 </div>
                 <div class="cef-definition-item">
                     <dt>Horario</dt>

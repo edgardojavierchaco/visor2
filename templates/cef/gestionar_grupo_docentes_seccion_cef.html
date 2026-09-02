@@ -1,0 +1,16 @@
+<section id="profesores-curso" class="cef-course-section cef-course-section-teachers">
+    <div class="cef-course-section-head">
+        <h3 class="mb-0">Profesores del grupo</h3>
+        <span class="cef-section-count" data-cef-section-count="docentes">{{ docentes|length }} registros</span>
+        {% if vista_docentes == 'actuales' and not gestionar_solo_lectura and grupo.estado == 'activo' and cef_context.puede_operar %}<button class="btn btn-outline-primary btn-sm" type="button" data-open-docentes-modal>
+            <i class="fa-solid fa-chalkboard-user"></i> Asignar profesor
+        </button>{% endif %}
+    </div>
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><a class="nav-link{% if vista_docentes == 'actuales' %} active{% endif %}" href="{{ url_docentes_actuales }}" data-cef-course-view-link data-cef-course-view="docentes">Activos</a></li>
+        <li class="nav-item"><a class="nav-link{% if vista_docentes == 'historial' %} active{% endif %}" href="{{ url_docentes_historial }}" data-cef-course-view-link data-cef-course-view="docentes">Historial</a></li>
+    </ul>
+    <div data-cef-fragment="docentes-grupo">
+        {% include "cef/docentes_grupo_lista_cef.html" %}
+    </div>
+</section>

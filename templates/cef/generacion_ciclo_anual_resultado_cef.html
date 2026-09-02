@@ -1,0 +1,73 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Resultado de la generación anual real.{% endblock %}
+
+{% block cef_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <div>
+            <span class="cef-section-kicker">Generación anual completada</span>
+            <h2 class="cef-panel-title">Ciclo {{ resumen.ciclo_destino.anio }} <span>generado correctamente</span></h2>
+        </div>
+        <div class="cef-panel-actions">
+            <span class="badge text-bg-success">COMPLETADO</span>
+            <a class="btn btn-outline-secondary" href="{{ volver_url }}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a Ciclos
+            </a>
+        </div>
+    </div>
+
+    <div class="cef-panel-body">
+        <div class="alert alert-success">
+            El ciclo {{ resumen.ciclo_destino.anio }} se generó correctamente y ya está disponible para trabajar. El ciclo {{ resumen.ciclo_origen.anio }} continúa cerrado y conserva su información.
+        </div>
+
+        <div class="cef-context-summary mb-4">
+            <div class="cef-context-summary-item">
+                <span>Fecha</span>
+                <strong>{{ resumen.fecha|date:"d/m/Y" }}</strong>
+            </div>
+            <div class="cef-context-summary-item">
+                <span>Usuario</span>
+                <strong>{{ resumen.usuario }}</strong>
+            </div>
+            <div class="cef-context-summary-item">
+                <span>Ciclo anterior</span>
+                <strong>{{ resumen.ciclo_origen.anio }} · Cerrado</strong>
+            </div>
+            <div class="cef-context-summary-item">
+                <span>Nuevo ciclo</span>
+                <strong>{{ resumen.ciclo_destino.anio }} · Disponible</strong>
+            </div>
+        </div>
+
+        <section class="cef-card">
+            <div class="cef-card-header">
+                <h3><i class="fa-solid fa-list-check me-2"></i>Resumen copiado</h3>
+            </div>
+            <div class="cef-card-body">
+                <div class="cef-table-wrap">
+                    <table class="cef-dt">
+                        <thead>
+                            <tr><th>Entidad</th><th>Cantidad</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>CEF</td><td>{{ resumen.conteos.cef }}</td></tr>
+                            <tr><td>Datos adicionales</td><td>{{ resumen.conteos.datos_relevamiento }}</td></tr>
+                            <tr><td>Grupos</td><td>{{ resumen.conteos.grupos }}</td></tr>
+                            <tr><td>Días</td><td>{{ resumen.conteos.dias }}</td></tr>
+                            <tr><td>Alumnos</td><td>{{ resumen.conteos.alumnos }}</td></tr>
+                            <tr><td>Profesores</td><td>{{ resumen.conteos.docentes }}</td></tr>
+                            <tr><td>Inscripciones</td><td>{{ resumen.conteos.inscripciones }}</td></tr>
+                            <tr><td>Asignaciones</td><td>{{ resumen.conteos.asignaciones }}</td></tr>
+                            <tr><td>Materiales</td><td>{{ resumen.conteos.inventario_materiales }}</td></tr>
+                            <tr><td>Distribuciones</td><td>{{ resumen.conteos.inventario_distribuciones }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-muted small mt-3 mb-0">Las jornadas, asistencias y movimientos de asistencia no se copiaron al nuevo ciclo.</p>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

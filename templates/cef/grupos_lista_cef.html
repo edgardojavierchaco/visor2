@@ -1,0 +1,131 @@
+<div class="cef-table-section" data-cef-table-root>
+    <div class="cef-tools">
+        <div class="cef-tools-left">
+            <span class="cef-tools-label">Mostrar</span>
+            <select data-cef-page-size>
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+            </select>
+            <span class="cef-tools-label">registros</span>
+        </div>
+        <div class="cef-tools-right">
+            <div class="cef-search-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input id="searchGrupos" type="search" placeholder="Buscar…" data-cef-table-search>
+                <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {% if grupos %}
+        <div class="cef-table-wrap">
+            <table class="cef-dt" data-cef-table>
+                <thead>
+                    <tr>
+                        <th>Actividad</th>
+                        <th>N°</th>
+                        <th>Nombre</th>
+                        <th>Nivel</th>
+                        <th>Turno</th>
+                        <th>Horario</th>
+                        <th>Días</th>
+                        <th>Estado</th>
+                        <th>Alumnos</th>
+                        <th>Profesores</th>
+                        <th>Cupo</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for grupo in grupos %}
+                        <tr class="{% if grupo.estado != 'activo' %}cef-row-inactive{% endif %}">
+                            <td><strong>{{ grupo.actividad }}</strong></td>
+                            <td>{{ grupo.numero }}</td>
+                            <td>{{ grupo.nombre|default:"—" }}</td>
+                            <td>{{ grupo.nivel }}</td>
+                            <td><span class="badge text-bg-secondary">{{ grupo.turno }}</span></td>
+                            <td>{{ grupo.hora_inicio|time:"H:i" }} – {{ grupo.hora_fin|time:"H:i" }}</td>
+                            <td>{{ grupo.dias_texto|default:"—" }}</td>
+                            <td>
+                                <span class="badge text-bg-{% if grupo.estado == 'activo' %}success{% else %}secondary{% endif %}">
+                                    {{ grupo.get_estado_display }}
+                                </span>
+                                {% if grupo.estado == 'baja' %}
+                                    <div class="small text-muted mt-1">{{ grupo.fecha_baja|date:"d/m/Y"|default:"-" }}</div>
+                                    <div class="small text-muted">{{ grupo.motivo_baja|default:"Sin motivo" }}</div>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge text-bg-primary">{{ grupo.alumnos_activos }}</span></td>
+                            <td><span class="badge text-bg-primary">{{ grupo.docentes_activos }}</span></td>
+                            <td>{{ grupo.cupo_maximo|default:"—" }}</td>
+                            <td class="cef-act-cell">
+                                <div class="dropdown" data-cef-row-actions>
+                                    <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-cef-row-actions-toggle aria-expanded="false">
+                                        Acciones
+                                    </button>
+                                    <ul class="dropdown-menu cef-row-actions-menu" data-cef-row-actions-menu>
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'cef:gestionar_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}origen=grupos">
+                                                <i class="fa-solid fa-clipboard-list"></i> Gestionar grupo
+                                            </a>
+                                        </li>
+                                        {% if grupo.estado == 'activo' %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'cef:asistencia_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                                <i class="fa-solid fa-user-check"></i> Ver asistencias
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                        {% if cef_context.puede_operar %}
+                                        {% if grupo.estado == 'activo' %}<li>
+                                            <a class="dropdown-item" href="{% url 'cef:carga_grupo_editar' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                                <i class="fa-solid fa-pen"></i> Editar grupo
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_baja=1&grupo_id={{ grupo.pk }}" data-cef-baja-open data-cef-baja-modal-id="modalBajaGrupoCef" data-cef-baja-modal-title="» Baja del grupo" data-template-id="cef-baja-grupo-{{ grupo.pk }}">
+                                                <i class="fa-solid fa-layer-group"></i> Dar de baja grupo
+                                            </a>
+                                            <template id="cef-baja-grupo-{{ grupo.pk }}">
+                                                {% include "cef/grupo_baja_cef_contenido.html" with baja_modal_grupo=grupo baja_form=baja_form_vacio %}
+                                            </template>
+                                        </li>
+                                        {% else %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}abrir_modal_reactivar=1&grupo_id={{ grupo.pk }}" data-cef-baja-open data-cef-baja-modal-id="modalBajaGrupoCef" data-cef-baja-modal-title="» Reactivar grupo" data-template-id="cef-reactivar-grupo-{{ grupo.pk }}">
+                                                <i class="fa-solid fa-rotate-left"></i> Reactivar grupo
+                                            </a>
+                                            <template id="cef-reactivar-grupo-{{ grupo.pk }}">
+                                                {% include "cef/grupo_reactivar_cef_contenido.html" with reactivar_modal_grupo=grupo %}
+                                            </template>
+                                        </li>
+                                        {% endif %}
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% elif cef_context.puede_consultar %}
+        <div class="cef-empty-state">
+            <i class="fa-solid fa-layer-group" style="font-size:1.5rem;color:var(--text-faint)"></i>
+            No hay grupos activos en el ciclo seleccionado.
+        </div>
+    {% else %}
+        <div class="cef-empty-state">
+            <i class="fa-solid fa-hand-pointer" style="font-size:1.5rem;color:var(--text-faint)"></i>
+            Seleccioná un CUE-Anexo y un ciclo para ver grupos.
+        </div>
+    {% endif %}
+
+    <div class="cef-tfoot">
+        <span class="cef-tfoot-count" data-cef-table-count>{{ total_grupos|default:0 }} registros</span>
+        <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+    </div>
+</div>

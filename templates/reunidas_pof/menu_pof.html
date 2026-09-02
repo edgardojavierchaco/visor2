@@ -1,6 +1,4 @@
 {% load static %}
-<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof.css' %}?v=20260727-1">
-<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof_view_transitions.css' %}">
 {% comment %}
     .pof-tabs-navbar {
         --pof-primary: #3B5CFF;
@@ -31,7 +29,7 @@
         width: 100%;
     }
 
-    .pof-tabs-link:first-of-type {
+    .pof-tabs-list .pof-guide-link {
         margin-left: auto;
     }
 
@@ -133,7 +131,18 @@
 
 <nav class="pof-tabs-navbar" aria-label="Navegaci&oacute;n POF">
     <div class="pof-tabs-list">
-        <span class="pof-tabs-brand">&#127979; Gesti&oacute;n POF</span>
+        <span class="pof-tabs-brand">
+            <span class="pof-brand-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">stress_management</span>
+            <span class="pof-tabs-brand-copy">
+                <span class="pof-tabs-brand-title">POF</span>
+                <span class="pof-tabs-brand-subtitle">Planta Org&aacute;nica Funcional</span>
+            </span>
+        </span>
+        <button type="button"
+                class="pof-tabs-link pof-guide-link"
+                data-pof-guide-open
+                aria-controls="pofGuiaUsoModal"
+                aria-haspopup="dialog"><span class="pof-guide-icon pof-material-symbol pof-icon-help material-symbols-outlined" aria-hidden="true">help</span> GU&Iacute;A DE USO</button>
         <a href="{% url 'reunidas_pof:inicio' %}" class="pof-tabs-link{% if seccion_activa == 'inicio' %} pof-tabs-link-active{% endif %}">INICIO</a>
         {% if not pof_solo_visualizacion %}
         <a href="{% url 'reunidas_pof:reunidas_pof' %}" class="pof-tabs-link{% if seccion_activa == 'reunidas' %} pof-tabs-link-active{% endif %}">POF</a>
@@ -148,31 +157,22 @@
     </div>
 </nav>
 
+{% include "reunidas_pof/guia_uso_pof.html" %}
+
+<script src="{% static 'reunidas_pof/js/guia_uso_pof.js' %}?v=20260818-2"></script>
+
 <script>
 (function() {
     const STORAGE_KEY = "pof_sidebar_state";
 
-    function applySidebarState() {
-        const state = sessionStorage.getItem(STORAGE_KEY);
-
-        if (state === "closed") {
-            document.body.classList.add("sidebar-collapse");
-            document.body.classList.remove("sidebar-open");
-        }
-
-        if (state === "open") {
-            document.body.classList.remove("sidebar-collapse");
-        }
-    }
-
     function saveSidebarState() {
         const isClosed = document.body.classList.contains("sidebar-collapse");
-        sessionStorage.setItem(STORAGE_KEY, isClosed ? "closed" : "open");
+        try {
+            sessionStorage.setItem(STORAGE_KEY, isClosed ? "closed" : "open");
+        } catch (error) {
+            // La preferencia visual no debe bloquear el control del sidebar.
+        }
     }
-
-    applySidebarState();
-
-    document.addEventListener("DOMContentLoaded", applySidebarState);
 
     document.addEventListener("click", function(event) {
         const toggle = event.target.closest('[data-widget="pushmenu"]');
@@ -181,9 +181,7 @@
             return;
         }
 
-        window.setTimeout(saveSidebarState, 180);
+        saveSidebarState();
     });
-
-    window.addEventListener("beforeunload", saveSidebarState);
 })();
 </script>

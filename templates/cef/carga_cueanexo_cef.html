@@ -7,9 +7,11 @@
     <section class="cef-card">
         <div class="cef-card-header">
             <h3><i class="fa-solid fa-school me-2"></i>Datos del establecimiento</h3>
-            <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:editar_datos_cueanexo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-pen-to-square me-1"></i>Modificar datos adicionales
-            </a>
+            {% if cef_context.puede_operar %}
+                <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:editar_datos_cueanexo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" data-cef-page-loading-link>
+                    <i class="fa-solid fa-pen-to-square me-1"></i>Modificar datos adicionales
+                </a>
+            {% endif %}
         </div>
         <div class="cef-card-body">
             {% if establecimiento_items %}
@@ -40,14 +42,15 @@
                     <div class="cef-info-item"><span>Prestación</span><strong>{{ datos.prestacion_tipo|default:"-" }}</strong></div>
                     <div class="cef-info-item"><span>Espacio comedor</span><strong>{{ datos.espacio_comedor|default:"-" }}</strong></div>
                     <div class="cef-info-item"><span>Orientación</span><strong>{{ datos.c_orientacion|default:"-" }}</strong></div>
-                    <div class="cef-info-item"><span>Nombre sección</span><strong>{{ datos.nombre_seccion|default:"-" }}</strong></div>
                     <div class="cef-info-item span-all"><span>Observaciones</span><strong>{{ datos.observaciones|default:"Sin observaciones" }}</strong></div>
                 </div>
-            {% elif cef_context.puede_operar %}
+            {% elif cef_context.puede_consultar %}
                 <div class="cef-empty-state mb-3">Todavía no hay datos adicionales cargados para este CEF y ciclo.</div>
-                <a class="btn btn-primary" href="{% url 'cef:editar_datos_cueanexo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
-                    <i class="fa-solid fa-plus me-1"></i>Cargar datos adicionales
-                </a>
+                {% if cef_context.puede_operar %}
+                    <a class="btn btn-primary" href="{% url 'cef:editar_datos_cueanexo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" data-cef-page-loading-link>
+                        <i class="fa-solid fa-plus me-1"></i>Cargar datos adicionales
+                    </a>
+                {% endif %}
             {% else %}
                 <div class="cef-empty-state">Seleccioná un CUE-Anexo y un ciclo para continuar.</div>
             {% endif %}

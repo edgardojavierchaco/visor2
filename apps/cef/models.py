@@ -23,7 +23,9 @@ PADRON_DB_ALIAS = "default"
 ROLES_AUTORIZADOS_CEF = {
     "Administrador",
     "Director de Servicios Complementarios",
+    "profesorcef",
 }
+ROL_PROFESOR_CEF = "profesorcef"
 
 # ============================================================
 # MODELOS EXTERNOS / INTEGRACION
@@ -208,6 +210,24 @@ def normalizar_cueanexo(valor):
     return cueanexo
 
 
+def _validar_baja_terminal(instancia, errors):
+    """
+    Impide reactivar una fila historica que ya se encuentra en baja.
+    """
+
+    if not instancia.pk or instancia.estado != instancia.Estado.ACTIVO:
+        return
+
+    estado_anterior = (
+        type(instancia).objects
+        .filter(pk=instancia.pk)
+        .values_list("estado", flat=True)
+        .first()
+    )
+    if estado_anterior == instancia.Estado.BAJA:
+        errors["estado"] = "Una fila dada de baja no puede volver a estado activo."
+
+
 def normalizar_cuil_usuario(user):
     """
     Toma el username del usuario logueado y lo interpreta como CUIL/CUIT.
@@ -222,6 +242,15 @@ def normalizar_cuil_usuario(user):
         return ""
 
     return cuil
+
+
+def usuario_es_profesor_cef(user, permisos=None):
+    """Indica si el usuario posee el rol restringido de asistencia CEF."""
+
+    if permisos is None:
+        permisos = obtener_permisos_usuario_cef(user)
+
+    return permisos.get("es_profesor_cef", False)
 
 
 def get_cefs_base_queryset():
@@ -332,28 +361,44 @@ def obtener_rol_usuario_cef(user):
     return rol_nombre.strip() or None
 
 
-def usuario_puede_ver_cef(user):
+def obtener_permisos_usuario_cef(user):
+    """Resuelve una sola vez el rol y sus permisos funcionales CEF."""
+    rol = obtener_rol_usuario_cef(user)
+    rol_normalizado = (rol or "").strip().casefold()
+    roles_autorizados = {item.casefold() for item in ROLES_AUTORIZADOS_CEF}
+    es_profesor_cef = rol_normalizado == ROL_PROFESOR_CEF.casefold()
+    return {
+        "rol": rol,
+        "puede_ver": rol_normalizado in roles_autorizados,
+        "es_admin": rol_normalizado == "administrador".casefold(),
+        "es_profesor_cef": es_profesor_cef,
+        "solo_asistencia": es_profesor_cef,
+    }
+
+
+def usuario_puede_ver_cef(user, permisos=None):
     """
     Indica si el usuario puede acceder actualmente al modulo CEF.
     """
 
-    rol = obtener_rol_usuario_cef(user)
+    if permisos is None:
+        permisos = obtener_permisos_usuario_cef(user)
 
-    if not rol:
-        return False
-
-    return rol in ROLES_AUTORIZADOS_CEF
+    return permisos["puede_ver"]
 
 
-def usuario_es_admin_cef(user):
+def usuario_es_admin_cef(user, permisos=None):
     """
     Atajo para controles puntuales que requieran rol Administrador.
     """
 
-    return obtener_rol_usuario_cef(user) == "Administrador"
+    if permisos is None:
+        permisos = obtener_permisos_usuario_cef(user)
+
+    return permisos["es_admin"]
 
 
-def get_cefs_visualizacion_usuario(user):
+def get_cefs_visualizacion_usuario(user, permisos=None):
     """
     Devuelve todos los CEF para los roles autorizados.
 
@@ -363,40 +408,68 @@ def get_cefs_visualizacion_usuario(user):
 
     queryset = get_todos_los_cef()
 
-    if not usuario_puede_ver_cef(user):
+    if not usuario_puede_ver_cef(user, permisos=permisos):
         return queryset.none()
 
     return queryset
 
 
-def get_cefs_cargables_usuario(user):
+def get_cefs_cargables_usuario(user, permisos=None):
     """
     Devuelve los CEF sobre los que el usuario puede cargar datos operativos.
 
     Regla inicial:
     - Administrador: todos los CEF.
-    - Otros usuarios autorizados: CEF donde su CUIL figura como responsable.
+    - Profesor CEF: CEF con una asignación docente activa.
+    - Director: CEF donde su CUIL figura como responsable.
     """
 
     queryset = get_todos_los_cef()
 
-    if not usuario_puede_ver_cef(user):
+    if permisos is None:
+        permisos = obtener_permisos_usuario_cef(user)
+
+    if not usuario_puede_ver_cef(user, permisos=permisos):
         return queryset.none()
 
-    if usuario_es_admin_cef(user):
+    if usuario_es_admin_cef(user, permisos=permisos):
         return queryset
+
+    if usuario_es_profesor_cef(user, permisos=permisos):
+        cuil = normalizar_cuil_usuario(user)
+        if not cuil:
+            return queryset.none()
+
+        cueanexos = (
+            CefDocenteGrupo.objects.filter(
+                docente_cuil=cuil,
+                estado=CefDocenteGrupo.Estado.ACTIVO,
+                rol__in=(
+                    CefDocenteGrupo.Rol.TITULAR,
+                    CefDocenteGrupo.Rol.SUPLENTE,
+                ),
+                grupo__estado=CefGrupo.Estado.ACTIVO,
+                grupo__ciclo__activo=True,
+            )
+            .values_list("grupo__cueanexo", flat=True)
+            .distinct()
+        )
+        return queryset.filter(cueanexo__in=cueanexos)
 
     return get_cefs_por_cuil_responsable(user)
 
 
-def get_cueanexos_cargables_usuario(user):
+def get_cueanexos_cargables_usuario(user, permisos=None):
     """
     Devuelve una lista normalizada de CUE-Anexos cargables para el usuario.
     """
 
     cueanexos = []
 
-    for cueanexo in get_cefs_cargables_usuario(user).values_list("cueanexo", flat=True).distinct():
+    for cueanexo in get_cefs_cargables_usuario(
+        user,
+        permisos=permisos,
+    ).values_list("cueanexo", flat=True).distinct():
         cueanexo_normalizado = normalizar_cueanexo(cueanexo)
 
         if cueanexo_normalizado and cueanexo_normalizado not in cueanexos:
@@ -405,7 +478,7 @@ def get_cueanexos_cargables_usuario(user):
     return cueanexos
 
 
-def usuario_puede_cargar_cueanexo(user, cueanexo):
+def usuario_puede_cargar_cueanexo(user, cueanexo, permisos=None):
     """
     Valida si el usuario puede operar sobre un CUE-Anexo determinado.
     """
@@ -415,7 +488,10 @@ def usuario_puede_cargar_cueanexo(user, cueanexo):
     if not cueanexo:
         return False
 
-    return cueanexo in get_cueanexos_cargables_usuario(user)
+    return cueanexo in get_cueanexos_cargables_usuario(
+        user,
+        permisos=permisos,
+    )
 
 
 # ============================================================
@@ -514,6 +590,7 @@ class CefCiclo(CefAuditoriaMixin):
     fecha_fin = models.DateField(blank=True, null=True)
     activo = models.BooleanField(default=True)
     actual = models.BooleanField(default=False)
+    cerrado = models.BooleanField(default=False, db_index=True)
 
     class Meta:
         db_table = '"cef"."ciclos"'
@@ -526,9 +603,17 @@ class CefCiclo(CefAuditoriaMixin):
                 condition=Q(actual=True),
                 name="uq_cef_ciclo_actual",
             ),
+            models.CheckConstraint(
+                check=~Q(cerrado=True, actual=True),
+                name="ck_cef_ciclo_cerrado_actual",
+            ),
         ]
 
     def clean(self):
+        if self.cerrado and self.actual:
+            raise ValidationError(
+                {"actual": "Un ciclo cerrado no puede ser el ciclo actual."}
+            )
         if self.fecha_inicio and self.fecha_fin and self.fecha_fin < self.fecha_inicio:
             raise ValidationError(
                 {"fecha_fin": "La fecha de fin no puede ser anterior a la fecha de inicio."}
@@ -692,13 +777,7 @@ class CefTurno(CefAuditoriaMixin):
     - Nocturno (18:00 a 22:00)
     """
 
-    ciclo = models.ForeignKey(
-        CefCiclo,
-        on_delete=models.PROTECT,
-        related_name="turnos",
-    )
-
-    nombre = models.CharField(max_length=80)
+    nombre = models.CharField(max_length=80, unique=True)
     hora_desde_referencia = models.TimeField()
     hora_hasta_referencia = models.TimeField()
     activo = models.BooleanField(default=True)
@@ -706,15 +785,9 @@ class CefTurno(CefAuditoriaMixin):
 
     class Meta:
         db_table = '"cef"."turnos"'
-        ordering = ["-ciclo__anio", "orden", "nombre"]
+        ordering = ["orden", "nombre"]
         verbose_name = "Turno CEF"
         verbose_name_plural = "Turnos CEF"
-        constraints = [
-            models.UniqueConstraint(
-                fields=["ciclo", "nombre"],
-                name="uq_cef_turno_cic_nom",
-            ),
-        ]
 
     def clean(self):
         if (
@@ -790,6 +863,17 @@ class CefOrientacionTipo(CefCatalogoCodigoBase):
         verbose_name_plural = "Tipos de orientacion CEF"
 
 
+class CefEstadoMaterialTipo(CefCatalogoCodigoBase):
+    """
+    Catalogo de estados permitidos para materiales del inventario CEF.
+    """
+
+    class Meta(CefCatalogoCodigoBase.Meta):
+        db_table = '"cef"."estado_material_tipo"'
+        verbose_name = "Tipo de estado de material CEF"
+        verbose_name_plural = "Tipos de estado de materiales CEF"
+
+
 # ============================================================
 # DATOS COMPLEMENTARIOS / RELEVAMIENTO CEF
 # ============================================================
@@ -837,7 +921,6 @@ class CefDatosRelevamiento(CefAuditoriaMixin):
         related_name="datos_orientacion",
     )
 
-    nombre_seccion = models.CharField(max_length=120, default="No corresponde")
     observaciones = models.TextField(blank=True)
 
     beneficio_codigo_snapshot = models.IntegerField(blank=True, null=True, editable=False)
@@ -885,9 +968,6 @@ class CefDatosRelevamiento(CefAuditoriaMixin):
             errors["cueanexo"] = "CUE-Anexo invalido."
         else:
             self.cueanexo = cueanexo_normalizado
-
-        nombre_seccion = (self.nombre_seccion or "").strip()
-        self.nombre_seccion = nombre_seccion or "No corresponde"
 
         if self._beneficio_requiere_no_corresponde():
             if self.fuente_financiamiento_id and self.fuente_financiamiento.codigo != -1:
@@ -1003,10 +1083,8 @@ class CefGrupo(CefAuditoriaMixin):
     """
 
     class Estado(models.TextChoices):
-        BORRADOR = "borrador", "Borrador"
         ACTIVO = "activo", "Activo"
-        INACTIVO = "inactivo", "Inactivo"
-        CERRADO = "cerrado", "Cerrado"
+        BAJA = "baja", "Baja"
 
     cueanexo = models.CharField(max_length=9, db_index=True)
 
@@ -1022,7 +1100,10 @@ class CefGrupo(CefAuditoriaMixin):
         related_name="grupos",
     )
 
-    numero = models.PositiveSmallIntegerField(default=1)
+    numero = models.PositiveSmallIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+    )
     nombre = models.CharField(max_length=150, blank=True)
 
     nivel = models.ForeignKey(
@@ -1055,6 +1136,17 @@ class CefGrupo(CefAuditoriaMixin):
         db_index=True,
     )
 
+    fecha_baja = models.DateField(blank=True, null=True)
+    motivo_baja = models.CharField(max_length=255, blank=True)
+
+    grupo_origen = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+        related_name="grupos_derivados",
+    )
+
     codigo_ra_override = models.ForeignKey(
         CefCodigoRa,
         on_delete=models.PROTECT,
@@ -1072,6 +1164,8 @@ class CefGrupo(CefAuditoriaMixin):
     turno_nombre_snapshot = models.CharField(max_length=80, blank=True, editable=False)
     turno_hora_desde_snapshot = models.TimeField(blank=True, null=True, editable=False)
     turno_hora_hasta_snapshot = models.TimeField(blank=True, null=True, editable=False)
+    nivel_nombre_snapshot = models.CharField(max_length=150, blank=True, editable=False)
+    rango_etario_nombre_snapshot = models.CharField(max_length=150, blank=True, editable=False)
 
     observaciones = models.TextField(blank=True)
 
@@ -1089,6 +1183,17 @@ class CefGrupo(CefAuditoriaMixin):
             models.UniqueConstraint(
                 fields=["cueanexo", "ciclo", "actividad", "numero"],
                 name="uq_cef_grp_cic_act_num",
+            ),
+            models.CheckConstraint(
+                condition=Q(numero__gte=1),
+                name="ck_cef_grp_num_gte_1",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(estado="activo", fecha_baja__isnull=True)
+                    | Q(estado="baja", fecha_baja__isnull=False)
+                ),
+                name="ck_cef_grp_estado_fecha",
             ),
         ]
         indexes = [
@@ -1109,11 +1214,16 @@ class CefGrupo(CefAuditoriaMixin):
         if self.cupo_maximo is not None and self.cupo_maximo < 1:
             errors["cupo_maximo"] = "El cupo maximo debe ser mayor a cero."
 
+        if self.estado == self.Estado.ACTIVO:
+            if self.fecha_baja:
+                errors["fecha_baja"] = "Un grupo activo no debe tener fecha de baja."
+            if self.motivo_baja:
+                errors["motivo_baja"] = "Un grupo activo no debe tener motivo de baja."
+        elif self.estado == self.Estado.BAJA and not self.fecha_baja:
+            errors["fecha_baja"] = "Debe indicar fecha de baja cuando el grupo esta en baja."
+
         if self.hora_inicio and self.hora_fin and self.hora_fin <= self.hora_inicio:
             errors["hora_fin"] = "La hora de fin debe ser posterior a la hora de inicio."
-
-        if self.turno_id and self.ciclo_id and self.turno.ciclo_id != self.ciclo_id:
-            errors["turno"] = "El turno debe pertenecer al mismo ciclo del grupo."
 
         if self.turno_id and self.hora_inicio:
             if self.hora_inicio < self.turno.hora_desde_referencia:
@@ -1144,7 +1254,13 @@ class CefGrupo(CefAuditoriaMixin):
             try:
                 grupo_anterior = (
                     type(self).objects
-                    .only("actividad_id", "codigo_ra_override_id", "turno_id")
+                    .only(
+                        "actividad_id",
+                        "codigo_ra_override_id",
+                        "turno_id",
+                        "nivel_id",
+                        "rango_etario_id",
+                    )
                     .get(pk=self.pk)
                 )
             except type(self).DoesNotExist:
@@ -1157,6 +1273,10 @@ class CefGrupo(CefAuditoriaMixin):
             or grupo_anterior.codigo_ra_override_id != self.codigo_ra_override_id
         )
         cambio_turno = es_nuevo or grupo_anterior.turno_id != self.turno_id
+        cambio_nivel = es_nuevo or grupo_anterior.nivel_id != self.nivel_id
+        cambio_rango_etario = (
+            es_nuevo or grupo_anterior.rango_etario_id != self.rango_etario_id
+        )
 
         actividad_snapshot_vacio = (
             not self.actividad_nombre_snapshot
@@ -1171,6 +1291,8 @@ class CefGrupo(CefAuditoriaMixin):
             or not self.turno_hora_desde_snapshot
             or not self.turno_hora_hasta_snapshot
         )
+        nivel_snapshot_vacio = not self.nivel_nombre_snapshot
+        rango_etario_snapshot_vacio = not self.rango_etario_nombre_snapshot
 
         if self.actividad_id and (cambio_actividad or actividad_snapshot_vacio):
             self.actividad_nombre_snapshot = self.actividad.nombre
@@ -1190,6 +1312,14 @@ class CefGrupo(CefAuditoriaMixin):
             self.turno_hora_desde_snapshot = self.turno.hora_desde_referencia
             self.turno_hora_hasta_snapshot = self.turno.hora_hasta_referencia
 
+        if self.nivel_id and (cambio_nivel or nivel_snapshot_vacio):
+            self.nivel_nombre_snapshot = self.nivel.nombre
+
+        if self.rango_etario_id and (
+            cambio_rango_etario or rango_etario_snapshot_vacio
+        ):
+            self.rango_etario_nombre_snapshot = self.rango_etario.nombre
+
     def save(self, *args, **kwargs):
         self.actualizar_snapshots_catalogo()
         self.full_clean()
@@ -1203,6 +1333,38 @@ class CefGrupo(CefAuditoriaMixin):
             return f"{base} - {self.nombre}"
 
         return f"{base} - Grupo {self.numero}"
+
+
+class CefGrupoEstadoMovimiento(CefAuditoriaMixin):
+    """Transición de estado registrada para un mismo grupo CEF."""
+
+    grupo = models.ForeignKey(
+        CefGrupo,
+        on_delete=models.PROTECT,
+        related_name="movimientos_estado",
+    )
+    estado_resultante = models.CharField(
+        max_length=20,
+        choices=CefGrupo.Estado.choices,
+    )
+    fecha = models.DateField(default=timezone.localdate)
+    motivo = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = '"cef"."grupo_estado_movimientos"'
+        ordering = ["grupo", "fecha", "creado_en", "pk"]
+        verbose_name = "Movimiento de estado de grupo CEF"
+        verbose_name_plural = "Movimientos de estado de grupos CEF"
+
+    def clean(self):
+        self.motivo = (self.motivo or "").strip()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.grupo} - {self.get_estado_resultante_display()} - {self.fecha}"
 
 
 class CefGrupoDiaFuncionamiento(CefAuditoriaMixin):
@@ -1260,7 +1422,6 @@ class CefAlumnoCef(CefAuditoriaMixin):
 
     class Estado(models.TextChoices):
         ACTIVO = "activo", "Activo"
-        INACTIVO = "inactivo", "Inactivo"
         BAJA = "baja", "Baja"
 
     cueanexo = models.CharField(max_length=9, db_index=True)
@@ -1303,6 +1464,13 @@ class CefAlumnoCef(CefAuditoriaMixin):
                 condition=Q(estado="activo"),
                 name="uq_cef_alumnocef_act",
             ),
+            models.CheckConstraint(
+                condition=(
+                    Q(estado="activo", fecha_baja__isnull=True)
+                    | Q(estado="baja", fecha_baja__isnull=False)
+                ),
+                name="ck_cef_alumnocef_estado_fecha",
+            ),
         ]
         indexes = [
             models.Index(fields=["cueanexo", "ciclo"], name="idx_cef_alumnocef_cic"),
@@ -1311,6 +1479,8 @@ class CefAlumnoCef(CefAuditoriaMixin):
 
     def clean(self):
         errors = {}
+
+        _validar_baja_terminal(self, errors)
 
         cueanexo_normalizado = normalizar_cueanexo(self.cueanexo)
         if not cueanexo_normalizado:
@@ -1321,7 +1491,9 @@ class CefAlumnoCef(CefAuditoriaMixin):
         if self.fecha_baja and self.fecha_baja < self.fecha_alta:
             errors["fecha_baja"] = "La fecha de baja no puede ser anterior a la fecha de alta."
 
-        if self.estado == self.Estado.BAJA and not self.fecha_baja:
+        if self.estado == self.Estado.ACTIVO and self.fecha_baja:
+            errors["fecha_baja"] = "Un alumno activo no debe tener fecha de baja."
+        elif self.estado == self.Estado.BAJA and not self.fecha_baja:
             errors["fecha_baja"] = "Debe indicar fecha de baja cuando el alumno esta en baja."
 
         if self.estado != self.Estado.BAJA and self.motivo_baja:
@@ -1366,7 +1538,6 @@ class CefDocenteCef(CefAuditoriaMixin):
 
     class Estado(models.TextChoices):
         ACTIVO = "activo", "Activo"
-        INACTIVO = "inactivo", "Inactivo"
         BAJA = "baja", "Baja"
 
     cueanexo = models.CharField(max_length=9, db_index=True)
@@ -1405,6 +1576,13 @@ class CefDocenteCef(CefAuditoriaMixin):
                 condition=Q(estado="activo"),
                 name="uq_cef_docentecef_act",
             ),
+            models.CheckConstraint(
+                condition=(
+                    Q(estado="activo", fecha_baja__isnull=True)
+                    | Q(estado="baja", fecha_baja__isnull=False)
+                ),
+                name="ck_cef_docentecef_estado_fecha",
+            ),
         ]
         indexes = [
             models.Index(fields=["cueanexo", "ciclo"], name="idx_cef_docentecef_cic"),
@@ -1413,6 +1591,8 @@ class CefDocenteCef(CefAuditoriaMixin):
 
     def clean(self):
         errors = {}
+
+        _validar_baja_terminal(self, errors)
 
         cueanexo_normalizado = normalizar_cueanexo(self.cueanexo)
         if not cueanexo_normalizado:
@@ -1429,7 +1609,9 @@ class CefDocenteCef(CefAuditoriaMixin):
         if self.fecha_baja and self.fecha_baja < self.fecha_alta:
             errors["fecha_baja"] = "La fecha de baja no puede ser anterior a la fecha de alta."
 
-        if self.estado == self.Estado.BAJA and not self.fecha_baja:
+        if self.estado == self.Estado.ACTIVO and self.fecha_baja:
+            errors["fecha_baja"] = "Un docente activo no debe tener fecha de baja."
+        elif self.estado == self.Estado.BAJA and not self.fecha_baja:
             errors["fecha_baja"] = "Debe indicar fecha de baja cuando el docente esta en baja."
 
         if self.estado != self.Estado.BAJA and self.motivo_baja:
@@ -1517,6 +1699,13 @@ class CefInscripcion(CefAuditoriaMixin):
                 condition=Q(estado="activo"),
                 name="uq_cef_insc_abierta",
             ),
+            models.CheckConstraint(
+                condition=(
+                    Q(estado="activo", fecha_baja__isnull=True)
+                    | Q(estado="baja", fecha_baja__isnull=False)
+                ),
+                name="ck_cef_insc_estado_fecha",
+            ),
         ]
         indexes = [
             models.Index(fields=["estado"], name="idx_cef_insc_est"),
@@ -1527,10 +1716,14 @@ class CefInscripcion(CefAuditoriaMixin):
     def clean(self):
         errors = {}
 
+        _validar_baja_terminal(self, errors)
+
         if self.fecha_baja and self.fecha_baja < self.fecha_inscripcion:
             errors["fecha_baja"] = "La fecha de baja no puede ser anterior a la fecha de inscripcion."
 
-        if self.estado == self.Estado.BAJA and not self.fecha_baja:
+        if self.estado == self.Estado.ACTIVO and self.fecha_baja:
+            errors["fecha_baja"] = "Una inscripcion activa no debe tener fecha de baja."
+        elif self.estado == self.Estado.BAJA and not self.fecha_baja:
             errors["fecha_baja"] = "Debe indicar fecha de baja cuando la inscripcion esta en baja."
 
         if self.estado != self.Estado.BAJA and self.motivo_baja:
@@ -1565,7 +1758,6 @@ class CefDocenteGrupo(CefAuditoriaMixin):
 
     class Estado(models.TextChoices):
         ACTIVO = "activo", "Activo"
-        INACTIVO = "inactivo", "Inactivo"
         BAJA = "baja", "Baja"
 
     grupo = models.ForeignKey(
@@ -1589,8 +1781,9 @@ class CefDocenteGrupo(CefAuditoriaMixin):
         db_index=True,
     )
 
-    fecha_desde = models.DateField(blank=True, null=True)
+    fecha_desde = models.DateField()
     fecha_hasta = models.DateField(blank=True, null=True)
+    motivo_baja = models.CharField(max_length=255, blank=True)
     docente_nombre_snapshot = models.CharField(max_length=255, blank=True, editable=False)
     docente_dni_snapshot = models.CharField(max_length=20, blank=True, editable=False)
     docente_estado_bnh_snapshot = models.CharField(max_length=30, blank=True, editable=False)
@@ -1612,6 +1805,13 @@ class CefDocenteGrupo(CefAuditoriaMixin):
                 condition=Q(estado="activo"),
                 name="uq_cef_doc_grp_rol_act",
             ),
+            models.CheckConstraint(
+                condition=(
+                    Q(estado="activo", fecha_hasta__isnull=True)
+                    | Q(estado="baja", fecha_hasta__isnull=False)
+                ),
+                name="ck_cef_docgrp_estado_fecha",
+            ),
         ]
         indexes = [
             models.Index(fields=["docente_cuil", "estado"], name="idx_cef_doc_cuil_est"),
@@ -1622,6 +1822,8 @@ class CefDocenteGrupo(CefAuditoriaMixin):
     def clean(self):
         errors = {}
 
+        _validar_baja_terminal(self, errors)
+
         docente_cuil_normalizado = solo_digitos(self.docente_cuil)
         if len(docente_cuil_normalizado) != 11:
             errors["docente_cuil"] = "El CUIL del docente debe tener 11 digitos."
@@ -1631,8 +1833,13 @@ class CefDocenteGrupo(CefAuditoriaMixin):
         if self.fecha_desde and self.fecha_hasta and self.fecha_hasta < self.fecha_desde:
             errors["fecha_hasta"] = "La fecha hasta no puede ser anterior a la fecha desde."
 
-        if self.estado == self.Estado.BAJA and not self.fecha_hasta:
+        if self.estado == self.Estado.ACTIVO and self.fecha_hasta:
+            errors["fecha_hasta"] = "Una asignacion activa no debe tener fecha hasta."
+        elif self.estado == self.Estado.BAJA and not self.fecha_hasta:
             errors["fecha_hasta"] = "Debe indicar fecha hasta cuando la asignacion esta en baja."
+
+        if self.estado != self.Estado.BAJA and self.motivo_baja:
+            errors["motivo_baja"] = "Solo debe indicar motivo de baja cuando la asignacion esta en baja."
 
         if errors:
             raise ValidationError(errors)
@@ -1707,7 +1914,12 @@ def validar_docente_grupo_activo(grupo, docente_cuil, rol, excluir_pk=None):
 
     rol_activo = activos.filter(rol=rol).first()
     if rol_activo:
-        raise ValidationError(f"El grupo ya tiene un {_rol_docente_grupo_texto(rol).lower()} activo.")
+        docente_nombre = rol_activo.docente_nombre_snapshot or "Profesor"
+        docente_cuil = rol_activo.docente_cuil or "-"
+        raise ValidationError(
+            f"El grupo ya tiene un {_rol_docente_grupo_texto(rol).lower()} activo: "
+            f"{docente_nombre} (CUIL {docente_cuil})."
+        )
 
 
 def docentes_grupo_tiene_duplicados_activos(grupo):
@@ -1731,6 +1943,171 @@ def docentes_grupo_tiene_duplicados_activos(grupo):
         .exists()
     )
     return docente_duplicado or rol_duplicado
+
+
+# ============================================================
+# ASISTENCIA CEF
+# ============================================================
+
+class CefJornadaAsistencia(CefAuditoriaMixin):
+    """Jornada única de asistencia para un grupo y una fecha."""
+
+    grupo = models.ForeignKey(
+        CefGrupo,
+        on_delete=models.PROTECT,
+        related_name="jornadas_asistencia",
+    )
+    fecha = models.DateField(db_index=True)
+
+    class Meta:
+        db_table = '"cef"."jornadas_asistencia"'
+        ordering = ["-fecha", "grupo", "pk"]
+        verbose_name = "Jornada de asistencia CEF"
+        verbose_name_plural = "Jornadas de asistencia CEF"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["grupo", "fecha"],
+                name="uq_cef_jornada_grupo_fecha",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["grupo", "fecha"], name="idx_cef_jornada_grp_fecha"),
+        ]
+
+    def clean(self):
+        errors = {}
+        if self.grupo_id and self.fecha:
+            ciclo = self.grupo.ciclo
+            if ciclo.cerrado:
+                errors["grupo"] = (
+                    "El ciclo está cerrado. La asistencia se encuentra en modo sólo lectura."
+                )
+            if self.fecha.year != ciclo.anio:
+                errors["fecha"] = "La fecha debe corresponder al año del ciclo."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.grupo} - {self.fecha}"
+
+
+class CefAsistencia(CefAuditoriaMixin):
+    """Estado actual de una inscripción en una jornada."""
+
+    class Estado(models.TextChoices):
+        PRESENTE = "presente", "Presente"
+        AUSENTE = "ausente", "Ausente"
+        JUSTIFICADA = "justificada", "Justificada"
+
+    jornada = models.ForeignKey(
+        CefJornadaAsistencia,
+        on_delete=models.PROTECT,
+        related_name="asistencias",
+    )
+    inscripcion = models.ForeignKey(
+        CefInscripcion,
+        on_delete=models.PROTECT,
+        related_name="asistencias",
+    )
+    estado = models.CharField(max_length=20, choices=Estado.choices)
+
+    class Meta:
+        db_table = '"cef"."asistencias"'
+        ordering = ["jornada", "inscripcion", "pk"]
+        verbose_name = "Asistencia CEF"
+        verbose_name_plural = "Asistencias CEF"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["jornada", "inscripcion"],
+                name="uq_cef_asistencia_jornada_insc",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["jornada", "estado"], name="idx_cef_asist_jornada_est"),
+        ]
+
+    def clean(self):
+        errors = {}
+        if self.jornada_id and self.inscripcion_id:
+            fecha = self.jornada.fecha
+            if self.jornada.grupo_id != self.inscripcion.grupo_id:
+                errors["inscripcion"] = (
+                    "La inscripción debe pertenecer al grupo de la jornada."
+                )
+            elif self.inscripcion.fecha_inscripcion > fecha or (
+                self.inscripcion.fecha_baja is not None
+                and self.inscripcion.fecha_baja < fecha
+            ):
+                errors["inscripcion"] = (
+                    "La inscripción no estaba vigente en la fecha de la jornada."
+                )
+            if self.jornada.grupo.ciclo.cerrado:
+                errors["jornada"] = (
+                    "El ciclo está cerrado. La asistencia se encuentra en modo sólo lectura."
+                )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.jornada} - {self.inscripcion} - {self.get_estado_display()}"
+
+
+class CefAsistenciaMovimiento(CefAuditoriaMixin):
+    """Historial inmutable de altas y cambios de estado de asistencia."""
+
+    asistencia = models.ForeignKey(
+        CefAsistencia,
+        on_delete=models.PROTECT,
+        related_name="movimientos",
+    )
+    estado_anterior = models.CharField(
+        max_length=20,
+        choices=CefAsistencia.Estado.choices,
+        blank=True,
+        null=True,
+    )
+    estado_nuevo = models.CharField(
+        max_length=20,
+        choices=CefAsistencia.Estado.choices,
+    )
+
+    class Meta:
+        db_table = '"cef"."asistencia_movimientos"'
+        ordering = ["creado_en", "pk"]
+        verbose_name = "Movimiento de asistencia CEF"
+        verbose_name_plural = "Movimientos de asistencia CEF"
+        indexes = [
+            models.Index(fields=["asistencia", "creado_en"], name="idx_cef_asist_mov_fecha"),
+        ]
+
+    def clean(self):
+        errors = {}
+        if self.estado_anterior and self.estado_anterior == self.estado_nuevo:
+            errors["estado_nuevo"] = "El nuevo estado debe ser distinto del anterior."
+        if self.asistencia_id and self.asistencia.jornada.grupo.ciclo.cerrado:
+            errors["asistencia"] = (
+                "El ciclo está cerrado. La asistencia se encuentra en modo sólo lectura."
+            )
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        anterior = self.get_estado_anterior_display() if self.estado_anterior else "Sin estado"
+        return f"{self.asistencia} - {anterior} a {self.get_estado_nuevo_display()}"
 
 
 # ============================================================
@@ -1781,6 +2158,7 @@ class CefInventarioMaterial(CefAuditoriaMixin):
         related_name="inventarios",
     )
 
+    # Campos heredados/transitorios hasta adaptar formularios, vistas, templates y datos existentes.
     cantidad = models.PositiveIntegerField(default=0)
     estado_descripcion = models.TextField(blank=True)
     material_nombre_snapshot = models.CharField(max_length=150, blank=True, editable=False)
@@ -1844,10 +2222,120 @@ class CefInventarioMaterial(CefAuditoriaMixin):
         if self.material_id and (material_cambiado or snapshot_vacio):
             self.material_nombre_snapshot = self.material.nombre
 
-    def save(self, *args, **kwargs):
-        self.actualizar_snapshots_catalogo()
-        self.full_clean()
+    def save(
+        self,
+        *args,
+        validar=True,
+        actualizar_snapshot=True,
+        **kwargs,
+    ):
+        if actualizar_snapshot:
+            self.actualizar_snapshots_catalogo()
+        if validar:
+            self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.cueanexo} - {self.ciclo} - {self.material} x {self.cantidad}"
+
+
+class CefInventarioMaterialEstado(CefAuditoriaMixin):
+    """
+    Distribucion de unidades por estado para un material del inventario CEF.
+    """
+
+    inventario_material = models.ForeignKey(
+        CefInventarioMaterial,
+        on_delete=models.CASCADE,
+        related_name="distribuciones_estado",
+    )
+    estado = models.ForeignKey(
+        CefEstadoMaterialTipo,
+        on_delete=models.PROTECT,
+        related_name="distribuciones_inventario",
+        null=True,
+        blank=True,
+    )
+    # Transitorios: retirar tras crear la tabla, cargar el catalogo, asociar datos,
+    # adaptar formularios/vistas/templates y verificar cobertura total.
+    estado_descripcion = models.CharField(max_length=150)
+    estado_normalizado = models.CharField(max_length=150, editable=False)
+    cantidad = models.PositiveIntegerField()
+
+    class Meta:
+        db_table = '"cef"."inventario_materiales_estados"'
+        ordering = ["inventario_material", "estado_normalizado"]
+        verbose_name = "Estado de material de inventario CEF"
+        verbose_name_plural = "Estados de materiales de inventario CEF"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["inventario_material", "estado_normalizado"],
+                name="uq_cef_inv_est_norm",
+            ),
+            models.UniqueConstraint(
+                fields=["inventario_material", "estado"],
+                name="uq_cef_inv_est_cat",
+            ),
+            models.CheckConstraint(
+                condition=Q(cantidad__gt=0),
+                name="ck_cef_inv_est_cant_pos",
+            ),
+            models.CheckConstraint(
+                condition=~Q(estado_normalizado=""),
+                name="ck_cef_inv_est_no_vacio",
+            ),
+        ]
+
+    def _sincronizar_estado_heredado_desde_catalogo(self):
+        if not self.estado_id:
+            return
+
+        estado_descripcion = " ".join((self.estado.nombre or "").split())
+        self.estado_descripcion = estado_descripcion
+        self.estado_normalizado = estado_descripcion.lower()
+
+    def clean(self):
+        errors = {}
+
+        self._sincronizar_estado_heredado_desde_catalogo()
+
+        if self.estado_id:
+            estado_descripcion = self.estado_descripcion
+        else:
+            estado_descripcion = " ".join((self.estado_descripcion or "").split())
+            self.estado_descripcion = estado_descripcion
+            self.estado_normalizado = estado_descripcion.lower()
+
+        if not estado_descripcion:
+            errors["estado_descripcion"] = "Debe indicar el estado del material."
+
+        if self.cantidad is None or self.cantidad <= 0:
+            errors["cantidad"] = "La cantidad debe ser mayor que cero."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(
+        self,
+        *args,
+        validar=True,
+        sincronizar_estado=True,
+        **kwargs,
+    ):
+        if sincronizar_estado:
+            self._sincronizar_estado_heredado_desde_catalogo()
+        if validar:
+            self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        material_nombre = (
+            self.inventario_material.material_nombre_snapshot
+            or str(self.inventario_material_id)
+        )
+        estado_nombre = (
+            self.estado.nombre
+            if self.estado_id
+            else self.estado_descripcion
+        )
+        return f"{material_nombre} - {estado_nombre}: {self.cantidad}"

@@ -1,0 +1,499 @@
+/* Inicio y Afectar cargos comparten estados FILL y transiciones sin condicionar al movimiento. */
+.pof-home-icon.pof-icon.material-symbols-outlined,
+.pof-cargos-selector-icon > .pof-material-symbol.material-symbols-outlined {
+    align-items: center;
+    color: var(--pof-primary-dark);
+    display: inline-flex;
+    font-size: 28px;
+    font-family: "Material Symbols Outlined";
+    font-style: normal;
+    font-weight: 400;
+    justify-content: center;
+    line-height: 1;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" var(--pof-icon-opsz, 28);
+    -webkit-font-feature-settings: "liga";
+    font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    text-align: center;
+    transition: color 140ms ease, font-variation-settings 140ms ease, background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.pof-home-card:hover .pof-home-icon.pof-icon.material-symbols-outlined,
+.pof-home-card:focus-visible .pof-home-icon.pof-icon.material-symbols-outlined {
+    background-color: rgba(59, 92, 255, .10);
+    border-color: var(--pof-primary);
+    box-shadow: 0 5px 12px rgba(59, 92, 255, .12);
+}
+
+.pof-home-card:hover .pof-icon.material-symbols-outlined,
+.pof-home-card:focus-visible .pof-icon.material-symbols-outlined,
+.pof-cargos-selector-card:hover .pof-cargos-selector-icon > .pof-material-symbol.material-symbols-outlined,
+.pof-cargos-selector-card:focus-within .pof-cargos-selector-icon > .pof-material-symbol.material-symbols-outlined {
+    color: var(--pof-primary);
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" var(--pof-icon-opsz, 28);
+}
+
+.pof-header-icon.material-symbols-outlined {
+    align-items: center;
+    color: var(--pof-primary);
+    display: inline-flex;
+    font-family: "Material Symbols Outlined";
+    font-size: 46px;
+    font-style: normal;
+    font-weight: 500;
+    justify-content: center;
+    line-height: 1;
+    font-variation-settings: "FILL" 0, "wght" 500, "GRAD" 0, "opsz" 48;
+    -webkit-font-feature-settings: "liga";
+    font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    vertical-align: middle;
+}
+
+.pof-material-symbol.material-symbols-outlined {
+    align-items: center;
+    color: inherit;
+    display: inline-flex;
+    font-family: "Material Symbols Outlined";
+    font-size: inherit;
+    font-style: normal;
+    font-weight: 400;
+    justify-content: center;
+    line-height: 1;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+    -webkit-font-feature-settings: "liga";
+    font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    vertical-align: middle;
+    transition: color 140ms ease, font-variation-settings 140ms ease;
+}
+
+.pof-guide-title-icon.pof-material-symbol.material-symbols-outlined {
+    color: var(--pof-danger);
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 24px;
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+    justify-content: center;
+    line-height: 1;
+}
+
+.pof-guide-intro-icon.pof-material-symbol.material-symbols-outlined {
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 20px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+    justify-content: center;
+    line-height: 1;
+}
+
+.pof-guide-step-icon.pof-material-symbol.material-symbols-outlined {
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 22px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 22;
+    justify-content: center;
+    line-height: 1;
+}
+
+.pof-guide-chip-icon.pof-material-symbol.material-symbols-outlined {
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 14px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 14;
+    justify-content: center;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.pof-guide-note-icon.pof-material-symbol.material-symbols-outlined {
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 18px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 18;
+    justify-content: center;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.pof-guide-muted-icon.pof-material-symbol.material-symbols-outlined {
+    color: var(--pof-muted);
+}
+
+.pof-guide-filled-icon.pof-material-symbol.material-symbols-outlined {
+    color: var(--pof-primary);
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 14;
+}
+
+.pof-reunida-confirm-icon.pof-material-symbol.material-symbols-outlined {
+    align-items: center;
+    display: inline-flex;
+    font-size: 21px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 21;
+    justify-content: center;
+    line-height: 1;
+}
+
+.pof-reunida-confirm-block-icon.pof-material-symbol.material-symbols-outlined {
+    font-size: 18px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 18;
+}
+
+.pof-delete-modal-confirm:disabled .pof-delete-confirm-icon.pof-material-symbol.material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+    transition: none;
+}
+
+.pof-delete-modal-warning-icon.pof-material-symbol.material-symbols-outlined {
+    align-items: center;
+    color: var(--pof-warning-border);
+    display: inline-flex;
+    font-size: 40px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 40;
+    justify-content: center;
+    line-height: 1;
+}
+
+.pof-delete-modal-trash-icon.pof-material-symbol.material-symbols-outlined {
+    align-items: center;
+    color: var(--pof-danger);
+    display: inline-flex;
+    font-size: 34px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 34;
+    justify-content: center;
+    line-height: 1;
+}
+
+.pof-brand-icon.material-symbols-outlined {
+    color: inherit;
+    flex: 0 0 28px;
+    font-size: 28px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 28;
+    height: 28px;
+    width: 28px;
+    transition: none;
+}
+
+.pof-guide-icon.material-symbols-outlined {
+    align-items: center;
+    color: var(--pof-primary-dark);
+    display: inline-flex;
+    flex: 0 0 22px;
+    font-size: 20px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+    height: 22px;
+    justify-content: center;
+    line-height: 1;
+    width: 22px;
+}
+
+.pof-guide-link:hover .pof-guide-icon.material-symbols-outlined,
+.pof-guide-link:focus-visible .pof-guide-icon.material-symbols-outlined {
+    color: var(--pof-danger);
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 20;
+}
+
+.pof-filter-warning-icon.pof-material-symbol.material-symbols-outlined {
+    color: var(--pof-warning-border);
+    font-size: 14px;
+}
+
+.pof-filter-chip-icon.pof-material-symbol.material-symbols-outlined {
+    display: inline-flex;
+    font-size: 13px;
+}
+
+.pof-filter-chip-remove-icon.pof-material-symbol.material-symbols-outlined {
+    color: var(--pof-primary-dark);
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 19px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+    transition: color 140ms ease, font-variation-settings 140ms ease;
+}
+
+.pof-filter-chip-remove:hover .pof-filter-chip-remove-icon.material-symbols-outlined,
+.pof-filter-chip-remove:focus-visible .pof-filter-chip-remove-icon.material-symbols-outlined {
+    color: var(--pof-danger);
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 20;
+}
+
+.pof-cue-total-icon.pof-material-symbol.material-symbols-outlined {
+    display: inline-flex;
+    font-size: 13px;
+}
+
+.pof-cue-code-icon.pof-material-symbol.material-symbols-outlined {
+    color: inherit;
+    flex: 0 0 20px;
+    font-size: 20px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+    animation: none;
+    transform: none;
+    transition: none;
+}
+
+.pof-cue-total-filled-icon.pof-material-symbol.material-symbols-outlined,
+.pof-cue-total-points-icon.pof-material-symbol.material-symbols-outlined {
+    color: #6495ED;
+    font-size: 14px;
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 20;
+    animation: none;
+    transform: none;
+    transition: none;
+}
+
+.pof-cue-total-points-icon.pof-material-symbol.material-symbols-outlined {
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 20;
+}
+
+.pof-detail-results-icon.pof-material-symbol.material-symbols-outlined {
+    color: inherit;
+    font-size: 18px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+    animation: none;
+    transform: none;
+    transition: none;
+}
+
+.pof-detail-search-summary-icon.pof-material-symbol.material-symbols-outlined {
+    align-items: center;
+    color: var(--pof-warning);
+    display: inline-flex;
+    flex: 0 0 18px;
+    font-size: 18px;
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 18;
+    justify-content: center;
+    line-height: 1;
+    animation: none;
+    transform: none;
+    transition: none;
+}
+
+.pof-cue-info-button .pof-action-icon.pof-material-symbol.material-symbols-outlined,
+.pof-visual-toggle-btn .pof-action-icon.pof-material-symbol.material-symbols-outlined,
+.pof-observation-toggle .pof-action-icon.pof-material-symbol.material-symbols-outlined,
+.pof-cargo-primary-action .pof-action-icon.pof-material-symbol.material-symbols-outlined {
+    flex: 0 0 20px;
+    font-size: 20px;
+}
+
+.pof-detalle-toolbar .pof-btn-excel .pof-action-icon.pof-material-symbol.material-symbols-outlined {
+    flex: 0 0 22px;
+    font-size: 22px;
+}
+
+.pof-export-detail-btn .pof-action-icon.pof-material-symbol.material-symbols-outlined {
+    color: var(--pof-primary);
+    flex: 0 0 18px;
+    font-size: 18px;
+}
+
+.pof-detalle-afectar-btn .pof-action-icon.pof-material-symbol.material-symbols-outlined {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 20px;
+    font-size: 20px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+    justify-content: center;
+    line-height: 1;
+}
+
+.pof-cue-info-button:hover .pof-action-icon.material-symbols-outlined,
+.pof-cue-info-button:focus-visible .pof-action-icon.material-symbols-outlined {
+    color: var(--pof-warning);
+}
+
+.pof-history-detail-icon.pof-material-symbol.material-symbols-outlined {
+    display: inline-flex;
+    font-size: 16px;
+}
+
+.pof-history-detail-btn.pof-quantity-history-btn.pof-material-history-btn::before {
+    content: none;
+    display: none;
+}
+
+.pof-cargos-selector-pin > .pof-material-symbol.material-symbols-outlined {
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 26;
+}
+
+.pof-cargos-selector-icon > .pof-material-symbol.material-symbols-outlined {
+    --pof-icon-opsz: 40;
+    font-size: inherit;
+}
+
+.pof-icon-settings.material-symbols-outlined {
+    color: var(--pof-muted);
+}
+
+.pof-icon-tools.material-symbols-outlined {
+    color: var(--pof-filter-accent-dark);
+}
+
+.pof-icon-export.material-symbols-outlined {
+    color: var(--pof-success);
+}
+
+.pof-icon-delete.material-symbols-outlined {
+    color: var(--pof-danger);
+}
+
+.pof-icon-view-apps.material-symbols-outlined {
+    color: var(--pof-primary);
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 26;
+}
+
+.pof-reunida-create-btn:hover .pof-action-icon.material-symbols-outlined,
+.pof-reunida-create-btn:focus-visible .pof-action-icon.material-symbols-outlined,
+.pof-observation-toggle:hover .pof-action-icon.material-symbols-outlined,
+.pof-observation-toggle:focus-visible .pof-action-icon.material-symbols-outlined,
+.pof-cargo-primary-action:hover .pof-action-icon.material-symbols-outlined,
+.pof-cargo-primary-action:focus-visible .pof-action-icon.material-symbols-outlined,
+.pof-observation-remove:hover .pof-action-icon.material-symbols-outlined,
+.pof-observation-remove:focus-visible .pof-action-icon.material-symbols-outlined,
+.pof-delete-modal-confirm:hover .pof-action-icon.material-symbols-outlined,
+.pof-delete-modal-confirm:focus-visible .pof-action-icon.material-symbols-outlined,
+.pof-detalle-toolbar .pof-btn:hover .pof-action-icon.material-symbols-outlined,
+.pof-detalle-toolbar .pof-btn:focus-visible .pof-action-icon.material-symbols-outlined,
+.pof-visual-toolbar-btn:hover .pof-action-icon.material-symbols-outlined,
+.pof-visual-toolbar-btn:focus-visible .pof-action-icon.material-symbols-outlined,
+.pof-export-btn-mini:hover .pof-action-icon.material-symbols-outlined,
+.pof-export-btn-mini:focus-visible .pof-action-icon.material-symbols-outlined,
+.pof-grid-icon-btn:hover .pof-action-icon.material-symbols-outlined,
+.pof-grid-icon-btn:focus-visible .pof-action-icon.material-symbols-outlined,
+.pof-filter-chip-edit:hover .pof-filter-chip-icon.material-symbols-outlined,
+.pof-filter-chip-edit:focus-visible .pof-filter-chip-icon.material-symbols-outlined,
+.pof-filter-chip:hover .pof-filter-chip-icon.material-symbols-outlined,
+.pof-filter-chip:focus-visible .pof-filter-chip-icon.material-symbols-outlined,
+.pof-filter-clear-all:hover .pof-material-symbol.material-symbols-outlined,
+.pof-filter-clear-all:focus-visible .pof-material-symbol.material-symbols-outlined,
+.pof-history-detail-btn:hover .pof-action-icon.material-symbols-outlined,
+.pof-history-detail-btn:focus-visible .pof-action-icon.material-symbols-outlined,
+.pof-cue-info-button:hover .pof-action-icon.material-symbols-outlined,
+.pof-cue-info-button:focus-visible .pof-action-icon.material-symbols-outlined,
+.pof-grid-dropdown-item:hover .pof-action-icon.material-symbols-outlined,
+.pof-grid-dropdown-item:focus-visible .pof-action-icon.material-symbols-outlined {
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 20;
+}
+
+.pof-grid-dropdown-item-success:hover .pof-icon-export.material-symbols-outlined,
+.pof-grid-dropdown-item-success:focus-visible .pof-icon-export.material-symbols-outlined,
+.pof-grid-dropdown-item-danger:hover .pof-icon-delete.material-symbols-outlined,
+.pof-grid-dropdown-item-danger:focus-visible .pof-icon-delete.material-symbols-outlined {
+    color: inherit;
+}
+
+.pof-detail-toggle-icon.pof-material-symbol.material-symbols-outlined,
+.pof-cue-table-wrap .pof-btn .pof-icon-settings.material-symbols-outlined {
+    display: inline-flex;
+    flex: 0 0 22px;
+    font-size: 22px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 22;
+    justify-content: center;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.js-detalle-grupo-toggle:hover .pof-detail-toggle-icon.pof-material-symbol.material-symbols-outlined,
+.js-detalle-grupo-toggle:focus-visible .pof-detail-toggle-icon.pof-material-symbol.material-symbols-outlined,
+.js-detalle-grupo-toggle[aria-expanded="true"] .pof-detail-toggle-icon.pof-material-symbol.material-symbols-outlined,
+.pof-cue-table-wrap .pof-btn:hover .pof-icon-settings.material-symbols-outlined,
+.pof-cue-table-wrap .pof-btn:focus-visible .pof-icon-settings.material-symbols-outlined {
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 22;
+}
+
+.pof-detail-cargos-title-icon.pof-material-symbol.material-symbols-outlined,
+.pof-offer-card-title-icon.pof-material-symbol.material-symbols-outlined {
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 16px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 16;
+    justify-content: center;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.pof-offer-selected-title-icon.pof-material-symbol.material-symbols-outlined {
+    color: var(--pof-primary);
+    font-size: 22px;
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 22;
+    transition: none;
+    transform: none;
+    animation: none;
+}
+
+.pof-offer-card-toggle.pof-material-symbol.material-symbols-outlined {
+    font-size: 18px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 18;
+}
+
+.pof-offer-card-header:hover .pof-offer-card-toggle.pof-material-symbol.material-symbols-outlined,
+.pof-offer-card-header:focus-visible .pof-offer-card-toggle.pof-material-symbol.material-symbols-outlined,
+.pof-offer-card-header[aria-expanded="true"] .pof-offer-card-toggle.pof-material-symbol.material-symbols-outlined {
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 18;
+}
+
+.pof-cargo-remove-btn .pof-action-icon.pof-material-symbol.material-symbols-outlined {
+    display: inline-flex;
+    font-size: 20px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+    justify-content: center;
+    line-height: 1;
+}
+
+.pof-cargo-remove-btn:hover .pof-action-icon.pof-material-symbol.material-symbols-outlined,
+.pof-cargo-remove-btn:focus-visible .pof-action-icon.pof-material-symbol.material-symbols-outlined {
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 20;
+}
+
+.pof-reunidas-table-wrap .pof-grid-gear-btn .pof-action-icon.pof-material-symbol.material-symbols-outlined {
+    display: inline-flex;
+    flex: 0 0 24px;
+    font-size: 22px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    height: 24px;
+    justify-content: center;
+    line-height: 1;
+    width: 24px;
+}
+
+.pof-reunidas-table-wrap .pof-grid-gear-btn:hover .pof-action-icon.pof-material-symbol.material-symbols-outlined,
+.pof-reunidas-table-wrap .pof-grid-gear-btn:focus-visible .pof-action-icon.pof-material-symbol.material-symbols-outlined {
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.pof-reunidas-table-wrap .pof-grid-actions-menu .pof-action-icon.pof-material-symbol.material-symbols-outlined {
+    display: inline-flex;
+    flex: 0 0 24px;
+    font-size: 23px;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    height: 24px;
+    justify-content: center;
+    line-height: 1;
+    width: 24px;
+}
+
+.pof-reunidas-table-wrap .pof-grid-actions-menu .pof-grid-dropdown-item:hover .pof-action-icon.pof-material-symbol.material-symbols-outlined,
+.pof-reunidas-table-wrap .pof-grid-actions-menu .pof-grid-dropdown-item:focus-visible .pof-action-icon.pof-material-symbol.material-symbols-outlined {
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+@media (max-width: 700px) {
+    .pof-delete-modal-warning-icon.pof-material-symbol.material-symbols-outlined {
+        font-size: 32px;
+    }
+
+    .pof-delete-modal-trash-icon.pof-material-symbol.material-symbols-outlined {
+        font-size: 30px;
+    }
+}
+
+@media (max-width: 767px) {
+    .pof-header-icon.material-symbols-outlined {
+        font-size: 34px;
+    }
+}
