@@ -1,79 +1,295 @@
+"use strict";
+
+
+/* ============================================================
+   ESTADO GLOBAL DEL MAPA
+============================================================ */
+
 let mapaSupervisores = null;
-
 let capaEscuelas = null;
+let mapaInicializado = false;
+let cargandoMapa = false;
 
-let markersEscuelas = [];
+
+/* ============================================================
+   CONFIGURACIÓN
+============================================================ */
+
+const MAPA_SUPERVISORES_URL =
+    "/supreg/api/mapa/supervisores/";
+
+const CENTRO_CHACO = [
+    -27.45,
+    -59.0
+];
 
 
-/* =========================================================
-INICIALIZAR
-========================================================= */
+/* ============================================================
+   ICONO PERSONALIZADO DE ESCUELA
+============================================================ */
+
+const ICONO_ESCUELA = L.divIcon({
+    className: "marcador-escuela",
+
+    html: `
+        <div class="marcador-escuela-pin">
+            <span></span>
+        </div>
+    `,
+
+    iconSize: [30, 30],
+
+    iconAnchor: [15, 30],
+
+    popupAnchor: [0, -30]
+});
+
+
+/* ============================================================
+   INICIALIZAR MAPA
+============================================================ */
 
 function inicializarMapaSupervisores() {
 
-    mapaSupervisores = L.map(
-        "mapaSupervisores"
-    ).setView(
-        [-27.45, -59.0],
-        8
-    );
+    const contenedor =
+        document.getElementById(
+            "mapaSupervisores"
+        );
 
+
+    if (!contenedor) {
+
+        console.warn(
+            "No existe el contenedor #mapaSupervisores."
+        );
+
+        return;
+    }
+
+
+    if (mapaInicializado) {
+
+        recalcularTamanoMapa();
+
+        return;
+    }
+
+
+    if (typeof L === "undefined") {
+
+        console.error(
+            "Leaflet no está cargado."
+        );
+
+        actualizarEstadoMapa(
+            "Error: Leaflet no pudo inicializarse.",
+            true
+        );
+
+        return;
+    }
+
+
+    mapaSupervisores =
+        L.map(
+            "mapaSupervisores",
+            {
+                zoomControl: true,
+                preferCanvas: true
+            }
+        )
+        .setView(
+            CENTRO_CHACO,
+            7
+        );
+
+
+    /* ========================================================
+       CAPA BASE CARTO POSITRON
+
+       IMPORTANTE:
+       reemplazar TU_API_KEY_CARTO por tu clave real.
+    ======================================================== */
 
     L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2s9h_1_bd646db33e2c8813a2d9b537",
         {
-            maxZoom: 19,
+            subdomains: "abcd",
+
+            maxZoom: 20,
 
             attribution:
-                "&copy; OpenStreetMap contributors"
+                '&copy; OpenStreetMap contributors ' +
+                '&copy; CARTO'
         }
     ).addTo(
         mapaSupervisores
     );
 
 
+    /* ========================================================
+       CAPA ESCUELAS
+    ======================================================== */
+
     capaEscuelas =
-        L.layerGroup().addTo(
+        L.layerGroup()
+        .addTo(
             mapaSupervisores
         );
 
+
+    mapaInicializado = true;
+
+
+    recalcularTamanoMapa();
+
+
+    /* ========================================================
+       CUANDO CAMBIA EL TAMAÑO DE LA VENTANA
+    ======================================================== */
+
+    window.addEventListener(
+        "resize",
+        () => {
+
+            recalcularTamanoMapa();
+
+        }
+    );
+
 }
 
 
-/* =========================================================
-   LIMPIAR
-========================================================= */
+/* ============================================================
+   RECALCULAR TAMAÑO DEL MAPA
+============================================================ */
 
-function limpiarMapaSupervisores() {
+function recalcularTamanoMapa() {
 
-    if (!capaEscuelas)
+    if (!mapaSupervisores) {
         return;
+    }
 
-    capaEscuelas.clearLayers();
 
-    markersEscuelas = [];
+    /*
+     * Se ejecuta varias veces porque los dashboards con sidebar
+     * pueden cambiar de ancho después de cargar.
+     */
+
+    setTimeout(
+        () => {
+
+            mapaSupervisores.invalidateSize({
+                animate: false
+            });
+
+        },
+        100
+    );
+
+
+    setTimeout(
+        () => {
+
+            mapaSupervisores.invalidateSize({
+                animate: false
+            });
+
+        },
+        400
+    );
+
+
+    setTimeout(
+        () => {
+
+            mapaSupervisores.invalidateSize({
+                animate: false
+            });
+
+        },
+        800
+    );
 
 }
 
 
-/* =========================================================
-   CARGAR MAPA
-========================================================= */
+/* ============================================================
+   LIMPIAR MAPA
+============================================================ */
 
-async function cargarMapaSupervisores(
+function limpiarMapa() {
+
+    if (capaEscuelas) {
+
+        capaEscuelas.clearLayers();
+
+    }
+
+}
+
+
+/* ============================================================
+   FILTROS DEL DASHBOARD
+============================================================ */
+
+function obtenerFiltrosMapa() {
+
+    return {
+
+        region:
+            document
+                .getElementById(
+                    "filtroRegion"
+                )
+                ?.value || "",
+
+        nivel:
+            document
+                .getElementById(
+                    "filtroNivel"
+                )
+                ?.value || "",
+
+        situacion:
+            document
+                .getElementById(
+                    "filtroSituacion"
+                )
+                ?.value || "",
+
+        q:
+            document
+                .getElementById(
+                    "filtroBusqueda"
+                )
+                ?.value
+                ?.trim() || ""
+
+    };
+
+}
+
+
+/* ============================================================
+   CONSTRUIR PARÁMETROS
+============================================================ */
+
+function construirParametrosMapa(
     supervisorId = null
 ) {
-
-    limpiarMapaSupervisores();
-
 
     const params =
         new URLSearchParams();
 
 
+    const filtros =
+        obtenerFiltrosMapa();
+
+
     if (supervisorId) {
 
-        params.append(
+        params.set(
             "supervisor_id",
             supervisorId
         );
@@ -81,125 +297,277 @@ async function cargarMapaSupervisores(
     }
 
 
-    const region =
-        document.getElementById(
-            "filtroRegion"
-        )?.value;
+    if (filtros.region) {
 
-
-    const nivel =
-        document.getElementById(
-            "filtroNivel"
-        )?.value;
-
-
-    const situacion =
-        document.getElementById(
-            "filtroSituacion"
-        )?.value;
-
-
-    const q =
-        document.getElementById(
-            "filtroBusqueda"
-        )?.value;
-
-
-    if (region) {
-
-        params.append(
+        params.set(
             "region",
-            region
+            filtros.region
         );
 
     }
 
 
-    if (nivel) {
+    if (filtros.nivel) {
 
-        params.append(
+        params.set(
             "nivel",
-            nivel
+            filtros.nivel
         );
 
     }
 
 
-    if (situacion) {
+    if (filtros.situacion) {
 
-        params.append(
+        params.set(
             "situacion",
-            situacion
+            filtros.situacion
         );
 
     }
 
 
-    if (q) {
+    if (filtros.q) {
 
-        params.append(
+        params.set(
             "q",
-            q
+            filtros.q
         );
 
     }
 
 
-    const response =
-        await fetch(
-            `/supreg/api/mapa/supervisores/?${params}`,
-            {
-                headers: {
-                    "X-Requested-With":
-                        "XMLHttpRequest"
-                }
-            }
-        );
+    return params;
+
+}
 
 
-    if (!response.ok) {
+/* ============================================================
+   COBERTURA GENERAL
+============================================================ */
 
-        console.error(
-            "Error cargando mapa",
-            response.status
-        );
+function mostrarCoberturaGeneral() {
 
-        return;
-
-    }
-
-
-    const data =
-        await response.json();
-
-
-    if (!data.ok) {
-
-        console.error(
-            data.error
-        );
-
-        return;
-
-    }
-
-
-    dibujarEscuelasSupervisores(
-        data.escuelas
+    cargarMapaSupervisores(
+        null
     );
 
 }
 
 
-/* =========================================================
-   DIBUJAR ESCUELAS
-========================================================= */
+/* ============================================================
+   CARGAR MAPA
+============================================================ */
 
-function dibujarEscuelasSupervisores(
+async function cargarMapaSupervisores(
+    supervisorId = null
+) {
+
+    inicializarMapaSupervisores();
+
+
+    if (!mapaSupervisores) {
+        return;
+    }
+
+
+    if (cargandoMapa) {
+        return;
+    }
+
+
+    cargandoMapa = true;
+
+
+    limpiarMapa();
+
+
+    actualizarEstadoMapa(
+        "Cargando cobertura territorial..."
+    );
+
+
+    try {
+
+        const params =
+            construirParametrosMapa(
+                supervisorId
+            );
+
+
+        const query =
+            params.toString();
+
+
+        const url =
+            query
+                ? `${MAPA_SUPERVISORES_URL}?${query}`
+                : MAPA_SUPERVISORES_URL;
+
+
+        console.log(
+            "Consultando mapa:",
+            url
+        );
+
+
+        const response =
+            await fetch(
+                url,
+                {
+                    method: "GET",
+
+                    credentials:
+                        "same-origin",
+
+                    headers: {
+
+                        "Accept":
+                            "application/json",
+
+                        "X-Requested-With":
+                            "XMLHttpRequest"
+
+                    }
+                }
+            );
+
+
+        let data;
+
+
+        try {
+
+            data =
+                await response.json();
+
+        }
+        catch {
+
+            throw new Error(
+                "El servidor devolvió una respuesta inválida."
+            );
+
+        }
+
+
+        if (
+            !response.ok ||
+            !data.ok
+        ) {
+
+            throw new Error(
+                data?.error ||
+                `Error HTTP ${response.status}`
+            );
+
+        }
+
+
+        console.log(
+            "Datos mapa:",
+            data
+        );
+
+
+        dibujarEscuelas(
+            data.escuelas || []
+        );
+
+
+        actualizarKpis(
+            data.estadisticas || {}
+        );
+
+
+        actualizarTituloMapa(
+            data
+        );
+
+
+        if (
+            !Array.isArray(data.escuelas) ||
+            data.escuelas.length === 0
+        ) {
+
+            actualizarEstadoMapa(
+                "No se encontraron establecimientos."
+            );
+
+        }
+        else {
+
+            actualizarEstadoMapa(
+                `${data.escuelas.length} establecimiento(s) cargado(s).`
+            );
+
+        }
+
+    }
+    catch (error) {
+
+        console.error(
+            "Error cargando mapa:",
+            error
+        );
+
+
+        actualizarEstadoMapa(
+            error.message ||
+            "Error cargando el mapa.",
+            true
+        );
+
+
+        actualizarKpis({
+            total: 0,
+            geolocalizadas: 0,
+            sin_geolocalizar: 0,
+            supervisores: 0,
+            regiones: 0
+        });
+
+    }
+    finally {
+
+        cargandoMapa = false;
+
+    }
+
+}
+
+
+/* ============================================================
+   DIBUJAR ESCUELAS
+============================================================ */
+
+function dibujarEscuelas(
     escuelas
 ) {
 
+    if (!Array.isArray(escuelas)) {
+
+        console.warn(
+            "escuelas no es un array:",
+            escuelas
+        );
+
+        return;
+    }
+
+
+    if (!capaEscuelas) {
+        return;
+    }
+
+
+    capaEscuelas.clearLayers();
+
+
     const bounds = [];
+
+
+    let cantidadMarcadores = 0;
 
 
     escuelas.forEach(
@@ -207,200 +575,94 @@ function dibujarEscuelasSupervisores(
 
             if (
                 escuela.latitud === null ||
-                escuela.longitud === null
+                escuela.latitud === undefined ||
+                escuela.longitud === null ||
+                escuela.longitud === undefined
             ) {
 
-                return;
+                console.warn(
+                    "Escuela sin coordenadas:",
+                    escuela.cueanexo
+                );
 
+                return;
+            }
+
+
+            const lat =
+                Number(
+                    escuela.latitud
+                );
+
+
+            const lon =
+                Number(
+                    escuela.longitud
+                );
+
+
+            if (
+                !Number.isFinite(lat) ||
+                !Number.isFinite(lon)
+            ) {
+
+                console.warn(
+                    "Coordenadas inválidas:",
+                    escuela
+                );
+
+                return;
+            }
+
+
+            if (
+                lat < -90 ||
+                lat > 90 ||
+                lon < -180 ||
+                lon > 180
+            ) {
+
+                console.warn(
+                    "Coordenadas fuera de rango:",
+                    escuela
+                );
+
+                return;
             }
 
 
             const marker =
-                L.marker([
-                    escuela.latitud,
-                    escuela.longitud
-                ]);
+                L.marker(
+                    [
+                        lat,
+                        lon
+                    ],
+                    {
+                        icon:
+                            ICONO_ESCUELA,
 
+                        title:
+                            escuela.escuela ||
+                            "Establecimiento",
 
-            let supervisoresHtml = "";
+                        riseOnHover:
+                            true,
 
-
-            if (
-                escuela.supervisores &&
-                escuela.supervisores.length
-            ) {
-
-                supervisoresHtml = `
-
-                    <hr>
-
-                    <strong>
-                        Supervisores
-                    </strong>
-
-                    <ul class="mb-0">
-
-                `;
-
-
-                escuela.supervisores.forEach(
-                    supervisor => {
-
-                        supervisoresHtml += `
-
-                            <li>
-
-                                <strong>
-                                    ${escapeHtml(
-                                        supervisor.nombre
-                                    )}
-                                </strong>
-
-                                <br>
-
-                                CUIL:
-                                ${escapeHtml(
-                                    supervisor.cuil
-                                )}
-
-                                <br>
-
-                                Regional:
-                                ${escapeHtml(
-                                    supervisor.region
-                                )}
-
-                            </li>
-
-                        `;
-
+                        riseOffset:
+                            1000
                     }
                 );
 
 
-                supervisoresHtml += `
-                    </ul>
-                `;
-
-            }
-
-
-            let ofertasHtml = "";
-
-
-            if (
-                escuela.ofertas &&
-                escuela.ofertas.length
-            ) {
-
-                ofertasHtml = `
-
-                    <hr>
-
-                    <strong>
-                        Ofertas asignadas
-                    </strong>
-
-                    <ul class="mb-0">
-
-                `;
-
-
-                escuela.ofertas.forEach(
-                    oferta => {
-
-                        ofertasHtml += `
-
-                            <li>
-
-                                ${escapeHtml(
-                                    oferta.oferta
-                                )}
-
-                                ${
-                                    oferta.acronimo
-                                    ? `(${escapeHtml(
-                                        oferta.acronimo
-                                    )})`
-                                    : ""
-                                }
-
-                            </li>
-
-                        `;
-
-                    }
-                );
-
-
-                ofertasHtml += `
-                    </ul>
-                `;
-
-            }
-
-
-            marker.bindPopup(`
-
-                <div
-                    style="
-                        min-width:300px;
-                        max-width:400px;
-                    "
-                >
-
-                    <h6>
-
-                        <strong>
-                            ${escapeHtml(
-                                escuela.escuela
-                            )}
-                        </strong>
-
-                    </h6>
-
-                    <div>
-
-                        <strong>
-                            CUEANEXO:
-                        </strong>
-
-                        ${escapeHtml(
-                            escuela.cueanexo
-                        )}
-
-                    </div>
-
-                    ${
-                        escuela.regiones &&
-                        escuela.regiones.length
-                        ? `
-
-                            <div>
-
-                                <strong>
-                                    Regional:
-                                </strong>
-
-                                ${escapeHtml(
-                                    escuela.regiones.join(
-                                        ", "
-                                    )
-                                )}
-
-                            </div>
-
-                          `
-                        : ""
-                    }
-
-                    ${ofertasHtml}
-
-                    ${supervisoresHtml}
-
-                </div>
-
-            `);
+            marker.bindPopup(
+                construirPopup(
+                    escuela
+                ),
+                {
+                    minWidth: 300,
+                    maxWidth: 450
+                }
+            );
 
 
             marker.addTo(
@@ -408,72 +670,212 @@ function dibujarEscuelasSupervisores(
             );
 
 
-            markersEscuelas.push(
-                marker
-            );
-
-
             bounds.push([
-                escuela.latitud,
-                escuela.longitud
+                lat,
+                lon
             ]);
+
+
+            cantidadMarcadores++;
 
         }
     );
 
 
-    if (bounds.length) {
+    console.log(
+        "Marcadores dibujados:",
+        cantidadMarcadores
+    );
 
-        mapaSupervisores.fitBounds(
-            bounds,
-            {
-                padding: [
-                    40,
-                    40
-                ]
+
+    setTimeout(
+        () => {
+
+            mapaSupervisores.invalidateSize({
+                animate: false
+            });
+
+
+            if (
+                bounds.length === 1
+            ) {
+
+                mapaSupervisores.setView(
+                    bounds[0],
+                    15,
+                    {
+                        animate: false
+                    }
+                );
+
             }
-        );
+            else if (
+                bounds.length > 1
+            ) {
 
-    }
+                mapaSupervisores.fitBounds(
+                    bounds,
+                    {
+                        padding: [
+                            40,
+                            40
+                        ],
 
-}
+                        maxZoom:
+                            15,
 
+                        animate:
+                            false
+                    }
+                );
 
-/* =========================================================
-   VER SUPERVISOR
-========================================================= */
+            }
+            else {
 
-function mostrarCoberturaSupervisor(
-    supervisorId
-) {
+                mapaSupervisores.setView(
+                    CENTRO_CHACO,
+                    7,
+                    {
+                        animate: false
+                    }
+                );
 
-    cargarMapaSupervisores(
-        supervisorId
+            }
+
+        },
+        250
     );
 
 }
 
 
-/* =========================================================
-   VER TODO
-========================================================= */
+/* ============================================================
+   POPUP ESCUELA
+============================================================ */
 
-function mostrarCoberturaGeneral() {
+function construirPopup(
+    escuela
+) {
 
-    cargarMapaSupervisores();
+    return `
+
+        <div class="popup-supervisor">
+
+            <div class="popup-supervisor-titulo">
+
+                ${escapeHtml(
+                    escuela.escuela
+                )}
+
+            </div>
+
+
+            <div class="popup-supervisor-dato">
+
+                <strong>CUEANEXO:</strong>
+
+                ${escapeHtml(
+                    escuela.cueanexo
+                )}
+
+            </div>
+
+
+            ${
+                escuela.region_loc
+                    ? `
+
+                        <div class="popup-supervisor-dato">
+
+                            <strong>
+                                Región:
+                            </strong>
+
+                            ${escapeHtml(
+                                escuela.region_loc
+                            )}
+
+                        </div>
+
+                      `
+                    : ""
+            }
+
+
+            ${
+                escuela.localidad
+                    ? `
+
+                        <div class="popup-supervisor-dato">
+
+                            <strong>
+                                Localidad:
+                            </strong>
+
+                            ${escapeHtml(
+                                escuela.localidad
+                            )}
+
+                        </div>
+
+                      `
+                    : ""
+            }
+
+
+            ${
+                escuela.departamento
+                    ? `
+
+                        <div class="popup-supervisor-dato">
+
+                            <strong>
+                                Departamento:
+                            </strong>
+
+                            ${escapeHtml(
+                                escuela.departamento
+                            )}
+
+                        </div>
+
+                      `
+                    : ""
+            }
+
+
+            ${construirRegiones(
+                escuela.regiones
+            )}
+
+
+            ${construirSupervisores(
+                escuela.supervisores
+            )}
+
+
+            ${construirOfertas(
+                escuela.ofertas
+            )}
+
+        </div>
+
+    `;
 
 }
 
 
-/* =========================================================
-   ESCAPE HTML
-========================================================= */
+/* ============================================================
+   REGIONES
+============================================================ */
 
-function escapeHtml(value) {
+function construirRegiones(
+    regiones
+) {
 
     if (
-        value === null ||
-        value === undefined
+        !Array.isArray(regiones) ||
+        regiones.length === 0
     ) {
 
         return "";
@@ -481,7 +883,517 @@ function escapeHtml(value) {
     }
 
 
-    return String(value)
+    const nombres =
+        regiones
+            .map(
+                item =>
+                    escapeHtml(
+                        item?.nombre || ""
+                    )
+            )
+            .filter(Boolean);
+
+
+    if (
+        nombres.length === 0
+    ) {
+
+        return "";
+
+    }
+
+
+    return `
+
+        <div class="popup-supervisor-seccion">
+
+            <strong>
+                Regional asignada:
+            </strong>
+
+            <div>
+
+                ${nombres.join(", ")}
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+/* ============================================================
+   SUPERVISORES
+============================================================ */
+
+function construirSupervisores(
+    supervisores
+) {
+
+    if (
+        !Array.isArray(supervisores) ||
+        supervisores.length === 0
+    ) {
+
+        return "";
+
+    }
+
+
+    let html = `
+
+        <div class="popup-supervisor-seccion">
+
+            <strong>
+
+                Supervisor${supervisores.length > 1 ? "es" : ""}:
+
+            </strong>
+
+    `;
+
+
+    supervisores.forEach(
+        supervisor => {
+
+            html += `
+
+                <div class="popup-supervisor-persona">
+
+                    <div>
+
+                        <strong>
+
+                            ${escapeHtml(
+                                supervisor.nombre ||
+                                "Sin nombre"
+                            )}
+
+                        </strong>
+
+                    </div>
+
+
+                    ${
+                        supervisor.cuil
+                            ? `
+
+                                <div>
+                                    CUIL:
+                                    ${escapeHtml(
+                                        supervisor.cuil
+                                    )}
+                                </div>
+
+                              `
+                            : ""
+                    }
+
+
+                    ${
+                        supervisor.telefono
+                            ? `
+
+                                <div>
+
+                                    Teléfono:
+
+                                    ${escapeHtml(
+                                        supervisor.telefono
+                                    )}
+
+                                </div>
+
+                              `
+                            : ""
+                    }
+
+
+                    ${
+                        supervisor.email
+                            ? `
+
+                                <div>
+
+                                    Email:
+
+                                    <a
+                                        href="mailto:${escapeHtml(
+                                            supervisor.email
+                                        )}"
+                                    >
+
+                                        ${escapeHtml(
+                                            supervisor.email
+                                        )}
+
+                                    </a>
+
+                                </div>
+
+                              `
+                            : ""
+                    }
+
+                </div>
+
+            `;
+
+        }
+    );
+
+
+    html += `
+
+        </div>
+
+    `;
+
+
+    return html;
+
+}
+
+
+/* ============================================================
+   OFERTAS
+============================================================ */
+
+function construirOfertas(
+    ofertas
+) {
+
+    if (
+        !Array.isArray(ofertas) ||
+        ofertas.length === 0
+    ) {
+
+        return "";
+
+    }
+
+
+    let html = `
+
+        <div class="popup-supervisor-seccion">
+
+            <strong>
+
+                Oferta${ofertas.length > 1 ? "s" : ""}:
+
+            </strong>
+
+            <ul
+                style="
+                    padding-left:20px;
+                    margin-top:5px;
+                    margin-bottom:0;
+                "
+            >
+
+    `;
+
+
+    ofertas.forEach(
+        oferta => {
+
+            html += `
+
+                <li>
+
+                    ${escapeHtml(
+                        oferta.oferta || ""
+                    )}
+
+                    ${
+                        oferta.acronimo
+                            ? `
+
+                                <span class="text-muted">
+
+                                    (${escapeHtml(
+                                        oferta.acronimo
+                                    )})
+
+                                </span>
+
+                              `
+                            : ""
+                    }
+
+                </li>
+
+            `;
+
+        }
+    );
+
+
+    html += `
+
+            </ul>
+
+        </div>
+
+    `;
+
+
+    return html;
+
+}
+
+
+/* ============================================================
+   KPIs
+============================================================ */
+
+function actualizarKpis(
+    estadisticas
+) {
+
+    setTexto(
+        "kpiSupervisores",
+        estadisticas.supervisores ?? 0
+    );
+
+
+    setTexto(
+        "kpiRegionales",
+        estadisticas.regiones ?? 0
+    );
+
+
+    setTexto(
+        "kpiEscuelas",
+        estadisticas.total ?? 0
+    );
+
+
+    setTexto(
+        "kpiGeo",
+        estadisticas.geolocalizadas ?? 0
+    );
+
+
+    setTexto(
+        "kpiSinGeo",
+        estadisticas.sin_geolocalizar ?? 0
+    );
+
+}
+
+
+/* ============================================================
+   TÍTULO
+============================================================ */
+
+function actualizarTituloMapa(
+    data
+) {
+
+    const titulo =
+        document.getElementById(
+            "tituloMapa"
+        );
+
+
+    if (!titulo) {
+        return;
+    }
+
+
+    if (
+        data.modo === "supervisor"
+    ) {
+
+        titulo.textContent =
+            "Cobertura territorial del supervisor";
+
+    }
+    else {
+
+        titulo.textContent =
+            "Cobertura territorial de supervisores";
+
+    }
+
+}
+
+
+/* ============================================================
+   ESTADO MAPA
+============================================================ */
+
+function actualizarEstadoMapa(
+    mensaje,
+    error = false
+) {
+
+    const estado =
+        document.getElementById(
+            "estadoMapa"
+        );
+
+
+    if (!estado) {
+        return;
+    }
+
+
+    estado.textContent =
+        mensaje;
+
+
+    estado.classList.remove(
+        "text-muted",
+        "text-danger",
+        "text-success"
+    );
+
+
+    if (error) {
+
+        estado.classList.add(
+            "text-danger"
+        );
+
+    }
+    else {
+
+        estado.classList.add(
+            "text-muted"
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   MAPA DE UN SUPERVISOR
+============================================================ */
+
+function mostrarCoberturaSupervisor(
+    supervisorId
+) {
+
+    if (!supervisorId) {
+        return;
+    }
+
+
+    cargarMapaSupervisores(
+        supervisorId
+    );
+
+
+    document
+        .getElementById(
+            "mapaSupervisores"
+        )
+        ?.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+
+}
+
+
+/* ============================================================
+   FILTRAR POR CUIL / NOMBRE
+============================================================ */
+
+async function mostrarMapaSupervisorPorCuil() {
+
+    const input =
+        document.getElementById(
+            "filtroBusqueda"
+        );
+
+
+    const valor =
+        input
+            ?.value
+            ?.trim();
+
+
+    if (!valor) {
+
+        if (
+            typeof Swal !== "undefined"
+        ) {
+
+            Swal.fire(
+                "Atención",
+                "Ingrese un CUIL, apellido o nombre.",
+                "warning"
+            );
+
+        }
+        else {
+
+            alert(
+                "Ingrese un CUIL, apellido o nombre."
+            );
+
+        }
+
+        return;
+
+    }
+
+
+    await cargarMapaSupervisores();
+
+}
+
+
+/* ============================================================
+   SET TEXTO
+============================================================ */
+
+function setTexto(
+    id,
+    valor
+) {
+
+    const elemento =
+        document.getElementById(
+            id
+        );
+
+
+    if (elemento) {
+
+        elemento.textContent =
+            String(valor);
+
+    }
+
+}
+
+
+/* ============================================================
+   ESCAPE HTML
+============================================================ */
+
+function escapeHtml(
+    valor
+) {
+
+    if (
+        valor === null ||
+        valor === undefined
+    ) {
+
+        return "";
+
+    }
+
+
+    return String(valor)
 
         .replace(
             /&/g,
@@ -509,3 +1421,144 @@ function escapeHtml(value) {
         );
 
 }
+
+
+/* ============================================================
+   ENTER BUSCADOR
+============================================================ */
+
+function configurarBuscadorMapa() {
+
+    const input =
+        document.getElementById(
+            "filtroBusqueda"
+        );
+
+
+    if (!input) {
+        return;
+    }
+
+
+    input.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.key === "Enter"
+            ) {
+
+                event.preventDefault();
+
+                mostrarCoberturaGeneral();
+
+            }
+
+        }
+    );
+
+}
+
+
+/* ============================================================
+   SELECTS
+============================================================ */
+
+function configurarFiltrosMapa() {
+
+    [
+        "filtroRegion",
+        "filtroNivel",
+        "filtroSituacion"
+    ]
+        .forEach(
+            id => {
+
+                const elemento =
+                    document.getElementById(
+                        id
+                    );
+
+
+                if (!elemento) {
+                    return;
+                }
+
+
+                elemento.addEventListener(
+                    "change",
+                    () => {
+
+                        mostrarCoberturaGeneral();
+
+                    }
+                );
+
+            }
+        );
+
+}
+
+
+/* ============================================================
+   INICIO
+============================================================ */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        const contenedor =
+            document.getElementById(
+                "mapaSupervisores"
+            );
+
+
+        if (!contenedor) {
+            return;
+        }
+
+
+        inicializarMapaSupervisores();
+
+        configurarBuscadorMapa();
+
+        configurarFiltrosMapa();
+
+
+        /*
+         * Esperamos un instante para que el layout principal
+         * termine de calcular su ancho.
+         */
+
+        setTimeout(
+            () => {
+
+                mostrarCoberturaGeneral();
+
+            },
+            300
+        );
+
+    }
+);
+
+
+/* ============================================================
+   FUNCIONES DISPONIBLES GLOBALMENTE
+============================================================ */
+
+window.inicializarMapaSupervisores =
+    inicializarMapaSupervisores;
+
+window.cargarMapaSupervisores =
+    cargarMapaSupervisores;
+
+window.mostrarCoberturaGeneral =
+    mostrarCoberturaGeneral;
+
+window.mostrarCoberturaSupervisor =
+    mostrarCoberturaSupervisor;
+
+window.mostrarMapaSupervisorPorCuil =
+    mostrarMapaSupervisorPorCuil;

@@ -84,8 +84,8 @@ let activeTypes = {};
 /* ================= 🔥 CAPAS PRO ================= */
 
 // Carto
-let claro = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png');
-let oscuro = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png');
+let claro = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2s9h_1_bd646db33e2c8813a2d9b537', { maxZoom:19 });
+let oscuro = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2s9h_1_bd646db33e2c8813a2d9b537', { maxZoom:19 });
 
 // Satélite
 let satelite = L.tileLayer(
@@ -94,7 +94,8 @@ let satelite = L.tileLayer(
 
 // Híbrido
 let labels = L.tileLayer(
-  'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png'
+  'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png?key=cb1_2s9h_1_bd646db33e2c8813a2d9b537',
+  { maxZoom:19 }
 );
 
 let hibrido = L.layerGroup([satelite, labels]);
