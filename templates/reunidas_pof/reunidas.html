@@ -1,4 +1,4 @@
-{% extends 'archivos/base/layout.html' %}
+{% extends 'reunidas_pof/layout_pof.html' %}
 {% block content %}
 
 {% comment %}
@@ -224,13 +224,18 @@
 <div class="pof-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa="reunidas" %}
     <div class="pof-view-header">
-        <h1>&#128218; POF</h1>
-        <p>Consult&aacute;, filtr&aacute; y administr&aacute; Plantas Org&aacute;nicas Funcionales por nivel.</p>
+        <div class="pof-view-header-icon-box" aria-hidden="true">
+            <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">collections_bookmark</span>
+        </div>
+        <div class="pof-view-header-copy">
+            <h1>POF</h1>
+            <p>Consult&aacute;, filtr&aacute; y administr&aacute; Plantas Org&aacute;nicas Funcionales por nivel.</p>
+        </div>
     </div>
 
     <div class="pof-reunidas-top-actions">
     <a class="pof-btn pof-reunida-create-btn" href="{% url 'reunidas_pof:crear_reunida' %}">
-        <span aria-hidden="true">🗃️</span>
+        <span aria-hidden="true"><span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">splitscreen_add</span></span>
         <span>Crear Planta Orgánica Funcional</span>
     </a>
 </div>
@@ -258,12 +263,14 @@
 
             <div class="pof-filter-field pof-col-2{% if filtro_nivel %} pof-filter-field-active{% endif %}{% if errores_filtros.nivel %} pof-filter-field-error{% endif %}">
                 <label for="filtroNivel">Nivel</label>
-                <select id="filtroNivel" name="nivel" {% if errores_filtros.nivel %}aria-invalid="true" aria-describedby="errorFiltroNivelReunidas"{% endif %}>
-                    <option value="">Todos</option>
-                    {% for codigo, nombre in niveles %}
-                        <option value="{{ codigo }}" {% if filtro_nivel == codigo %}selected{% endif %}>{{ nombre }}</option>
-                    {% endfor %}
-                </select>
+                <span class="pof-native-select-wrap">
+                    <select id="filtroNivel" name="nivel" {% if errores_filtros.nivel %}aria-invalid="true" aria-describedby="errorFiltroNivelReunidas"{% endif %}>
+                        <option value="">Todos</option>
+                        {% for codigo, nombre in niveles %}
+                            <option value="{{ codigo }}" {% if filtro_nivel == codigo %}selected{% endif %}>{{ nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </span>
                 {% if errores_filtros.nivel %}
                     <span id="errorFiltroNivelReunidas" class="pof-filter-field-help">{{ errores_filtros.nivel }}</span>
                 {% endif %}
@@ -278,7 +285,7 @@
         </div>
         {% if mensaje_filtros %}
         <div class="pof-filter-warning">
-            <span class="pof-filter-warning-icon" aria-hidden="true">⚠️</span>
+            <span class="pof-filter-warning-icon pof-material-symbol pof-icon-warning material-symbols-outlined" aria-hidden="true">warning</span>
             <span>{{ mensaje_filtros }}</span>
         </div>
 {% endif %}
@@ -286,7 +293,7 @@
 
     <div>
         {% if tabla_reunidas_no_migrada %}
-            <div class="pof-note">La tabla de Reunidas todav&iacute;a no est&aacute; migrada. Se muestra la pantalla sin registros hasta aplicar migraciones.</div>
+            <div class="pof-note">La tabla de POF todav&iacute;a no est&aacute; migrada. Se muestra la pantalla sin registros hasta aplicar migraciones.</div>
         {% endif %}
 
         <div class="pof-filter-summary">
@@ -314,36 +321,36 @@
                                 <div class="dropdown pof-grid-dropdown">
                                     <button type="button"
                                             class="pof-grid-icon-btn pof-grid-gear-btn"
-                                            title="Acciones de la Reunida"
+                                            title="Acciones de la POF"
                                             aria-label="Acciones de la Reunida"
                                             data-toggle="dropdown"
                                             aria-haspopup="true"
                                             aria-expanded="false">
-                                        ⚙️
+                                        <span class="pof-action-icon pof-material-symbol pof-icon-settings material-symbols-outlined" aria-hidden="true">settings_account_box</span>
                                     </button>
                                     <div class="dropdown-menu pof-grid-dropdown-menu pof-grid-actions-menu">
                                         <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-detail" href="{% url 'reunidas_pof:detalle_reunida' %}?anio={{ reunida.anio }}&amp;nivel={{ reunida.nivel_codigo }}">
-                                            👁️ VER DETALLE
+                                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">info</span> VER DETALLE
                                         </a>
                                         <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-primary" href="{% url 'reunidas_pof:cargar_cargos' %}?cabecera_tipo=REUNIDA&amp;anio={{ reunida.anio }}&amp;nivel={{ reunida.nivel_codigo|urlencode }}">
-                                            👥 AFECTAR CARGOS
+                                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> AFECTAR CARGOS
                                         </a>
                                         <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-warning" href="{% url 'reunidas_pof:consultar_cargos' %}?anio={{ reunida.anio }}&amp;nivel={{ reunida.nivel_codigo }}">
-                                            🛠️ ADMIN. CARGOS
+                                            <span class="pof-action-icon pof-material-symbol pof-icon-tools material-symbols-outlined" aria-hidden="true">handyman</span> ADMIN. CARGOS
                                         </a>
                                         <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-success" href="{% url 'reunidas_pof:exportar_reunida' %}?anio={{ reunida.anio }}&amp;nivel={{ reunida.nivel_codigo }}">
-                                            📗 EXPORTAR POF
+                                            <span class="pof-action-icon pof-material-symbol pof-icon-export material-symbols-outlined" aria-hidden="true">add_notes</span> EXPORTAR POF
                                         </a>
                                         <div class="pof-grid-dropdown-form pof-grid-dropdown-form-danger">
                                             <button type="button"
                                                     class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-danger"
                                                     data-pof-delete-open
                                                     data-pof-delete-tipo="REUNIDA"
-                                                    data-pof-delete-title="Eliminar Reunida"
+                                                    data-pof-delete-title="Eliminar POF"
                                                     data-pof-delete-label="{{ reunida.nivel_nombre }} {{ reunida.anio }}"
-                                                    data-pof-delete-warning="Esta operación solo se realizará si la Reunida no registra actividad administrativa posterior y no es utilizada como base por otra Reunida. La Reunida base anterior no será modificada."
+                                                    data-pof-delete-warning="Esta operación solo se realizará si la POF no registra actividad administrativa posterior y no es utilizada como base por otra POF. La POF base anterior no será modificada."
                                                     data-pof-delete-url="{% url 'reunidas_pof:eliminar_reunida' reunida.id %}">
-                                                &#128465;&#65039; ELIMINAR REUNIDA
+                                                <span class="pof-action-icon pof-material-symbol pof-icon-delete material-symbols-outlined" aria-hidden="true">delete</span> ELIMINAR POF
                                             </button>
                                         </div>
                                     </div>
@@ -361,7 +368,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="4" class="pof-grid-empty">No hay Reunidas cargadas.</td>
+                            <td colspan="4" class="pof-grid-empty">No hay POF cargadas.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -373,11 +380,13 @@
                 <input type="hidden" name="anio" value="{{ filtro_anio }}">
                 <input type="hidden" name="nivel" value="{{ filtro_nivel }}">
                 <label for="pageSizeReunidas">Registros por p&aacute;gina</label>
-                <select id="pageSizeReunidas" name="page_size">
-                    {% for opcion in page_size_options %}
-                        <option value="{{ opcion }}" {% if page_size == opcion %}selected{% endif %}>{{ opcion }}</option>
-                    {% endfor %}
-                </select>
+                <span class="pof-native-select-wrap">
+                    <select id="pageSizeReunidas" name="page_size">
+                        {% for opcion in page_size_options %}
+                            <option value="{{ opcion }}" {% if page_size == opcion %}selected{% endif %}>{{ opcion }}</option>
+                        {% endfor %}
+                    </select>
+                </span>
                 <button type="submit" class="pof-btn pof-btn-light">Aplicar</button>
             </form>
 
@@ -415,6 +424,6 @@
 
 {% block scripts %}
 {% load static %}
-<script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}?v=20260827-1"></script>
 
 {% endblock %}

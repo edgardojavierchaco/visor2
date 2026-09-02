@@ -1,9 +1,11 @@
 {% extends 'archivos/base/layout.html' %}
+{% load l10n %}
 {% block content %}
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 
 <style>
 
@@ -268,6 +270,32 @@
     #padronTable thead th { background: #111827; color: #fff; font-size: .82rem; padding: .8rem .9rem !important; text-align: center; } 
     #padronTable tbody td { padding: .65rem .9rem !important; vertical-align: middle; text-align: center; color: #111827; }
     #padronTable thead th.th-left, #padronTable tbody td.td-left { text-align: left !important; }
+    .padron-cue-popup {
+        width: 220px;
+        max-width: 220px;
+        font-size: 12px;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+        word-break: normal;
+    }
+    #padronCueMap .leaflet-popup-content {
+        margin: 10px 12px;
+        max-width: 220px;
+    }
+    #padronCueMap .padron-cue-popup .btn {
+        font-size: 12px;
+        padding: .25rem .5rem;
+    }
+    #padronCueMap {
+        width: 100%;
+        height: 520px;
+        border-radius: .4rem;
+    }
+    .col-accion {
+        width: 65px;
+        min-width: 65px;
+        text-align: center !important;
+    }
     .table-foot { display: flex; align-items: center; justify-content: space-between; padding: .8rem 1.2rem; background: #f8fafc; }
     .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate { display: none !important; }
 
@@ -313,7 +341,7 @@
                         <div class="p-3 border rounded-3 bg-light h-100">
                             <i class="fas fa-graduation-cap text-primary me-2"></i>
                             <strong>Oferta Educativa</strong>
-                            <p class="small text-muted mb-0 mt-1">Permite filtrar por el tipo de oferta educativa, se pueden combinar opciones. Solo se requiere hacer click y agregar o quitar opciones en el selector. Las ofertas seleccionadas figuran en la etiqueta de fitros aplicados.</p>
+                            <p class="small text-muted mb-0 mt-1">Permite combinar una o varias ofertas educativas. Las opciones seleccionadas aparecen entre los filtros activos.</p>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -323,11 +351,25 @@
                             <p class="small text-muted mb-0 mt-1">Permiten filtrar por Sector (Estatal, Privado o Gestión Social/Cooperativa) y Ámbito (Urbano, Rural, Rural Disperso o Rural Aglomerado).</p>
                         </div>
                     </div>
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <div class="p-3 border rounded-3 bg-light mt-3">
                             <i class="fas fa-hashtag text-primary me-2"></i>
-                            <strong>CUE-Anexo</strong>
-                            <p class="small text-muted mb-0 mt-1">Ingresa el código numérico para ir directo a un establecimiento exacto.</p>
+                            <strong>CUE-Anexo, Latitud y Longitud</strong>
+                            <p class="small text-muted mb-0 mt-1">Permiten buscar el código o las coordenadas mediante coincidencias completas o parciales.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 border rounded-3 bg-light mt-3">
+                            <i class="fas fa-school text-primary me-2"></i>
+                            <strong>Establecimiento y Dirección</strong>
+                            <p class="small text-muted mb-0 mt-1">Permiten buscar por nombre del establecimiento o dirección completa o parcial.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="p-3 border rounded-3 bg-light">
+                            <i class="fas fa-address-card text-primary me-2"></i>
+                            <strong>Directivo, Teléfono y Correo</strong>
+                            <p class="small text-muted mb-0 mt-1">Permiten buscar por apellido o nombre del directivo, teléfono y correo mediante coincidencias completas o parciales.</p>
                         </div>
                     </div>
                 </div>
@@ -336,7 +378,7 @@
                     <li class="mb-2"><strong>Limpiar Filtros: </strong> Quita todos los filtros aplicados.</li>
                     <li><strong>Buscador Inteligente: </strong> Consta de dos partes para mayor precisión:
                         <ul class="mt-1 mb-0" style="padding-left: 1.2rem; list-style-type: circle;">
-                            <li class="mb-1"><strong>Selector:</strong> Permite elegir exactamente en qué columna buscar (ej. "Establecimiento"). Si dejas la opción "🔍 Todas", buscará en toda la tabla.</li>
+                            <li class="mb-1"><strong>Selector:</strong> Permite buscar en cualquiera de las 14 columnas de datos. Si dejas la opción "🔍 Todas", buscará en toda la tabla.</li>
                         </ul>
                     </li>
                 </ul>
@@ -346,10 +388,11 @@
                     <div class="col-12">
                         <div class="p-3 border rounded-3 bg-light" style="font-size: 0.9rem; color: #334155;">
                             <p class="mb-2">Para que la tabla sea más fácil de leer, puedes elegir qué datos ver. <strong>Haz clic en los botones del panel izquierdo de manera individual para mostrar u ocultar las columnas.</strong></p>
+                            <p class="mb-2">Están disponibles: CUE-Anexo, Latitud, Longitud, Establecimiento, Oferta Educativa, Regional, Departamento, Localidad, Sector, Ámbito, Dirección, Directivo, Teléfono y Correo.</p>
                             <p class="mb-2">También tienes 2 botones rápidos:</p>
                             <ul class="text-muted mb-0" style="line-height: 1.6; padding-left: 1.5rem;">
                                 <li class="mb-1"><strong>Mostrar todas:</strong> Despliega absolutamente toda la información en la tabla.</li>
-                                <li><strong>Ocultar:</strong> Limpia la tabla y deja solo la identificación básica (CUE-Anexo y Nombre).</li>
+                                <li><strong>Ocultar:</strong> Limpia la tabla y deja solo Acción, CUE-Anexo y Establecimiento.</li>
                             </ul>
                         </div>
                     </div>
@@ -361,7 +404,7 @@
                 <div class="row">
                     <div class="col-12">
                         <div class="p-3 border rounded-3 bg-light" style="font-size: 0.9rem; color: #334155;">
-                            <p class="mb-2">Utiliza los botones ubicados en la barra superior de la tabla para descargar o imprimir el el informe de padrón. <strong>Importante:</strong> Los reportes generados respetarán exactamente los filtros y las columnas que tengas visibles en ese momento. El documento generado con el botón PDF e Imprimir tiene formato de hoja A4 y orientación vertical.</p>
+                            <p class="mb-2">Utiliza los botones ubicados en la barra superior de la tabla para descargar o imprimir el informe de padrón. <strong>Importante:</strong> Los reportes generados respetarán exactamente los filtros y las columnas que tengas visibles en ese momento. El documento generado con el botón PDF e Imprimir tiene formato de hoja A4 y orientación vertical.</p>
                             <ul class="text-muted mb-0" style="line-height: 1.6; padding-left: 1.5rem;">
                                 <li class="mb-2"><strong><i class="fas fa-file-excel text-success me-1"></i> Excel:</strong> Descarga la tabla en formato <code>.xlsx</code>, ideal si necesitas realizar cálculos, gráficos o cruces de datos en tu computadora.</li>
                                 <li class="mb-2"><strong><i class="fas fa-file-pdf text-danger me-1"></i> PDF:</strong> Genera y descarga en tu dispositivo un documento formal en formato vertical (A4). Incluye encabezados y detalla qué filtros se aplicaron al momento de su creación.</li>
@@ -374,6 +417,39 @@
             
             <div class="modal-footer" style="background-color: #f8fafc;">
                 <button type="button" class="btn btn-primary fw-bold rounded-3 px-4" data-dismiss="modal" data-bs-dismiss="modal">Entendido</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalMapaCue" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                    Ubicación del CUE-Anexo
+                    <span id="modalMapaCueNumero"></span>
+                </h5>
+                <button
+                    type="button"
+                    class="btn btn-sm btn-light border btn-cerrar-mapa-cue"
+                    title="Cerrar"
+                    aria-label="Cerrar"
+                >
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="modal-body p-2">
+                <div id="padronCueMap"></div>
+            </div>
+            <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-light border btn-sm btn-cerrar-mapa-cue"
+                >
+                    Cerrar
+                </button>
             </div>
         </div>
     </div>
@@ -395,10 +471,12 @@
                     <button id="btnHideAll"><i class="fas fa-eye-slash me-1"></i>Ocultar</button>
                 </div>
                 <div class="col-groups">
-                    <div class="col-group"><span class="col-group-label">Identific.</span><span class="col-badge active" data-cols="0">CUE-Anexo</span><span class="col-badge active" data-cols="1">Establecimiento</span></div>
-                    <div class="col-group"><span class="col-group-label">Académico</span><span class="col-badge active" data-cols="2">Oferta / Niveles</span></div>
-                    <div class="col-group"><span class="col-group-label">Ubicación</span><span class="col-badge active" data-cols="3">Regional</span><span class="col-badge active" data-cols="4">Departamento</span><span class="col-badge active" data-cols="5">Localidad</span></div>
-                    <div class="col-group"><span class="col-group-label">Gestión</span><span class="col-badge active" data-cols="6">Sector</span><span class="col-badge active" data-cols="7">Ámbito</span></div>
+                    <div class="col-group"><span class="col-group-label">Identific.</span><span class="col-badge active" data-cols="1">CUE-Anexo</span><span class="col-badge active" data-cols="4">Establecimiento</span></div>
+                    <div class="col-group"><span class="col-group-label">Mapa</span><span class="col-badge active" data-cols="2">Latitud</span><span class="col-badge active" data-cols="3">Longitud</span></div>
+                    <div class="col-group"><span class="col-group-label">Académico</span><span class="col-badge active" data-cols="5">Oferta / Niveles</span></div>
+                    <div class="col-group"><span class="col-group-label">Ubicación</span><span class="col-badge active" data-cols="6">Regional</span><span class="col-badge active" data-cols="7">Departamento</span><span class="col-badge active" data-cols="8">Localidad</span><span class="col-badge active" data-cols="11">Dirección</span></div>
+                    <div class="col-group"><span class="col-group-label">Gestión</span><span class="col-badge active" data-cols="9">Sector</span><span class="col-badge active" data-cols="10">Ámbito</span></div>
+                    <div class="col-group"><span class="col-group-label">Contacto</span><span class="col-badge active" data-cols="12">Directivo</span><span class="col-badge active" data-cols="13">Teléfono</span><span class="col-badge active" data-cols="14">Correo</span></div>
                 </div>
             </div>
 
@@ -465,12 +543,47 @@
                     </div>
 
                     <div class="filter-item">
+                        <label for="fLatitud"><i class="fas fa-map-pin"></i> Latitud</label>
+                        <input type="text" id="fLatitud" placeholder="Latitud completa o parcial">
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fLongitud"><i class="fas fa-map-pin"></i> Longitud</label>
+                        <input type="text" id="fLongitud" placeholder="Longitud completa o parcial">
+                    </div>
+
+                    <div class="filter-item">
                         <label><i class="fas fa-graduation-cap"></i> Oferta Educativa</label>
                         <select id="fOferta" multiple="multiple" style="width: 100%;">
                             {% for oferta in lista_ofertas %}
                                 <option value="{{ oferta }}">{{ oferta }}</option>
                             {% endfor %}
                         </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fEstablecimiento"><i class="fas fa-school"></i> Establecimiento</label>
+                        <input type="text" id="fEstablecimiento" placeholder="Nombre completo o parcial">
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fDireccion"><i class="fas fa-map-marker-alt"></i> Dirección</label>
+                        <input type="text" id="fDireccion" placeholder="Dirección completa o parcial">
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fDirectivo"><i class="fas fa-user-tie"></i> Directivo</label>
+                        <input type="text" id="fDirectivo" placeholder="Apellido o nombre">
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fTelefono"><i class="fas fa-phone"></i> Teléfono</label>
+                        <input type="text" id="fTelefono" placeholder="Teléfono completo o parcial">
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="fCorreo"><i class="fas fa-envelope"></i> Correo</label>
+                        <input type="text" id="fCorreo" placeholder="Correo completo o parcial">
                     </div>
 
                 </div>
@@ -517,7 +630,10 @@
             <table id="padronTable" class="table table-bordered table-hover">
                 <thead> 
                     <tr>
+                        <th class="col-accion no-export" style="width: 65px;">Acción</th>
                         <th>CUE-Anexo</th>           
+                        <th>Latitud</th>
+                        <th>Longitud</th>
                         <th class="th-left">Establecimiento</th>
                         <th class="th-left">Oferta Educativa</th>             
                         <th>Regional</th>           
@@ -525,12 +641,54 @@
                         <th>Localidad</th>              
                         <th>Sector</th>             
                         <th>Ámbito</th>
+                        <th class="th-left">Dirección</th>
+                        <th class="th-left">Directivo</th>
+                        <th>Teléfono</th>
+                        <th class="th-left">Correo</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in escuelas %}
                     <tr>
+                        <td class="col-accion text-center">
+                            {% if item.lat and item.long %}
+                            <button
+                                type="button"
+                                class="btn btn-outline-primary btn-sm btn-ver-mapa"
+                                title="Ver ubicación en mapa"
+                                aria-label="Ver ubicación del CUE-Anexo {{ item.cueanexo }}"
+                                data-cueanexo="{{ item.cueanexo|default:'' }}"
+                                data-lat="{{ item.lat|unlocalize }}"
+                                data-lng="{{ item.long|unlocalize }}"
+                                data-establecimiento="{{ item.nom_est|default:'' }}"
+                                data-oferta="{{ item.oferta|default:''|escape }}"
+                                data-ambito="{{ item.ambito|default:''|escape }}"
+                                data-sector="{{ item.sector|default:''|escape }}"
+                                data-region="{{ item.region_loc|default:''|escape }}"
+                                data-calle="{{ item.calle|default:''|escape }}"
+                                data-numero="{{ item.numero|default:''|escape }}"
+                                data-localidad="{{ item.localidad|default:''|escape }}"
+                                data-apellido-resp="{{ item.apellido_resp|default:''|escape }}"
+                                data-nombre-resp="{{ item.nombre_resp|default:''|escape }}"
+                                data-telefono="{{ item.resploc_telefono|default:''|escape }}"
+                                data-correo="{{ item.resploc_email|default:''|escape }}"
+                            >
+                                <i class="fas fa-eye" aria-hidden="true"></i>
+                            </button>
+                            {% else %}
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                title="Sin coordenadas disponibles"
+                                disabled
+                            >
+                                <i class="fas fa-eye" aria-hidden="true"></i>
+                            </button>
+                            {% endif %}
+                        </td>
                         <td class="fw-bold text-primary">{{ item.cueanexo|default:"-" }}</td>
+                        <td>{{ item.lat|default:"-" }}</td>
+                        <td>{{ item.long|default:"-" }}</td>
                         <td class="td-left"><strong>{{ item.nom_est|default:"-" }}</strong></td>
                         <td class="td-left text-muted">{{ item.oferta|default:"-" }}</td>
                         <td>{{ item.region_loc|default:"-" }}</td>
@@ -542,6 +700,10 @@
                             {% else %}<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-2 py-1">Gestión Social/Cooperativa</span>{% endif %}
                         </td>
                         <td>{{ item.ambito|default:"-" }}</td>
+                        <td class="td-left">{% if item.calle and item.numero %}{{ item.calle }} {{ item.numero }}{% elif item.calle %}{{ item.calle }}{% elif item.numero %}{{ item.numero }}{% else %}-{% endif %}</td>
+                        <td class="td-left">{% if item.apellido_resp and item.nombre_resp %}{{ item.apellido_resp }}, {{ item.nombre_resp }}{% elif item.apellido_resp %}{{ item.apellido_resp }}{% elif item.nombre_resp %}{{ item.nombre_resp }}{% else %}-{% endif %}</td>
+                        <td>{{ item.resploc_telefono|default:"-" }}</td>
+                        <td class="td-left">{{ item.resploc_email|default:"-" }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -565,8 +727,14 @@
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 
 <script>
+let padronCueMap = null;
+let padronCueMarker = null;
+let padronCuePendiente = null;
+let padronCueModal = null;
+
 // ─── VARIABLES GEOGRÁFICAS (CON FALLBACK SEGURO) ───
 let jerarquiaGeografica = null;
 const userRegionStr = "{{ region_actual }}"; 
@@ -683,7 +851,7 @@ $(document).ready(async function () {
     });
 
     $('#padronTable tbody tr').each(function() {
-        var $td = $(this).find('td').eq(2);
+        var $td = $(this).find('td').eq(5);
         var text = $td.text();
         if (text && text !== '-') {
             $td.text(text.replace(/[()]/g, '').trim());
@@ -754,10 +922,12 @@ $(document).ready(async function () {
         }
     });
 
-    const ALL_COLS = [0, 1, 2, 3, 4, 5, 6, 7];
+    const ALL_COLS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
     const filterLabels = { 
         'fRegion': 'Región', 'fDepartamento': 'Depto.', 'fLocalidad': 'Localidad', 
-        'fSector': 'Sector', 'fAmbito': 'Ámbito', 'fCueanexo': 'CUE', 'fOferta': 'Oferta'
+        'fSector': 'Sector', 'fAmbito': 'Ámbito', 'fCueanexo': 'CUE', 'fOferta': 'Oferta',
+        'fLatitud': 'Latitud', 'fLongitud': 'Longitud', 'fEstablecimiento': 'Establecimiento',
+        'fDireccion': 'Dirección', 'fDirectivo': 'Directivo', 'fTelefono': 'Teléfono', 'fCorreo': 'Correo'
     };
 
     function getTextoFiltrosExportacion() {
@@ -808,6 +978,15 @@ $(document).ready(async function () {
         language: { url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" },
         pageLength: 10,
         dom: 'Brt',
+        order: [[1, 'asc']],
+        columnDefs: [
+            {
+                targets: 0,
+                orderable: false,
+                searchable: false,
+                className: 'text-center'
+            }
+        ],
        buttons: [
             { 
                 extend: 'excelHtml5', 
@@ -817,7 +996,7 @@ $(document).ready(async function () {
                 title: 'Informe Padrón', 
                 filename: function() { return getNombreArchivoConFiltros(); },
                 messageTop: function() { return getTextoFiltrosExportacion(); },
-                exportOptions: { columns: ':visible', modifier: { page: 'all' } },
+                exportOptions: { columns: function (idx) { return idx !== 0 && table.column(idx).visible(); }, modifier: { page: 'all' } },
                 customize: function(xlsx) {
                     var sheet = xlsx.xl.worksheets['sheet1.xml'];
                     var ahora = new Date();
@@ -846,7 +1025,7 @@ $(document).ready(async function () {
                 messageTop: function() { return getTextoFiltrosExportacion(); },
                 orientation: 'portrait',
                 pageSize: 'A4',
-                exportOptions: { columns: ':visible', modifier: { page: 'all' } },
+                exportOptions: { columns: function (idx) { return idx !== 0 && table.column(idx).visible(); }, modifier: { page: 'all' } },
                 customize: function(doc) {
                     doc.info = { title: 'Informe Padrón' }; 
                     doc.pageMargins = [30, 50, 30, 40]; // Aumentamos el margen superior a 50 para que entre la fecha
@@ -916,7 +1095,7 @@ $(document).ready(async function () {
                 orientation: 'portrait', 
                 pageSize: 'A4',
                 download: 'open', 
-                exportOptions: { columns: ':visible', modifier: { page: 'all' } },
+                exportOptions: { columns: function (idx) { return idx !== 0 && table.column(idx).visible(); }, modifier: { page: 'all' } },
                 customize: function(doc) {
                     doc.info = { title: 'Informe Padrón' }; 
                     doc.pageMargins = [30, 50, 30, 40]; // Aumentamos el margen superior a 50 para que entre la fecha
@@ -1011,7 +1190,7 @@ $(document).ready(async function () {
         updateFooter();
     });
     $('#btnShowAll').on('click', function () { table.columns().visible(true); $('.col-badge').addClass('active'); updateFooter(); });
-    $('#btnHideAll').on('click', function () { ALL_COLS.forEach(i => { if (i>1) { table.column(i).visible(false); $(`.col-badge[data-cols="${i}"]`).removeClass('active'); }}); updateFooter(); });
+    $('#btnHideAll').on('click', function () { ALL_COLS.forEach(i => { if (i !== 0 && i !== 1 && i !== 4) { table.column(i).visible(false); $(`.col-badge[data-cols="${i}"]`).removeClass('active'); }}); updateFooter(); });
 
     function actualizarChips() {
         $('#chips-container').empty();
@@ -1064,78 +1243,118 @@ $(document).ready(async function () {
         filterTimeout = setTimeout(() => {
             table.search('').columns().search('');
             
-            // Filtro Regional (Columna 3)
+            // Filtro Regional (Columna 6)
             var rVal = $('#toggleRegionActivo').is(':checked') ? $('#fRegion').val() : '';
             if (rVal) {
-                table.column(3).search('^\\s*' + $.fn.dataTable.util.escapeRegex(rVal) + '\\s*$', true, false);
-                if (!table.column(3).visible()) { 
-                    table.column(3).visible(true); 
-                    $(`.col-badge[data-cols="3"]`).addClass('active'); 
-                }
-            }
-            
-            // Filtro Departamento (Columna 4)
-            var dVal = $('#fDepartamento').val(); 
-            if (dVal) {
-                table.column(4).search('^\\s*' + $.fn.dataTable.util.escapeRegex(dVal) + '\\s*$', true, false);
-                if (!table.column(4).visible()) { 
-                    table.column(4).visible(true); 
-                    $(`.col-badge[data-cols="4"]`).addClass('active'); 
-                }
-            }
-            
-            // Filtro Localidad (Columna 5)
-            var lVal = $('#fLocalidad').val(); 
-            if (lVal) {
-                table.column(5).search('^\\s*' + $.fn.dataTable.util.escapeRegex(lVal) + '\\s*$', true, false);
-                if (!table.column(5).visible()) { 
-                    table.column(5).visible(true); 
-                    $(`.col-badge[data-cols="5"]`).addClass('active'); 
-                }
-            }
-            
-            // Filtro Sector (Columna 6)
-            var sVal = $('#fSector').val(); 
-            if (sVal) {
-                table.column(6).search($.fn.dataTable.util.escapeRegex(sVal), true, false);
+                table.column(6).search('^\\s*' + $.fn.dataTable.util.escapeRegex(rVal) + '\\s*$', true, false);
                 if (!table.column(6).visible()) { 
                     table.column(6).visible(true); 
                     $(`.col-badge[data-cols="6"]`).addClass('active'); 
                 }
             }
-
-            // Filtro Ámbito (Columna 7)
-            var aVal = $('#fAmbito').val(); 
-            if (aVal) {
-                table.column(7).search('^\\s*' + $.fn.dataTable.util.escapeRegex(aVal) + '\\s*$', true, false);
+            
+            // Filtro Departamento (Columna 7)
+            var dVal = $('#fDepartamento').val(); 
+            if (dVal) {
+                table.column(7).search('^\\s*' + $.fn.dataTable.util.escapeRegex(dVal) + '\\s*$', true, false);
                 if (!table.column(7).visible()) { 
                     table.column(7).visible(true); 
                     $(`.col-badge[data-cols="7"]`).addClass('active'); 
                 }
             }
             
-            // Filtro CUE-Anexo (Columna 0)
-            var cVal = $('#fCueanexo').val(); 
-            if (cVal) {
-                table.column(0).search($.fn.dataTable.util.escapeRegex(cVal), true, false);
-                if (!table.column(0).visible()) { 
-                    table.column(0).visible(true); 
-                    $(`.col-badge[data-cols="0"]`).addClass('active'); 
+            // Filtro Localidad (Columna 8)
+            var lVal = $('#fLocalidad').val(); 
+            if (lVal) {
+                table.column(8).search('^\\s*' + $.fn.dataTable.util.escapeRegex(lVal) + '\\s*$', true, false);
+                if (!table.column(8).visible()) { 
+                    table.column(8).visible(true); 
+                    $(`.col-badge[data-cols="8"]`).addClass('active'); 
+                }
+            }
+            
+            // Filtro Sector (Columna 9)
+            var sVal = $('#fSector').val(); 
+            if (sVal) {
+                table.column(9).search($.fn.dataTable.util.escapeRegex(sVal), true, false);
+                if (!table.column(9).visible()) { 
+                    table.column(9).visible(true); 
+                    $(`.col-badge[data-cols="9"]`).addClass('active'); 
                 }
             }
 
-            // Filtro Oferta Educativa (Columna 2)
+            // Filtro Ámbito (Columna 10)
+            var aVal = $('#fAmbito').val(); 
+            if (aVal) {
+                table.column(10).search('^\\s*' + $.fn.dataTable.util.escapeRegex(aVal) + '\\s*$', true, false);
+                if (!table.column(10).visible()) { 
+                    table.column(10).visible(true); 
+                    $(`.col-badge[data-cols="10"]`).addClass('active'); 
+                }
+            }
+            
+            // Filtro CUE-Anexo (Columna 1)
+            var cVal = $('#fCueanexo').val(); 
+            if (cVal) {
+                table.column(1).search($.fn.dataTable.util.escapeRegex(cVal), true, false);
+                if (!table.column(1).visible()) { 
+                    table.column(1).visible(true); 
+                    $(`.col-badge[data-cols="1"]`).addClass('active'); 
+                }
+            }
+
+            // Filtro Latitud (Columna 2)
+            var latVal = $('#fLatitud').val();
+            if (latVal) {
+                table.column(2).search($.fn.dataTable.util.escapeRegex(latVal), true, false);
+                if (!table.column(2).visible()) {
+                    table.column(2).visible(true);
+                    $(`.col-badge[data-cols="2"]`).addClass('active');
+                }
+            }
+
+            // Filtro Longitud (Columna 3)
+            var longVal = $('#fLongitud').val();
+            if (longVal) {
+                table.column(3).search($.fn.dataTable.util.escapeRegex(longVal), true, false);
+                if (!table.column(3).visible()) {
+                    table.column(3).visible(true);
+                    $(`.col-badge[data-cols="3"]`).addClass('active');
+                }
+            }
+
+            // Filtro Oferta Educativa (Columna 5)
             var oVal = $('#fOferta').val();
             if (oVal && oVal.length > 0) {
                 var regexOferta = '^\\s*(' + oVal.map($.fn.dataTable.util.escapeRegex).join('|') + ')\\s*$';
-                table.column(2).search(regexOferta, true, false);
-                if (!table.column(2).visible()) { 
-                    table.column(2).visible(true); 
-                    $(`.col-badge[data-cols="2"]`).addClass('active'); 
+                table.column(5).search(regexOferta, true, false);
+                if (!table.column(5).visible()) { 
+                    table.column(5).visible(true); 
+                    $(`.col-badge[data-cols="5"]`).addClass('active'); 
                 }
             } else {
-                table.column(2).search('', true, false);
+                table.column(5).search('', true, false);
             }
+
+            // Filtros textuales institucionales y de contacto
+            var filtrosTexto = [
+                ['#fEstablecimiento', 4],
+                ['#fDireccion', 11],
+                ['#fDirectivo', 12],
+                ['#fTelefono', 13],
+                ['#fCorreo', 14]
+            ];
+            filtrosTexto.forEach(function (filtro) {
+                var valor = $(filtro[0]).val();
+                var columna = filtro[1];
+                if (valor) {
+                    table.column(columna).search($.fn.dataTable.util.escapeRegex(valor), true, false);
+                    if (!table.column(columna).visible()) {
+                        table.column(columna).visible(true);
+                        $(`.col-badge[data-cols="${columna}"]`).addClass('active');
+                    }
+                }
+            });
 
             // Buscador Especializado Inteligente
             var query = $('#customSearch').val().trim().replace(/\s+/g, ' ');
@@ -1143,8 +1362,8 @@ $(document).ready(async function () {
 
             if (query !== '') {
                 if (scope === 'all') {
-                    if (!table.column(0).visible()) { table.column(0).visible(true); $(`.col-badge[data-cols="0"]`).addClass('active'); }
                     if (!table.column(1).visible()) { table.column(1).visible(true); $(`.col-badge[data-cols="1"]`).addClass('active'); }
+                    if (!table.column(4).visible()) { table.column(4).visible(true); $(`.col-badge[data-cols="4"]`).addClass('active'); }
                     table.search(query, false, false, true);
                 } else {
                     table.column(parseInt(scope)).search(query, false, false, true);
@@ -1164,9 +1383,10 @@ $(document).ready(async function () {
     function cargarSelectorBusquedaCompleto() {
         const selector = $('#searchScope');
         selector.empty().append('<option value="all" selected>🔍 Todas</option>');
-        const colIdx = 1; // Establecimiento
-        const headerText = $(table.column(colIdx).header()).text().trim();
-        selector.append(`<option value="${colIdx}">${headerText}</option>`);
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].forEach(colIdx => {
+            const headerText = $(table.column(colIdx).header()).text().trim();
+            selector.append(`<option value="${colIdx}">${headerText}</option>`);
+        });
     }
 
     $('#customSearch').on('input', function() {
@@ -1208,7 +1428,7 @@ $(document).ready(async function () {
     });
 
     let typingTimer;
-    $('#fCueanexo').on('input', function () { 
+    $('#fCueanexo, #fLatitud, #fLongitud, #fEstablecimiento, #fDireccion, #fDirectivo, #fTelefono, #fCorreo').on('input', function () { 
         toggleHasValue($(this)); clearTimeout(typingTimer);
         typingTimer = setTimeout(function() { actualizarChips(); applyAllFilters(); }, 400); 
     });
@@ -1221,7 +1441,7 @@ $(document).ready(async function () {
 // === BOTÓN LIMPIAR FILTROS (RESETEO INTELIGENTE Y JERÁRQUICO) ===
     $('#btnClearFilters').on('click', function () {
         // 1. Limpiamos todos los campos de texto y combos
-        $('#fRegion, #fDepartamento, #fLocalidad, #fSector, #fAmbito, #fCueanexo, #customSearch').val('').removeClass('has-value');
+        $('#fRegion, #fDepartamento, #fLocalidad, #fSector, #fAmbito, #fCueanexo, #fLatitud, #fLongitud, #fEstablecimiento, #fDireccion, #fDirectivo, #fTelefono, #fCorreo, #customSearch').val('').removeClass('has-value');
         
         // Limpiamos el selector múltiple de Oferta
         $('#fOferta').val(null).trigger('change');
@@ -1246,6 +1466,275 @@ $(document).ready(async function () {
         applyAllFilters();
     });
 
+    const modalMapaCueElement = document.getElementById('modalMapaCue');
+
+    function normalizarCoordenadaPadronCue(valor) {
+        const numero = Number(String(valor || '').trim().replace(',', '.'));
+        return Number.isFinite(numero) ? numero : null;
+    }
+
+    function escaparHtmlPadronCue(valor) {
+        const texto = valor === null || valor === undefined ? '' : String(valor);
+        const entidades = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return texto.replace(/[&<>"']/g, caracter => entidades[caracter]);
+    }
+
+    function abrirGoogleEarthPadronCue(lat, lng) {
+        const url =
+            'https://earth.google.com/web/@' + lat + ',' + lng + ',200a,60d,35y';
+
+        window.open(url, '_blank');
+    }
+
+    function abrirStreetViewPadronCue(lat, lng) {
+        const url =
+            'https://www.google.com/maps?q=&layer=c&cbll=' + lat + ',' + lng;
+
+        window.open(url, '_blank');
+    }
+
+    function abrirGoogleMapsRutaPadronCue(lat, lng) {
+        const url =
+            'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng;
+
+        window.open(url, '_blank');
+    }
+
+    function actualizarMapaPadronCue() {
+        if (!padronCuePendiente) {
+            return;
+        }
+
+        if (typeof L === 'undefined') {
+            console.error('Leaflet no está disponible.');
+
+            const mapaContainer = document.getElementById('padronCueMap');
+
+            if (mapaContainer) {
+                mapaContainer.innerHTML =
+                    '<div class="d-flex align-items-center justify-content-center h-100 text-danger">' +
+                    '<span>No se pudo cargar el mapa.</span>' +
+                    '</div>';
+            }
+
+            return;
+        }
+
+        const mapaContainer = document.getElementById('padronCueMap');
+
+        if (!mapaContainer) {
+            console.error('No se encontró el contenedor #padronCueMap.');
+            return;
+        }
+
+        if (
+            mapaContainer.offsetWidth === 0 ||
+            mapaContainer.offsetHeight === 0
+        ) {
+            window.setTimeout(actualizarMapaPadronCue, 150);
+            return;
+        }
+
+        if (!padronCueMap) {
+            const capaClaro = L.tileLayer(
+                'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors'
+                }
+            );
+            const capaSatelite = L.tileLayer(
+                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+                {
+                    maxZoom: 19
+                }
+            );
+
+            padronCueMap = L.map(mapaContainer, {
+                layers: [capaClaro]
+            });
+
+            L.control.layers({
+                'Claro': capaClaro,
+                'Satélite': capaSatelite
+            }).addTo(padronCueMap);
+
+            padronCueMap.on('popupopen', function (e) {
+                const popupNode = e.popup.getElement();
+
+                $(popupNode)
+                    .find('.btn-google-earth-padron')
+                    .off('click')
+                    .on('click', function () {
+                        abrirGoogleEarthPadronCue(
+                            $(this).data('lat'),
+                            $(this).data('lng')
+                        );
+                    });
+
+                $(popupNode)
+                    .find('.btn-street-view-padron')
+                    .off('click')
+                    .on('click', function () {
+                        abrirStreetViewPadronCue(
+                            $(this).data('lat'),
+                            $(this).data('lng')
+                        );
+                    });
+
+                $(popupNode)
+                    .find('.btn-maps-ruta-padron')
+                    .off('click')
+                    .on('click', function () {
+                        abrirGoogleMapsRutaPadronCue(
+                            $(this).data('lat'),
+                            $(this).data('lng')
+                        );
+                    });
+            });
+
+        }
+
+        if (padronCueMarker) {
+            padronCueMap.removeLayer(padronCueMarker);
+            padronCueMarker = null;
+        }
+
+        const datos = padronCuePendiente;
+        const direccion = [datos.calle, datos.numero]
+            .map(function (valor) { return String(valor || '').trim(); })
+            .filter(Boolean)
+            .join(' ');
+        const apellidoResp = String(datos.apellidoResp || '').trim();
+        const nombreResp = String(datos.nombreResp || '').trim();
+        const directivo = apellidoResp && nombreResp
+            ? apellidoResp + ', ' + nombreResp
+            : (apellidoResp || nombreResp);
+        const esUrbano = String(datos.ambito || '')
+            .trim()
+            .toLowerCase() === 'urbano';
+        const latPopup = escaparHtmlPadronCue(datos.lat);
+        const lngPopup = escaparHtmlPadronCue(datos.lng);
+
+        let popup = '<div class="padron-cue-popup">' +
+            '<strong>' + escaparHtmlPadronCue(datos.establecimiento) + '</strong><br><br>' +
+            '<b>CUE:</b> ' + escaparHtmlPadronCue(datos.cueanexo) + '<br>' +
+            '<b>Latitud:</b> ' + latPopup + '<br>' +
+            '<b>Longitud:</b> ' + lngPopup + '<br>' +
+            '<b>Oferta:</b> ' + escaparHtmlPadronCue(datos.oferta) + '<br>' +
+            '<b>Ámbito:</b> ' + escaparHtmlPadronCue(datos.ambito) + '<br>' +
+            '<b>Sector:</b> ' + escaparHtmlPadronCue(datos.sector) + '<br>' +
+            '<b>Región:</b> ' + escaparHtmlPadronCue(datos.region) + '<br>' +
+            '<b>Dirección:</b> ' + escaparHtmlPadronCue(direccion) + '<br>' +
+            '<b>Localidad:</b> ' + escaparHtmlPadronCue(datos.localidad) + '<br>' +
+            '<b>Directivo:</b> ' + escaparHtmlPadronCue(directivo) + '<br>' +
+            '<b>Teléfono:</b> ' + escaparHtmlPadronCue(datos.telefono) + '<br>' +
+            '<b>Correo:</b> ' + escaparHtmlPadronCue(datos.correo) + '<br>' +
+            '<hr style="margin:5px 0;">' +
+            '<button type="button" class="btn btn-sm btn-primary w-100 mb-1 btn-google-earth-padron" data-lat="' +
+            latPopup + '" data-lng="' + lngPopup + '">🌍 Ver en 3D</button>';
+
+        if (esUrbano) {
+            popup += '<button type="button" class="btn btn-sm btn-info w-100 mb-1 btn-street-view-padron" data-lat="' +
+                latPopup + '" data-lng="' + lngPopup + '">🚶 Street View</button>';
+        }
+
+        popup += '<button type="button" class="btn btn-sm btn-success w-100 btn-maps-ruta-padron" data-lat="' +
+            latPopup + '" data-lng="' + lngPopup + '">🗺️ Cómo llegar</button>' +
+            '</div>';
+
+        padronCueMap.setView(
+            [datos.lat, datos.lng],
+            17
+        );
+
+        padronCueMarker = L.marker([
+            datos.lat,
+            datos.lng
+        ])
+            .addTo(padronCueMap)
+            .bindPopup(popup, {
+                autoPan: false,
+                keepInView: false
+            });
+
+        padronCueMarker.openPopup();
+
+        requestAnimationFrame(function () {
+            padronCueMap.invalidateSize();
+
+            window.setTimeout(function () {
+                padronCueMap.invalidateSize();
+            }, 150);
+        });
+    }
+
+    if (modalMapaCueElement) {
+        $(document).on(
+            'click',
+            '#padronTable tbody .btn-ver-mapa',
+            function () {
+                const lat = normalizarCoordenadaPadronCue($(this).attr('data-lat'));
+                const lng = normalizarCoordenadaPadronCue($(this).attr('data-lng'));
+
+                if (lat === null || lng === null || lat === 0 || lng === 0) return;
+
+                padronCuePendiente = {
+                    cueanexo: $(this).attr('data-cueanexo') || '',
+                    establecimiento: $(this).attr('data-establecimiento') || '',
+                    oferta: $(this).attr('data-oferta') || '',
+                    ambito: $(this).attr('data-ambito') || '',
+                    sector: $(this).attr('data-sector') || '',
+                    region: $(this).attr('data-region') || '',
+                    calle: $(this).attr('data-calle') || '',
+                    numero: $(this).attr('data-numero') || '',
+                    localidad: $(this).attr('data-localidad') || '',
+                    apellidoResp: $(this).attr('data-apellido-resp') || '',
+                    nombreResp: $(this).attr('data-nombre-resp') || '',
+                    telefono: $(this).attr('data-telefono') || '',
+                    correo: $(this).attr('data-correo') || '',
+                    lat: lat,
+                    lng: lng
+                };
+
+                $('#modalMapaCueNumero').text(padronCuePendiente.cueanexo ? ' ' + padronCuePendiente.cueanexo : '');
+
+                if (
+                    typeof bootstrap === 'undefined' ||
+                    !bootstrap.Modal
+                ) {
+                    return;
+                }
+
+                if (!padronCueModal) {
+                    padronCueModal = new bootstrap.Modal(modalMapaCueElement);
+                }
+
+                padronCueModal.show();
+
+                window.setTimeout(function () {
+                    actualizarMapaPadronCue();
+                }, 200);
+
+                window.setTimeout(function () {
+                    if (padronCueMap) {
+                        padronCueMap.invalidateSize();
+                    }
+                }, 450);
+            }
+        );
+
+
+        modalMapaCueElement
+            .querySelectorAll('.btn-cerrar-mapa-cue')
+            .forEach(function (boton) {
+                boton.addEventListener('click', function () {
+                    if (padronCueModal) {
+                        padronCueModal.hide();
+                    }
+                });
+            });
+    }
     await cargarJerarquiaGeografica();
 });
 </script>

@@ -1,17 +1,22 @@
-{% extends 'archivos/base/layout.html' %}
+{% extends 'reunidas_pof/layout_pof.html' %}
 {% block content %}
 
 <div class="pof-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa="cargar" %}
     <div class="pof-view-header">
-        <h1>&#128221; AFECTAR CARGOS</h1>
-        <p>Registr&aacute; cargos y horas c&aacute;tedra asociados a una oferta educativa.</p>
+        <div class="pof-view-header-icon-box" aria-hidden="true">
+            <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">edit_document</span>
+        </div>
+        <div class="pof-view-header-copy">
+            <h1>AFECTAR CARGOS</h1>
+            <p>Registr&aacute; cargos y horas c&aacute;tedra asociados a una oferta educativa.</p>
+        </div>
     </div>
 
     <div class="pof-card pof-card-accent pof-cabecera-load-card">
         <h2>1. Cabecera de carga</h2>
         <div class="pof-help">
-            Seleccioná la Reunida POF sobre la que vas a cargar cargos.
+            Seleccioná la POF sobre la que vas a cargar cargos.
         </div>
 
         <input type="hidden" id="cabecera_reunida_id">
@@ -22,32 +27,36 @@
         <div class="pof-grid" id="cabeceraReunidaCampos">
             <div class="pof-field pof-col-6">
                 <label for="anio">A&ntilde;o</label>
-                <select id="anio" class="pof-form-select" {% if not anios_reunida %}disabled{% endif %}>
-                    {% if anios_reunida %}
-                        {% for anio in anios_reunida %}
-                            <option value="{{ anio }}" {% if anio_activo == anio %}selected{% endif %}>{{ anio }}</option>
-                        {% endfor %}
-                    {% else %}
-                        <option value="">No hay reunidas cargadas</option>
-                    {% endif %}
-                </select>
+                <span class="pof-native-select-wrap">
+                    <select id="anio" class="pof-form-select" {% if not anios_reunida %}disabled{% endif %}>
+                        {% if anios_reunida %}
+                            {% for anio in anios_reunida %}
+                                <option value="{{ anio }}" {% if anio_activo == anio %}selected{% endif %}>{{ anio }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="">No hay POF cargadas</option>
+                        {% endif %}
+                    </select>
+                </span>
             </div>
 
             <div class="pof-field pof-col-6">
                 <label for="nivel">Nivel</label>
-                <select id="nivel" class="pof-form-select" required>
-                    <option value="">Seleccioná un nivel</option>
-                    {% for value, label in niveles %}
-                        <option value="{{ value }}" {% if nivel_activo == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
+                <span class="pof-native-select-wrap">
+                    <select id="nivel" class="pof-form-select" required>
+                        <option value="">Seleccioná un nivel</option>
+                        {% for value, label in niveles %}
+                            <option value="{{ value }}" {% if nivel_activo == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </span>
             </div>
         </div>
 
         <div class="pof-cabecera-actions">
             <div class="pof-actions">
                 <button type="button" class="pof-btn pof-btn-primary" id="btnValidarReunida">
-                    Validar Reunida
+                    Validar POF
                 </button>
                 <button type="button" class="pof-btn pof-btn-light pof-hidden" id="btnCambiarReunida">
                     Cambiar cabecera
@@ -148,10 +157,12 @@
 
                 <div class="pof-field pof-cargo-entry-unit">
                     <label>Unidad</label>
-                    <select id="unidadCargo">
-                        <option value="CARGO">Cargo</option>
-                        <option value="HORA_CATEDRA">Horas Cátedra</option>
-                    </select>
+                    <span class="pof-native-select-wrap">
+                        <select id="unidadCargo">
+                            <option value="CARGO">Cargo</option>
+                            <option value="HORA_CATEDRA">Horas Cátedra</option>
+                        </select>
+                    </span>
                 </div>
 
                 <div class="pof-field pof-cargo-entry-small">
@@ -166,10 +177,10 @@
 
                 <div class="pof-cargo-entry-actions" id="cargoEntryActions">
                     <button type="button" class="pof-btn pof-observation-toggle" id="btnMostrarObservacion">
-                        💬 Agregar observación
+                        <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">text_ad</span> Agregar observación
                     </button>
                     <button type="button" class="pof-btn pof-cargo-primary-action" id="btnAgregarCargoLista">
-                        👤 Agregar cargo a la lista
+                        <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">person</span> Agregar cargo a la lista
                     </button>
                 </div>
 
@@ -178,7 +189,7 @@
                     <textarea id="observacionCargo" rows="2" placeholder="Opcional — escribí una aclaración para este cargo..."></textarea>
                     <div class="pof-observation-actions" id="observationCargoActions">
                         <button type="button" class="pof-btn pof-observation-remove" id="btnQuitarObservacion">
-                            ❌ Quitar observación
+                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">tab_close_right</span> Quitar observación
                         </button>
                     </div>
                 </div>
@@ -285,6 +296,6 @@
 <script>
     {% include "reunidas_pof/_helpers_carga_cargos_comunes.html" %}
 </script>
-<script src="{% static 'reunidas_pof/js/carga_cargos_comun.js' %}"></script>
-<script src="{% static 'reunidas_pof/js/cargar_cargos_reunida.js' %}?v=20260717-2"></script>
+<script src="{% static 'reunidas_pof/js/carga_cargos_comun.js' %}?v=20260828-1"></script>
+<script src="{% static 'reunidas_pof/js/cargar_cargos_reunida.js' %}?v=20260828-1"></script>
 {% endblock %}

@@ -108,6 +108,14 @@ class InformeSGE(models.Model):
 
 class PadronRegional(models.Model):
     cueanexo = models.CharField(max_length=20, primary_key=True, verbose_name='CUE Anexo')
+    padron_cueanexo = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name='CUE Anexo Padrón',
+    )
+    lat = models.FloatField(blank=True, null=True, verbose_name='Latitud')
+    long = models.FloatField(blank=True, null=True, verbose_name='Longitud')
     nom_est = models.CharField(max_length=255, verbose_name='Establecimiento')
     oferta = models.TextField(blank=True, null=True, verbose_name='Oferta(s)')
     region_loc = models.CharField(max_length=50, blank=True, null=True, verbose_name='Región')
@@ -158,6 +166,17 @@ class FechaActualizacionSGE(models.Model):
         db_table = '"indicadores"."fecha_actualizacion_sge2026"'
         verbose_name = 'Fecha de Actualización SGE'
         verbose_name_plural = 'Fechas de Actualización SGE'
+
+
+class FechaActualizacionComparativaSgeRa(models.Model):
+    id = models.IntegerField(primary_key=True)
+    fecha = models.DateTimeField(verbose_name='Fecha de Actualización')
+
+    class Meta:
+        managed = False
+        db_table = '"indicadores"."fecha_actualizacion_sge"'
+        verbose_name = 'Fecha de Actualización Comparativa SGE RA'
+        verbose_name_plural = 'Fechas de Actualización Comparativa SGE RA'
 
 # =====================================================================
 # 2. EL NUEVO SISTEMA DE ROLES (Basado en tu verificación SQL)
@@ -217,3 +236,132 @@ class UsuarioPerfil(models.Model):
 
     def __str__(self):
         return f"{self.usuario.username} -> {self.rol.nombre}"
+
+
+class AnalisisSgeRa(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    sistema = models.CharField(max_length=20, blank=True, null=True)
+    nivel = models.CharField(max_length=100, blank=True, null=True)
+    cueanexo = models.CharField(max_length=20, blank=True, null=True)
+    escuela = models.TextField(blank=True, null=True)
+    grado = models.CharField(max_length=100, blank=True, null=True)
+    seccion = models.CharField(max_length=50, blank=True, null=True)
+    turno = models.CharField(max_length=50, blank=True, null=True)
+    tipo_secc = models.CharField(max_length=50, blank=True, null=True)
+    total = models.IntegerField(blank=True, null=True)
+    origen_estructura_id = models.TextField(blank=True, null=True)
+    origen_grados = models.JSONField(blank=True, null=True)
+    origen_es_agrupada = models.BooleanField(blank=True, null=True)
+    origen_total = models.IntegerField(blank=True, null=True)
+    origen_componentes = models.JSONField(blank=True, null=True)
+    calidad_registros_repetidos = models.JSONField(blank=True, null=True)
+    calidad_inscripciones_multiseccion = models.JSONField(blank=True, null=True)
+    region = models.CharField(max_length=50, blank=True, null=True)
+    estado_padron_actual = models.TextField(blank=True, null=True)
+    en_padron_actual = models.BooleanField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = '"public"."analisis_sge_ra"'
+
+
+class AuditoriaSgeRa(models.Model):
+    id = models.TextField(primary_key=True)
+    cueanexo = models.TextField()
+    tipo_situacion = models.TextField()
+    orden = models.IntegerField()
+    contexto_nivel = models.TextField(blank=True, null=True)
+    contexto_grado = models.TextField(blank=True, null=True)
+    contexto_seccion = models.TextField(blank=True, null=True)
+    contexto_turno = models.TextField(blank=True, null=True)
+    contexto_tipo_secc = models.TextField(blank=True, null=True)
+    titulo = models.TextField()
+    valor_ra = models.TextField()
+    valor_sge = models.TextField()
+    mensaje = models.TextField()
+    detalle = models.JSONField()
+    bloquea_revision = models.BooleanField()
+    motivo_bloqueo = models.TextField(blank=True, null=True)
+    dimension_codigo = models.TextField()
+    categoria_operativa = models.TextField()
+    comparabilidad_codigo = models.TextField()
+    resumen_diferencia = models.TextField()
+    accion_revision_codigo = models.TextField()
+    periodo_ra = models.SmallIntegerField(blank=True, null=True)
+    periodo_sge = models.SmallIntegerField(blank=True, null=True)
+    valor_ra_tipo = models.TextField()
+    valor_sge_tipo = models.TextField()
+    valor_ra_numero = models.BigIntegerField(blank=True, null=True)
+    valor_sge_numero = models.BigIntegerField(blank=True, null=True)
+    diferencia_absoluta = models.BigIntegerField(blank=True, null=True)
+    diferencia_sge_menos_ra = models.BigIntegerField(blank=True, null=True)
+    comparacion_confiable = models.BooleanField()
+    motivo_no_comparable_codigo = models.TextField(blank=True, null=True)
+    causa_sin_datos_codigo = models.TextField(blank=True, null=True)
+    detalle_version = models.SmallIntegerField()
+    estado_padron_actual = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+    )
+    en_padron_actual = models.BooleanField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = '"public"."auditoria_sge_ra"'
+
+
+class AuditoriaSgeRaEstado(models.Model):
+    id = models.SmallIntegerField(primary_key=True)
+    valida = models.BooleanField()
+    estado_base = models.CharField(max_length=20)
+    estado_auditoria = models.CharField(max_length=20)
+    ultimo_intento_en = models.DateTimeField(blank=True, null=True)
+    base_refrescada_en = models.DateTimeField(blank=True, null=True)
+    auditoria_refrescada_en = models.DateTimeField(blank=True, null=True)
+    ultimo_refresco_exitoso_en = models.DateTimeField(blank=True, null=True)
+    ultimo_error_en = models.DateTimeField(blank=True, null=True)
+    filas_base = models.BigIntegerField(blank=True, null=True)
+    filas_ra = models.BigIntegerField(blank=True, null=True)
+    filas_sge = models.BigIntegerField(blank=True, null=True)
+    cues_padron_activos = models.BigIntegerField(blank=True, null=True)
+    cues_ra_sge = models.BigIntegerField(blank=True, null=True)
+    cues_solo_ra = models.BigIntegerField(blank=True, null=True)
+    cues_solo_sge = models.BigIntegerField(blank=True, null=True)
+    cues_sin_datos_ra_sge = models.BigIntegerField(blank=True, null=True)
+    cues_universo_total = models.BigIntegerField(blank=True, null=True)
+    situaciones = models.BigIntegerField(blank=True, null=True)
+    alcance = models.TextField()
+    fuente_ra = models.TextField()
+    fuente_sge = models.TextField()
+    version_motor = models.TextField()
+    detalle_estado = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = '"public"."auditoria_sge_ra_estado"'
+
+
+class ResumenSgeRa(models.Model):
+    cueanexo = models.CharField(max_length=20, primary_key=True)
+    escuela = models.TextField(blank=True, null=True)
+    region = models.CharField(max_length=50, blank=True, null=True)
+    estado_padron_actual = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+    )
+    en_padron_actual = models.BooleanField(blank=True, null=True)
+    estado_actual = models.TextField(blank=True, null=True)
+    cantidad_situaciones_total = models.IntegerField()
+    cantidad_bloqueos_total = models.IntegerField()
+    tiene_situaciones = models.BooleanField()
+    tiene_bloqueos = models.BooleanField()
+    situaciones_por_tipo = models.JSONField()
+    bloqueos_por_tipo = models.JSONField()
+    estado_codigo = models.CharField(max_length=30)
+    estado = models.TextField()
+
+    class Meta:
+        managed = False
+        db_table = '"public"."resumen_sge_ra"'

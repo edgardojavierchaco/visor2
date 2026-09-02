@@ -5,6 +5,16 @@ from functools import lru_cache
 from io import BytesIO
 from .permisos import padron_interno_admin_o_gestor_required
 from .views_fecha import get_contexto_fecha_padron
+from .buscador_padron import (
+    IDENTIFIER_ALNUM,
+    IDENTIFIER_DIGITS,
+    TEXT,
+    build_contains_search_clause,
+    build_global_search_clause,
+    filter_tokens as _filter_tokens,
+    fold_filter_text as _fold_filter_text,
+    folded_sql as _folded_sql,
+)
 import openpyxl
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import connections
@@ -372,6 +382,7 @@ DOMICILIO_SEARCH_SQL = """
 
 # Mapa cerrado de campos permitidos para filtros y ordenamiento.
 CAMPO_SQL = {
+    'cue_anexo': "CONCAT(vl.cue::text, LPAD(COALESCE(BTRIM(vl.anexo), ''), 2, '0'))",
     'cue': 'vl.cue::text',
     'anexo': "COALESCE(BTRIM(vl.anexo), '')",
     'codigo_jurisdiccional': "COALESCE(BTRIM(vl.codigo_jurisdiccional), '')",
@@ -417,8 +428,25 @@ CAMPO_SQL = {
     'regional_hasta_2020': "COALESCE(BTRIM(vl.cp_reg_hasta_2020), '')",
 }
 
+SEARCH_FIELD_TYPES = {field: TEXT for field in CAMPO_SQL}
+SEARCH_FIELD_TYPES.update({
+    'cue_anexo': IDENTIFIER_DIGITS,
+    'cue': IDENTIFIER_DIGITS,
+    'anexo': IDENTIFIER_DIGITS,
+    'codigo_jurisdiccional': IDENTIFIER_ALNUM,
+    'cod_area_tel': IDENTIFIER_DIGITS,
+    'telefono': IDENTIFIER_DIGITS,
+    'tel_director_regional': IDENTIFIER_DIGITS,
+    'nro_biblioteca': IDENTIFIER_DIGITS,
+    'cuof': IDENTIFIER_ALNUM,
+    'cui': IDENTIFIER_ALNUM,
+    'cua': IDENTIFIER_ALNUM,
+    'tel_supervisor': IDENTIFIER_DIGITS,
+})
+
 # Nombres legibles para reportes y resumen de filtros.
 VISIBLE_NAME_MAP = {
+    'cue_anexo': 'Cue-Anexo',
     'cue': 'Cue',
     'anexo': 'Anexo',
     'codigo_jurisdiccional': 'Codigo Jurisdiccional',
@@ -639,25 +667,6 @@ OPERADOR_SQL = {
 
 TIPO_OFERTA_EXACT_SET_OPERATOR = '8'
 
-_ACCENTED_CHARS = '\u00c1\u00c9\u00cd\u00d3\u00da\u00dc\u00d1\u00e1\u00e9\u00ed\u00f3\u00fa\u00fc\u00f1'
-_UNACCENTED_CHARS = 'AEIOUUNaeiouun'
-_ACCENT_TRANSLATION = str.maketrans(_ACCENTED_CHARS, _UNACCENTED_CHARS)
-
-
-def _fold_filter_text(value):
-    return _normalize_text(value).translate(_ACCENT_TRANSLATION).lower()
-
-
-def _folded_sql(expr):
-    return f"LOWER(TRANSLATE(BTRIM(COALESCE(({expr})::text, '')), '{_ACCENTED_CHARS}', '{_UNACCENTED_CHARS}'))"
-
-
-def _filter_tokens(value):
-    folded = _fold_filter_text(value)
-    tokens = [token for token in re.split(r'[^a-z0-9]+', folded) if token]
-    return list(dict.fromkeys(tokens))
-
-
 def _like_token_values(value):
     return [f'%{token}%' for token in _filter_tokens(value)]
 
@@ -746,15 +755,6 @@ def _append_tipo_oferta_filter(clauses, params, oper, values):
     params.extend(estado_params)
 
 
-def _build_text_search_clause(expr, value):
-    tokens = _filter_tokens(value)
-    if not tokens:
-        return '', []
-
-    folded_expr = _folded_sql(expr)
-    return ' AND '.join([f"{folded_expr} LIKE %s" for _ in tokens]), [f'%{token}%' for token in tokens]
-
-
 def _tipo_oferta_clause_operator(oper):
     if oper in {'0', '1'}:
         return 'LIKE'
@@ -815,6 +815,11 @@ def _build_where(request):
     params = []
     grouped_positive_filters = {}
     geo_positive_filters = []
+    quick_search_value = (
+        request.GET.get('smart_ui_val', '').strip()
+        if request.GET.get('smart_ui_col', '').strip()
+        else ''
+    )
 
     campos = request.GET.getlist('campo_filtro')
     opers = request.GET.getlist('operador_filtro')
@@ -856,7 +861,12 @@ def _build_where(request):
         col = CAMPO_SQL[campo]
         op_str, val_fn = OPERADOR_SQL.get(oper, OPERADOR_SQL['0'])
         if oper == '0':
-            token_clause, token_params = _build_text_search_clause(col, valor)
+            token_clause, token_params = build_contains_search_clause(
+                col,
+                valor,
+                SEARCH_FIELD_TYPES.get(campo, TEXT),
+                quick_search_value,
+            )
             if token_clause:
                 clauses.append(token_clause)
                 params.extend(token_params)
@@ -894,7 +904,12 @@ def _build_where(request):
 
         if len(values) == 1:
             if oper == '0':
-                token_clause, token_params = _build_text_search_clause(col, values[0])
+                token_clause, token_params = build_contains_search_clause(
+                    col,
+                    values[0],
+                    SEARCH_FIELD_TYPES.get(campo, TEXT),
+                    quick_search_value,
+                )
                 if token_clause:
                     clauses.append(token_clause)
                     params.extend(token_params)
@@ -907,7 +922,12 @@ def _build_where(request):
         subclauses = []
         for value in values:
             if oper == '0':
-                token_clause, token_params = _build_text_search_clause(col, value)
+                token_clause, token_params = build_contains_search_clause(
+                    col,
+                    value,
+                    SEARCH_FIELD_TYPES.get(campo, TEXT),
+                    quick_search_value,
+                )
                 if token_clause:
                     subclauses.append(token_clause)
                     params.extend(token_params)
@@ -926,7 +946,12 @@ def _build_where(request):
 
             for value in values:
                 if oper == '0':
-                    token_clause, token_params = _build_text_search_clause(col, value)
+                    token_clause, token_params = build_contains_search_clause(
+                        col,
+                        value,
+                        SEARCH_FIELD_TYPES.get(campo, TEXT),
+                        quick_search_value,
+                    )
                     if token_clause:
                         geo_subclauses.append(token_clause)
                         params.extend(token_params)
@@ -940,13 +965,10 @@ def _build_where(request):
 
     q = request.GET.get('q', '').strip()
     if q:
-        token_groups = []
-        for token in _filter_tokens(q):
-            global_search_clauses = [f"{_folded_sql(sql_expr)} LIKE %s" for sql_expr in CAMPO_SQL.values()]
-            token_groups.append(f"({' OR '.join(global_search_clauses)})")
-            params.extend([f'%{token}%'] * len(global_search_clauses))
-        if token_groups:
-            clauses.append(f"({' AND '.join(token_groups)})")
+        search_clause, search_params = build_global_search_clause(CAMPO_SQL, SEARCH_FIELD_TYPES, q)
+        if search_clause:
+            clauses.append(search_clause)
+            params.extend(search_params)
 
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ''
     return where, params
