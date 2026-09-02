@@ -460,16 +460,30 @@ def _serializar_fila_analisis(row):
     }
 
 
-def _obtener_filas_analisis(cueanexo):
+def _obtener_filas_analisis_bulk(cueanexos):
+    cueanexos_en_orden = list(dict.fromkeys(
+        cueanexo
+        for cueanexo in (_cueanexo(value) for value in cueanexos)
+        if cueanexo
+    ))
+    cueanexos_permitidos = set(cueanexos_en_orden)
+    filas_por_cue = {
+        cueanexo: {'RA': [], 'SGE': []}
+        for cueanexo in cueanexos_en_orden
+    }
+    if not cueanexos_en_orden:
+        return filas_por_cue
+
     queryset = (
         AnalisisSgeRa.objects.using('sge_nacion')
         .annotate(cueanexo_limpio=Trim('cueanexo'))
         .filter(
-            cueanexo_limpio=cueanexo,
+            cueanexo_limpio__in=cueanexos_permitidos,
             sistema__in=('RA', 'SGE'),
         )
-        .values(*ANALISIS_FIELDS)
+        .values('cueanexo', *ANALISIS_FIELDS)
         .order_by(
+            'cueanexo_limpio',
             'sistema',
             'nivel',
             'grado',
@@ -480,12 +494,22 @@ def _obtener_filas_analisis(cueanexo):
         )
     )
 
-    filas = {'RA': [], 'SGE': []}
     for row in queryset:
+        cueanexo = _cueanexo(row.get('cueanexo'))
         sistema = _texto(row.get('sistema')).strip()
-        if sistema in filas:
-            filas[sistema].append(_serializar_fila_analisis(row))
-    return filas
+        if cueanexo in cueanexos_permitidos and sistema in ('RA', 'SGE'):
+            filas_por_cue[cueanexo][sistema].append(
+                _serializar_fila_analisis(row)
+            )
+    return filas_por_cue
+
+
+def _obtener_filas_analisis(cueanexo):
+    cueanexo = _cueanexo(cueanexo)
+    return _obtener_filas_analisis_bulk([cueanexo]).get(
+        cueanexo,
+        {'RA': [], 'SGE': []},
+    )
 
 
 def _orden_valor_estructura(value):
@@ -1287,6 +1311,69 @@ def _respuesta_resumen(filas):
     }
 
 
+def _respuesta_export_bulk(request, resumen_autorizado, auditoria):
+    try:
+        payload = json.loads(request.body or b'{}')
+    except (TypeError, ValueError, UnicodeDecodeError):
+        return JsonResponse({'error': 'El cuerpo JSON no es válido.'}, status=400)
+
+    if not isinstance(payload, dict) or payload.get('modo') != 'export_bulk':
+        return JsonResponse({'error': 'Modo de exportación no válido.'}, status=400)
+
+    cueanexos_recibidos = payload.get('cueanexos')
+    if not isinstance(cueanexos_recibidos, list):
+        return JsonResponse({'error': 'La lista de CUE-Anexo es obligatoria.'}, status=400)
+
+    cueanexos = []
+    cueanexos_vistos = set()
+    for value in cueanexos_recibidos:
+        if isinstance(value, bool) or not isinstance(value, (str, int)):
+            return JsonResponse({'error': 'La lista de CUE-Anexo contiene un valor no válido.'}, status=400)
+        cueanexo = _cueanexo(value)
+        if not cueanexo:
+            return JsonResponse({'error': 'La lista de CUE-Anexo contiene un valor vacío.'}, status=400)
+        if cueanexo not in cueanexos_vistos:
+            cueanexos_vistos.add(cueanexo)
+            cueanexos.append(cueanexo)
+
+    autorizados = {
+        _cueanexo(value)
+        for value in resumen_autorizado.filter(
+            cueanexo__in=cueanexos,
+        ).values_list('cueanexo', flat=True)
+    }
+    no_disponibles = [
+        cueanexo for cueanexo in cueanexos
+        if cueanexo not in autorizados
+    ]
+    if no_disponibles:
+        return JsonResponse({
+            'error': 'Uno o más CUE-Anexo ya no están disponibles en el alcance autorizado.',
+            'cueanexos_no_disponibles': no_disponibles,
+        }, status=404)
+
+    filas_por_cue = _obtener_filas_analisis_bulk(cueanexos)
+    situaciones_por_cue = _obtener_situaciones(cueanexos)
+    detalles = []
+    for cueanexo in cueanexos:
+        situaciones = situaciones_por_cue.get(cueanexo, [])
+        detalle = _construir_detalle_cue(
+            cueanexo,
+            filas_por_cue.get(cueanexo, {'RA': [], 'SGE': []}),
+            situaciones,
+            situaciones,
+        )
+        detalles.append({
+            'cueanexo': cueanexo,
+            'detalle_cue': detalle,
+        })
+
+    return JsonResponse({
+        'auditoria': auditoria,
+        'detalles': detalles,
+    })
+
+
 @method_decorator(login_required, name='dispatch')
 class ComparativaSgeRaView(TemplateView):
     template_name = 'indicadoresie/seguimiento/comparativa_sge_ra.html'
@@ -1316,10 +1403,9 @@ class ComparativaSgeRaView(TemplateView):
 
 @login_required
 def comparativa_sge_ra_json(request):
-    if request.method != 'GET':
+    if request.method not in ('GET', 'POST'):
         return JsonResponse({'error': 'Método no permitido.'}, status=405)
 
-    params = _parametros_comparativa(request)
     contexto_sge = resolver_contexto_sge(request)
     resumen_autorizado = _queryset_resumen_autorizado(contexto_sge)
     estado_auditoria = (
@@ -1328,6 +1414,11 @@ def comparativa_sge_ra_json(request):
         .first()
     )
     auditoria = _serializar_auditoria(estado_auditoria)
+
+    if request.method == 'POST':
+        return _respuesta_export_bulk(request, resumen_autorizado, auditoria)
+
+    params = _parametros_comparativa(request)
 
     if params['detalle_cueanexo']:
         cueanexo = params['detalle_cueanexo']

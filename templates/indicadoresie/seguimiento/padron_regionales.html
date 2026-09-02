@@ -400,15 +400,13 @@
 
                 <hr class="my-3">
                 
-                <h6 class="mb-3 fw-bold mt-4"><i class="fas fa-download text-primary me-2"></i> Exportar e Imprimir</h6>
+                <h6 class="mb-3 fw-bold mt-4"><i class="fas fa-download text-primary me-2"></i> Exportar</h6>
                 <div class="row">
                     <div class="col-12">
                         <div class="p-3 border rounded-3 bg-light" style="font-size: 0.9rem; color: #334155;">
-                            <p class="mb-2">Utiliza los botones ubicados en la barra superior de la tabla para descargar o imprimir el informe de padrón. <strong>Importante:</strong> Los reportes generados respetarán exactamente los filtros y las columnas que tengas visibles en ese momento. El documento generado con el botón PDF e Imprimir tiene formato de hoja A4 y orientación vertical.</p>
+                            <p class="mb-2">Utiliza el botón Excel ubicado en la barra superior de la tabla para descargar el informe de padrón. <strong>Importante:</strong> El reporte generado respetará exactamente los filtros y las columnas que tengas visibles en ese momento.</p>
                             <ul class="text-muted mb-0" style="line-height: 1.6; padding-left: 1.5rem;">
-                                <li class="mb-2"><strong><i class="fas fa-file-excel text-success me-1"></i> Excel:</strong> Descarga la tabla en formato <code>.xlsx</code>, ideal si necesitas realizar cálculos, gráficos o cruces de datos en tu computadora.</li>
-                                <li class="mb-2"><strong><i class="fas fa-file-pdf text-danger me-1"></i> PDF:</strong> Genera y descarga en tu dispositivo un documento formal en formato vertical (A4). Incluye encabezados y detalla qué filtros se aplicaron al momento de su creación.</li>
-                                <li><strong><i class="fas fa-print text-dark me-1"></i> Imprimir:</strong> Genera el reporte con el mismo diseño formal del PDF y lo <strong>abre en una pestaña nueva</strong> del navegador.</li>
+                                <li><strong><i class="fas fa-file-excel text-success me-1"></i> Excel:</strong> Descarga la tabla en formato <code>.xlsx</code>, ideal si necesitas realizar cálculos, gráficos o cruces de datos en tu computadora.</li>
                             </ul>
                         </div>
                     </div>
@@ -722,10 +720,7 @@
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
-<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 
@@ -1013,145 +1008,6 @@ $(document).ready(async function () {
                     var numLineas = textoCompleto.split('\n').length;
                     var alturaFila = numLineas * 16; 
                     $('row:nth-child(2)', sheet).attr('ht', alturaFila).attr('customHeight', '1');
-                }
-            },
-            { 
-                extend: 'pdfHtml5', 
-                text: '<i class="fas fa-file-pdf me-1 text-danger"></i>PDF',
-                className: 'btn-sm bg-white',
-                titleAttr: 'Exportar a PDF',
-                title: 'Informe Padrón', 
-                filename: function() { return getNombreArchivoConFiltros(); },
-                messageTop: function() { return getTextoFiltrosExportacion(); },
-                orientation: 'portrait',
-                pageSize: 'A4',
-                exportOptions: { columns: function (idx) { return idx !== 0 && table.column(idx).visible(); }, modifier: { page: 'all' } },
-                customize: function(doc) {
-                    doc.info = { title: 'Informe Padrón' }; 
-                    doc.pageMargins = [30, 50, 30, 40]; // Aumentamos el margen superior a 50 para que entre la fecha
-                    doc.styles.title = { color: '#1a3a5c', fontSize: '14', alignment: 'center', bold: true };
-                    doc.styles.message = { fontSize: 10, italics: true, margin: [0, 0, 0, 10], color: '#444' };
-                    
-                    // --- NUEVO: ENCABEZADO CON FECHA ---
-                    doc.header = function() {
-                        var ahora = new Date();
-                        var fechaStr = ahora.toLocaleDateString('es-AR') + ' - ' + ahora.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'});
-                        return {
-                            text: 'Informe generado el: ' + fechaStr,
-                            alignment: 'right',
-                            fontSize: 8,
-                            color: '#6b7280',
-                            margin: [0, 20, 30, 0] // [left, top, right, bottom]
-                        };
-                    };
-                    
-                    var tableNode = doc.content.find(n => n.table);
-                    if (tableNode) {
-                        tableNode.table.dontBreakRows = true;
-                        var colCount = tableNode.table.body[0].length;
-                        var anchos = [];
-                        for (var i = 0; i < colCount; i++) {
-                            var headerText = tableNode.table.body[0][i].text;
-                            if (headerText.includes('Escuela') || headerText.includes('Establecimiento') || headerText.includes('Oferta')) {
-                                anchos.push('*');
-                            } else {
-                                anchos.push('auto');
-                            }
-                        }
-                        tableNode.table.widths = anchos;
-                        
-                        tableNode.layout = {
-                            hLineWidth: function(i) { return 0.5; }, vLineWidth: function(i) { return 0.5; },
-                            hLineColor: function() { return '#aaa'; }, vLineColor: function() { return '#aaa'; },
-                            fillColor: function(rowIndex) { return (rowIndex === 0) ? '#1a3a5c' : null; }
-                        };
-
-                        tableNode.table.body.forEach(function(row, i) {
-                            row.forEach(function(cell) {
-                                cell.fontSize = 8; 
-                                if (i === 0) { cell.color = 'white'; cell.alignment = 'center'; cell.fontSize = 9; cell.bold = true; }
-                            });
-                        });
-                    }
-
-                    doc.footer = function(page, pages) {
-                        return {
-                            columns: [
-                                { text: 'Informe Padrón', alignment: 'left', fontSize: 8, color: '#6b7280', margin: [30, 10] },
-                                { text: 'Página ' + page.toString() + ' de ' + pages.toString(), alignment: 'right', fontSize: 8, color: '#6b7280', margin: [0, 10, 30, 0] }
-                            ]
-                        };
-                    };
-                }
-            },
-            {
-                extend: 'pdfHtml5',
-                text: '<i class="fas fa-print me-1 text-dark"></i>Imprimir',
-                className: 'btn-sm bg-white',
-                titleAttr: 'Imprimir informe',
-                title: 'Informe Padrón', 
-                filename: function() { return getNombreArchivoConFiltros(); },
-                messageTop: function() { return getTextoFiltrosExportacion(); },
-                orientation: 'portrait', 
-                pageSize: 'A4',
-                download: 'open', 
-                exportOptions: { columns: function (idx) { return idx !== 0 && table.column(idx).visible(); }, modifier: { page: 'all' } },
-                customize: function(doc) {
-                    doc.info = { title: 'Informe Padrón' }; 
-                    doc.pageMargins = [30, 50, 30, 40]; // Aumentamos el margen superior a 50 para que entre la fecha
-                    doc.styles.title = { color: '#1a3a5c', fontSize: '14', alignment: 'center', bold: true };
-                    doc.styles.message = { fontSize: 10, italics: true, margin: [0, 0, 0, 10], color: '#444' };
-                    
-                    // --- NUEVO: ENCABEZADO CON FECHA ---
-                    doc.header = function() {
-                        var ahora = new Date();
-                        var fechaStr = ahora.toLocaleDateString('es-AR') + ' - ' + ahora.toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'});
-                        return {
-                            text: 'Informe generado el: ' + fechaStr,
-                            alignment: 'right',
-                            fontSize: 8,
-                            color: '#6b7280',
-                            margin: [0, 20, 30, 0] // [left, top, right, bottom]
-                        };
-                    };
-                    
-                    var tableNode = doc.content.find(n => n.table);
-                    if (tableNode) {
-                        tableNode.table.dontBreakRows = true;
-                        var colCount = tableNode.table.body[0].length;
-                        var anchos = [];
-                        for (var i = 0; i < colCount; i++) {
-                            var headerText = tableNode.table.body[0][i].text;
-                            if (headerText.includes('Escuela') || headerText.includes('Establecimiento') || headerText.includes('Oferta')) {
-                                anchos.push('*');
-                            } else {
-                                anchos.push('auto');
-                            }
-                        }
-                        tableNode.table.widths = anchos;
-                        
-                        tableNode.layout = {
-                            hLineWidth: function(i) { return 0.5; }, vLineWidth: function(i) { return 0.5; },
-                            hLineColor: function() { return '#aaa'; }, vLineColor: function() { return '#aaa'; },
-                            fillColor: function(rowIndex) { return (rowIndex === 0) ? '#1a3a5c' : null; }
-                        };
-
-                        tableNode.table.body.forEach(function(row, i) {
-                            row.forEach(function(cell) {
-                                cell.fontSize = 8; 
-                                if (i === 0) { cell.color = 'white'; cell.alignment = 'center'; cell.fontSize = 9; cell.bold = true; }
-                            });
-                        });
-                    }
-
-                    doc.footer = function(page, pages) {
-                        return {
-                            columns: [
-                                { text: 'Informe Padrón', alignment: 'left', fontSize: 8, color: '#6b7280', margin: [30, 10] },
-                                { text: 'Página ' + page.toString() + ' de ' + pages.toString(), alignment: 'right', fontSize: 8, color: '#6b7280', margin: [0, 10, 30, 0] }
-                            ]
-                        };
-                    };
                 }
             }
         ],
