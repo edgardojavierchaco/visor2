@@ -40,11 +40,20 @@
 <script>
     var map = L.map('map').setView([-25.3884, -60.9902], 8);
 
-    var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
-        minZoom: 7,
-        maxZoom: 18
-    }).addTo(map);
+    var osmLayer = L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2s9h_1_bd646db33e2c8813a2d9b537",
+        {
+            subdomains: "abcd",
+
+            maxZoom: 20,
+
+            attribution:
+                '&copy; OpenStreetMap contributors ' +
+                '&copy; CARTO'
+        }
+    ).addTo(
+        map
+    );
 
     var geometries = {{ geometries|safe }};
 
