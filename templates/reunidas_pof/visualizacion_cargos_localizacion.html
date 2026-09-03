@@ -1,11 +1,15 @@
-{% extends 'archivos/base/layout.html' %}
+{% extends 'reunidas_pof/layout_pof.html' %}
 {% load static %}
+
+{% block head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/panel-option-search.css' %}?v=20260716-2">
+{% endblock %}
 
 {% block content %}
 
 <div class="pof-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa="visualizacion_cargos" %}
-    <link rel="stylesheet" href="{% static 'reunidas_pof/css/panel-option-search.css' %}?v=20260716-2">
 
     <div class="pof-view-header">
         {% if es_proyecto_especial and proyecto_especial %}
@@ -48,13 +52,15 @@
                 <div class="pof-visual-search-control-row">
                     <label class="pof-visually-hidden" for="visualizacionColumnaSelect">Columna</label>
                     <span class="pof-visual-search-icon material-symbols-outlined" aria-hidden="true">table_chart</span>
-                    <select id="visualizacionColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
-                        {% for columna in columnas %}
-                            {% if columna.buscable %}
-                                <option value="{{ columna.id }}" {% if columna.id == busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
-                            {% endif %}
-                        {% endfor %}
-                    </select>
+                    <span class="pof-native-select-wrap pof-native-select-wrap--visual-search">
+                        <select id="visualizacionColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
+                            {% for columna in columnas %}
+                                {% if columna.buscable %}
+                                    <option value="{{ columna.id }}" {% if columna.id == busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </span>
                     <label class="pof-visually-hidden" for="visualizacionColumnaInput">Buscar en columna</label>
                     <div class="pof-visual-search-input-wrap">
                         <span class="pof-visual-search-input-icon material-symbols-outlined" aria-hidden="true">document_search</span>
@@ -90,16 +96,18 @@
             {% if not es_proyecto_especial %}
                 <div class="pof-visual-year-filter">
                     <label for="visualizacionAnioSelect">A&ntilde;o</label>
-                    <select id="visualizacionAnioSelect"
-                            name="anio"
-                            class="pof-visual-year-select"
-                            {% if not anios_visualizacion %}disabled{% endif %}>
-                        {% for anio in anios_visualizacion %}
-                            <option value="{{ anio }}" {% if anio == anio_visualizacion %}selected{% endif %}>{{ anio }}</option>
-                        {% empty %}
-                            <option value="">Sin a&ntilde;os</option>
-                        {% endfor %}
-                    </select>
+                    <span class="pof-native-select-wrap">
+                        <select id="visualizacionAnioSelect"
+                                name="anio"
+                                class="pof-visual-year-select"
+                                {% if not anios_visualizacion %}disabled{% endif %}>
+                            {% for anio in anios_visualizacion %}
+                                <option value="{{ anio }}" {% if anio == anio_visualizacion %}selected{% endif %}>{{ anio }}</option>
+                            {% empty %}
+                                <option value="">Sin a&ntilde;os</option>
+                            {% endfor %}
+                        </select>
+                    </span>
                 </div>
             {% endif %}
 
@@ -133,11 +141,13 @@
                         <a id="visualizacionExcelFiltros"
                         class="dropdown-item pof-grid-dropdown-item pof-grid-dropdown-item-success"
                         href="{% url 'reunidas_pof:visualizacion_cargos_localizacion_exportar_filtros' %}{% if querystring_exportar_filtros %}?{{ querystring_exportar_filtros }}{% endif %}"
-                        data-export-base="{% url 'reunidas_pof:visualizacion_cargos_localizacion_exportar_filtros' %}">
+                        data-export-base="{% url 'reunidas_pof:visualizacion_cargos_localizacion_exportar_filtros' %}"
+                        data-pof-excel-link>
                             <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cloud_download</span> Exportar vista actual
                         </a>
 
                         <a class="dropdown-item pof-grid-dropdown-item pof-grid-dropdown-item-success"
+                        data-pof-excel-all-link
                         href="{% url 'reunidas_pof:visualizacion_cargos_localizacion_exportar_todo' %}{% if querystring_exportar_todo %}?{{ querystring_exportar_todo }}{% endif %}">
                             <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> Exportar todos los datos
                         </a>
@@ -220,7 +230,9 @@
             <div class="pof-visual-dialog-body">
                 <div class="pof-visual-dialog-field">
                     <label for="visualizacionOperadorFiltro">Operador</label>
-                    <select name="operador_filtro" id="visualizacionOperadorFiltro"></select>
+                    <span class="pof-native-select-wrap">
+                        <select name="operador_filtro" id="visualizacionOperadorFiltro"></select>
+                    </span>
                 </div>
                 <div class="pof-visual-dialog-field">
                     <label id="visualizacionValorFiltroLabel" for="visualizacionValorFiltro">Valor</label>
@@ -282,13 +294,19 @@
         <div class="pof-visual-preview-toolbar pof-filter-summary">
             <div class="pof-filter-summary-left">
                 <span class="pof-filter-summary-main" id="visualizacionResultadosContador">
-                    Resultados: {{ total_registros }} cargos
+                    Resultados: {{ total_registros }} Registros
                 </span>
             </div>
+            {% if not es_proyecto_especial %}
+                <div class="pof-group-legend" aria-label="Separadores de grupo">
+                    <span class="pof-group-legend-item"><span class="pof-group-legend-line pof-group-legend-line-cue" aria-hidden="true"></span>CUE</span>
+                    <span class="pof-group-legend-item"><span class="pof-group-legend-line pof-group-legend-line-anexo" aria-hidden="true"></span>CUEANEXO</span>
+                </div>
+            {% endif %}
             <span class="pof-export-count"
                 id="visualizacionColumnasContadorTop"
                 data-visual-row-count="{{ total_registros }}">
-                {{ columnas_visibles_count }} columnas visibles &middot; {{ total_registros }} cargos
+                {{ columnas_visibles_count }} columnas visibles &middot; {{ total_registros }} Registros
             </span>
         </div>
 
@@ -785,10 +803,10 @@
             contador.textContent = text;
         }
         if (resultadosContador) {
-            resultadosContador.textContent = "Resultados: " + totalRegistros + " cargos";
+            resultadosContador.textContent = "Resultados: " + totalRegistros + " Registros";
         }
         if (contadorTop) {
-            contadorTop.textContent = seleccionadas + " columnas visibles \u00b7 " + totalRegistros + " cargos";
+            contadorTop.textContent = seleccionadas + " columnas visibles \u00b7 " + totalRegistros + " Registros";
         }
         if (columnasEstado) {
             columnasEstado.value = seleccionadas === 0 ? "none" : "custom";
@@ -2402,4 +2420,5 @@
     syncColumnVisibility();
 })();
 </script>
+<script src="{% static 'reunidas_pof/js/excel_download_feedback.js' %}?v=20260901-5"></script>
 {% endblock %}

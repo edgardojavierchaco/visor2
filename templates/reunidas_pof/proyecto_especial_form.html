@@ -1,4 +1,4 @@
-{% extends 'archivos/base/layout.html' %}
+{% extends 'reunidas_pof/layout_pof.html' %}
 {% block content %}
 
 <div class="pof-page">
@@ -47,7 +47,9 @@
 
             <div class="pof-field pof-col-6">
                 <label for="{{ form.proyecto_base_anterior.id_for_label }}">{{ form.proyecto_base_anterior.label }}</label>
-                {{ form.proyecto_base_anterior }}
+                <span class="pof-native-select-wrap">
+                    {{ form.proyecto_base_anterior }}
+                </span>
                 {% for error in form.proyecto_base_anterior.errors %}<div class="pof-form-error">{{ error }}</div>{% endfor %}
             </div>
 

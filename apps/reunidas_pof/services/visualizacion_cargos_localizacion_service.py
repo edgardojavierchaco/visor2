@@ -34,6 +34,7 @@ from ..models import (
     obtener_rol_usuario_pof,
     usuario_tiene_alcance_restringido_pof,
 )
+from .excel_estilos import COLOR_SEPARADOR_CUE, COLOR_SEPARADOR_CUEANEXO
 from .padron_materializadas_service import (
     REGIONES_EDUCATIVAS_POF,
     normalizar_region_padron,
@@ -1686,8 +1687,12 @@ def _armar_columnas(request, columnas_visibles_ids):
             query = request.GET.copy()
             query.pop("page", None)
             query.pop("page_size", None)
-            query["orden"] = columna_id
-            query["dir"] = "desc" if orden_actual == columna_id and dir_actual != "desc" else "asc"
+            if orden_actual == columna_id and dir_actual == "desc":
+                query.pop("orden", None)
+                query.pop("dir", None)
+            else:
+                query["orden"] = columna_id
+                query["dir"] = "desc" if orden_actual == columna_id else "asc"
             querystring_orden = query.urlencode()
 
         columnas.append({
@@ -1943,7 +1948,7 @@ def construir_contexto_visualizacion_cargos_localizacion(request, incluir_opcion
         )
         cargos = list(queryset_pagina)
         queryset_totales_pagina = _restringir_queryset_a_unidades_cue(
-            _queryset_visualizacion(request, ignorar_filtros=True),
+            queryset,
             unidades_pagina,
         )
         contexto_totales_generales = _construir_contexto_totales_generales_orm(
@@ -2110,7 +2115,7 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
     """
     Construye el Excel del visualizador con el alcance y formato vigentes.
 
-    - Calcula Total General en SQL desde el queryset autorizado sin filtros de pantalla.
+    - Calcula Total General en SQL desde el queryset autorizado del alcance solicitado.
     - Recorre secuencialmente el queryset en lotes de 1.000 sin cachear todos los cargos.
     - Calcula anchos durante la escritura y reutiliza estilos identicos por tipo de celda.
     - Mantiene columnas, estilos y valores de la exportacion sin cambios funcionales.
@@ -2118,19 +2123,32 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
     from copy import copy as copy_style
 
     from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill, Side
+    from openpyxl.formatting.rule import FormulaRule, Rule
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.styles.differential import DifferentialStyle
+    from openpyxl.styles.numbers import NumberFormat
     from openpyxl.utils import get_column_letter
+    from openpyxl.worksheet.filters import FilterColumn
 
     contexto_cabecera = _resolver_contexto_visualizacion(request)
     queryset = _queryset_visualizacion(request, ignorar_filtros=exportar_todo)
     contexto_totales_generales = _construir_contexto_totales_generales_orm(
-        _queryset_visualizacion(request, ignorar_filtros=True),
+        queryset,
         (),
     )
     columnas_ids, _ = _resolver_columnas_visibles(request, exportar_todo=exportar_todo)
     if not columnas_ids:
         columnas_ids = list(COLUMNAS_DEFAULT_IDS)
     columnas = [COLUMNAS_POR_ID[columna_id] for columna_id in columnas_ids]
+    indice_total_general = next(
+        (
+            indice
+            for indice, columna in enumerate(columnas, start=1)
+            if columna["id"] == "total_general"
+        ),
+        None,
+    )
+    total_general_dinamico = indice_total_general is not None
 
     wb = Workbook()
     ws = wb.active
@@ -2151,8 +2169,8 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
         vertical="top",
         wrap_text=True,
     )
-    borde_superior_cue = Side(style="medium", color="2444D8")
-    borde_superior_anexo = Side(style="thin", color="111827")
+    borde_superior_cue = Side(style="medium", color=COLOR_SEPARADOR_CUE)
+    borde_superior_anexo = Side(style="medium", color=COLOR_SEPARADOR_CUEANEXO)
 
     total_columnas = len(columnas)
     ultima_columna = get_column_letter(total_columnas)
@@ -2189,10 +2207,66 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
         celda.alignment = encabezado_alignment
 
     fila_actual = fila_encabezado + 1
-    clave_localizacion_anterior = None
     claves_totales_vistas = set()
     cue_anterior = None
     anexo_anterior = None
+    fila_visible_columna = total_columnas + 1
+    letra_fila_visible = get_column_letter(fila_visible_columna)
+    clave_grupo_columna = fila_visible_columna + 1
+    letra_clave_grupo = get_column_letter(clave_grupo_columna)
+    clave_cue_columna = clave_grupo_columna + 1
+    letra_clave_cue = get_column_letter(clave_cue_columna)
+    tiene_anexo_columna = clave_cue_columna + 1
+    letra_tiene_anexo = get_column_letter(tiene_anexo_columna)
+    cue_con_separador_columna = tiene_anexo_columna + 1
+    letra_cue_con_separador = get_column_letter(cue_con_separador_columna)
+    ultimo_grupo_visible_columna = cue_con_separador_columna + 1
+    letra_ultimo_grupo_visible = get_column_letter(ultimo_grupo_visible_columna)
+    ultimo_cue_visible_columna = ultimo_grupo_visible_columna + 1
+    letra_ultimo_cue_visible = get_column_letter(ultimo_cue_visible_columna)
+    es_afectado_columna = ultimo_cue_visible_columna + 1
+    letra_es_afectado = get_column_letter(es_afectado_columna)
+    total_cargo_columna = es_afectado_columna + 1
+    letra_total_cargo = get_column_letter(total_cargo_columna)
+    total_visible_grupo_columna = total_cargo_columna + 1
+    letra_total_visible_grupo = get_column_letter(total_visible_grupo_columna)
+    grupo_visto_visible_columna = total_visible_grupo_columna + 1
+    letra_grupo_visto_visible = get_column_letter(grupo_visto_visible_columna)
+    indice_cue = 0
+    ultima_fila_por_grupo = {}
+    columnas_no_repetir_excel = [
+        indice
+        for indice, columna in enumerate(columnas, start=1)
+        if columna["id"] in COLUMNAS_NO_REPETIR_POR_LOCALIZACION
+    ]
+
+    # Estas columnas no participan del filtro ni se muestran al usuario. Las dos
+    # de estado propagan el ultimo grupo/CUE visible; las cuatro finales, solo
+    # cuando corresponde, calculan Total General sin recorridos acumulativos.
+    for indice, encabezado in (
+        (fila_visible_columna, "_fila_visible"),
+        (clave_grupo_columna, "_clave_grupo"),
+        (clave_cue_columna, "_clave_cue"),
+        (tiene_anexo_columna, "_tiene_anexo"),
+        (cue_con_separador_columna, "_cue_con_separador"),
+        (ultimo_grupo_visible_columna, ""),
+        (ultimo_cue_visible_columna, ""),
+        (es_afectado_columna, "_es_afectado"),
+        (total_cargo_columna, "_total_cargo"),
+        (total_visible_grupo_columna, "_total_visible_grupo"),
+        (grupo_visto_visible_columna, "_grupo_visto_visible"),
+    ):
+        if not total_general_dinamico and indice > ultimo_cue_visible_columna:
+            continue
+        ws.cell(row=fila_encabezado, column=indice, value=encabezado)
+        ws.column_dimensions[get_column_letter(indice)].hidden = True
+
+    def expresion_total_afectado_visible(numero_fila):
+        return (
+            f"IF(${letra_es_afectado}{numero_fila}=1,"
+            f"SUBTOTAL(109,${letra_total_cargo}{numero_fila}),0)"
+        )
+
     for cargos_lote in _iterar_cargos_exportacion_por_lotes(queryset):
         contexto_totales_generales["claves_por_cargo"] = {
             cargo.id: _obtener_clave_agrupacion_visualizacion(cargo.localizacion)
@@ -2222,14 +2296,24 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
                 if es_inicio_anexo
                 else None
             )
-            fila_display, clave_localizacion_anterior = _aplicar_no_repeticion_visual(
-                fila_raw,
-                clave_localizacion_anterior,
+            clave_localizacion_actual = fila_raw.get("_clave_localizacion_grupo", "")
+            fila_anterior_grupo = (
+                ultima_fila_por_grupo.get(clave_localizacion_actual)
+                if total_general_dinamico
+                else None
             )
-            _aplicar_no_repeticion_total_general(
-                fila_display,
-                claves_totales_vistas,
-            )
+            if cue_actual and cue_actual != cue_anterior:
+                indice_cue += 1
+
+            # Las celdas deben conservar los valores reales para que Excel pueda
+            # filtrar cualquier cargo del grupo. La compacidad se aplica luego
+            # con formato condicional dependiente de las filas visibles.
+            fila_display = fila_raw.copy()
+            if not total_general_dinamico:
+                _aplicar_no_repeticion_total_general(
+                    fila_display,
+                    claves_totales_vistas,
+                )
             for indice, columna in enumerate(columnas, start=1):
                 valor_excel = _valor_excel_columna(
                     columna["id"],
@@ -2250,12 +2334,189 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
                     borde = copy_style(celda.border)
                     borde.top = borde_superior
                     celda.border = borde
+                if columna["id"] == "total_general" and total_general_dinamico:
+                    grupo_visto_anterior = (
+                        "0"
+                        if fila_anterior_grupo is None
+                        else f"${letra_grupo_visto_visible}{fila_anterior_grupo}"
+                    )
+                    celda.value = (
+                        f"=IF(AND(SUBTOTAL(103,${letra_fila_visible}{fila_actual})=1,"
+                        f"{grupo_visto_anterior}=0),"
+                        f"${letra_total_visible_grupo}{fila_actual},\"\")"
+                    )
+            ws.cell(row=fila_actual, column=fila_visible_columna, value=1)
+            ws.cell(
+                row=fila_actual,
+                column=clave_grupo_columna,
+                value=clave_localizacion_actual,
+            )
+            ws.cell(
+                row=fila_actual,
+                column=clave_cue_columna,
+                value=cue_actual,
+            )
+            ws.cell(
+                row=fila_actual,
+                column=tiene_anexo_columna,
+                value=int(bool(anexo_actual)),
+            )
+            ws.cell(
+                row=fila_actual,
+                column=cue_con_separador_columna,
+                value=int(bool(cue_actual and indice_cue > 1)),
+            )
+            ultimo_grupo_anterior = (
+                '""'
+                if fila_actual == fila_encabezado + 1
+                else f"${letra_ultimo_grupo_visible}{fila_actual - 1}"
+            )
+            ultimo_cue_anterior = (
+                '""'
+                if fila_actual == fila_encabezado + 1
+                else f"${letra_ultimo_cue_visible}{fila_actual - 1}"
+            )
+            formula_ultimo_grupo_visible = (
+                f"=IF(SUBTOTAL(103,${letra_fila_visible}{fila_actual}),"
+                f"${letra_clave_grupo}{fila_actual},"
+                f"{ultimo_grupo_anterior})"
+            )
+            formula_ultimo_cue_visible = (
+                f"=IF(SUBTOTAL(103,${letra_fila_visible}{fila_actual}),"
+                f"${letra_clave_cue}{fila_actual},"
+                f"{ultimo_cue_anterior})"
+            )
+            ws.cell(
+                row=fila_actual,
+                column=ultimo_grupo_visible_columna,
+                value=formula_ultimo_grupo_visible,
+            )
+            ws.cell(
+                row=fila_actual,
+                column=ultimo_cue_visible_columna,
+                value=formula_ultimo_cue_visible,
+            )
+            if total_general_dinamico:
+                valor_total_cargo = fila_raw.get("total", GUION)
+                ws.cell(
+                    row=fila_actual,
+                    column=es_afectado_columna,
+                    value=int(
+                        fila_raw.get("estado_pof_codigo")
+                        == CargoPof.EstadoPof.AFECTADO
+                    ),
+                )
+                ws.cell(
+                    row=fila_actual,
+                    column=total_cargo_columna,
+                    value=(
+                        float(Decimal(valor_total_cargo))
+                        if valor_total_cargo not in (None, "", GUION)
+                        else 0
+                    ),
+                )
+                ws.cell(
+                    row=fila_actual,
+                    column=total_visible_grupo_columna,
+                    value=f"={expresion_total_afectado_visible(fila_actual)}",
+                )
+                grupo_visto_anterior = (
+                    "0"
+                    if fila_anterior_grupo is None
+                    else f"${letra_grupo_visto_visible}{fila_anterior_grupo}"
+                )
+                ws.cell(
+                    row=fila_actual,
+                    column=grupo_visto_visible_columna,
+                    value=(
+                        f"=IF(SUBTOTAL(103,${letra_fila_visible}{fila_actual})=1,1,"
+                        f"{grupo_visto_anterior})"
+                    ),
+                )
+                if fila_anterior_grupo is not None:
+                    ws.cell(
+                        row=fila_anterior_grupo,
+                        column=total_visible_grupo_columna,
+                        value=(
+                            f"={expresion_total_afectado_visible(fila_anterior_grupo)}+"
+                            f"${letra_total_visible_grupo}{fila_actual}"
+                        ),
+                    )
+                ultima_fila_por_grupo[clave_localizacion_actual] = fila_actual
             fila_actual += 1
             cue_anterior = cue_actual or None
             anexo_anterior = anexo_actual or None
 
+    ultima_fila_datos = max(fila_actual - 1, fila_encabezado)
+    hay_filas_datos = fila_actual > fila_encabezado + 1
+    if hay_filas_datos and columnas_no_repetir_excel:
+        ocultar_repetido_dxf = DifferentialStyle(
+            numFmt=NumberFormat(numFmtId=164, formatCode=";;;"),
+        )
+        rangos = " ".join(
+            f"{get_column_letter(indice)}{fila_encabezado + 1}:"
+            f"{get_column_letter(indice)}{ultima_fila_datos}"
+            for indice in columnas_no_repetir_excel
+        )
+        formula_duplicado_visible = (
+            f"AND(SUBTOTAL(103,${letra_fila_visible}{fila_encabezado + 1})=1,"
+            f"${letra_clave_grupo}{fila_encabezado + 1}="
+            f"${letra_ultimo_grupo_visible}{fila_encabezado})"
+        )
+        ws.conditional_formatting.add(
+            rangos,
+            Rule(
+                type="expression",
+                formula=[formula_duplicado_visible],
+                dxf=ocultar_repetido_dxf,
+            ),
+        )
+
+    if hay_filas_datos:
+        rango_datos = f"A{fila_encabezado + 1}:{ultima_columna}{ultima_fila_datos}"
+        formula_primer_cue_visible = (
+            f"AND(SUBTOTAL(103,${letra_fila_visible}{fila_encabezado + 1})=1,"
+            f"${letra_cue_con_separador}{fila_encabezado + 1}=1,"
+            f"${letra_clave_cue}{fila_encabezado + 1}<>"
+            f"${letra_ultimo_cue_visible}{fila_encabezado})"
+        )
+        ws.conditional_formatting.add(
+            rango_datos,
+            FormulaRule(
+                formula=[formula_primer_cue_visible],
+                border=Border(top=borde_superior_cue),
+                stopIfTrue=True,
+            ),
+        )
+        formula_primer_anexo_visible = (
+            f"AND(SUBTOTAL(103,${letra_fila_visible}{fila_encabezado + 1})=1,"
+            f"${letra_tiene_anexo}{fila_encabezado + 1}=1,"
+            f"${letra_clave_grupo}{fila_encabezado + 1}<>"
+            f"${letra_ultimo_grupo_visible}{fila_encabezado},"
+            f"${letra_clave_cue}{fila_encabezado + 1}="
+            f"${letra_ultimo_cue_visible}{fila_encabezado})"
+        )
+        ws.conditional_formatting.add(
+            rango_datos,
+            FormulaRule(
+                formula=[formula_primer_anexo_visible],
+                border=Border(top=borde_superior_anexo),
+            ),
+        )
+
     ws.freeze_panes = "A5"
     ws.auto_filter.ref = f"A{fila_encabezado}:{ultima_columna}{max(fila_actual - 1, fila_encabezado)}"
+    if total_general_dinamico:
+        ws.auto_filter.filterColumn.append(
+            FilterColumn(
+                colId=indice_total_general - 1,
+                hiddenButton=True,
+                showButton=False,
+            )
+        )
+        wb.calculation.calcMode = "auto"
+        wb.calculation.fullCalcOnLoad = True
+        wb.calculation.forceFullCalc = True
 
     for indice, ancho in enumerate(anchos_columnas, start=1):
         letra = get_column_letter(indice)

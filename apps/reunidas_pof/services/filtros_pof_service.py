@@ -464,20 +464,18 @@ def _querystring_sin_parametros(request, parametros):
         query.pop(parametro, None)
     query.pop("page", None)
     query.pop("texto", None)
+    query.pop("page_size", None)
     return query.urlencode()
 
 
-def querystring_limpio_historial(request, page_size):
+def querystring_limpio_historial():
     query = QueryDict(mutable=True)
     query["vista_rapida"] = VISTA_RECIENTES
-    query["page_size"] = page_size
     return query.urlencode()
 
 
-def querystring_limpio_cargos(request, page_size):
-    query = QueryDict(mutable=True)
-    query["page_size"] = page_size
-    return query.urlencode()
+def querystring_limpio_cargos():
+    return ""
 
 
 def construir_chips_filtros_historial(request, filtros, errores=None):

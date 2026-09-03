@@ -1,0 +1,18 @@
+<div id="modalBajaGrupoCef" class="cef-docente-overlay{% if baja_modal_grupo or reactivar_modal_grupo %} is-open{% endif %}" aria-hidden="{% if baja_modal_grupo or reactivar_modal_grupo %}false{% else %}true{% endif %}">
+    <div class="cef-docente-modal" role="dialog" aria-modal="true" aria-labelledby="bajaGrupoCefTitulo">
+        <div class="cef-docente-modal-head">
+            <h2 id="bajaGrupoCefTitulo" class="cef-docente-modal-title">
+                <i class="fa-solid fa-layer-group me-2"></i>Grupos
+                <span data-cef-baja-modal-title>» {% if reactivar_modal_grupo %}Reactivar grupo{% else %}Baja del grupo{% endif %}</span>
+            </h2>
+            <button class="cef-docente-close" type="button" aria-label="Cerrar" data-cef-baja-close><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="cef-docente-modal-body" data-cef-baja-content>
+            {% if reactivar_modal_grupo %}
+                {% include "cef/grupo_reactivar_cef_contenido.html" %}
+            {% elif baja_modal_grupo %}
+                {% include "cef/grupo_baja_cef_contenido.html" %}
+            {% endif %}
+        </div>
+    </div>
+</div>

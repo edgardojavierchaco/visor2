@@ -1,0 +1,1 @@
+{% extends 'bnh/base.html' %}{% block content %}<h1>{{ title }}</h1><form method="post" action="{% url 'bnhpersonas:horario_agregar' actividad.pk %}" class="card p-4">{% csrf_token %}{% include 'bnh/personas/fields.html' %}<button class="btn btn-primary mt-4">Reintentar</button></form><a href="{% url 'bnhpersonas:editar_actividad' actividad.pk %}">Recargar cargo</a>{% endblock %}

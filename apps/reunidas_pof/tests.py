@@ -1,10 +1,13 @@
 from inspect import unwrap
+from decimal import Decimal
+from io import BytesIO
 from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from django.test import RequestFactory, SimpleTestCase
+from openpyxl import load_workbook
 
 from . import forms as pof_forms
 from . import models, permisos, views
@@ -18,6 +21,7 @@ from .models import (
     obtener_regiones_usuario_pof,
 )
 from .services import carga_service
+from .services import exportacion_reunida as exportacion_service
 from .services import guardado_pof_service
 from .services import visualizacion_cargos_localizacion_service as visualizacion_service
 
@@ -28,6 +32,402 @@ class RolesPofTests(SimpleTestCase):
         self.assertIn("Director de Nivel Inicial", ROLES_POF_SOLO_VISUALIZACION_COMPLETA)
         self.assertNotIn(ROL_POF_REGIONAL, ROLES_POF_SOLO_VISUALIZACION_COMPLETA)
         self.assertNotIn(ROL_POF_DIRECTOR, ROLES_POF_SOLO_VISUALIZACION_COMPLETA)
+
+
+class ExportacionReunidaExcelTests(SimpleTestCase):
+    def _abrir_excel_comun(self, columnas_config, filas, schema):
+        contexto = {
+            "es_proyecto_especial": False,
+            "columnas": [columna["titulo"] for columna in columnas_config],
+            "filas_exportacion": [],
+            "filas_normalizadas_exportacion": filas,
+            "columnas_exportacion_config": columnas_config,
+            "schema_exportacion": schema,
+            "separadores_filas_exportacion": [],
+            "secciones_exportacion": [],
+            "mensaje_exportacion": "",
+            "nombre_archivo": "reunida.xlsx",
+            "titulo_hoja": "Reunida",
+            "titulo_excel": "Reunida POF",
+            "reunida": {},
+        }
+        respuesta = views._crear_respuesta_excel_exportacion(contexto)
+        return load_workbook(BytesIO(respuesta.content), data_only=False).active
+
+    def _columnas_auxiliares(self, ws, cantidad_columnas_visibles):
+        return {
+            ws.cell(row=4, column=indice).value: indice
+            for indice in range(cantidad_columnas_visibles + 1, ws.max_column + 1)
+        }
+
+    def test_clave_total_general_estandar_prioriza_cueanexo_y_aplica_fallbacks(self):
+        helper = exportacion_service.obtener_clave_total_general_cueanexo_reunida
+
+        self.assertEqual(
+            helper({"cueanexo": " 111111100 ", "cuof": "10", "cue": "1111111"}),
+            "CUEANEXO:111111100",
+        )
+        self.assertNotEqual(
+            helper({"cueanexo": "111111100", "cue": "1111111"}),
+            helper({"cueanexo": "111111101", "cue": "1111111"}),
+        )
+        self.assertEqual(helper({"cueanexo": "", "cuof": " 20 "}), "CUOF:20")
+        self.assertEqual(
+            helper({"cueanexo": "", "cuof": "", "localizacion_id": 30}),
+            "LOCALIZACION:30",
+        )
+        self.assertEqual(helper({}, indice=4), "FILA:4")
+
+    def test_preview_total_general_separa_cueanexos_del_mismo_cue(self):
+        filas = [
+            {"cueanexo": "111111100", "cue": "1111111", "cargo_id": 1},
+            {"cueanexo": "111111100", "cue": "1111111", "cargo_id": 2},
+            {"cueanexo": "111111101", "cue": "1111111", "cargo_id": 3},
+        ]
+        totales = {
+            "CUEANEXO:111111100": Decimal("300"),
+            "CUEANEXO:111111101": Decimal("50"),
+        }
+        columnas = [
+            {"source": "cueanexo", "repetir": "por_cueanexo"},
+            {"source": "total_general", "repetir": "por_cue"},
+        ]
+
+        exportacion_service._aplicar_totales_generales_preview_reunida(
+            filas,
+            "PRIMARIA",
+            totales,
+        )
+        proyectadas = exportacion_service._proyectar_filas_exportacion(
+            "PRIMARIA",
+            filas,
+            columnas,
+        )
+
+        self.assertEqual(
+            proyectadas,
+            [
+                ["111111100", Decimal("300")],
+                ["", ""],
+                ["111111101", Decimal("50")],
+            ],
+        )
+        self.assertEqual(filas[0]["total_general_exportacion"], Decimal("300"))
+        self.assertEqual(filas[2]["total_general_exportacion"], Decimal("50"))
+
+    def test_excel_total_general_no_encadena_cueanexos_del_mismo_cue(self):
+        columnas_config = [
+            {"source": "cueanexo", "titulo": "CUEANEXO", "repetir": "por_cueanexo"},
+            {
+                "source": "total_general",
+                "titulo": "Total General",
+                "repetir": "por_cue",
+            },
+        ]
+        filas = [
+            {
+                "cueanexo": "111111100",
+                "cue": "1111111",
+                "estado_pof_codigo": views.CargoPof.EstadoPof.AFECTADO,
+                "total": Decimal("100"),
+            },
+            {
+                "cueanexo": "111111100",
+                "cue": "1111111",
+                "estado_pof_codigo": views.CargoPof.EstadoPof.AFECTADO,
+                "total": Decimal("200"),
+            },
+            {
+                "cueanexo": "111111100",
+                "cue": "1111111",
+                "estado_pof_codigo": views.CargoPof.EstadoPof.DESAFECTADO,
+                "total": Decimal("0"),
+            },
+            {
+                "cueanexo": "111111101",
+                "cue": "1111111",
+                "estado_pof_codigo": views.CargoPof.EstadoPof.AFECTADO,
+                "total": Decimal("50"),
+            },
+        ]
+
+        ws = self._abrir_excel_comun(
+            columnas_config,
+            filas,
+            {"columnas": [], "grupo_total_general": ("cue",)},
+        )
+        auxiliares = self._columnas_auxiliares(ws, len(columnas_config))
+        letra_total = ws.cell(
+            4,
+            auxiliares["_total_visible_grupo"],
+        ).column_letter
+        letra_grupo_visto = ws.cell(
+            4,
+            auxiliares["_grupo_visto_visible"],
+        ).column_letter
+        letra_es_afectado = ws.cell(
+            4,
+            auxiliares["_es_afectado"],
+        ).column_letter
+
+        self.assertIn(f"${letra_total}6", ws[f"{letra_total}5"].value)
+        self.assertIn(f"${letra_total}7", ws[f"{letra_total}6"].value)
+        self.assertNotIn(f"${letra_total}8", ws[f"{letra_total}7"].value)
+        self.assertEqual(ws[f"{letra_es_afectado}7"].value, 0)
+        self.assertNotIn(f"${letra_grupo_visto}7", ws[f"{letra_grupo_visto}8"].value)
+        self.assertIn("0=0", ws["B8"].value)
+        self.assertEqual(
+            [columna.colId for columna in ws.auto_filter.filterColumn],
+            [1],
+        )
+
+    def test_totales_tecnicos_visibles_usan_acumuladores_dinamicos_por_grupo(self):
+        columnas_config = [
+            {"source": "cueanexo", "titulo": "CUEANEXO", "repetir": "por_cueanexo"},
+            {
+                "source": "total_horas_catedra",
+                "titulo": "Total Horas Cátedra",
+                "repetir": "siempre",
+            },
+            {
+                "source": "puntos_horas_catedra",
+                "titulo": "Puntos Horas Cátedra",
+                "repetir": "siempre",
+            },
+            {"source": "total_puntos", "titulo": "Total Puntos", "repetir": "siempre"},
+        ]
+        schema = {
+            "columnas": [
+                {"key": "total_horas_catedra"},
+                {"key": "puntos_horas_catedra"},
+                {"key": "total_puntos"},
+            ],
+            "grupo_total_general": ("cue",),
+        }
+        filas = [
+            {
+                "cueanexo": "111111100",
+                "cue": "1111111",
+                "estado_pof_codigo": views.CargoPof.EstadoPof.AFECTADO,
+                "cantidad_horas": Decimal("10"),
+                "total": Decimal("100"),
+                "total_horas_catedra": Decimal("10"),
+                "puntos_horas_catedra": Decimal("100"),
+                "total_puntos": Decimal("100"),
+            },
+            {
+                "cueanexo": "111111100",
+                "cue": "1111111",
+                "estado_pof_codigo": views.CargoPof.EstadoPof.AFECTADO,
+                "cantidad_horas": "",
+                "total": Decimal("200"),
+                "total_horas_catedra": "",
+                "puntos_horas_catedra": "",
+                "total_puntos": Decimal("200"),
+            },
+            {
+                "cueanexo": "111111100",
+                "cue": "1111111",
+                "estado_pof_codigo": views.CargoPof.EstadoPof.DESAFECTADO,
+                "cantidad_horas": Decimal("5"),
+                "total": Decimal("50"),
+                "total_horas_catedra": Decimal("5"),
+                "puntos_horas_catedra": Decimal("50"),
+                "total_puntos": Decimal("50"),
+            },
+            {
+                "cueanexo": "222222200",
+                "cue": "2222222",
+                "estado_pof_codigo": views.CargoPof.EstadoPof.AFECTADO,
+                "cantidad_horas": "",
+                "total": Decimal("25"),
+            },
+            {
+                "cueanexo": "111111101",
+                "cue": "1111111",
+                "estado_pof_codigo": views.CargoPof.EstadoPof.AFECTADO,
+                "cantidad_horas": "",
+                "total": Decimal("300"),
+            },
+        ]
+
+        ws = self._abrir_excel_comun(columnas_config, filas, schema)
+        auxiliares = self._columnas_auxiliares(ws, len(columnas_config))
+
+        self.assertEqual(len(auxiliares), 14)
+        self.assertIn("_cantidad_horas", auxiliares)
+        self.assertIn("_horas_visible_grupo", auxiliares)
+        self.assertIn("_puntos_horas_visible_grupo", auxiliares)
+        self.assertTrue(
+            all(
+                ws.column_dimensions[ws.cell(4, indice).column_letter].hidden
+                for indice in auxiliares.values()
+            )
+        )
+        self.assertNotIn(ws.cell(4, auxiliares["_fila_visible"]).column_letter, ws.auto_filter.ref)
+
+        letras = {
+            nombre: ws.cell(4, indice).column_letter
+            for nombre, indice in auxiliares.items()
+        }
+        self.assertIn(f"${letras['_horas_visible_grupo']}5", ws["B5"].value)
+        self.assertIn(f"${letras['_puntos_horas_visible_grupo']}5", ws["C5"].value)
+        self.assertIn(f"${letras['_total_visible_grupo']}5", ws["D5"].value)
+        self.assertEqual(ws["B5"].number_format, "#,##0")
+        self.assertEqual(ws["C5"].number_format, "#,##0.00")
+        self.assertEqual(ws["D5"].number_format, "#,##0.00")
+
+        formula_horas = ws.cell(5, auxiliares["_horas_visible_grupo"]).value
+        formula_puntos_horas = ws.cell(
+            5, auxiliares["_puntos_horas_visible_grupo"]
+        ).value
+        self.assertIn(
+            f"SUBTOTAL(109,${letras['_cantidad_horas']}5)",
+            formula_horas,
+        )
+        self.assertIn(
+            f"SUBTOTAL(109,${letras['_total_cargo']}5)",
+            formula_puntos_horas,
+        )
+        self.assertNotIn("puntos", formula_puntos_horas.lower())
+        for acumulador in (
+            "_total_visible_grupo",
+            "_horas_visible_grupo",
+            "_puntos_horas_visible_grupo",
+        ):
+            formula_intercalada = ws.cell(7, auxiliares[acumulador]).value
+            self.assertIn(f"${letras[acumulador]}9", formula_intercalada)
+
+        self.assertEqual(
+            {columna.colId for columna in ws.auto_filter.filterColumn},
+            {1, 2, 3},
+        )
+        self.assertTrue(
+            all(
+                columna.hiddenButton and columna.showButton is False
+                for columna in ws.auto_filter.filterColumn
+            )
+        )
+        reglas_condicionales = [
+            regla
+            for reglas in ws.conditional_formatting._cf_rules.values()
+            for regla in reglas
+        ]
+        self.assertTrue(
+            any(
+                regla.dxf
+                and regla.dxf.numFmt
+                and regla.dxf.numFmt.formatCode == ";;;"
+                and regla.dxf.font is None
+                for regla in reglas_condicionales
+            )
+        )
+        self.assertTrue(
+            any(
+                regla.dxf
+                and regla.dxf.border
+                and regla.dxf.border.top.style == "medium"
+                and regla.dxf.border.top.color.rgb == "003B5CFF"
+                for regla in reglas_condicionales
+            )
+        )
+        self.assertTrue(
+            any(
+                regla.dxf
+                and regla.dxf.border
+                and regla.dxf.border.top.style == "medium"
+                and regla.dxf.border.top.color.rgb == "009CA3AF"
+                for regla in reglas_condicionales
+            )
+        )
+
+    def test_total_puntos_no_es_dinamico_fuera_del_schema_tecnico(self):
+        columnas_config = [
+            {"source": "cueanexo", "titulo": "CUEANEXO", "repetir": "por_cueanexo"},
+            {"source": "total_puntos", "titulo": "Total Puntos", "repetir": "siempre"},
+        ]
+        fila = {
+            "cueanexo": "111111100",
+            "cue": "1111111",
+            "total_puntos": Decimal("125"),
+        }
+
+        ws = self._abrir_excel_comun(
+            columnas_config,
+            [fila],
+            {"columnas": [{"key": "total_puntos"}]},
+        )
+
+        self.assertEqual(ws["B5"].value, 125)
+        self.assertEqual(ws.max_column, len(columnas_config) + 7)
+        self.assertFalse(ws.auto_filter.filterColumn)
+        self.assertIsNone(ws.parent.calculation.forceFullCalc)
+
+    def test_total_general_normal_conserva_once_helpers(self):
+        columnas_config = [
+            {"source": "cueanexo", "titulo": "CUEANEXO", "repetir": "por_cueanexo"},
+            {
+                "source": "total_general",
+                "titulo": "Total General",
+                "repetir": "por_cue",
+            },
+        ]
+        fila = {
+            "cueanexo": "111111100",
+            "cue": "1111111",
+            "estado_pof_codigo": views.CargoPof.EstadoPof.AFECTADO,
+            "total": Decimal("125"),
+        }
+
+        ws = self._abrir_excel_comun(
+            columnas_config,
+            [fila],
+            {"columnas": [], "grupo_total_general": ("cue",)},
+        )
+
+        self.assertEqual(ws.max_column, len(columnas_config) + 11)
+        self.assertTrue(ws["B5"].value.startswith("=IF(AND(SUBTOTAL(103,"))
+        self.assertEqual(
+            [columna.colId for columna in ws.auto_filter.filterColumn],
+            [1],
+        )
+
+    def test_proyecto_especial_conserva_writer_historico_sin_auxiliares_comunes(self):
+        """Proyecto Especial no debe entrar al writer filtrable de Reunidas."""
+        contexto = {
+            "es_proyecto_especial": True,
+            "columnas": ["CUEANEXO", "Cargo"],
+            "filas_exportacion": [["123456700", "Cargo A"]],
+            "filas_normalizadas_exportacion": [
+                {"cueanexo": "123456700", "cargo": "Cargo A"}
+            ],
+            "columnas_exportacion_config": [
+                {"source": "cueanexo", "titulo": "CUEANEXO"},
+                {"source": "cargo", "titulo": "Cargo"},
+            ],
+            "separadores_filas_exportacion": [],
+            "secciones_exportacion": [],
+            "mensaje_exportacion": "",
+            "nombre_archivo": "proyecto.xlsx",
+            "titulo_hoja": "Proyecto Especial",
+            "titulo_excel": "Proyecto Especial POF",
+            "reunida": {},
+        }
+
+        respuesta = views._crear_respuesta_excel_exportacion(contexto)
+        ws = load_workbook(BytesIO(respuesta.content), data_only=False).active
+
+        self.assertEqual(ws.max_column, 2)
+        self.assertEqual(ws.auto_filter.ref, "A4:B5")
+        self.assertEqual(ws.freeze_panes, "A5")
+        self.assertFalse(ws.column_dimensions["C"].hidden)
+        self.assertFalse(
+            any(
+                isinstance(celda.value, str) and celda.value.startswith("=")
+                for fila in ws.iter_rows()
+                for celda in fila
+            )
+        )
 
 
 class AniosDisponiblesCargaPofTests(SimpleTestCase):
@@ -352,6 +752,98 @@ class VisualizacionFiltrosCanonicosTests(SimpleTestCase):
         self.assertEqual(query.getlist("campo_filtro"), ["cue"])
         self.assertEqual(query.getlist("operador_filtro"), ["2"])
         self.assertEqual(query.getlist("valor_filtro"), ["522522"])
+
+
+class VisualizacionOrdenamientoTests(SimpleTestCase):
+    def setUp(self):
+        self.request_factory = RequestFactory()
+
+    def _armar_columnas(self, querystring=""):
+        request = self.request_factory.get(f"/visualizacion/?{querystring}")
+        return visualizacion_service._armar_columnas(
+            request,
+            visualizacion_service.COLUMNAS_DEFAULT_IDS,
+        )
+
+    def _obtener_columna(self, columnas, columna_id):
+        return next(columna for columna in columnas if columna["id"] == columna_id)
+
+    def test_sin_orden_activo_el_siguiente_enlace_genera_asc(self):
+        columnas = self._armar_columnas("anio=2025")
+        cueanexo = self._obtener_columna(columnas, "cueanexo")
+        query = self.request_factory.get(f"/?{cueanexo['order_querystring']}").GET
+
+        self.assertEqual(query["orden"], "cueanexo")
+        self.assertEqual(query["dir"], "asc")
+        self.assertFalse(any(columna["order_active"] for columna in columnas))
+
+    def test_orden_asc_activo_el_siguiente_enlace_genera_desc(self):
+        columnas = self._armar_columnas("orden=cueanexo&dir=asc")
+        cueanexo = self._obtener_columna(columnas, "cueanexo")
+        query = self.request_factory.get(f"/?{cueanexo['order_querystring']}").GET
+
+        self.assertEqual(query["orden"], "cueanexo")
+        self.assertEqual(query["dir"], "desc")
+        self.assertTrue(cueanexo["order_active"])
+        self.assertEqual(cueanexo["order_dir"], "asc")
+
+    def test_orden_desc_activo_el_siguiente_enlace_vuelve_al_predeterminado(self):
+        columnas = self._armar_columnas("orden=cueanexo&dir=desc")
+        cueanexo = self._obtener_columna(columnas, "cueanexo")
+        query = self.request_factory.get(f"/?{cueanexo['order_querystring']}").GET
+
+        self.assertNotIn("orden", query)
+        self.assertNotIn("dir", query)
+        columnas_predeterminadas = self._armar_columnas(query.urlencode())
+        self.assertFalse(
+            any(columna["order_active"] for columna in columnas_predeterminadas)
+        )
+
+    def test_vuelta_al_predeterminado_conserva_contexto_y_elimina_paginacion(self):
+        columnas = self._armar_columnas(
+            "anio=2025&cabecera_tipo=PROYECTO_ESPECIAL&proyecto_especial_id=34"
+            "&campo_filtro=cue&operador_filtro=0&valor_filtro=313&q=maestra"
+            "&visible_col=cueanexo&visible_col=cargo&page=3&page_size=50"
+            "&orden=cueanexo&dir=desc"
+        )
+        cueanexo = self._obtener_columna(columnas, "cueanexo")
+        query = self.request_factory.get(f"/?{cueanexo['order_querystring']}").GET
+
+        self.assertEqual(query["anio"], "2025")
+        self.assertEqual(query["cabecera_tipo"], "PROYECTO_ESPECIAL")
+        self.assertEqual(query["proyecto_especial_id"], "34")
+        self.assertEqual(query.getlist("campo_filtro"), ["cue"])
+        self.assertEqual(query.getlist("operador_filtro"), ["0"])
+        self.assertEqual(query.getlist("valor_filtro"), ["313"])
+        self.assertEqual(query["q"], "maestra")
+        self.assertEqual(query.getlist("visible_col"), ["cueanexo", "cargo"])
+        self.assertNotIn("orden", query)
+        self.assertNotIn("dir", query)
+        self.assertNotIn("page", query)
+        self.assertNotIn("page_size", query)
+
+    def test_total_general_continua_sin_ser_ordenable(self):
+        columnas = self._armar_columnas()
+        total_general = self._obtener_columna(columnas, "total_general")
+
+        self.assertFalse(total_general["ordenable"])
+        self.assertEqual(total_general["order_querystring"], "")
+        self.assertFalse(total_general["order_active"])
+
+    def test_sin_orden_aplica_el_orden_predeterminado_existente(self):
+        queryset = Mock()
+        request = self.request_factory.get("/visualizacion/")
+
+        resultado = visualizacion_service._aplicar_orden(queryset, request)
+
+        self.assertIs(resultado, queryset.order_by.return_value)
+        queryset.order_by.assert_called_once_with(
+            "localizacion__cueanexo",
+            "localizacion__cuof",
+            "ceic",
+            "id",
+        )
+
 
 class AlcanceVisualizacionPofTests(SimpleTestCase):
     def test_acceso_completo_y_consulta_general_no_reciben_filtro_de_datos(self):

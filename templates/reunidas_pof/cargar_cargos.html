@@ -1,4 +1,4 @@
-{% extends 'archivos/base/layout.html' %}
+{% extends 'reunidas_pof/layout_pof.html' %}
 {% block content %}
 
 <div class="pof-page">
@@ -27,25 +27,29 @@
         <div class="pof-grid" id="cabeceraReunidaCampos">
             <div class="pof-field pof-col-6">
                 <label for="anio">A&ntilde;o</label>
-                <select id="anio" class="pof-form-select" {% if not anios_reunida %}disabled{% endif %}>
-                    {% if anios_reunida %}
-                        {% for anio in anios_reunida %}
-                            <option value="{{ anio }}" {% if anio_activo == anio %}selected{% endif %}>{{ anio }}</option>
-                        {% endfor %}
-                    {% else %}
-                        <option value="">No hay POF cargadas</option>
-                    {% endif %}
-                </select>
+                <span class="pof-native-select-wrap">
+                    <select id="anio" class="pof-form-select" {% if not anios_reunida %}disabled{% endif %}>
+                        {% if anios_reunida %}
+                            {% for anio in anios_reunida %}
+                                <option value="{{ anio }}" {% if anio_activo == anio %}selected{% endif %}>{{ anio }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="">No hay POF cargadas</option>
+                        {% endif %}
+                    </select>
+                </span>
             </div>
 
             <div class="pof-field pof-col-6">
                 <label for="nivel">Nivel</label>
-                <select id="nivel" class="pof-form-select" required>
-                    <option value="">Seleccioná un nivel</option>
-                    {% for value, label in niveles %}
-                        <option value="{{ value }}" {% if nivel_activo == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
+                <span class="pof-native-select-wrap">
+                    <select id="nivel" class="pof-form-select" required>
+                        <option value="">Seleccioná un nivel</option>
+                        {% for value, label in niveles %}
+                            <option value="{{ value }}" {% if nivel_activo == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </span>
             </div>
         </div>
 
@@ -153,10 +157,12 @@
 
                 <div class="pof-field pof-cargo-entry-unit">
                     <label>Unidad</label>
-                    <select id="unidadCargo">
-                        <option value="CARGO">Cargo</option>
-                        <option value="HORA_CATEDRA">Horas Cátedra</option>
-                    </select>
+                    <span class="pof-native-select-wrap">
+                        <select id="unidadCargo">
+                            <option value="CARGO">Cargo</option>
+                            <option value="HORA_CATEDRA">Horas Cátedra</option>
+                        </select>
+                    </span>
                 </div>
 
                 <div class="pof-field pof-cargo-entry-small">

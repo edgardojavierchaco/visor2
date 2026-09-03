@@ -944,12 +944,14 @@
                            placeholder="Filtrar por oferta real, CUOF, categoría, jornada o localidad"
                            value="${escaparHtml(filtroOfertaTexto)}"
                            autocomplete="off">
-                    <select id="filtroOfertaEstado" class="pof-form-select pof-offer-filter-status">
-                        <option value="TODOS"${filtroOfertaEstado === "TODOS" ? " selected" : ""}>Todos</option>
-                        <option value="ACTIVA"${filtroOfertaEstado === "ACTIVA" ? " selected" : ""}>Activa</option>
-                        <option value="BAJA"${filtroOfertaEstado === "BAJA" ? " selected" : ""}>Baja</option>
-                        <option value="SIN_DATO"${filtroOfertaEstado === "SIN_DATO" ? " selected" : ""}>Sin dato</option>
-                    </select>
+                    <span class="pof-native-select-wrap">
+                        <select id="filtroOfertaEstado" class="pof-form-select pof-offer-filter-status">
+                            <option value="TODOS"${filtroOfertaEstado === "TODOS" ? " selected" : ""}>Todos</option>
+                            <option value="ACTIVA"${filtroOfertaEstado === "ACTIVA" ? " selected" : ""}>Activa</option>
+                            <option value="BAJA"${filtroOfertaEstado === "BAJA" ? " selected" : ""}>Baja</option>
+                            <option value="SIN_DATO"${filtroOfertaEstado === "SIN_DATO" ? " selected" : ""}>Sin dato</option>
+                        </select>
+                    </span>
                 </div>
                 <div class="pof-offer-list-scroll">
                     ${renderizarListaTarjetasOferta(ofertasVisibles, "No hay ofertas que coincidan con el filtro aplicado.")}

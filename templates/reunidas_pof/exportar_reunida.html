@@ -1,16 +1,6 @@
-{% extends 'archivos/base/layout.html' %}
+{% extends 'reunidas_pof/layout_pof.html' %}
 {% load static %}
 {% block content %}
-
-<style>
-    .pof-export-table tr.pof-export-grupo-cue > td {
-        border-top: 3px solid #2444D8;
-    }
-
-    .pof-export-table tr.pof-export-grupo-anexo > td {
-        border-top: 3px solid var(--pof-border);
-    }
-</style>
 
 <div class="pof-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa="exportar" %}
@@ -52,13 +42,15 @@
                         <div class="pof-visual-search-control-row">
                             <label class="pof-visually-hidden" for="exportarReunidaColumnaSelect">Columna</label>
                             <span class="pof-visual-search-icon material-symbols-outlined" aria-hidden="true">table_chart</span>
-                            <select id="exportarReunidaColumnaSelect"
-                                    class="pof-visual-search-select"
-                                    aria-label="Columna de b&uacute;squeda">
-                                {% for columna in columnas_busqueda %}
-                                    <option value="{{ columna.id }}" {% if columna.id == busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
-                                {% endfor %}
-                            </select>
+                            <span class="pof-native-select-wrap pof-native-select-wrap--visual-search">
+                                <select id="exportarReunidaColumnaSelect"
+                                        class="pof-visual-search-select"
+                                        aria-label="Columna de b&uacute;squeda">
+                                    {% for columna in columnas_busqueda %}
+                                        <option value="{{ columna.id }}" {% if columna.id == busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </span>
                             <label class="pof-visually-hidden" for="exportarReunidaColumnaInput">Buscar en columna</label>
                             <div class="pof-visual-search-input-wrap">
                                 <span class="pof-visual-search-input-icon material-symbols-outlined" aria-hidden="true">document_search</span>
@@ -133,6 +125,13 @@
                 class="pof-export-btn-mini pof-export-btn-light pof-export-detail-btn">
                     <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">arrow_circle_right</span> Ir a Detalles
                 </a>
+            {% endif %}
+
+            {% if not es_proyecto_especial %}
+                <div class="pof-group-legend" aria-label="Separadores de grupo">
+                    <span class="pof-group-legend-item"><span class="pof-group-legend-line pof-group-legend-line-cue" aria-hidden="true"></span>CUE</span>
+                    <span class="pof-group-legend-item"><span class="pof-group-legend-line pof-group-legend-line-anexo" aria-hidden="true"></span>CUEANEXO</span>
+                </div>
             {% endif %}
 
             <div class="pof-export-actions-mini">
@@ -271,7 +270,7 @@
         {% endif %}
 
         <div class="pof-export-wrap" data-pof-export-table-wrap>
-            <table class="pof-export-table{% if columnas_disponibles and not columnas_visibles_keys %} pof-export-no-visible-columns{% endif %}"
+            <table class="pof-export-table{% if not es_proyecto_especial %} pof-export-table-reunida{% endif %}{% if columnas_disponibles and not columnas_visibles_keys %} pof-export-no-visible-columns{% endif %}"
                    data-pof-export-table>
                 <thead>
                     <tr>
@@ -490,6 +489,7 @@
         const searchStatus = document.querySelector("#exportarReunidaBusquedaStatus");
         const searchStatusText = document.querySelector("#exportarReunidaBusquedaStatusText");
         const searchBadges = document.querySelector("#exportarReunidaFiltrosActivos");
+        const esProyectoEspecial = {% if es_proyecto_especial %}true{% else %}false{% endif %};
         let searchLoadingToken = 0;
         let searchInteractionDirty = false;
         let searchRequestState = null;
@@ -534,7 +534,7 @@
          * Elimina de una URL todos los filtros de columna del buscador común.
          *
          * - Solo opera sobre el prefijo controlado `col_`.
-         * - Evita trasladar la búsqueda del preview a una descarga Excel.
+         * - Permite excluir la búsqueda del preview solo en la descarga completa.
          * - No altera el año, nivel, columnas ni otros parámetros funcionales.
          */
         function clearSearchParams(url) {
@@ -904,12 +904,18 @@
             localStorage.setItem(compactStorageKey, active ? "1" : "0");
         }
 
-        function buildExcelHref(keys) {
+        function buildExcelHref(keys, alcance) {
             const url = new URL(window.location.href);
             url.searchParams.delete("accion");
             url.searchParams.delete("visible_col");
-            clearSearchParams(url);
-            if (document.querySelector("[data-pof-export-preview-pagination]")) {
+            if (!esProyectoEspecial) {
+                url.searchParams.delete("alcance");
+                if (alcance === "todos") {
+                    clearSearchParams(url);
+                }
+                url.searchParams.delete("page");
+                url.searchParams.set("alcance", alcance);
+            } else if (document.querySelector("[data-pof-export-preview-pagination]")) {
                 url.searchParams.delete("page");
             }
             url.searchParams.set("accion", "excel");
@@ -919,7 +925,7 @@
             return url.pathname + "?" + url.searchParams.toString();
         }
 
-        function setExcelLinkState(link, keys) {
+        function setExcelLinkState(link, keys, alcance) {
             if (!link) {
                 return;
             }
@@ -933,13 +939,13 @@
 
             link.classList.remove("pof-export-btn-disabled");
             link.removeAttribute("aria-disabled");
-            link.setAttribute("href", buildExcelHref(keys));
+            link.setAttribute("href", buildExcelHref(keys, alcance));
         }
 
 
         function setExcelState(keys) {
-            setExcelLinkState(excelLink, keys);
-            setExcelLinkState(excelAllLink, getAllKeys());
+            setExcelLinkState(excelLink, keys, "vista");
+            setExcelLinkState(excelAllLink, getAllKeys(), "todos");
         }
 
         function updateColumns() {
@@ -1310,6 +1316,7 @@
                 const open = panel.hidden;
                 panel.hidden = !open;
                 toggle.setAttribute("aria-expanded", open ? "true" : "false");
+                toggle.classList.toggle("pof-visual-toggle-active", open);
             });
         }
 
@@ -1435,4 +1442,5 @@
         updateColumns();
     }());
 </script>
+<script src="{% static 'reunidas_pof/js/excel_download_feedback.js' %}?v=20260901-5"></script>
 {% endblock %}

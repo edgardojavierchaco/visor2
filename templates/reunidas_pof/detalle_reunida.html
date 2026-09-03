@@ -1,11 +1,16 @@
-{% extends 'archivos/base/layout.html' %}
+{% extends 'reunidas_pof/layout_pof.html' %}
 {% load static %}
+
+{% block head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/panel-option-search.css' %}?v=20260824-1">
+{% endblock %}
+
 {% block content %}
 
 
 <div class="pof-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa=seccion_activa %}
-    <link rel="stylesheet" href="{% static 'reunidas_pof/css/panel-option-search.css' %}?v=20260824-1">
     <div class="pof-view-header">
         <div class="pof-view-header-icon-box" aria-hidden="true">
             <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">{% if es_proyecto_especial %}folder_special{% else %}collections_bookmark{% endif %}</span>
@@ -56,11 +61,13 @@
                         <div class="pof-visual-search-control-row">
                             <label class="pof-visually-hidden" for="detalleColumnaSelect">Columna</label>
                             <span class="pof-visual-search-icon material-symbols-outlined" aria-hidden="true">table_chart</span>
-                            <select id="detalleColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
-                                {% for columna in detalle_busqueda_columnas %}
-                                    <option value="{{ columna.id }}" {% if columna.id == detalle_busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
-                                {% endfor %}
-                            </select>
+                            <span class="pof-native-select-wrap pof-native-select-wrap--visual-search">
+                                <select id="detalleColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
+                                    {% for columna in detalle_busqueda_columnas %}
+                                        <option value="{{ columna.id }}" {% if columna.id == detalle_busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </span>
                             <label class="pof-visually-hidden" for="detalleColumnaInput">Buscar en columna</label>
                             <div class="pof-visual-search-input-wrap">
                                 <span class="pof-visual-search-input-icon material-symbols-outlined" aria-hidden="true">document_search</span>
@@ -134,7 +141,9 @@
                     <div class="pof-visual-dialog-body">
                         <div class="pof-visual-dialog-field">
                             <label for="detalleOperadorFiltro">Operador</label>
-                            <select name="operador_filtro" id="detalleOperadorFiltro"></select>
+                            <span class="pof-native-select-wrap">
+                                <select name="operador_filtro" id="detalleOperadorFiltro"></select>
+                            </span>
                         </div>
                         <div class="pof-visual-dialog-field">
                             <label id="detalleValorFiltroLabel" for="detalleValorFiltro">Valor</label>
@@ -404,11 +413,13 @@
                         <div class="pof-visual-search-control-row">
                             <label class="pof-visually-hidden" for="detalleColumnaSelect">Columna</label>
                             <span class="pof-visual-search-icon material-symbols-outlined" aria-hidden="true">table_chart</span>
-                            <select id="detalleColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
-                                {% for columna in detalle_busqueda_columnas %}
-                                    <option value="{{ columna.id }}" {% if columna.id == detalle_busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
-                                {% endfor %}
-                            </select>
+                            <span class="pof-native-select-wrap pof-native-select-wrap--visual-search">
+                                <select id="detalleColumnaSelect" class="pof-visual-search-select" aria-label="Columna de b&uacute;squeda">
+                                    {% for columna in detalle_busqueda_columnas %}
+                                        <option value="{{ columna.id }}" {% if columna.id == detalle_busqueda_columna_id %}selected{% endif %}>{{ columna.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </span>
                             <label class="pof-visually-hidden" for="detalleColumnaInput">Buscar en columna</label>
                             <div class="pof-visual-search-input-wrap">
                                 <span class="pof-visual-search-input-icon material-symbols-outlined" aria-hidden="true">document_search</span>
@@ -482,7 +493,9 @@
                     <div class="pof-visual-dialog-body">
                         <div class="pof-visual-dialog-field">
                             <label for="detalleOperadorFiltro">Operador</label>
-                            <select name="operador_filtro" id="detalleOperadorFiltro"></select>
+                            <span class="pof-native-select-wrap">
+                                <select name="operador_filtro" id="detalleOperadorFiltro"></select>
+                            </span>
                         </div>
                         <div class="pof-visual-dialog-field">
                             <label id="detalleValorFiltroLabel" for="detalleValorFiltro">Valor</label>

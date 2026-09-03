@@ -1,8 +1,91 @@
 {% extends "cef/base_operativo_cef.html" %}
 
-{% block cef_subtitle %}Alta de ciclos y selección del ciclo actual. Solo disponible para Administrador.{% endblock %}
+{% block cef_subtitle %}Alta, edición, cierre y continuidad anual de ciclos. Solo disponible para Administrador.{% endblock %}
 
 {% block cef_content %}
+<section class="cef-card mb-4">
+    <div class="cef-card-header">
+        <h3><i class="fa-solid fa-calendar-check me-2"></i>Gestionar ciclo actual</h3>
+        {% if ciclo_actual_admin %}
+            <span class="badge text-bg-success">{{ ciclo_actual_admin.anio }} · Actual · Abierto</span>
+        {% elif ciclo_origen_anual %}
+            <span class="badge text-bg-secondary">{{ ciclo_origen_anual.anio }} · Cerrado</span>
+        {% else %}
+            <span class="badge text-bg-secondary">Sin ciclo actual</span>
+        {% endif %}
+    </div>
+    <div class="cef-card-body">
+        {% if ciclo_actual_admin %}
+            <div class="cef-context-summary mb-3">
+                <div class="cef-context-summary-item">
+                    <span>Año</span>
+                    <strong>{{ ciclo_actual_admin.anio }}</strong>
+                </div>
+                <div class="cef-context-summary-item">
+                    <span>Fecha inicio (referencia)</span>
+                    <strong>{{ ciclo_actual_admin.fecha_inicio|date:"d/m/Y"|default:"—" }}</strong>
+                </div>
+                <div class="cef-context-summary-item">
+                    <span>Estado</span>
+                    <strong>Actual · Abierto</strong>
+                </div>
+            </div>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="editar_actual">
+                <input type="hidden" name="ciclo_id" value="{{ ciclo_actual_admin.pk }}">
+                <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                {% if form_actual.non_field_errors %}<div class="alert alert-danger">{{ form_actual.non_field_errors }}</div>{% endif %}
+                <div class="cef-form-grid is-two-col">
+                    {% for field in form_actual %}
+                        <div class="cef-field{% if field.name == 'descripcion' %} span-2{% endif %}">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}<div class="cef-error">{{ field.errors|join:", " }}</div>{% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="cef-form-actions mt-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-floppy-disk me-1"></i>Guardar cambios
+                    </button>
+                </div>
+            </form>
+
+            <div class="cef-form-actions mt-3">
+                <a class="btn btn-outline-primary" href="{% url 'cef:prevalidar_ciclo_anual' ciclo_actual_admin.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                    <i class="fa-solid fa-magnifying-glass-chart me-1"></i>Previsualizar generación {{ ciclo_actual_admin.anio|add:"1" }}
+                </a>
+                <form method="post" class="m-0"
+                      data-cef-confirm-submit
+                      data-cef-confirm-title="Cerrar ciclo {{ ciclo_actual_admin.anio }}"
+                      data-cef-confirm-message="Al cerrar el ciclo {{ ciclo_actual_admin.anio }}, su información quedará en modo sólo lectura."
+                      data-cef-confirm-entity="Esta acción no generará automáticamente el ciclo {{ ciclo_actual_admin.anio|add:'1' }}.">
+                    {% csrf_token %}
+                    <input type="hidden" name="accion" value="cerrar_actual">
+                    <input type="hidden" name="ciclo_id" value="{{ ciclo_actual_admin.pk }}">
+                    <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                    {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="fa-solid fa-lock me-1"></i>Cerrar ciclo {{ ciclo_actual_admin.anio }}
+                    </button>
+                </form>
+            </div>
+        {% elif ciclo_origen_anual %}
+            <div class="alert alert-info">
+                El ciclo {{ ciclo_origen_anual.anio }} está cerrado y permanece disponible para consulta histórica. El siguiente paso administrativo es previsualizar y generar el ciclo {{ ciclo_origen_anual.anio|add:"1" }}.
+            </div>
+            <a class="btn btn-primary" href="{% url 'cef:prevalidar_ciclo_anual' ciclo_origen_anual.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                <i class="fa-solid fa-magnifying-glass-chart me-1"></i>Previsualizar generación {{ ciclo_origen_anual.anio|add:"1" }}
+            </a>
+        {% else %}
+            <div class="alert alert-warning mb-0">No hay un ciclo actual ni un último ciclo cerrado disponible para la continuidad anual.</div>
+        {% endif %}
+    </div>
+</section>
+
 <div class="cef-row-grid">
     <section class="cef-card">
         <div class="cef-card-header">
@@ -17,10 +100,11 @@
                             <tr>
                                 <th>Año</th>
                                 <th>Descripción</th>
-                                <th>Inicio</th>
-                                <th>Fin</th>
+                                <th>Inicio (referencia)</th>
+                                <th>Fin (referencia)</th>
                                 <th>Activo</th>
                                 <th>Actual</th>
+                                <th>Estado</th>
                                 <th>Acción</th>
                             </tr>
                         </thead>
@@ -45,23 +129,38 @@
                                             <span class="badge text-bg-secondary">No</span>
                                         {% endif %}
                                     </td>
-                                    <td class="cef-act-cell">
-                                        {% if not ciclo.actual %}
-                                            <form method="post" class="m-0">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="accion" value="marcar_actual">
-                                                <input type="hidden" name="ciclo_id" value="{{ ciclo.pk }}">
-                                                <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
-                                                {% if cef_context.ciclo %}
-                                                    <input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">
-                                                {% endif %}
-                                                <button type="submit" class="btn btn-outline-primary btn-sm">
-                                                    <i class="fa-solid fa-check"></i> Marcar actual
-                                                </button>
-                                            </form>
+                                    <td>
+                                        {% if ciclo.cerrado %}
+                                            <span class="badge text-bg-secondary">Cerrado</span>
                                         {% else %}
-                                            —
+                                            <span class="badge text-bg-success">Abierto</span>
                                         {% endif %}
+                                    </td>
+                                    <td class="cef-act-cell">
+                                        <div class="d-flex flex-wrap gap-1 align-items-center">
+                                            {% if ciclo_origen_anual and ciclo.pk == ciclo_origen_anual.pk %}
+                                                <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:prevalidar_ciclo_anual' ciclo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                                                    <i class="fa-solid fa-magnifying-glass-chart"></i> Previsualizar generación {{ ciclo.anio|add:"1" }}
+                                                </a>
+                                            {% endif %}
+                                            {% if not ciclo.actual and not ciclo.cerrado %}
+                                                <form method="post" class="m-0">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="accion" value="marcar_actual">
+                                                    <input type="hidden" name="ciclo_id" value="{{ ciclo.pk }}">
+                                                    <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
+                                                    {% if cef_context.ciclo %}
+                                                        <input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">
+                                                    {% endif %}
+                                                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                        <i class="fa-solid fa-check"></i> Marcar actual
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                            {% if ciclo.cerrado %}
+                                                {% if not ciclo_origen_anual or ciclo.pk != ciclo_origen_anual.pk %}—{% endif %}
+                                            {% endif %}
+                                        </div>
                                     </td>
                                 </tr>
                             {% endfor %}

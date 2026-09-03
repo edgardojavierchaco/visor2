@@ -1,4 +1,4 @@
-{% extends 'archivos/base/layout.html' %}
+{% extends 'reunidas_pof/layout_pof.html' %}
 {% load static %}
 {% block content %}
 
@@ -17,7 +17,6 @@
     <form method="get" class="pof-filter-panel"
           data-pof-filter-form
           data-pof-filter-fields="anio,nivel,cueanexo,cuof,ceic,estado_pof,unidad_cantidad">
-        <input type="hidden" name="page_size" value="{{ page_size }}">
         <input type="hidden" name="cabecera_tipo" value="{{ cabecera_tipo_activa }}">
         <input type="hidden" name="proyecto_especial_id" value="{{ proyecto_especial_id_activo }}">
 
@@ -30,13 +29,15 @@
 
             <div class="pof-filter-field pof-col-2{% if errores_filtros.nivel %} pof-filter-field-error{% endif %}">
                 <label for="filtroNivel">Nivel</label>
-                <select id="filtroNivel" name="nivel">
-                    <option value="">Seleccionar nivel</option>
-                    <option value="__todos__" {% if filtros.nivel == "__todos__" %}selected{% endif %}>Todos los niveles</option>
-                    {% for codigo, nombre in niveles.items %}
-                        <option value="{{ codigo }}" {% if filtros.nivel == codigo %}selected{% endif %}>{{ nombre }}</option>
-                    {% endfor %}
-                </select>
+                <span class="pof-native-select-wrap">
+                    <select id="filtroNivel" name="nivel">
+                        <option value="">Seleccionar nivel</option>
+                        <option value="__todos__" {% if filtros.nivel == "__todos__" %}selected{% endif %}>Todos los niveles</option>
+                        {% for codigo, nombre in niveles.items %}
+                            <option value="{{ codigo }}" {% if filtros.nivel == codigo %}selected{% endif %}>{{ nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </span>
                 {% if errores_filtros.nivel %}<span id="errorFiltroNivel" class="pof-filter-field-help">{{ errores_filtros.nivel }}</span>{% endif %}
             </div>
 
@@ -60,23 +61,27 @@
 
             <div class="pof-filter-field pof-col-2{% if errores_filtros.estado_pof %} pof-filter-field-error{% endif %}">
                 <label for="filtroEstadoPof">Estado</label>
-                <select id="filtroEstadoPof" name="estado_pof" {% if errores_filtros.estado_pof %}aria-invalid="true" aria-describedby="errorFiltroEstadoPof"{% endif %}>
-                    <option value="">Seleccionar estado</option>
-                    {% for codigo_estado, etiqueta_estado in opciones_estado_pof %}
-                        <option value="{{ codigo_estado }}" {% if filtros.estado_pof == codigo_estado %}selected{% endif %}>{{ etiqueta_estado }}</option>
-                    {% endfor %}
-                </select>
+                <span class="pof-native-select-wrap">
+                    <select id="filtroEstadoPof" name="estado_pof" {% if errores_filtros.estado_pof %}aria-invalid="true" aria-describedby="errorFiltroEstadoPof"{% endif %}>
+                        <option value="">Seleccionar estado</option>
+                        {% for codigo_estado, etiqueta_estado in opciones_estado_pof %}
+                            <option value="{{ codigo_estado }}" {% if filtros.estado_pof == codigo_estado %}selected{% endif %}>{{ etiqueta_estado }}</option>
+                        {% endfor %}
+                    </select>
+                </span>
                 {% if errores_filtros.estado_pof %}<span id="errorFiltroEstadoPof" class="pof-filter-field-help">{{ errores_filtros.estado_pof }}</span>{% endif %}
             </div>
 
             <div class="pof-filter-field pof-col-2{% if errores_filtros.unidad_cantidad %} pof-filter-field-error{% endif %}">
                 <label for="filtroUnidadCantidad">Unidad</label>
-                <select id="filtroUnidadCantidad" name="unidad_cantidad" {% if errores_filtros.unidad_cantidad %}aria-invalid="true" aria-describedby="errorFiltroUnidadCantidad"{% endif %}>
-                    <option value="">Seleccionar unidad</option>
-                    {% for codigo_unidad, etiqueta_unidad in opciones_unidad_cantidad %}
-                        <option value="{{ codigo_unidad }}" {% if filtros.unidad_cantidad == codigo_unidad %}selected{% endif %}>{{ etiqueta_unidad }}</option>
-                    {% endfor %}
-                </select>
+                <span class="pof-native-select-wrap">
+                    <select id="filtroUnidadCantidad" name="unidad_cantidad" {% if errores_filtros.unidad_cantidad %}aria-invalid="true" aria-describedby="errorFiltroUnidadCantidad"{% endif %}>
+                        <option value="">Seleccionar unidad</option>
+                        {% for codigo_unidad, etiqueta_unidad in opciones_unidad_cantidad %}
+                            <option value="{{ codigo_unidad }}" {% if filtros.unidad_cantidad == codigo_unidad %}selected{% endif %}>{{ etiqueta_unidad }}</option>
+                        {% endfor %}
+                    </select>
+                </span>
                 {% if errores_filtros.unidad_cantidad %}<span id="errorFiltroUnidadCantidad" class="pof-filter-field-help">{{ errores_filtros.unidad_cantidad }}</span>{% endif %}
             </div>
 
@@ -187,27 +192,8 @@
         </table>
     </div>
 
-    <div class="pof-table-footer">
-        <form method="get" class="pof-page-size">
-            <input type="hidden" name="anio" value="{{ filtros.anio }}">
-            <input type="hidden" name="nivel" value="{{ filtros.nivel }}">
-            <input type="hidden" name="cueanexo" value="{{ filtros.cueanexo }}">
-            <input type="hidden" name="cuof" value="{{ filtros.cuof }}">
-            <input type="hidden" name="ceic" value="{{ filtros.ceic }}">
-            <input type="hidden" name="estado_pof" value="{{ filtros.estado_pof }}">
-            <input type="hidden" name="unidad_cantidad" value="{{ filtros.unidad_cantidad }}">
-            <input type="hidden" name="cabecera_tipo" value="{{ cabecera_tipo_activa }}">
-            <input type="hidden" name="proyecto_especial_id" value="{{ proyecto_especial_id_activo }}">
-            <label for="pageSizeCargos">Registros por p&aacute;gina</label>
-            <select id="pageSizeCargos" name="page_size">
-                {% for opcion in page_size_options %}
-                    <option value="{{ opcion }}" {% if page_size == opcion %}selected{% endif %}>{{ opcion }}</option>
-                {% endfor %}
-            </select>
-            <button type="submit" class="pof-btn pof-btn-light">Aplicar</button>
-        </form>
-
-        {% if paginator.num_pages > 1 %}
+    {% if paginator.num_pages > 1 %}
+        <div class="pof-table-footer pof-table-footer-pagination-only">
             <nav class="pof-pagination" aria-label="Paginaci&oacute;n de cargos">
                 {% if page_obj.has_previous %}
                     <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.previous_page_number }}#administracionCargosResultados">Anterior</a>
@@ -231,8 +217,8 @@
                     <span class="pof-page-btn pof-page-btn-disabled">Siguiente</span>
                 {% endif %}
             </nav>
-        {% endif %}
-    </div>
+        </div>
+    {% endif %}
 
     {% include "reunidas_pof/gestion_cargo_modal.html" with gestion_cargo_success_mode="reload" %}
 </div>

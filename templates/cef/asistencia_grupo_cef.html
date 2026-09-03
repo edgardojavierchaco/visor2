@@ -1,0 +1,285 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Registro y consulta de asistencia del grupo.{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<style>
+    .cef-asistencia-workspace {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .cef-asistencia-tabs {
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        display: grid;
+        gap: .3rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-width: 430px;
+        padding: .3rem;
+    }
+
+    .cef-asistencia-tabs [role="tab"] {
+        align-items: center;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: var(--r-sm);
+        color: var(--text-muted);
+        display: inline-flex;
+        font: inherit;
+        font-size: var(--fs-sm);
+        font-weight: 800;
+        gap: .45rem;
+        justify-content: center;
+        min-height: 40px;
+        padding: .55rem .85rem;
+    }
+
+    .cef-asistencia-tabs [role="tab"]:hover,
+    .cef-asistencia-tabs [role="tab"]:focus-visible {
+        color: var(--primary-dark);
+        outline: none;
+    }
+
+    .cef-asistencia-tabs [role="tab"]:focus-visible {
+        box-shadow: 0 0 0 3px rgba(45,125,210,.16);
+    }
+
+    .cef-asistencia-tabs [role="tab"][aria-selected="true"] {
+        background: var(--surface);
+        border-color: var(--blue-200);
+        box-shadow: var(--shadow-xs);
+        color: var(--primary-dark);
+    }
+
+    .cef-asistencia-panel { min-width: 0; }
+
+    .cef-asistencia-date {
+        background: var(--blue-50);
+        border: 1px solid var(--blue-200);
+        border-left: 4px solid var(--primary);
+        border-radius: var(--r-md);
+        padding: 1rem 1.1rem;
+    }
+
+    .cef-asistencia-date-head {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .85rem 1rem;
+        justify-content: space-between;
+    }
+
+    .cef-asistencia-eyebrow {
+        color: var(--slate-600);
+        display: block;
+        font-size: var(--fs-xs);
+        font-weight: 800;
+        letter-spacing: .06em;
+        margin-bottom: .25rem;
+        text-transform: uppercase;
+    }
+
+    .cef-asistencia-date-title {
+        color: var(--blue-950);
+        font-size: clamp(1.25rem, 2vw, 1.65rem);
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .cef-asistencia-date-status {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .55rem;
+        margin-top: .7rem;
+    }
+
+    .cef-asistencia-date-status .badge {
+        align-items: center;
+        display: inline-flex;
+        line-height: 1.2;
+        padding: .35rem .75rem;
+    }
+
+    .cef-asistencia-date-edit {
+        border-top: 1px solid var(--blue-200);
+        margin-top: .85rem;
+        padding-top: .8rem;
+    }
+
+    .cef-asistencia-date-edit form {
+        align-items: end;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .6rem;
+    }
+
+    .cef-asistencia-date-edit .form-control { max-width: 220px; }
+
+    .cef-asistencia-notice {
+        font-size: var(--fs-sm);
+        margin: .8rem 0 0;
+        padding: .6rem .75rem;
+    }
+
+    .cef-asistencia-summary {
+        color: var(--slate-700);
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .cef-asistencia-summary strong { color: var(--slate-900); }
+
+    .cef-asistencia-audit { margin-top: .65rem; }
+
+    .cef-asistencia-audit-panel {
+        border-top: 1px solid var(--blue-200);
+        margin-top: .75rem;
+        padding-top: .75rem;
+    }
+
+    .cef-asistencia-section {
+        border-top: 1px solid var(--border);
+        margin-top: 1rem;
+        padding-top: 1rem;
+    }
+
+    .cef-asistencia-section-head {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .65rem 1rem;
+        justify-content: space-between;
+        margin-bottom: .8rem;
+    }
+
+    .cef-asistencia-section-title {
+        color: var(--slate-900);
+        font-size: var(--fs-lg);
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .cef-asistencia-count {
+        color: var(--text-muted);
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        margin-right: auto;
+    }
+
+    .cef-asistencia-table .form-select {
+        appearance: auto;
+        background-color: var(--surface);
+        border: 1.5px solid var(--border-strong);
+        border-radius: var(--r-sm);
+        color: var(--slate-800);
+        font-size: var(--fs-sm);
+        font-weight: 600;
+        height: 38px;
+        min-width: 190px;
+        padding: .4rem .65rem;
+        transition: border-color .15s ease, box-shadow .15s ease;
+    }
+
+    .cef-asistencia-table .form-select:hover { border-color: var(--slate-600); }
+
+    .cef-asistencia-table .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(45,125,210,.15);
+        outline: none;
+    }
+
+    .cef-asistencia-savebar {
+        align-items: center;
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+        border-radius: var(--r-md);
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem 1rem;
+        justify-content: space-between;
+        margin-top: 1rem;
+        padding: .75rem .85rem;
+    }
+
+    .cef-asistencia-progress {
+        color: var(--slate-700);
+        font-size: var(--fs-sm);
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .cef-asistencia-progress.is-complete { color: var(--green-700); }
+
+    .cef-asistencia-savebar .btn-primary {
+        min-height: 42px;
+        padding-left: 1.1rem;
+        padding-right: 1.1rem;
+    }
+
+    .cef-asistencia-history-head {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: .6rem;
+        margin-bottom: .85rem;
+    }
+
+    .cef-asistencia-history-title {
+        color: var(--slate-900);
+        font-size: var(--fs-lg);
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .cef-asistencia-legacy-row td {
+        color: var(--text-muted);
+        font-size: var(--fs-sm);
+    }
+
+    @media (max-width: 575.98px) {
+        .cef-asistencia-tabs { max-width: none; }
+        .cef-asistencia-date { padding: .85rem; }
+        .cef-asistencia-date-head { align-items: flex-start; }
+        .cef-asistencia-date-head > .btn { width: 100%; }
+        .cef-asistencia-date-edit .form-control { max-width: none; width: 100%; }
+        .cef-asistencia-section-head [data-cef-marcar-presentes] { width: 100%; }
+        .cef-asistencia-count { margin-right: 0; }
+        .cef-asistencia-savebar { align-items: stretch; }
+        .cef-asistencia-savebar .btn-primary { width: 100%; }
+    }
+</style>
+{% endblock %}
+
+{% block cef_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head cef-course-header">
+        <div class="cef-course-heading">
+            <span class="cef-section-kicker">Asistencia</span>
+            <div class="cef-course-title-line">
+                <h2 class="cef-panel-title">{{ grupo.actividad }} · Grupo N.º {{ grupo.numero }}</h2>
+                {% if solo_lectura %}<span class="badge text-bg-secondary">Sólo lectura</span>{% endif %}
+            </div>
+            <div class="cef-course-meta">
+                <span>{% for relacion in dias_habituales %}{{ relacion.dia_semana.nombre }}{% if not forloop.last %} y {% endif %}{% empty %}Sin días configurados{% endfor %} · {{ grupo.hora_inicio|time:"H:i" }} a {{ grupo.hora_fin|time:"H:i" }}</span>
+                <span><strong>CUE-Anexo</strong> {{ grupo.cueanexo }}</span>
+                <span><strong>Ciclo</strong> {{ grupo.ciclo.anio }}</span>
+            </div>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ asistencia_inicio_url }}">
+            <i class="fa-solid fa-arrow-left me-1"></i>Volver a Asistencia
+        </a>
+    </div>
+
+    <div class="cef-panel-body">
+        <div data-cef-asistencia-workspace>
+            {% include "cef/asistencia_grupo_workspace_cef.html" %}
+        </div>
+    </div>
+</div>
+{% endblock %}

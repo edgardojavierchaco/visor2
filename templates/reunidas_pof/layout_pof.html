@@ -1,0 +1,109 @@
+{% extends 'archivos/base/layout.html' %}
+{% load static %}
+
+{% block head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof.css' %}?v=20260903-6">
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof_view_transitions.css' %}?v=20260901-1">
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/pof-icons.css' %}?v=20260829-1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&amp;icon_names=add,add_notes,admin_panel_settings,apartment,arrow_circle_right,bubble_chart,calendar_month,cancel,check_box,clock_loader_10,clock_loader_80,cloud_download,collections_bookmark,data_table,delete,document_search,edit_document,expand_circle_down,expand_circle_right,explore_nearby,file_save,filter_alt,folder,folder_special,group,group_add,handyman,help,home,hourglass_top,info,label,laptop_chromebook,lightbulb_2,list_alt,mystery,person,person_edit,progress_activity,search_check_2,settings_account_box,splitscreen_add,star,stress_management,tab_close_right,tab_recent,table_chart,table_rows_narrow,text_ad,view_apps,warning&amp;display=block">
+<style id="pof-initial-layout-guard">
+    html.pof-layout-bootstrapping .content-wrapper,
+    html.pof-layout-bootstrapping .main-header,
+    html.pof-layout-bootstrapping .main-sidebar,
+    html.pof-layout-bootstrapping .main-sidebar *,
+    html.pof-layout-bootstrapping .main-footer {
+        transition: none !important;
+    }
+</style>
+<script>
+(function () {
+    "use strict";
+
+    const root = document.documentElement;
+    const sidebarStorageKey = "pof_sidebar_state";
+    const compactTargets = [
+        {
+            storageKey: "pof_visualizacion_cargos_columnas_compactas",
+            selector: "#visualizacionTablaWrap",
+            applied: false
+        },
+        {
+            storageKey: "pof_exportacion_tabla_columnas_compactas",
+            selector: "[data-pof-export-table-wrap]",
+            applied: false
+        }
+    ];
+    let sidebarApplied = false;
+    let observer = null;
+
+    function readStorage(storageName, key) {
+        try {
+            return window[storageName].getItem(key);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    const sidebarState = readStorage("sessionStorage", sidebarStorageKey);
+
+    compactTargets.forEach(function (target) {
+        target.active = readStorage("localStorage", target.storageKey) === "1";
+        target.applied = !target.active;
+    });
+
+    root.classList.add("pof-layout-bootstrapping");
+
+    function applyInitialState() {
+        if (!sidebarApplied && document.body) {
+            if (sidebarState === "closed") {
+                document.body.classList.add("sidebar-collapse");
+                document.body.classList.remove("sidebar-open");
+            } else if (sidebarState === "open") {
+                document.body.classList.remove("sidebar-collapse");
+            }
+
+            sidebarApplied = true;
+        }
+
+        compactTargets.forEach(function (target) {
+            if (target.applied) {
+                return;
+            }
+
+            const element = document.querySelector(target.selector);
+            if (element) {
+                element.classList.add("pof-visual-table-compact");
+                target.applied = true;
+            }
+        });
+
+        return sidebarApplied && compactTargets.every(function (target) {
+            return target.applied;
+        });
+    }
+
+    if (!applyInitialState()) {
+        observer = new MutationObserver(function () {
+            if (applyInitialState()) {
+                observer.disconnect();
+            }
+        });
+        observer.observe(root, { childList: true, subtree: true });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        applyInitialState();
+        if (observer) {
+            observer.disconnect();
+        }
+
+        window.requestAnimationFrame(function () {
+            root.classList.remove("pof-layout-bootstrapping");
+        });
+    }, { once: true });
+}());
+</script>
+{% endblock %}
+
+{% block scripts %}{% endblock %}

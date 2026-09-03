@@ -1,4 +1,4 @@
-{% extends 'archivos/base/layout.html' %}
+{% extends 'reunidas_pof/layout_pof.html' %}
 {% block content %}
 {% load static %}
 
@@ -22,8 +22,6 @@
     </div>  
 
     <form method="get" class="pof-filter-panel" id="filtrosProyectosForm">
-        <input type="hidden" name="page_size" value="{{ page_size }}">
-
         <div class="pof-filter-grid">
             <div class="pof-filter-field pof-col-2{% if filtro_anio %} pof-filter-field-active{% endif %}{% if errores_filtros.anio %} pof-filter-field-error{% endif %}">
                 <label for="filtroAnio">A&ntilde;o</label>
@@ -172,20 +170,8 @@
             </table>
         </div>
 
-        <div class="pof-table-footer">
-            <form method="get" class="pof-page-size">
-                <input type="hidden" name="anio" value="{{ filtro_anio }}">
-                <input type="hidden" name="proyecto_especial_id" value="{{ filtro_proyecto_especial_id }}">
-                <label for="pageSizeProyectos">Registros por p&aacute;gina</label>
-                <select id="pageSizeProyectos" name="page_size">
-                    {% for opcion in page_size_options %}
-                        <option value="{{ opcion }}" {% if page_size == opcion %}selected{% endif %}>{{ opcion }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" class="pof-btn pof-btn-light">Aplicar</button>
-            </form>
-
-            {% if paginator.num_pages > 1 %}
+        {% if paginator.num_pages > 1 %}
+            <div class="pof-table-footer pof-table-footer-pagination-only">
                 <nav class="pof-pagination" aria-label="Paginaci&oacute;n de Proyectos Especiales">
                     {% if page_obj.has_previous %}
                         <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.previous_page_number }}">Anterior</a>
@@ -209,8 +195,8 @@
                         <span class="pof-page-btn pof-page-btn-disabled">Siguiente</span>
                     {% endif %}
                 </nav>
-            {% endif %}
-        </div>
+            </div>
+        {% endif %}
     </div>
     {% include "reunidas_pof/modal_eliminar_cabecera.html" %}
 </div>

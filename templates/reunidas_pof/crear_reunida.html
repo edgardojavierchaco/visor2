@@ -1,4 +1,4 @@
-{% extends 'archivos/base/layout.html' %}
+{% extends 'reunidas_pof/layout_pof.html' %}
 {% block content %}
 
 <div class="pof-page">
@@ -53,7 +53,9 @@
                 class="pof-field pof-col-6{% if form.nivel.errors %} pof-field-error{% endif %}"
             >
                 <label for="{{ form.nivel.id_for_label }}">Nivel</label>
-                {{ form.nivel }}
+                <span class="pof-native-select-wrap">
+                    {{ form.nivel }}
+                </span>
 
                 <div
                     id="crearReunidaErrorNivel"
