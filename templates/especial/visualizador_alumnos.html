@@ -74,12 +74,12 @@
 
     <section class="cef-panel">
         <div class="cef-panel-body p-0"><div class="table-responsive"><table class="table table-hover table-sm mb-0 especial-visualizador-table">
-            <thead><tr><th class="col-cue">CUE-Anexo</th><th>Matrícula compartida</th><th>Apellido</th><th>Nombre</th><th>DNI</th><th>CUIL</th><th>Email</th><th class="col-action">Acción</th></tr></thead>
+            <thead><tr><th class="col-cue">CUE-Anexo</th>{% if mostrar_columna_matricula_compartida %}<th>Matrícula compartida</th>{% endif %}<th>Apellido</th><th>Nombre</th><th>DNI</th><th>CUIL</th><th>Email</th><th class="col-action">Acción</th></tr></thead>
             <tbody>
                 {% for alumno in alumnos %}
                     <tr>
                         <td class="col-cue">{% if alumno.visualizador_cue_original %}<span class="especial-visualizador-chip">{{ alumno.visualizador_cue_original }}</span>{% else %}<span class="especial-visualizador-muted">No cargado</span>{% endif %}</td>
-                        <td>{% if alumno.visualizador_matricula_compartida %}Sí{% else %}No{% endif %}</td>
+                        {% if mostrar_columna_matricula_compartida %}<td>{% if alumno.visualizador_matricula_compartida %}Sí{% else %}No{% endif %}</td>{% endif %}
                         <td><span class="especial-visualizador-value">{{ alumno.visualizador_persona.apellido|default:"—" }}</span></td>
                         <td><span class="especial-visualizador-value">{{ alumno.visualizador_persona.nombre|default:"—" }}</span></td>
                         <td>{{ alumno.visualizador_persona.nro_documento|default:"—" }}</td>
@@ -87,7 +87,7 @@
                         <td>{{ alumno.visualizador_persona.email|default:"—" }}</td>
                         <td class="col-action"><button class="btn btn-primary btn-sm" type="button" data-modal-open="visualizador-modal-{{ alumno.pk }}">Ver detalle</button></td>
                     </tr>
-                {% empty %}<tr><td colspan="8" class="text-center py-4">No se encontraron alumnos para los filtros seleccionados.</td></tr>{% endfor %}
+                {% empty %}<tr><td colspan="{% if mostrar_columna_matricula_compartida %}8{% else %}7{% endif %}" class="text-center py-4">No se encontraron alumnos para los filtros seleccionados.</td></tr>{% endfor %}
             </tbody>
         </table></div></div>
     </section>
