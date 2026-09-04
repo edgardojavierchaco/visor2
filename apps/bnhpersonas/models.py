@@ -467,6 +467,7 @@ class Personas(AuditoriaModel):
         choices=[('ACTIVO', 'Activo'), ('PASIVO', 'Pasivo')],
         default='ACTIVO'
     )
+    archivada = models.BooleanField(default=False)
 
     class Meta:
         db_table = "personas"
