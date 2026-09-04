@@ -467,6 +467,18 @@
             </div>
 
             <div class="filter-group">
+                <div class="filter-label" onclick="toggleFilter('relevamiento')">
+                    <i class="fas fa-calendar-alt"></i> Relevamiento <span class="required-badge">REQ</span>
+                    <button class="filter-toggle active" id="toggle-relevamiento"></button>
+                </div>
+                <div class="filter-control visible" id="fc-relevamiento">
+                    <select id="sel-relevamiento" onchange="aplicarFiltros()">
+                        <option value="ra_carga2025" selected>2025</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-group">
                 <div class="filter-label" onclick="toggleFilter('vista')">
                     <i class="fas fa-layer-group"></i> Modalidad / Oferta <span class="required-badge">REQ</span>
                     <button class="filter-toggle active" id="toggle-vista"></button>
@@ -816,6 +828,7 @@ const CSRF_TOKEN = "{{ csrf_token }}";
 
 // ── Estado de filtros activos ──────────────────────────────────────────────────
 const filtersState = {
+    relevamiento: true,
     vista:        true,
     cueanexo:     false,
     ambito:       false,
@@ -1082,6 +1095,11 @@ function actualizarFiltrosJerarquicos() {
 
 // ── Toggle de filtros (switch lateral) ────────────────────────────────────────
 function toggleFilter(name) {
+    if (name === 'relevamiento') {
+        document.getElementById('sel-relevamiento').value = 'ra_carga2025';
+        return;
+    }
+
     const btn = document.getElementById('toggle-' + name);
     const fc  = document.getElementById('fc-' + name);
 
@@ -1122,6 +1140,7 @@ function toggleFilter(name) {
 // ── Recolectar filtros actuales ────────────────────────────────────────────────
 function getFiltros() {
     return {
+        Relevamiento: document.getElementById('sel-relevamiento')?.value || 'ra_carga2025',
         Vista:         document.getElementById('sel-vista')?.value || '',
         Cueanexo:      filtersState.cueanexo  ? (document.getElementById('inp-cueanexo')?.value || '') : '',
         Ambito:        filtersState.ambito     ? (document.getElementById('sel-ambito')?.value || '') : '',
@@ -1134,7 +1153,7 @@ function getFiltros() {
 
 // ── Chips de filtros activos ───────────────────────────────────────────────────
 const LABEL_MAP = {
-    Vista: 'Modalidad', Cueanexo: 'Cueanexo', Ambito: 'Ámbito', 
+    Relevamiento: 'Relevamiento', Vista: 'Modalidad', Cueanexo: 'Cueanexo', Ambito: 'Ámbito', 
     Sector: 'Sector', Region: 'Región', Departamento: 'Departamento', Localidad: 'Localidad'
 };
 
@@ -1153,8 +1172,10 @@ function actualizarChips(filtros) {
         }
         const chip = document.createElement('span');
         chip.className = 'filter-chip';
+        const removeChip = key === 'Relevamiento' ? '' :
+            `<span class="remove-chip" onclick="quitarFiltro('${key}')">×</span>`;
         chip.innerHTML = `<b>${LABEL_MAP[key] || key}:</b>&nbsp;${display}
-            <span class="remove-chip" onclick="quitarFiltro('${key}')">×</span>`;
+            ${removeChip}`;
         container.appendChild(chip);
     });
 
@@ -1162,6 +1183,12 @@ function actualizarChips(filtros) {
 }
 
 function quitarFiltro(key) {
+    if (key === 'Relevamiento') {
+        document.getElementById('sel-relevamiento').value = 'ra_carga2025';
+        aplicarFiltros();
+        return;
+    }
+
     const sel = document.getElementById('sel-' + key.toLowerCase());
     const inp = document.getElementById('inp-' + key.toLowerCase());
     if (sel) sel.value = '';
@@ -1176,6 +1203,11 @@ function inicializarDT() {
     try {
         var filtros = getFiltros();
         var filtrosActivos = [];
+
+        var selRelevamiento = document.getElementById('sel-relevamiento');
+        var relevamientoText = filtros.Relevamiento;
+        if (selRelevamiento && selRelevamiento.selectedIndex >= 0) relevamientoText = selRelevamiento.options[selRelevamiento.selectedIndex].text;
+        if (filtros.Relevamiento) filtrosActivos.push("Relevamiento: " + relevamientoText);
 
         var selVista = document.getElementById('sel-vista');
         var vistaText = filtros.Vista;
@@ -1340,11 +1372,11 @@ function mostrarEstado(estado) {
 
 // ── Actualizar subtítulo del header ───────────────────────────────────────────
 function actualizarSubtitle(filtros) {
+    const rel = document.getElementById('sel-relevamiento');
     const vis = document.getElementById('sel-vista');
-    const visText = vis.options[vis.selectedIndex]?.text || '';
-    const parts = [visText].filter(Boolean);
-    document.getElementById('header-subtitle').textContent =
-        parts.length ? 'Modalidad: ' + parts.join(' — ') : 'Seleccioná Modalidad para comenzar';
+    const relText = rel.options[rel.selectedIndex]?.text || '2025';
+    const visText = filtros.Vista ? (vis.options[vis.selectedIndex]?.text || '') : 'Seleccioná Modalidad para comenzar';
+    document.getElementById('header-subtitle').textContent = relText + ' — ' + visText;
 }
 
 // ── AJAX principal ────────────────────────────────────────────────────────────
@@ -1425,6 +1457,8 @@ function aplicarFiltros() {
 
 // ── Limpiar todos los filtros ──────────────────────────────────────────────────
 function limpiarFiltros() {
+    document.getElementById('sel-relevamiento').value = 'ra_carga2025';
+
     ['vista','ambito','sector','region','departamento','localidad'].forEach(name => {
         const sel = document.getElementById('sel-' + name);
         if (sel) sel.value = '';

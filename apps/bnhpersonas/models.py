@@ -6,7 +6,6 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from .middleware import get_current_user
-from smart_selects.db_fields import ChainedForeignKey
 from django.utils import timezone
 from datetime import date
 from dateutil.relativedelta import relativedelta
@@ -429,6 +428,8 @@ class Personas(AuditoriaModel):
     id = models.BigAutoField(primary_key=True)
 
     cuil = models.CharField(max_length=11, null=True, blank=True, db_index=True)
+    version = models.PositiveIntegerField(default=1)
+    archivada = models.BooleanField(default=False, db_index=True)
     dni = models.CharField(max_length=8, null=True, blank=True, db_index=True)
 
     apellido = models.CharField(max_length=150, db_index=True)
@@ -471,6 +472,7 @@ class Personas(AuditoriaModel):
 
     class Meta:
         db_table = "personas"
+        constraints = [models.UniqueConstraint(fields=["cuil"], condition=models.Q(cuil__isnull=False) & ~models.Q(cuil=""), name="bnh_persona_cuil_unico")]
         indexes = [
             models.Index(fields=['dni']), 
             models.Index(fields=['cuil']),
@@ -480,65 +482,30 @@ class Personas(AuditoriaModel):
     # =========================
     # VALIDACIONES
     # =========================
+    def __str__(self):
+        return f"{self.apellido}, {self.nombre}"
+
     def clean(self):
-        if self.dni:
-            validar_dni(self.dni)
-        if self.cuil:
-            validar_cuil(self.cuil)
-        
-        # =========================
-        # VALIDAR EDAD
-        # ENTRE 16 Y 90 AÑOS
-        # =========================
+        errors = {}
+        for campo, validator in (("dni", validar_dni), ("cuil", validar_cuil)):
+            value = getattr(self, campo)
+            if value:
+                try:
+                    validator(value)
+                except ValidationError as exc:
+                    errors[campo] = exc.messages
+        if self.cuil and self.dni and self.cuil[2:10] != self.dni.zfill(8):
+            errors["dni"] = "El DNI no coincide con el CUIL."
+        if self.f_nacimiento and self.f_nacimiento > timezone.localdate():
+            errors["f_nacimiento"] = "La fecha de nacimiento no puede ser futura."
+        if self.localidad_id and self.provincia_id:
+            if not Localidades.objects.filter(pk=self.localidad_id, c_provincia_id=self.provincia_id).exists():
+                errors["localidad"] = "La localidad no pertenece a la provincia."
+        if bool(self.telefono) != bool(self.codigo_area_id):
+            errors["telefono"] = "Complete juntos el código de área y el teléfono."
+        if errors:
+            raise ValidationError(errors)
 
-        if self.f_nacimiento:
-
-
-            hoy = date.today()
-
-
-
-            fecha_minima = (
-                hoy -
-                relativedelta(
-                    years=90
-                )
-            )
-
-
-
-            fecha_maxima = (
-                hoy -
-                relativedelta(
-                    years=16
-                )
-            )
-
-
-
-            if self.f_nacimiento < fecha_minima:
-
-
-                raise ValidationError({
-
-                    "f_nacimiento":
-                    "La persona no puede tener más de 90 años."
-
-                })
-
-
-
-            if self.f_nacimiento > fecha_maxima:
-
-
-                raise ValidationError({
-
-                    "f_nacimiento":
-                    "La persona debe tener al menos 16 años."
-
-                })
-    
-    
     # =========================
     # NORMALIZACIÓN PRO
     # =========================
@@ -621,7 +588,7 @@ def validar_cuil(cuil):
     if dv == 11:
         dv = 0
     elif dv == 10:
-        dv = 9
+        raise ValidationError("CUIL inválido (dígito verificador no representable)")
 
     if dv != int(cuil[-1]):
         raise ValidationError('CUIL inválido (dígito verificador incorrecto)')
@@ -787,7 +754,7 @@ class RegistroActividades(AuditoriaModel):
 
     ceic = models.ForeignKey('NomencladorCeic', on_delete=models.PROTECT)
     
-    grado_anio = models.ForeignKey('Grado_anio', on_delete=models.PROTECT)
+    grado_anio = models.ForeignKey('Grado_anio', on_delete=models.PROTECT, null=True, blank=True)
     
     turno=models.CharField(max_length=20, choices=[
         ('MAÑANA', 'MAÑANA'),
@@ -798,17 +765,17 @@ class RegistroActividades(AuditoriaModel):
         default='MAÑANA'
     )
     
-    secciones=models.ForeignKey('Secciones', on_delete=models.PROTECT)
+    secciones=models.ForeignKey('Secciones', on_delete=models.PROTECT, null=True, blank=True)
     
     espacios = models.ForeignKey(
         'TitulosEspacios',
         on_delete=models.PROTECT,
         to_field='descrip_titulo',
-        db_column='descrip_titulo'
+        db_column='descrip_titulo', null=True, blank=True
     )    
     f_desde = models.DateField()
-    f_hasta = models.DateField()
-    carga_horaria = models.DecimalField(max_digits=4, decimal_places=2)
+    f_hasta = models.DateField(null=True, blank=True)
+    carga_horaria = models.DecimalField(max_digits=5, decimal_places=2)
 
     estado = models.CharField(max_length=10, choices=[
         ('ACTIVO', 'Activo'),
@@ -822,58 +789,49 @@ class RegistroActividades(AuditoriaModel):
     )
     
     f_desde_funciones = models.DateField(default=date.today)
-    f_hasta_funciones = models.DateField(default=date.today)
+    f_hasta_funciones = models.DateField(null=True, blank=True)
+
+    version = models.PositiveIntegerField(default=1)
+    eliminado = models.BooleanField(default=False, db_index=True)
+    validacion = models.CharField(max_length=12, default="BORRADOR", choices=[
+        ("BORRADOR", "Pendiente de validación"), ("VALIDADO", "Validado"), ("OBSERVADO", "Observado")])
 
     class Meta:
         db_table = "registro_actividades"
-        
-    # =========================
-    # 🔥 VALIDACIÓN DOMINIO
-    # =========================
+        indexes = [models.Index(fields=["cueanexo", "eliminado", "estado"], name="bnh_cue_estado_idx")]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(carga_horaria__gt=0), name="bnh_carga_positiva"),
+            models.CheckConstraint(condition=models.Q(f_hasta__isnull=True) | models.Q(f_hasta__gte=models.F("f_desde")), name="bnh_cargo_fechas"),
+            models.CheckConstraint(condition=models.Q(f_hasta_funciones__isnull=True) | models.Q(f_hasta_funciones__gte=models.F("f_desde_funciones")), name="bnh_funcion_fechas"),
+        ]
+
     def clean(self):
-
         errors = {}
-
-        hoy = timezone.localdate()
-        
-        if self.f_desde:
-
-            if self.f_desde > hoy:
-                errors["f_desde"] = (
-                    "La fecha 'desde' no puede ser posterior a la fecha actual"
-                )
-        
-        if self.f_desde and self.f_hasta:
-            if self.f_hasta < self.f_desde:
-                errors["f_hasta"] = "La fecha 'hasta' no puede ser menor a 'desde'"
-                
-        if self.f_desde_funciones:
-
-            if self.f_desde_funciones > hoy:
-                errors["f_desde_funciones"] = (
-                    "La fecha 'desde' no puede ser posterior a la fecha actual"
-                )
-        
-        if self.f_desde_funciones and self.f_hasta_funciones:
-            if self.f_hasta_funciones < self.f_desde_funciones:
-                errors["f_hasta_funciones"] = "La fecha 'hasta' no puede ser menor a 'desde'"
-
-        if not self.cueanexo:
-            errors["cueanexo"] = "CUEANEXO es obligatorio"
-
+        if not re.fullmatch(r"[0-9]{9}", str(self.cueanexo or "")):
+            errors["cueanexo"] = "Ingrese los nueve dígitos del CUEANEXO."
+        for start, end in (("f_desde", "f_hasta"), ("f_desde_funciones", "f_hasta_funciones")):
+            desde, hasta = getattr(self, start), getattr(self, end)
+            if desde and hasta and hasta < desde:
+                errors[end] = "La fecha hasta debe ser igual o posterior a desde."
+        if self.f_desde and self.f_desde_funciones and self.f_desde_funciones < self.f_desde:
+            errors["f_desde_funciones"] = "Las funciones deben comenzar dentro del período del cargo."
+        if self.f_hasta:
+            if self.f_desde_funciones and self.f_desde_funciones > self.f_hasta:
+                errors["f_desde_funciones"] = "Las funciones deben comenzar dentro del período del cargo."
+            if not self.f_hasta_funciones or self.f_hasta_funciones > self.f_hasta:
+                errors["f_hasta_funciones"] = "Indique un fin de funciones dentro del período del cargo."
+        if self.carga_horaria is not None and self.carga_horaria <= 0:
+            errors["carga_horaria"] = "La carga horaria debe ser positiva."
+        if self.estado == "INACTIVO" and not self.f_hasta:
+            errors["f_hasta"] = "Indique la fecha de finalización."
+        if self.categoria == "NO DOCENTE" and any((self.grado_anio_id, self.secciones_id, self.espacios_id)):
+            errors["categoria"] = "Para personal no docente deje vacíos grado, sección y espacio curricular."
         if errors:
             raise ValidationError(errors)
 
-    # =========================
-    # 🔥 NORMALIZACIÓN (IMPORTANTE CON VIEWS)
-    # =========================
     def normalize(self):
-        """
-        💡 garantiza consistencia del dato externo
-        """
-        if self.cueanexo:
-            self.cueanexo = str(self.cueanexo).strip()
-            
+        self.cueanexo = str(self.cueanexo or "").strip()
+
 
 ################################
 # ACTIVIDAD INTERMEDIA
@@ -921,8 +879,35 @@ class HorarioActividad(models.Model):
 
     class Meta:
         db_table="horarios_actividad"
+        constraints = [models.CheckConstraint(condition=models.Q(hora_hasta__gt=models.F("hora_desde")), name="bnh_horario_orden")]
         unique_together = ("actividad_sede", "dia", "hora_desde", "hora_hasta")
 
 
     def __str__(self):
         return f"{self.dia} {self.hora_desde}-{self.hora_hasta}"
+
+class AccesoRegional(AuditoriaModel):
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    region = models.CharField(max_length=100, help_text="Valor exacto de region_loc en el padrón.")
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["usuario", "region"], name="bnh_usuario_region_unico")]
+
+    def __str__(self):
+        return f"{self.usuario_id} / {self.region}"
+
+
+class EventoAuditoria(models.Model):
+    fecha = models.DateTimeField(auto_now_add=True, db_index=True)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    entidad = models.CharField(max_length=40)
+    objeto_id = models.PositiveBigIntegerField()
+    cueanexo = models.CharField(max_length=9, blank=True, db_index=True)
+    accion = models.CharField(max_length=30)
+    motivo = models.TextField(blank=True)
+    antes = models.JSONField(default=dict)
+    despues = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ["-fecha", "-pk"]

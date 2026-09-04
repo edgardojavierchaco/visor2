@@ -1,5 +1,53 @@
 {% extends 'archivos/base/layout.html' %}
+{% block head %}
+{{ block.super }}
+<script>
+(function() {
+    if (sessionStorage.getItem('indicadoresie_sidebar_state') === 'closed') {
+        document.documentElement.classList.add('indicadoresie-sidebar-initial-collapsed');
+    } else {
+        document.documentElement.classList.remove('indicadoresie-sidebar-initial-collapsed');
+    }
+})();
+</script>
+
+<style id="indicadoresie-sidebar-prepaint-stability">
+    html.indicadoresie-sidebar-initial-collapsed .content-wrapper,
+    html.indicadoresie-sidebar-initial-collapsed .main-header,
+    html.indicadoresie-sidebar-initial-collapsed .main-footer {
+        margin-left: 4.6rem !important;
+    }
+
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar,
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar::before {
+        width: 4.6rem !important;
+        overflow-x: hidden !important;
+    }
+
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar:hover,
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar:hover::before,
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar:focus-within,
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar:focus-within::before {
+        width: 250px !important;
+        overflow-x: visible !important;
+    }
+
+    @media (max-width: 991.98px) {
+        html.indicadoresie-sidebar-initial-collapsed .content-wrapper,
+        html.indicadoresie-sidebar-initial-collapsed .main-header,
+        html.indicadoresie-sidebar-initial-collapsed .main-footer {
+            margin-left: 0 !important;
+        }
+
+        html.indicadoresie-sidebar-initial-collapsed
+        .main-sidebar:not(:hover):not(:focus-within) {
+            transform: translateX(-250px) !important;
+        }
+    }
+</style>
+{% endblock %}
 {% block content %}
+{% include 'indicadoresie/seguimiento/nav_operativo_sge.html' %}
 
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">

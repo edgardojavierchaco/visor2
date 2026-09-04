@@ -1,332 +1,529 @@
-# supervisor_registro/services/supervisor_geo_service.py
+# apps/supervisor_registro/services/supervisor_geo_service.py
 
 from collections import defaultdict
+
+from django.db.models import CharField
+from django.db.models.functions import Cast
 
 from apps.consultasge.models_padron import CapaUnicaOfertas
 
 from ..models import (
     ABMSupervisores,
-    SupervisorRegional,
     SupervisorRegionalOferta,
 )
 
 
 class SupervisorGeoService:
     """
-    Servicio para obtener la cobertura geográfica
-    de los supervisores a partir de las escuelas
-    que tienen asignadas.
+    Servicio encargado de construir la información geográfica
+    correspondiente a los supervisores y sus establecimientos.
 
-    IMPORTANTE:
+    La fuente geográfica es:
 
-    El supervisor NO tiene coordenadas propias.
+        CapaUnicaOfertas
+        -> vista PostgreSQL v_capa_unica_ofertas_ant
 
-    La geolocalización se obtiene de las escuelas
-    asignadas mediante CUEANEXO.
+    Las asignaciones se obtienen desde:
 
-    Fuente geográfica:
-        v_capa_unica_ofertas_ant
+        SupervisorRegionalOferta
 
-    Coordenadas:
-        lat
-        long
+    IMPORTANTE
+    ----------
+    En la vista PostgreSQL, cueanexo puede venir como INTEGER/BIGINT,
+    aunque en el modelo Django esté declarado como CharField.
 
-    Geometría:
-        geom (EPSG:4326)
+    Por ese motivo TODO CUE se normaliza a texto antes de realizar
+    cruces entre ambas fuentes.
     """
+
+    # ==============================================================
+    # UTILIDADES
+    # ==============================================================
+
+    @staticmethod
+    def _normalizar_cue(cue):
+        """
+        Normaliza cualquier CUE/anexo a string.
+
+        Ejemplos:
+
+            220000700
+            "220000700"
+            " 220000700 "
+
+        todos terminan como:
+
+            "220000700"
+        """
+
+        if cue is None:
+            return None
+
+        cue = str(cue).strip()
+
+        if not cue:
+            return None
+
+        # Por seguridad, elimina ".0" si alguna fuente
+        # hubiera transformado el valor en float.
+        if cue.endswith(".0"):
+            cue = cue[:-2]
+
+        return cue
+
+    # --------------------------------------------------------------
 
     @staticmethod
     def _coordenadas(row):
         """
         Obtiene latitud y longitud.
 
-        Prioridad:
-
-        1. lat / long
-        2. geom
-
-        Esto permite trabajar aunque alguna escuela
-        no tenga cargados lat/long pero sí tenga geom.
+        Se priorizan los campos lat/long de la vista porque el campo
+        geom del padrón puede tener un SRID diferente del declarado
+        en el modelo Django.
         """
 
         lat = row.get("lat")
         lon = row.get("long")
 
-        if lat is None or lon is None:
-            return None, None
-
         try:
-            lat = float(lat)
-            lon = float(lon)
+            if lat is not None:
+                lat = float(lat)
+
+            if lon is not None:
+                lon = float(lon)
+
         except (TypeError, ValueError):
             return None, None
 
-        # Validación básica de coordenadas
-        if not -90 <= lat <= 90:
-            return None, None
+        # Coordenadas imposibles
+        if lat is not None and not (-90 <= lat <= 90):
+            lat = None
 
-        if not -180 <= lon <= 180:
-            return None, None
+        if lon is not None and not (-180 <= lon <= 180):
+            lon = None
 
         return lat, lon
 
-    # =====================================================
-    # ESCUELAS DE UN SUPERVISOR
-    # =====================================================
+    # --------------------------------------------------------------
+
+    @staticmethod
+    def _nombre_usuario(usuario):
+
+        if not usuario:
+            return ""
+
+        apellido = (
+            getattr(
+                usuario,
+                "apellido",
+                ""
+            )
+            or ""
+        ).strip()
+
+        nombres = (
+            getattr(
+                usuario,
+                "nombres",
+                ""
+            )
+            or ""
+        ).strip()
+
+
+        if apellido or nombres:
+
+            return " ".join(
+                valor
+                for valor in [
+                    apellido,
+                    nombres
+                ]
+                if valor
+            )
+
+
+        apellido = (
+            getattr(
+                usuario,
+                "last_name",
+                ""
+            )
+            or ""
+        ).strip()
+
+        nombres = (
+            getattr(
+                usuario,
+                "first_name",
+                ""
+            )
+            or ""
+        ).strip()
+
+
+        if apellido or nombres:
+
+            return " ".join(
+                valor
+                for valor in [
+                    apellido,
+                    nombres
+                ]
+                if valor
+            )
+
+
+        return str(
+            getattr(
+                usuario,
+                "username",
+                ""
+            )
+            or usuario
+        )
+
+
+    @classmethod
+    def _datos_supervisor(
+        cls,
+        supervisor
+    ):
+
+        usuario = getattr(
+            supervisor,
+            "usuario",
+            None
+        )
+
+        return {
+
+            "id":
+                supervisor.id,
+
+            "cuil":
+                getattr(
+                    usuario,
+                    "username",
+                    None
+                )
+                if usuario
+                else None,
+
+            "nombre":
+                cls._nombre_usuario(
+                    usuario
+                ),
+
+            "telefono":
+                supervisor.telefono
+                or "",
+
+            "email":
+                supervisor.email
+                or "",
+
+            "activo":
+                bool(
+                    supervisor.activo
+                ),
+
+        }
+
+    # --------------------------------------------------------------
+
+    @staticmethod
+    def _datos_oferta(asignacion):
+        """
+        Serializa una oferta asignada al supervisor.
+        """
+
+        return {
+            "cueanexo": str(asignacion.cueanexo).strip(),
+            "oferta": asignacion.oferta or "",
+            "acronimo": asignacion.acronimo or "",
+            "nom_est": asignacion.nom_est or "",
+        }
+
+    # --------------------------------------------------------------
+
+    @staticmethod
+    def _deduplicar_por(items, clave):
+        """
+        Deduplica una lista de diccionarios.
+        """
+
+        resultado = []
+        vistos = set()
+
+        for item in items:
+
+            valor = item.get(clave)
+
+            if valor in vistos:
+                continue
+
+            vistos.add(valor)
+            resultado.append(item)
+
+        return resultado
+
+    # ==============================================================
+    # QUERYSET GEOGRÁFICO
+    # ==============================================================
+
+    @classmethod
+    def _queryset_escuelas(cls, cues):
+        """
+        Devuelve establecimientos del padrón geográfico.
+
+        IMPORTANTE:
+        Se hace CAST explícito de cueanexo a texto porque la columna
+        física de PostgreSQL puede ser numérica mientras Django la
+        tiene declarada como CharField.
+        """
+
+        cues = {
+            cls._normalizar_cue(cue)
+            for cue in cues
+            if cls._normalizar_cue(cue)
+        }
+
+        if not cues:
+            return CapaUnicaOfertas.objects.none()
+
+        return (
+            CapaUnicaOfertas.objects
+            .annotate(
+                cueanexo_normalizado=Cast(
+                    "cueanexo",
+                    output_field=CharField(),
+                )
+            )
+            .filter(
+                cueanexo_normalizado__in=cues
+            )
+        )
+
+    # ==============================================================
+    # MAPA DE UN SUPERVISOR
+    # ==============================================================
 
     @classmethod
     def escuelas_supervisor(
         cls,
-        supervisor_id,
+        supervisor,
         regiones=None,
     ):
         """
-        Devuelve todas las escuelas asignadas
-        a un supervisor.
+        Devuelve establecimientos asignados a un único supervisor.
 
-        Una escuela aparece una sola vez aunque
-        tenga varias ofertas asignadas.
+        regiones:
+            None -> sin filtro territorial adicional
+            []   -> ningún acceso
+            [1,2,...] -> regiones autorizadas
         """
 
-        regionales = (
-            SupervisorRegional.objects
-            .filter(
-                supervisor_id=supervisor_id,
-                activo=True,
-            )
-            .select_related("region")
-        )
+        if supervisor is None:
+            return []
 
-        # -------------------------------------------------
-        # Restricción territorial
-        # -------------------------------------------------
-
-        if regiones is not None:
-
-            regionales = regionales.filter(
-                region_id__in=regiones
-            )
+        # ----------------------------------------------------------
+        # ASIGNACIONES
+        # ----------------------------------------------------------
 
         asignaciones = (
             SupervisorRegionalOferta.objects
             .filter(
-                supervisor_regional__in=regionales,
+                supervisor_regional__supervisor=supervisor,
+                supervisor_regional__activo=True,
                 activo=True,
             )
             .select_related(
                 "supervisor_regional",
+                "supervisor_regional__supervisor",
+                "supervisor_regional__supervisor__usuario",
                 "supervisor_regional__region",
             )
         )
 
-        # -------------------------------------------------
-        # CUEANEXO asignados
-        # -------------------------------------------------
+        # ----------------------------------------------------------
+        # FILTRO DE REGIONES
+        # ----------------------------------------------------------
 
-        cues = list(
-            asignaciones
-            .values_list(
-                "cueanexo",
-                flat=True,
+        if regiones is not None:
+
+            if not regiones:
+                return []
+
+            asignaciones = asignaciones.filter(
+                supervisor_regional__region_id__in=regiones
             )
-            .distinct()
-        )
 
-        if not cues:
+        # ----------------------------------------------------------
+        # MATERIALIZAMOS LAS ASIGNACIONES
+        # ----------------------------------------------------------
 
-            return {
-                "supervisor_id": supervisor_id,
-                "cantidad_escuelas": 0,
-                "escuelas": [],
-            }
+        asignaciones = list(asignaciones)
 
-        # -------------------------------------------------
-        # Información de las asignaciones
-        # -------------------------------------------------
+        if not asignaciones:
+            return []
 
-        asignaciones_por_cue = defaultdict(list)
+        # ----------------------------------------------------------
+        # AGRUPAMOS INFORMACIÓN POR CUE
+        # ----------------------------------------------------------
+
+        escuelas_supervisores = defaultdict(list)
+        escuelas_regiones = defaultdict(list)
+        escuelas_ofertas = defaultdict(list)
+
+        cues = set()
 
         for asignacion in asignaciones:
 
-            regional = (
+            cue = cls._normalizar_cue(
+                asignacion.cueanexo
+            )
+
+            if not cue:
+                continue
+
+            cues.add(cue)
+
+            supervisor_obj = (
+                asignacion
+                .supervisor_regional
+                .supervisor
+            )
+
+            region = (
                 asignacion
                 .supervisor_regional
                 .region
             )
 
-            data = {
+            escuelas_supervisores[cue].append(
+                cls._datos_supervisor(supervisor_obj)
+            )
 
-                "region": (
-                    regional.nombre
-                    if regional
-                    else ""
-                ),
+            escuelas_regiones[cue].append(
+                {
+                    "id": region.id,
+                    "nombre": str(region),
+                }
+            )
 
-                "oferta": (
-                    asignacion.oferta
-                    or ""
-                ),
+            escuelas_ofertas[cue].append(
+                cls._datos_oferta(asignacion)
+            )
 
-                "acronimo": (
-                    asignacion.acronimo
-                    or ""
-                ),
+        if not cues:
+            return []
 
-            }
-
-            if data not in asignaciones_por_cue[
-                asignacion.cueanexo
-            ]:
-
-                asignaciones_por_cue[
-                    asignacion.cueanexo
-            ].append(data)
-
-        # -------------------------------------------------
-        # Escuelas
-        # -------------------------------------------------
+        # ----------------------------------------------------------
+        # PADRÓN GEOGRÁFICO
+        # ----------------------------------------------------------
 
         queryset = (
-            CapaUnicaOfertas.objects
-            .filter(
-                cueanexo__in=cues
-            )
+            cls._queryset_escuelas(cues)
             .values(
                 "cueanexo",
                 "nom_est",
                 "region_loc",
                 "localidad",
                 "departamento",
-                "oferta",
-                "acronimo",
                 "lat",
                 "long",
-                "geom",
+            )
+            .order_by(
+                "cueanexo",
+                "nom_est",
             )
         )
 
-        escuelas = {}
+        resultado = []
+
+        cues_agregados = set()
 
         for row in queryset:
 
-            cue = row["cueanexo"]
-
-            latitud, longitud = (
-                cls._coordenadas(row)
+            cue = cls._normalizar_cue(
+                row["cueanexo"]
             )
 
-            # -------------------------------------------------
-            # Si la escuela no tiene coordenadas,
-            # igualmente la conservamos para poder
-            # informar el problema en el dashboard.
-            # -------------------------------------------------
+            if not cue:
+                continue
 
-            if cue not in escuelas:
+            # La vista puede tener varias filas por CUE debido
+            # a las distintas ofertas.
+            # Para el mapa necesitamos un punto por establecimiento.
+            if cue in cues_agregados:
+                continue
 
-                escuelas[cue] = {
+            cues_agregados.add(cue)
 
+            lat, lon = cls._coordenadas(row)
+
+            supervisores = cls._deduplicar_por(
+                escuelas_supervisores.get(cue, []),
+                "id",
+            )
+
+            regiones_cue = cls._deduplicar_por(
+                escuelas_regiones.get(cue, []),
+                "id",
+            )
+
+            ofertas = cls._deduplicar_por(
+                escuelas_ofertas.get(cue, []),
+                "oferta",
+            )
+
+            resultado.append(
+                {
                     "cueanexo": cue,
 
                     "escuela": (
-                        row["nom_est"]
+                        row.get("nom_est")
                         or ""
                     ),
 
                     "region_loc": (
-                        row["region_loc"]
+                        row.get("region_loc")
                         or ""
                     ),
 
                     "localidad": (
-                        row["localidad"]
+                        row.get("localidad")
                         or ""
                     ),
 
                     "departamento": (
-                        row["departamento"]
+                        row.get("departamento")
                         or ""
                     ),
 
-                    "latitud": latitud,
-
-                    "longitud": longitud,
+                    "latitud": lat,
+                    "longitud": lon,
 
                     "geolocalizada": (
-                        latitud is not None
-                        and longitud is not None
+                        lat is not None
+                        and lon is not None
                     ),
 
-                    "ofertas": [],
+                    "regiones": regiones_cue,
 
-                    "regiones": [],
+                    "supervisores": supervisores,
 
+                    "ofertas": ofertas,
                 }
+            )
 
-            # -------------------------------------------------
-            # Agregar asignaciones
-            # -------------------------------------------------
+        return resultado
 
-            for asignacion in (
-                asignaciones_por_cue.get(
-                    cue,
-                    [],
-                )
-            ):
-
-                if asignacion not in (
-                    escuelas[cue]["ofertas"]
-                ):
-
-                    escuelas[cue]["ofertas"].append(
-                        asignacion
-                    )
-
-                region = asignacion["region"]
-
-                if (
-                    region
-                    and region not in
-                    escuelas[cue]["regiones"]
-                ):
-
-                    escuelas[cue]["regiones"].append(
-                        region
-                    )
-
-        resultado = list(
-            escuelas.values()
-        )
-
-        return {
-
-            "supervisor_id":
-                supervisor_id,
-
-            "cantidad_escuelas":
-                len(resultado),
-
-            "cantidad_geolocalizadas":
-                sum(
-                    1
-                    for escuela in resultado
-                    if escuela["geolocalizada"]
-                ),
-
-            "cantidad_sin_geolocalizar":
-                sum(
-                    1
-                    for escuela in resultado
-                    if not escuela["geolocalizada"]
-                ),
-
-            "escuelas":
-                resultado,
-
-        }
-
-    # =====================================================
+    # ==============================================================
     # MAPA GENERAL
-    # =====================================================
+    # ==============================================================
 
     @classmethod
     def mapa_general(
@@ -335,77 +532,116 @@ class SupervisorGeoService:
         regiones=None,
     ):
         """
-        Construye el mapa general de escuelas
-        asignadas a los supervisores visibles.
+        Genera el mapa general de supervisores.
 
-        Una escuela aparece una sola vez.
+        El resultado contiene UN registro por establecimiento
+        (CUE/anexo), aunque existan varias ofertas o supervisores.
 
-        Si está asignada a varios supervisores,
-        todos aparecen dentro del popup.
+        Ejemplo:
+
+        {
+            "cueanexo": "220000700",
+            "escuela": "...",
+            "regiones": [...],
+            "supervisores": [...],
+            "ofertas": [...]
+        }
         """
 
-        supervisor_ids = [
-            supervisor.id
-            for supervisor in supervisores
-        ]
+        # ----------------------------------------------------------
+        # SUPERVISORES
+        # ----------------------------------------------------------
 
-        if not supervisor_ids:
-
+        if supervisores is None:
             return []
 
-        regionales = (
-            SupervisorRegional.objects
-            .filter(
-                supervisor_id__in=supervisor_ids,
-                activo=True,
+        if hasattr(supervisores, "values_list"):
+
+            supervisor_ids = list(
+                supervisores.values_list(
+                    "id",
+                    flat=True,
+                )
             )
-            .select_related(
-                "supervisor",
-                "supervisor__usuario",
-                "region",
-            )
+
+        else:
+
+            supervisor_ids = [
+                supervisor.id
+                for supervisor in supervisores
+                if supervisor is not None
+            ]
+
+        supervisor_ids = list(
+            dict.fromkeys(supervisor_ids)
         )
 
-        if regiones is not None:
+        if not supervisor_ids:
+            return []
 
-            regionales = regionales.filter(
-                region_id__in=regiones
-            )
+        # ----------------------------------------------------------
+        # ASIGNACIONES
+        # ----------------------------------------------------------
 
         asignaciones = (
             SupervisorRegionalOferta.objects
             .filter(
-                supervisor_regional__in=regionales,
+                supervisor_regional__supervisor_id__in=supervisor_ids,
+                supervisor_regional__activo=True,
+                supervisor_regional__supervisor__activo=True,
                 activo=True,
             )
             .select_related(
                 "supervisor_regional",
-                "supervisor_regional__region",
                 "supervisor_regional__supervisor",
                 "supervisor_regional__supervisor__usuario",
+                "supervisor_regional__region",
             )
         )
 
-        cues = list(
-            asignaciones
-            .values_list(
-                "cueanexo",
-                flat=True,
+        # ----------------------------------------------------------
+        # RESTRICCIÓN REGIONAL
+        # ----------------------------------------------------------
+
+        if regiones is not None:
+
+            if not regiones:
+                return []
+
+            asignaciones = asignaciones.filter(
+                supervisor_regional__region_id__in=regiones
             )
-            .distinct()
-        )
 
-        if not cues:
+        # Ejecutamos UNA SOLA VEZ el queryset.
+        asignaciones = list(asignaciones)
 
+        if not asignaciones:
             return []
 
-        # -------------------------------------------------
-        # Supervisores por escuela
-        # -------------------------------------------------
+        # ----------------------------------------------------------
+        # AGRUPADORES
+        # ----------------------------------------------------------
 
         escuelas_supervisores = defaultdict(list)
+        escuelas_regiones = defaultdict(list)
+        escuelas_ofertas = defaultdict(list)
+
+        cues = set()
+
+        # ----------------------------------------------------------
+        # ASIGNACIONES -> CUE
+        # ----------------------------------------------------------
 
         for asignacion in asignaciones:
+
+            cue = cls._normalizar_cue(
+                asignacion.cueanexo
+            )
+
+            if not cue:
+                continue
+
+            cues.add(cue)
 
             supervisor = (
                 asignacion
@@ -413,62 +649,43 @@ class SupervisorGeoService:
                 .supervisor
             )
 
-            usuario = supervisor.usuario
-
             region = (
                 asignacion
                 .supervisor_regional
                 .region
             )
 
-            supervisor_data = {
-
-                "supervisor_id":
-                    supervisor.id,
-
-                "cuil":
-                    usuario.username,
-
-                "nombre":
-                    (
-                        f"{usuario.apellido}, "
-                        f"{usuario.nombres}"
-                    ),
-
-                "region":
-                    (
-                        region.nombre
-                        if region
-                        else ""
-                    ),
-
-                "oferta":
-                    asignacion.oferta
-                    or "",
-
-            }
-
-            lista = (
-                escuelas_supervisores[
-                    asignacion.cueanexo
-                ]
+            # Supervisor
+            escuelas_supervisores[cue].append(
+                cls._datos_supervisor(
+                    supervisor
+                )
             )
 
-            if supervisor_data not in lista:
+            # Región
+            escuelas_regiones[cue].append(
+                {
+                    "id": region.id,
+                    "nombre": str(region),
+                }
+            )
 
-                lista.append(
-                    supervisor_data
+            # Oferta
+            escuelas_ofertas[cue].append(
+                cls._datos_oferta(
+                    asignacion
                 )
+            )
 
-        # -------------------------------------------------
-        # Datos geográficos
-        # -------------------------------------------------
+        if not cues:
+            return []
+
+        # ----------------------------------------------------------
+        # BUSCAMOS LOS ESTABLECIMIENTOS
+        # ----------------------------------------------------------
 
         queryset = (
-            CapaUnicaOfertas.objects
-            .filter(
-                cueanexo__in=cues
-            )
+            cls._queryset_escuelas(cues)
             .values(
                 "cueanexo",
                 "nom_est",
@@ -477,62 +694,236 @@ class SupervisorGeoService:
                 "departamento",
                 "lat",
                 "long",
-                "geom",
+            )
+            .order_by(
+                "cueanexo",
+                "nom_est",
             )
         )
 
-        resultado = {}
+        # ----------------------------------------------------------
+        # RESULTADO
+        # ----------------------------------------------------------
+
+        resultado = []
+
+        cues_agregados = set()
 
         for row in queryset:
 
-            cue = row["cueanexo"]
-
-            latitud, longitud = (
-                cls._coordenadas(row)
+            cue = cls._normalizar_cue(
+                row["cueanexo"]
             )
 
-            if cue not in resultado:
+            if not cue:
+                continue
 
-                resultado[cue] = {
+            # Una sola marca por CUE/anexo.
+            if cue in cues_agregados:
+                continue
 
-                    "cueanexo":
-                        cue,
+            cues_agregados.add(cue)
 
-                    "escuela":
-                        row["nom_est"]
-                        or "",
+            lat, lon = cls._coordenadas(
+                row
+            )
 
-                    "region_loc":
-                        row["region_loc"]
-                        or "",
+            # ----------------------------------------------
+            # CRUCE
+            # ----------------------------------------------
 
-                    "localidad":
-                        row["localidad"]
-                        or "",
+            supervisores_cue = (
+                escuelas_supervisores.get(
+                    cue,
+                    [],
+                )
+            )
 
-                    "departamento":
-                        row["departamento"]
-                        or "",
+            regiones_cue = (
+                escuelas_regiones.get(
+                    cue,
+                    [],
+                )
+            )
 
-                    "latitud":
-                        latitud,
+            ofertas_cue = (
+                escuelas_ofertas.get(
+                    cue,
+                    [],
+                )
+            )
 
-                    "longitud":
-                        longitud,
+            # ----------------------------------------------
+            # DEDUPLICACIÓN
+            # ----------------------------------------------
 
-                    "geolocalizada":
-                        (
-                            latitud is not None
-                            and longitud is not None
-                        ),
+            supervisores_cue = (
+                cls._deduplicar_por(
+                    supervisores_cue,
+                    "id",
+                )
+            )
 
-                    "supervisores":
-                        escuelas_supervisores[
-                            cue
-                        ],
+            regiones_cue = (
+                cls._deduplicar_por(
+                    regiones_cue,
+                    "id",
+                )
+            )
 
+            # Una escuela puede tener varias filas iguales
+            # de oferta provenientes de distintos cruces.
+            ofertas_vistas = set()
+            ofertas_final = []
+
+            for oferta in ofertas_cue:
+
+                clave = (
+                    oferta.get("cueanexo"),
+                    oferta.get("oferta"),
+                    oferta.get("acronimo"),
+                )
+
+                if clave in ofertas_vistas:
+                    continue
+
+                ofertas_vistas.add(clave)
+                ofertas_final.append(oferta)
+
+            # ----------------------------------------------
+            # REGISTRO FINAL
+            # ----------------------------------------------
+
+            resultado.append(
+                {
+                    "cueanexo": cue,
+
+                    "escuela": (
+                        row.get("nom_est")
+                        or ""
+                    ),
+
+                    "region_loc": (
+                        row.get("region_loc")
+                        or ""
+                    ),
+
+                    "localidad": (
+                        row.get("localidad")
+                        or ""
+                    ),
+
+                    "departamento": (
+                        row.get("departamento")
+                        or ""
+                    ),
+
+                    "latitud": lat,
+
+                    "longitud": lon,
+
+                    "geolocalizada": (
+                        lat is not None
+                        and lon is not None
+                    ),
+
+                    "regiones": regiones_cue,
+
+                    "supervisores": supervisores_cue,
+
+                    "ofertas": ofertas_final,
                 }
+            )
 
-        return list(
-            resultado.values()
+        # ----------------------------------------------------------
+        # ORDEN
+        # ----------------------------------------------------------
+
+        resultado.sort(
+            key=lambda item: (
+                item.get("region_loc") or "",
+                item.get("localidad") or "",
+                item.get("escuela") or "",
+                item.get("cueanexo") or "",
+            )
         )
+
+        return resultado
+
+    # ==============================================================
+    # ESTADÍSTICAS
+    # ==============================================================
+
+    @classmethod
+    def estadisticas(cls, escuelas):
+        """
+        Calcula estadísticas para el dashboard/mapa.
+        """
+
+        if not escuelas:
+            return {
+                "total": 0,
+                "geolocalizadas": 0,
+                "sin_geolocalizar": 0,
+                "supervisores": 0,
+                "regiones": 0,
+                "ofertas": 0,
+            }
+
+        supervisores = set()
+        regiones = set()
+        ofertas = set()
+
+        geolocalizadas = 0
+
+        for escuela in escuelas:
+
+            if escuela.get("geolocalizada"):
+                geolocalizadas += 1
+
+            for supervisor in escuela.get(
+                "supervisores",
+                [],
+            ):
+                supervisor_id = supervisor.get("id")
+
+                if supervisor_id is not None:
+                    supervisores.add(
+                        supervisor_id
+                    )
+
+            for region in escuela.get(
+                "regiones",
+                [],
+            ):
+                region_id = region.get("id")
+
+                if region_id is not None:
+                    regiones.add(
+                        region_id
+                    )
+
+            for oferta in escuela.get(
+                "ofertas",
+                [],
+            ):
+
+                clave = (
+                    oferta.get("cueanexo"),
+                    oferta.get("oferta"),
+                )
+
+                ofertas.add(clave)
+
+        total = len(escuelas)
+
+        return {
+            "total": total,
+            "geolocalizadas": geolocalizadas,
+            "sin_geolocalizar": (
+                total - geolocalizadas
+            ),
+            "supervisores": len(supervisores),
+            "regiones": len(regiones),
+            "ofertas": len(ofertas),
+        }

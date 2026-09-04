@@ -317,6 +317,10 @@ OPCIONES_FILTROS_VISUALIZACION = {
     "estado_establecimiento_padron": "NULLIF(TRIM(ve.estado::text), '')",
 }
 
+CAMPOS_FILTROS_DETALLE_REMOTOS = frozenset(
+    campo for campo in OPCIONES_FILTROS_VISUALIZACION if campo != "oferta"
+)
+
 CATALOGOS_INGRESO_MANUAL_POF = (
     "region",
     "localidad",
@@ -327,6 +331,77 @@ CATALOGOS_INGRESO_MANUAL_POF = (
     "categoria",
     "jornada",
 )
+
+
+def _obtener_opciones_filtro_padron(campo, cursor, from_sql):
+    """
+    Obtiene un único catálogo de Padrón usando la expresión SQL declarada.
+
+    - Solo acepta campos presentes en la whitelist de expresiones conocidas.
+    - Mantiene la resolución y normalización vigente de región y texto.
+    - Ejecuta exactamente una consulta para el campo recibido.
+    """
+    expresion = OPCIONES_FILTROS_VISUALIZACION.get(campo)
+    if expresion is None:
+        raise ValueError("Campo de filtro no permitido.")
+
+    if campo == "region":
+        cursor.execute(f"""
+            SELECT DISTINCT
+                NULLIF(TRIM(ol.regional::text), '') AS oferta_regional,
+                NULLIF(TRIM(vl.regional_actual::text), '') AS regional_actual
+            {from_sql}
+        """)
+        regiones_presentes = {
+            resolver_region_padron(oferta_regional, regional_actual)
+            for oferta_regional, regional_actual in cursor.fetchall()
+            if resolver_region_padron(oferta_regional, regional_actual)
+        }
+        return [
+            region
+            for region in REGIONES_EDUCATIVAS_POF
+            if region in regiones_presentes
+        ]
+
+    sql = f"""
+        SELECT valor
+        FROM (
+            SELECT DISTINCT {expresion} AS valor
+            {from_sql}
+        ) opciones
+        WHERE valor IS NOT NULL AND valor <> ''
+        ORDER BY valor
+    """
+    cursor.execute(sql)
+    return [
+        normalizar_texto(fila[0])
+        for fila in cursor.fetchall()
+        if normalizar_texto(fila[0])
+    ]
+
+
+def obtener_opciones_filtro_detalle_padron(campo):
+    """
+    Devuelve un único catálogo remoto para los filtros del Detalle común.
+
+    - Valida el campo contra la whitelist antes de construir la consulta.
+    - Reutiliza las expresiones y normalización de Visualización de Padrón.
+    - No crea cachés ni modifica archivos, configuración o datos persistidos.
+    """
+    campo = str(campo or "").strip()
+    if campo not in CAMPOS_FILTROS_DETALLE_REMOTOS:
+        raise ValueError("Campo de filtro no permitido.")
+
+    from_sql = """
+        FROM padroninterno.mv_localizaciones vl
+        LEFT JOIN padroninterno.mv_establecimientos ve
+            ON ve.id_establecimiento = vl.id_establecimiento
+        LEFT JOIN padroninterno.mv_ofertaslocales ol
+            ON ol.id_localizacion = vl.id_localizacion
+    """
+
+    with connections[MATERIALIZADAS_DB].cursor() as cursor:
+        return _obtener_opciones_filtro_padron(campo, cursor, from_sql)
 
 
 def obtener_opciones_filtros_visualizacion_padron():
@@ -346,41 +421,12 @@ def obtener_opciones_filtros_visualizacion_padron():
     """
 
     with connections[MATERIALIZADAS_DB].cursor() as cursor:
-        for campo, expresion in OPCIONES_FILTROS_VISUALIZACION.items():
-            if campo == "region":
-                cursor.execute(f"""
-                    SELECT DISTINCT
-                        NULLIF(TRIM(ol.regional::text), '') AS oferta_regional,
-                        NULLIF(TRIM(vl.regional_actual::text), '') AS regional_actual
-                    {from_sql}
-                """)
-                regiones_presentes = {
-                    resolver_region_padron(oferta_regional, regional_actual)
-                    for oferta_regional, regional_actual in cursor.fetchall()
-                    if resolver_region_padron(oferta_regional, regional_actual)
-                }
-                opciones[campo] = [
-                    region
-                    for region in REGIONES_EDUCATIVAS_POF
-                    if region in regiones_presentes
-                ]
-                continue
-
-            sql = f"""
-                SELECT valor
-                FROM (
-                    SELECT DISTINCT {expresion} AS valor
-                    {from_sql}
-                ) opciones
-                WHERE valor IS NOT NULL AND valor <> ''
-                ORDER BY valor
-            """
-            cursor.execute(sql)
-            opciones[campo] = [
-                normalizar_texto(fila[0])
-                for fila in cursor.fetchall()
-                if normalizar_texto(fila[0])
-            ]
+        for campo in OPCIONES_FILTROS_VISUALIZACION:
+            opciones[campo] = _obtener_opciones_filtro_padron(
+                campo,
+                cursor,
+                from_sql,
+            )
 
     return opciones
 

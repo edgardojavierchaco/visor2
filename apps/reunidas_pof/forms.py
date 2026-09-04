@@ -17,7 +17,7 @@ TIPOS_CABECERA = (
     ("PROYECTO_ESPECIAL", "Proyecto Especial"),
 )
 
-DUPLICADO_REUNIDA_POF = "Ya existe una Reunida POF para ese año y nivel."
+DUPLICADO_REUNIDA_POF = "Ya existe una POF para ese año y nivel."
 MODO_PADRON_PADRON = "PADRON"
 MODO_PADRON_MANUAL_CONTROLADO = "MANUAL_CONTROLADO"
 MODOS_PADRON_VALIDOS = {MODO_PADRON_PADRON, MODO_PADRON_MANUAL_CONTROLADO}
@@ -327,7 +327,7 @@ class GuardarCargaPofForm(forms.Form):
         if cabecera_tipo == "REUNIDA":
             anio = cleaned_data.get("anio")
             if not anio:
-                self.add_error("anio", "El año es obligatorio para Reunidas POF.")
+                self.add_error("anio", "El año es obligatorio para la POF.")
             else:
                 anio_texto = str(anio)
                 if not anio_texto.isdigit() or len(anio_texto) != 4:
@@ -336,7 +336,7 @@ class GuardarCargaPofForm(forms.Form):
             nivel = _texto(cleaned_data.get("nivel"))
             nivel_normalizado = ""
             if not nivel:
-                self.add_error("nivel", "El nivel es obligatorio para Reunidas POF.")
+                self.add_error("nivel", "El nivel es obligatorio para la POF.")
             else:
                 nivel_normalizado = normalizar_nivel(nivel)
                 if not nivel_normalizado:
@@ -348,7 +348,7 @@ class GuardarCargaPofForm(forms.Form):
                 if not ReunidaPof.objects.filter(anio=anio, nivel=nivel_normalizado).exists():
                     self.add_error(
                         "reunida",
-                        "No existe una Reunida POF para ese año y nivel. Primero debe crearla.",
+                        "No existe una POF para ese año y nivel. Primero debe crearla.",
                     )
 
         if cabecera_tipo == "PROYECTO_ESPECIAL" and not cleaned_data.get("proyecto_especial_id"):
@@ -392,7 +392,7 @@ def validar_payload_guardar_carga(datos):
 
     if cabecera_tipo == "REUNIDA":
         if not cueanexo:
-            errores["cueanexo"] = ["El CUEANEXO es obligatorio para Reunidas POF."]
+            errores["cueanexo"] = ["El CUEANEXO es obligatorio para la POF."]
         elif not re.fullmatch(r"\d{9}", cueanexo):
             errores["cueanexo"] = ["El CUEANEXO debe tener 9 dígitos."]
 
