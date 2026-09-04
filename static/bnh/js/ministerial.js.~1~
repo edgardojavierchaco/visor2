@@ -1,0 +1,109 @@
+"use strict";
+(() => {
+  const error = document.getElementById("network-error");
+  const report = (message) => { error.textContent = message; error.hidden = false; };
+  if (window.jQuery && window.jQuery.fn.select2) {
+    window.jQuery(".select2").select2({width: "100%"});
+  }
+  const notify = (el) => {
+    if (window.jQuery && window.jQuery.fn.select2) window.jQuery(el).trigger("change.select2");
+  };
+  const fill = (select, data, value, label) => {
+    if (!select) return;
+    select.replaceChildren(new Option("Seleccione", ""));
+    for (const item of data) select.add(new Option(item[label], item[value]));
+    notify(select);
+  };
+  const get = async (url, signal) => {
+    const response = await fetch(url, {signal, headers: {"Accept": "application/json"}});
+    if (!response.ok || response.redirected || !response.headers.get("content-type")?.includes("application/json")) throw new Error("No se pudieron cargar las opciones. Compruebe su sesión y reintente.");
+    return response.json();
+  };
+  const onChange = (element, handler) => {
+    if (!element) return;
+    if (window.jQuery && window.jQuery.fn.select2) window.jQuery(element).on("change", handler);
+    else element.addEventListener("change", handler);
+  };
+  for (const form of document.querySelectorAll("[data-editor]")) {
+    const field = (name) => form.querySelector(`[name="${name}"], [name="actividad-${name}"], [name="persona-${name}"]`);
+    let catalogsController, localitiesController;
+    let catalogRequest = 0;
+    let catalogPending = false;
+    const isNonTeaching = () => field("categoria")?.value === "NO DOCENTE";
+    const enable = () => {
+      if (field("niveles")) field("niveles").disabled = !field("modalidad")?.value || catalogPending;
+      if (field("ceic")) field("ceic").disabled = !field("niveles")?.value || catalogPending;
+      if (field("grado_anio")) field("grado_anio").disabled = isNonTeaching() || !field("niveles")?.value || catalogPending;
+      if (field("secciones")) field("secciones").disabled = isNonTeaching() || !field("grado_anio")?.value || catalogPending;
+    };
+    const reset = name => fill(field(name), [], "", "");
+    const catalogs = async (source) => {
+      catalogsController?.abort();
+      catalogsController = new AbortController();
+      const generation = ++catalogRequest;
+      if (source === "modalidad") ["niveles", "ceic", "grado_anio", "secciones"].forEach(reset);
+      if (source === "niveles") ["ceic", "grado_anio", "secciones"].forEach(reset);
+      if (source === "grado_anio") reset("secciones");
+      catalogPending = true; enable();
+      const url = new URL(form.dataset.catalogUrl, location.origin);
+      url.searchParams.set("modalidad", field("modalidad")?.value || "");
+      url.searchParams.set("nivel", field("niveles")?.value || "");
+      url.searchParams.set("grado", field("grado_anio")?.value || "");
+      try {
+        const data = await get(url, catalogsController.signal);
+        if (generation !== catalogRequest) return;
+        if (source === "modalidad") fill(field("niveles"), data.niveles, "c_nivel", "descrip_nivel");
+        if (source === "niveles") {
+          fill(field("ceic"), data.ceic, "c_ceic", "descripcion");
+          if (!isNonTeaching()) fill(field("grado_anio"), data.grado, "c_grado_anio", "nombre_grado_anio");
+          if (!data.grado.length && !isNonTeaching()) report("Esta modalidad y nivel no tienen grados configurados. Solicite revisar el catálogo; no seleccione un grado de otro nivel.");
+        }
+        if (source === "grado_anio" && !isNonTeaching()) fill(field("secciones"), data.secciones, "c_seccion", "nombre_seccion");
+      } catch (e) { if (e.name !== "AbortError") report(e.message); }
+      finally { if (generation === catalogRequest) { catalogPending = false; enable(); } }
+    };
+    for (const name of ["modalidad", "niveles", "grado_anio"]) onChange(field(name), () => catalogs(name));
+    form.addEventListener("submit", event => {
+      if (catalogPending) { event.preventDefault(); report("Espere a que termine la carga de opciones."); }
+    });
+    onChange(field("provincia"), async () => {
+      localitiesController?.abort(); localitiesController = new AbortController();
+      fill(field("localidad"), [], "", "");
+      const url = new URL(form.dataset.localitiesUrl, location.origin);
+      url.searchParams.set("provincia", field("provincia").value);
+      try { fill(field("localidad"), await get(url, localitiesController.signal), "c_localidad", "descrip_localidad"); }
+      catch (e) { if (e.name !== "AbortError") report(e.message); }
+    });
+    const category = (changed = false) => {
+      const disabled = field("categoria")?.value === "NO DOCENTE";
+      for (const name of ["grado_anio", "secciones", "espacios"]) {
+        const el = field(name); if (!el) continue;
+        el.disabled = disabled;
+        if (disabled) { el.value = ""; notify(el); }
+        el.closest("[data-field]").hidden = disabled;
+      }
+    };
+    onChange(field("categoria"), () => {
+      catalogsController?.abort(); ++catalogRequest; catalogPending = false;
+      category(true);
+      if (!isNonTeaching() && field("niveles")?.value) catalogs("niveles");
+      else enable();
+    });
+    category(); enable();
+  }
+  for (const form of document.querySelectorAll("form")) {
+    form.addEventListener("submit", event => {
+      if (event.defaultPrevented) return;
+      if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) { event.preventDefault(); return; }
+      if (form.dataset.submitting) { event.preventDefault(); return; }
+      form.dataset.submitting = "1";
+      for (const button of form.querySelectorAll('button[type="submit"],button:not([type])')) button.disabled = true;
+    });
+  }
+  window.addEventListener("pageshow", () => {
+    for (const form of document.querySelectorAll("form")) {
+      delete form.dataset.submitting;
+      for (const button of form.querySelectorAll("button")) button.disabled = false;
+    }
+  });
+})();

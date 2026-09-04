@@ -1,0 +1,922 @@
+# models.py
+import re
+import uuid
+from django.db import models
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
+from .middleware import get_current_user
+from django.utils import timezone
+from datetime import date
+from dateutil.relativedelta import relativedelta
+
+
+#################
+# AUDITORIA
+#################
+class AuditoriaModel(models.Model):
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+
+    usuario_creacion = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='%(class)s_creados'
+    )
+
+    usuario_modificacion = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='%(class)s_modificados'
+    )
+
+    class Meta:
+        abstract = True
+
+    
+
+
+###############################
+# CODIGOS DE ÁREA TELEFÓNICAS
+###############################
+class CodAreasTelefonos(models.Model):
+    id = models.AutoField(primary_key=True)
+    cod_prov=models.IntegerField(name='cod_prov')
+    provincia=models.CharField(max_length=100)
+    localidad=models.CharField(max_length=150)
+    codigo=models.IntegerField()
+    
+    class Meta:
+        managed=False
+        verbose_name='Codigo Area'
+        verbose_name_plural='Codigos Areas'
+        db_table='cod_areas'
+        ordering=['codigo', 'localidad']
+    
+    def __str__(self):
+        return f'{self.provincia} {self.localidad} - {self.codigo}'
+
+###############################
+# TIPOS DE DOCUMENTO IDENTIDAD
+###############################
+class DocumentoTipo(models.Model):
+    c_tipo_doc=models.IntegerField(primary_key=True)
+    descrip_doc=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Documento'
+        verbose_name_plural='Tipos Documentos'
+        db_table='documento_tipo_bnh'
+        
+    def __str__(self):
+        return self.descrip_doc
+    
+
+
+#####################
+# PROVINCIAS
+#####################
+class Provincias(models.Model):
+    c_provincia=models.IntegerField(primary_key=True)
+    descrip_provincia=models.CharField(max_length=100)
+
+    class Meta:
+        managed=False
+        verbose_name='provincia'
+        verbose_name_plural='provincias'
+        db_table='provincia_tipo_bnh'
+    
+    def __str__(self):
+        return self.descrip_provincia
+
+
+#######################
+# LOCALIDADES
+#######################
+class Localidades(models.Model):
+    c_localidad=models.IntegerField(primary_key=True)
+    descrip_localidad=models.CharField(max_length=150)
+    c_departamento=models.IntegerField()
+    descrip_departamento=models.CharField(max_length=150)
+    c_provincia=models.ForeignKey(
+        Provincias, 
+        on_delete=models.PROTECT,
+        db_column='c_provincia'
+    )
+    
+    class Meta:
+        managed=False
+        verbose_name='Localidad'
+        verbose_name_plural='Localidades'
+        db_table='localidad_tipo_bnh'
+        ordering=['descrip_localidad']
+    
+    def __str__(self):
+        return f'{self.descrip_localidad} {self.descrip_departamento}'
+
+
+######################
+# MODALIDADES
+######################
+class Modalidades(models.Model):
+    c_modalidad=models.IntegerField(primary_key=True)
+    descrip_modalidad=models.CharField(max_length=150)
+    
+    class Meta:
+        managed=False
+        verbose_name='modalidad'
+        verbose_name_plural='modalidades'
+        db_table='modalidades_tipo'
+    
+    def __str__(self):
+        return self.descrip_modalidad
+
+
+#####################
+# NACIONALIDAD
+#####################
+class Nacionalidad(models.Model):
+    c_nacionalidad=models.IntegerField(primary_key=True)
+    descrip_nac=models.CharField(max_length=100)
+    c_pais=models.IntegerField()
+    
+    class Meta:
+        managed=False
+        verbose_name='Nacionalidad'
+        verbose_name_plural='Nacionalidades'
+        db_table='nacionalidad_tipo_bnh'
+    
+    def __str__(self):
+        return self.descrip_nac
+
+####################
+# OFERTAS
+####################
+class NivelServicio(models.Model):
+    c_nivel=models.IntegerField(primary_key=True)
+    descrip_nivel=models.CharField(max_length=150)
+    
+    class Meta:
+        managed=False
+        verbose_name='oferta'
+        verbose_name_plural='ofertas'
+        db_table='nivel_servicio'
+    
+    def __str__(self):
+        return self.descrip_nivel
+
+###########
+# CEIC
+###########
+class NomencladorCeic(models.Model):
+    c_ceic=models.IntegerField(primary_key=True)
+    descripcion=models.CharField(max_length=150)
+    estado=models.CharField(max_length=25)
+    c_niv=models.IntegerField()
+    t_nivel=models.CharField(max_length=10)
+    
+    class Meta:
+        managed=False
+        verbose_name='nomenclador ceic'
+        verbose_name_plural='nomencladores ceic'
+        db_table='nomenclador_ceic'
+        ordering=['descripcion']
+        indexes = [
+            models.Index(fields=['t_nivel', 'c_niv']),
+        ]
+
+    def __str__(self):
+        return f'{self.descripcion}'
+
+
+##########
+# PAICES
+##########
+class Pais(models.Model):
+    c_pais=models.IntegerField(primary_key=True)
+    descrip_pais=models.CharField(max_length=100)
+
+    class Meta:
+        managed=False
+        verbose_name='pais'
+        verbose_name_plural='paices'
+        db_table='pais_tipo_bnh'
+    
+    def __str__(self):
+        return self.descrip_pais
+
+  
+
+###########
+# SEXO
+###########
+class Sexo(models.Model):
+    c_sexo=models.IntegerField(primary_key=True)
+    descrip_sexo=models.CharField(max_length=25)
+
+    class Meta:
+        managed=False 
+        verbose_name='sexo'
+        verbose_name_plural='sexos'
+        db_table='sexo_tipo_bnh'
+    
+    def __str__(self):
+        return self.descrip_sexo
+
+
+#############################
+# OTROS CATÁLOGOS
+#############################
+class TipoTelefono(models.Model):
+    c_tipo_telefono=models.IntegerField(primary_key=True)
+    descrip_tipo_telefono=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Telefono'
+        verbose_name_plural='Tipos Telefonos'
+        db_table='tipo_telefono'
+    
+    def __str__(self):
+        return self.descrip_tipo_telefono
+    
+
+class EstadosCiviles(models.Model):
+    c_estado_civil=models.IntegerField(primary_key=True)
+    descrip_estado_civil=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Estado Civil'
+        verbose_name_plural='Estados Civiles'
+        db_table='estado_civil_tipo_bnh'
+    
+    def __str__(self):
+        return self.descrip_estado_civil
+
+
+class TipoEmail(models.Model):
+    c_tipo_email=models.IntegerField(primary_key=True)
+    descrip_tipo_email=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Email'
+        verbose_name_plural='Tipos Email'
+        db_table='tipo_email_bnh'
+    
+    def __str__(self):
+        return self.descrip_tipo_email
+
+
+class RelacionParentesco(models.Model):
+    c_relacion_parentesco=models.IntegerField(primary_key=True)
+    descrip_relacion_parentesco=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Relacion Parentesco'
+        verbose_name_plural='Relaciones Parentesco'
+        db_table='relacion_parentesco_tipo'
+    
+    def __str__(self):
+        return self.descrip_relacion_parentesco
+
+
+
+class TipoDiscapacidad(models.Model):
+    c_tipo_discapacidad=models.IntegerField(primary_key=True)
+    descrip_tipo_discapacidad=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Discapacidad'
+        verbose_name_plural='Tipos Discapacidad'
+        db_table='tipo_discapacidad_bnh'
+    
+    def __str__(self):
+        return self.descrip_tipo_discapacidad
+
+
+class TipoDocenteIntegrador(models.Model):
+    c_tipo_docente_integrador=models.IntegerField(primary_key=True)
+    descrip_tipo_docente_integrador=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Docente Integrador'
+        verbose_name_plural='Tipos Docente Integrador'
+        db_table='tipo_docente_integrador'
+    
+    def __str__(self):
+        return self.descrip_tipo_docente_integrador
+
+
+
+class TipoComunidadOriginaria(models.Model):
+    c_tipo_comunidad_originaria=models.IntegerField(primary_key=True)
+    descrip_tipo_comunidad_originaria=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Comunidad Originaria'
+        verbose_name_plural='Tipos Comunidad Originaria'
+        db_table='tipo_comunidad_originaria_bnh'
+    
+    def __str__(self):
+        return self.descrip_tipo_comunidad_originaria
+
+
+class TipoLenguaOriginaria(models.Model):
+    c_tipo_lengua_originaria=models.IntegerField(primary_key=True)
+    descrip_tipo_lengua_originaria=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Lengua Originaria'
+        verbose_name_plural='Tipos Lengua Originaria'
+        db_table='tipo_lengua_originaria_bnh'
+    
+    def __str__(self):
+        return self.descrip_tipo_lengua_originaria
+
+
+class TipoPlanesSociales(models.Model):
+    c_tipo_planes_sociales=models.IntegerField(primary_key=True)
+    descrip_tipo_planes_sociales=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo Plan Social'
+        verbose_name_plural='Tipos Planes Sociales'
+        db_table='tipo_planes_sociales_bnh'
+    
+    def __str__(self):
+        return self.descrip_tipo_planes_sociales
+
+
+
+class NivelFormacion(models.Model):
+    c_nivel_formacion=models.IntegerField(primary_key=True)
+    descrip_nivel_formacion=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Nivel Formación'
+        verbose_name_plural='Niveles Formación'
+        db_table='nivel_formacion'
+    
+    def __str__(self):
+        return self.descrip_nivel_formacion
+
+
+class TipoOS(models.Model):
+    c_tipo_os=models.IntegerField(primary_key=True, db_column='c_os')
+    descrip_os=models.CharField(max_length=50)
+    
+    class Meta:
+        managed=False
+        verbose_name='Tipo OS'
+        verbose_name_plural='Tipos OS'
+        db_table='tipo_obra_social'
+    
+    def __str__(self):
+        return self.descrip_os
+
+
+##########################
+# GRADO / AÑO
+##########################
+class Grado_anio(models.Model):
+    c_grado_anio=models.BigAutoField(primary_key=True)
+    nombre_grado_anio=models.CharField(max_length=100, null=True, blank=True, db_index=True)
+    estado=models.BooleanField(default=True)
+    c_niv_grado=models.IntegerField()
+    t_niv_grado=models.CharField(max_length=100,null=True, blank=True)
+    c_modalidad = models.IntegerField(null=True, blank=True)
+    
+    class Meta:
+        indexes = [models.Index(fields=["c_modalidad", "c_niv_grado", "estado"], name="bnh_grado_parent_idx")]
+        verbose_name="Grado_Anio"
+        verbose_name_plural="Grados_Anios"
+        db_table="grado_anio"
+        
+    def __str__(self):
+        return self.nombre_grado_anio
+
+
+##########################
+# SECCION
+##########################
+class Secciones(models.Model):
+    c_seccion=models.BigAutoField(primary_key=True)
+    nombre_seccion=models.CharField(max_length=100, null=True, blank=True, db_index=True)
+    estado=models.BooleanField(default=True)
+    c_niv_seccion=models.IntegerField()
+    t_niv_seccion=models.CharField(max_length=100,null=True, blank=True)
+    c_modalidad = models.IntegerField(null=True, blank=True)
+    class Meta:
+        indexes = [models.Index(fields=["c_modalidad", "c_niv_seccion", "estado"], name="bnh_seccion_parent_idx")]
+        verbose_name="Seccion"
+        verbose_name_plural="Secciones"
+        db_table="Secciones"
+    
+    def __str__(self):
+        return self.nombre_seccion
+
+
+
+##########################
+# PERSONAS
+##########################
+class Personas(AuditoriaModel):
+    id = models.BigAutoField(primary_key=True)
+
+    cuil = models.CharField(max_length=11, null=True, blank=True, db_index=True)
+    version = models.PositiveIntegerField(default=1)
+    archivada = models.BooleanField(default=False, db_index=True)
+    dni = models.CharField(max_length=8, null=True, blank=True, db_index=True)
+
+    apellido = models.CharField(max_length=150, db_index=True)
+    nombre = models.CharField(max_length=150, db_index=True)
+    f_nacimiento=models.DateField()
+    
+    sexo = models.ForeignKey('Sexo', on_delete=models.PROTECT)
+    
+    provincia = models.ForeignKey('Provincias', on_delete=models.PROTECT)
+    localidad = models.ForeignKey('Localidades', on_delete=models.PROTECT)
+    
+    codigo_area = models.ForeignKey(
+        CodAreasTelefonos,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True
+    )
+
+    telefono = models.CharField(
+        max_length=8,
+        null=True,
+        blank=True,
+        validators=[
+            RegexValidator(
+                r'^\d{6,8}$',
+                message='Ingrese solo el número local (6 a 8 dígitos, sin código de área)'
+            )
+        ]
+    )
+
+    telefono_normalizado = models.CharField(max_length=15, null=True, blank=True, db_index=True)
+    whatsapp = models.BooleanField(default=False)
+
+    estado = models.CharField(
+        max_length=10,
+        choices=[('ACTIVO', 'Activo'), ('PASIVO', 'Pasivo')],
+        default='ACTIVO'
+    )
+
+    class Meta:
+        db_table = "personas"
+        constraints = [models.UniqueConstraint(fields=["cuil"], condition=models.Q(cuil__isnull=False) & ~models.Q(cuil=""), name="bnh_persona_cuil_unico")]
+        indexes = [
+            models.Index(fields=['dni']), 
+            models.Index(fields=['cuil']),
+            models.Index(fields=['telefono_normalizado']),
+        ]
+
+    # =========================
+    # VALIDACIONES
+    # =========================
+    def __str__(self):
+        return f"{self.apellido}, {self.nombre}"
+
+    def clean(self):
+        errors = {}
+        for campo, validator in (("dni", validar_dni), ("cuil", validar_cuil)):
+            value = getattr(self, campo)
+            if value:
+                try:
+                    validator(value)
+                except ValidationError as exc:
+                    errors[campo] = exc.messages
+        if self.cuil and self.dni and self.cuil[2:10] != self.dni.zfill(8):
+            errors["dni"] = "El DNI no coincide con el CUIL."
+        if self.f_nacimiento and self.f_nacimiento > timezone.localdate():
+            errors["f_nacimiento"] = "La fecha de nacimiento no puede ser futura."
+        if self.localidad_id and self.provincia_id:
+            if not Localidades.objects.filter(pk=self.localidad_id, c_provincia_id=self.provincia_id).exists():
+                errors["localidad"] = "La localidad no pertenece a la provincia."
+        if bool(self.telefono) != bool(self.codigo_area_id):
+            errors["telefono"] = "Complete juntos el código de área y el teléfono."
+        if errors:
+            raise ValidationError(errors)
+
+    # =========================
+    # NORMALIZACIÓN PRO
+    # =========================
+    def normalizar_telefono(self):
+        """
+        Devuelve número en formato E.164
+        Ej: +54362445566
+        """
+        if not self.telefono or not self.codigo_area:
+            return None
+
+        numero = re.sub(r'\D', '', self.telefono)
+        codigo = str(self.codigo_area.codigo)
+
+        return f"+54{codigo}{numero}"
+    
+    
+    # =========================
+    # SAVE
+    # =========================
+    def save(self, *args, **kwargs):
+        if not kwargs.pop("skip_clean", False):
+            self.full_clean()
+        
+        # 🔥 normalización SIEMPRE antes de guardar
+        self.telefono_normalizado = self.normalizar_telefono()
+        super().save(*args, **kwargs)
+    
+    
+    # =========================
+    # HELPERS PRO
+    # =========================
+    def telefono_para_whatsapp(self):
+        """
+        WhatsApp usa sin '+'
+        """
+        if not self.telefono_normalizado:
+            return None
+        return self.telefono_normalizado.replace("+", "")
+
+    def telefono_display(self):
+        """
+        Formato lindo para UI
+        """
+        if not self.telefono or not self.codigo_area:
+            return ""
+
+        return f"({self.codigo_area.codigo}) {self.telefono}"
+        
+
+############################
+# FUNCIONES DE VALIDACION
+############################
+def validar_dni(dni):
+    if not dni:
+        return
+
+    if not dni.isdigit():
+        raise ValidationError('DNI debe contener solo números')
+
+    if len(dni) not in (7, 8):
+        raise ValidationError('DNI inválido')
+
+
+def validar_cuil(cuil):
+    if not cuil:
+        return
+
+    cuil = re.sub(r'[^\d]', '', cuil)
+
+    if len(cuil) != 11:
+        raise ValidationError('CUIL debe tener 11 dígitos')
+
+    coef = [5,4,3,2,7,6,5,4,3,2]
+
+    tmp = sum(int(cuil[i]) * coef[i] for i in range(10))
+    resto = tmp % 11
+
+    dv = 11 - resto
+    if dv == 11:
+        dv = 0
+    elif dv == 10:
+        raise ValidationError("CUIL inválido (dígito verificador no representable)")
+
+    if dv != int(cuil[-1]):
+        raise ValidationError('CUIL inválido (dígito verificador incorrecto)')
+    
+
+#########################
+# SITUACION REVISTA
+#########################
+class SituacionServicio(models.Model):
+    cod_sitrev=models.IntegerField(primary_key=True)
+    descrip_sitrev=models.CharField(max_length=50)
+    ayuda = models.TextField(
+        blank=True,
+        null=True
+    )
+    
+    class Meta:
+        managed=False
+        db_table='situacion_revista'
+    
+    def __str__(self):
+        return self.descrip_sitrev
+
+
+#########################
+# CONDICION DE ACTIVIDAD
+#########################
+class CondicionActividad(models.Model):
+    cod_condicion=models.IntegerField(primary_key=True)
+    descrip_condicion=models.CharField(max_length=50)
+    ayuda = models.TextField(
+        blank=True,
+        null=True
+    )
+    
+    class Meta:
+        managed=False
+        db_table='condicion_actividad_bnh'
+    
+    def __str__(self):
+        return self.descrip_condicion
+
+
+#########################
+# TITULOS DE ESPACIOS
+#########################
+class TitulosEspacios(models.Model):
+    cod_titulo=models.IntegerField(primary_key=True)
+    descrip_titulo=models.CharField(max_length=255, unique=True)
+    
+    class Meta:
+        managed=False
+        db_table='titulos_docentes'
+        ordering=['descrip_titulo']
+    
+    def __str__(self):
+        return self.descrip_titulo
+
+
+#############################
+# TIPO DE FUNCIONES
+#############################
+class TipoFunciones(models.Model):
+    c_funciones=models.IntegerField(primary_key=True)
+    funciones_descripcion=models.CharField(max_length=100, unique=True)
+    ayuda = models.TextField(
+        blank=True,
+        null=True
+    )
+    
+    class Meta:
+        managed=False
+        db_table='funciones_tipo_bnh'
+    
+    def __str__(self):
+        return self.funciones_descripcion
+    
+    
+#################################
+# TIPO DE DESIGNACIÓN / FUNCIÓN
+#################################
+class TipoDesigFunc(models.Model):
+    c_desigfunc=models.IntegerField(primary_key=True)
+    desigfunc_descripcion=models.CharField(max_length=100, unique=True)
+    ayuda = models.TextField(
+        blank=True,
+        null=True
+    )
+    
+    class Meta:
+        managed=True
+        db_table='desigfunc_tipo_bnh'
+    
+    def __str__(self):
+        return self.desigfunc_descripcion
+    
+
+#################################
+# MODALIDAD - NIVELES
+#################################
+class ModalidadNivel(models.Model): 
+    id = models.BigAutoField(primary_key=True)
+    modalidad = models.ForeignKey(Modalidades, on_delete=models.CASCADE)
+    nivel = models.ForeignKey(NivelServicio, on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = "modalidad_nivel"
+        unique_together = ("modalidad", "nivel")
+
+    def __str__(self):
+        return f"{self.modalidad} - {self.nivel}"
+
+
+
+#################################
+# MODALIDAD - NIVELES - CEIC
+#################################    
+class ModalidadNivelCeic(models.Model):
+
+    modalidad = models.ForeignKey(Modalidades, on_delete=models.CASCADE)
+    nivel = models.ForeignKey(NivelServicio, on_delete=models.CASCADE)
+
+    rango_ceic = models.CharField(
+        max_length=500,
+        help_text="Ej.: 1-21,220,221"
+    )
+    
+    class Meta:
+        db_table = "modalidad_nivel_ceic"
+        unique_together = ("modalidad", "nivel")
+
+    def __str__(self):
+        return f"{self.modalidad} - {self.nivel} - {self.rango_ceic}"
+    
+    
+
+###############################
+# REGISTRO DE ACTIVIDADES
+###############################
+class RegistroActividades(AuditoriaModel):
+
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    cueanexo = models.CharField(max_length=9, db_index=True)
+    persona = models.ForeignKey(Personas, on_delete=models.CASCADE, related_name='actividades')
+
+    categoria = models.CharField(max_length=10, choices=[
+        ('DOCENTE', 'Docente'),
+        ('NO DOCENTE', 'No Docente'),
+    ])
+
+    modalidad = models.ForeignKey('Modalidades', on_delete=models.PROTECT)
+    niveles = models.ForeignKey('NivelServicio', on_delete=models.PROTECT)
+
+    sit_revista = models.ForeignKey('SituacionServicio', on_delete=models.PROTECT)
+    cond_actividad = models.ForeignKey('CondicionActividad', on_delete=models.PROTECT)
+    
+    designacion=models.CharField(max_length=20, choices=[
+        ('CARGO', 'CARGO'),
+        ('HORAS CATEDRAS', 'HORAS CATEDRAS'),
+    ], default='CARGO')
+    
+    t_designacion=models.ForeignKey('TipoDesigFunc', on_delete=models.PROTECT)
+
+    ceic = models.ForeignKey('NomencladorCeic', on_delete=models.PROTECT)
+    
+    grado_anio = models.ForeignKey('Grado_anio', on_delete=models.PROTECT, null=True, blank=True)
+    
+    turno=models.CharField(max_length=20, choices=[
+        ('MAÑANA', 'MAÑANA'),
+        ('TARDE', 'TARDE'),
+        ('NOCHE', 'NOCHE'),
+        ('VESPERTINO', 'VESPERTINO'),
+    ],
+        default='MAÑANA'
+    )
+    
+    secciones=models.ForeignKey('Secciones', on_delete=models.PROTECT, null=True, blank=True)
+    
+    espacios = models.ForeignKey(
+        'TitulosEspacios',
+        on_delete=models.PROTECT,
+        to_field='descrip_titulo',
+        db_column='descrip_titulo', null=True, blank=True
+    )    
+    f_desde = models.DateField()
+    f_hasta = models.DateField(null=True, blank=True)
+    carga_horaria = models.DecimalField(max_digits=5, decimal_places=2)
+
+    estado = models.CharField(max_length=10, choices=[
+        ('ACTIVO', 'Activo'),
+        ('INACTIVO', 'Inactivo'),
+    ])
+    
+    funciones = models.ForeignKey(
+        'TipoFunciones',
+        on_delete=models.PROTECT,
+        db_column='c_funciones',
+    )
+    
+    f_desde_funciones = models.DateField(default=date.today)
+    f_hasta_funciones = models.DateField(null=True, blank=True)
+
+    version = models.PositiveIntegerField(default=1)
+    eliminado = models.BooleanField(default=False, db_index=True)
+    validacion = models.CharField(max_length=12, default="BORRADOR", choices=[
+        ("BORRADOR", "Pendiente de validación"), ("VALIDADO", "Validado"), ("OBSERVADO", "Observado")])
+
+    class Meta:
+        db_table = "registro_actividades"
+        indexes = [models.Index(fields=["cueanexo", "eliminado", "estado"], name="bnh_cue_estado_idx")]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(carga_horaria__gt=0), name="bnh_carga_positiva"),
+            models.CheckConstraint(condition=models.Q(f_hasta__isnull=True) | models.Q(f_hasta__gte=models.F("f_desde")), name="bnh_cargo_fechas"),
+            models.CheckConstraint(condition=models.Q(f_hasta_funciones__isnull=True) | models.Q(f_hasta_funciones__gte=models.F("f_desde_funciones")), name="bnh_funcion_fechas"),
+        ]
+
+    def clean(self):
+        errors = {}
+        if not re.fullmatch(r"[0-9]{9}", str(self.cueanexo or "")):
+            errors["cueanexo"] = "Ingrese los nueve dígitos del CUEANEXO."
+        for start, end in (("f_desde", "f_hasta"), ("f_desde_funciones", "f_hasta_funciones")):
+            desde, hasta = getattr(self, start), getattr(self, end)
+            if desde and hasta and hasta < desde:
+                errors[end] = "La fecha hasta debe ser igual o posterior a desde."
+        if self.f_desde and self.f_desde_funciones and self.f_desde_funciones < self.f_desde:
+            errors["f_desde_funciones"] = "Las funciones deben comenzar dentro del período del cargo."
+        if self.f_hasta:
+            if self.f_desde_funciones and self.f_desde_funciones > self.f_hasta:
+                errors["f_desde_funciones"] = "Las funciones deben comenzar dentro del período del cargo."
+            if not self.f_hasta_funciones or self.f_hasta_funciones > self.f_hasta:
+                errors["f_hasta_funciones"] = "Indique un fin de funciones dentro del período del cargo."
+        if self.carga_horaria is not None and self.carga_horaria <= 0:
+            errors["carga_horaria"] = "La carga horaria debe ser positiva."
+        if self.estado == "INACTIVO" and not self.f_hasta:
+            errors["f_hasta"] = "Indique la fecha de finalización."
+        if self.categoria == "NO DOCENTE" and any((self.grado_anio_id, self.secciones_id, self.espacios_id)):
+            errors["categoria"] = "Para personal no docente deje vacíos grado, sección y espacio curricular."
+        if errors:
+            raise ValidationError(errors)
+
+    def normalize(self):
+        self.cueanexo = str(self.cueanexo or "").strip()
+
+
+################################
+# ACTIVIDAD INTERMEDIA
+################################
+class ActividadSede(models.Model):
+    actividad = models.ForeignKey(RegistroActividades, on_delete=models.CASCADE)
+    cueanexo = models.CharField(max_length=9, db_index=True)
+
+    class Meta:
+        unique_together = ("actividad", "cueanexo")
+    
+    def __str__(self):
+        return f"{self.actividad_id} - {self.cueanexo}"
+        
+
+################################
+# HORARIOS ACTIVIDAD
+################################
+class HorarioActividad(models.Model):
+    
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    
+    actividad_sede = models.ForeignKey(
+        ActividadSede,
+        on_delete=models.CASCADE,
+        related_name="horarios"
+    )
+
+    DIAS = [
+        ("LUNES", "Lunes"),
+        ("MARTES", "Martes"),
+        ("MIERCOLES", "Miércoles"),
+        ("JUEVES", "Jueves"),
+        ("VIERNES", "Viernes"),
+    ]
+
+    dia = models.CharField(
+        max_length=15,
+        choices=DIAS
+    )
+
+    hora_desde = models.TimeField()
+
+    hora_hasta = models.TimeField()
+
+    class Meta:
+        db_table="horarios_actividad"
+        constraints = [models.CheckConstraint(condition=models.Q(hora_hasta__gt=models.F("hora_desde")), name="bnh_horario_orden")]
+        unique_together = ("actividad_sede", "dia", "hora_desde", "hora_hasta")
+
+
+    def __str__(self):
+        return f"{self.dia} {self.hora_desde}-{self.hora_hasta}"
+
+class AccesoRegional(AuditoriaModel):
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    region = models.CharField(max_length=100, help_text="Valor exacto de region_loc en el padrón.")
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["usuario", "region"], name="bnh_usuario_region_unico")]
+
+    def __str__(self):
+        return f"{self.usuario_id} / {self.region}"
+
+
+class EventoAuditoria(models.Model):
+    fecha = models.DateTimeField(auto_now_add=True, db_index=True)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    entidad = models.CharField(max_length=40)
+    objeto_id = models.PositiveBigIntegerField()
+    cueanexo = models.CharField(max_length=9, blank=True, db_index=True)
+    accion = models.CharField(max_length=30)
+    motivo = models.TextField(blank=True)
+    antes = models.JSONField(default=dict)
+    despues = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ["-fecha", "-pk"]

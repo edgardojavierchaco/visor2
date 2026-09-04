@@ -2,8 +2,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.http import require_http_methods
 from openpyxl import Workbook
 
 from .models import ABMSupervisores
@@ -11,6 +11,7 @@ from .services.catalogo_service import CatalogoService
 from .services.permission_service import (
     get_regiones_usuario,
     get_responsable,
+    puede_administrar_supervisores,
     puede_operar_supervisor,
     puede_ver_supervisores,
 )
@@ -21,15 +22,26 @@ from .services.supervisor_service import update
 @ensure_csrf_cookie
 @login_required
 def dashboard(request):
+    if not puede_ver_supervisores(request.user):
+        return HttpResponseForbidden(
+            "Sin permisos para consultar supervisores."
+        )
+
     context = CatalogoService.contexto(request.user)
     context["responsable"] = get_responsable(request.user)
+    context["puede_crud_supervisores"] = puede_administrar_supervisores(
+        request.user
+    )
+
     return render(request, "supervisores/dashboard.html", context)
 
 
 @login_required
 def SupervisoresList(request):
     if not puede_ver_supervisores(request.user):
-        return HttpResponseForbidden("Sin permisos para consultar supervisores.")
+        return HttpResponseForbidden(
+            "Sin permisos para consultar supervisores."
+        )
 
     context = CatalogoService.contexto(request.user)
     context.update({
@@ -37,8 +49,16 @@ def SupervisoresList(request):
         "region_seleccionada": request.GET.get("region", ""),
         "situacion_seleccionada": request.GET.get("situacion", ""),
         "nivel_seleccionado": request.GET.get("nivel", ""),
+        "puede_crud_supervisores": puede_administrar_supervisores(
+            request.user
+        ),
     })
-    return render(request, "supervisores/listado_supervisores.html", context)
+
+    return render(
+        request,
+        "supervisores/listado_supervisores.html",
+        context,
+    )
 
 
 @login_required
@@ -48,23 +68,35 @@ def detalle_supervisor(request, pk):
         pk=pk,
         activo=True,
     )
+
     if not puede_operar_supervisor(request.user, supervisor, "ver"):
-        return HttpResponseForbidden("Sin permisos para consultar este supervisor.")
+        return HttpResponseForbidden(
+            "Sin permisos para consultar este supervisor."
+        )
 
     regiones = get_regiones_usuario(request.user)
-    asignaciones = supervisor.asignaciones_regionales.filter(activo=True)
+
+    asignaciones = supervisor.asignaciones_regionales.filter(
+        activo=True
+    )
+
     if regiones is not None:
-        asignaciones = asignaciones.filter(region_id__in=regiones)
+        asignaciones = asignaciones.filter(
+            region_id__in=regiones
+        )
 
     asignaciones = asignaciones.select_related("region").prefetch_related(
-        "niveles__nivel", "ofertas"
+        "niveles__nivel",
+        "ofertas",
     )
 
     escuelas = []
+
     for asignacion in asignaciones:
         for oferta in asignacion.ofertas.all():
             if not oferta.activo:
                 continue
+
             escuelas.append({
                 "region": asignacion.region.nombre,
                 "cueanexo": oferta.cueanexo,
@@ -73,10 +105,17 @@ def detalle_supervisor(request, pk):
                 "acronimo": oferta.acronimo,
             })
 
-    return render(request, "supervisores/detalle.html", {
-        "supervisor": supervisor,
-        "escuelas": escuelas,
-    })
+    return render(
+        request,
+        "supervisores/detalle.html",
+        {
+            "supervisor": supervisor,
+            "escuelas": escuelas,
+            "puede_crud_supervisores": puede_administrar_supervisores(
+                request.user
+            ),
+        },
+    )
 
 
 SupervisorDetalle = detalle_supervisor
@@ -90,8 +129,15 @@ def SupervisorEditar(request, pk):
         pk=pk,
         activo=True,
     )
-    if not puede_operar_supervisor(request.user, supervisor, "modificar"):
-        return HttpResponseForbidden("Sin permisos para modificar este supervisor.")
+
+    if not puede_operar_supervisor(
+        request.user,
+        supervisor,
+        "modificar",
+    ):
+        return HttpResponseForbidden(
+            "Sólo Administrador y Gestor pueden modificar supervisores."
+        )
 
     if request.method == "POST":
         update(
@@ -99,20 +145,41 @@ def SupervisorEditar(request, pk):
             telefono=request.POST.get("telefono"),
             email=request.POST.get("email"),
         )
-        messages.success(request, "Supervisor actualizado correctamente.")
-        return redirect("supervisor_registro:detalle", pk=supervisor.pk)
 
-    return render(request, "supervisores/editar.html", {"supervisor": supervisor})
+        messages.success(
+            request,
+            "Supervisor actualizado correctamente.",
+        )
+
+        return redirect(
+            "supervisor_registro:detalle",
+            pk=supervisor.pk,
+        )
+
+    return render(
+        request,
+        "supervisores/editar.html",
+        {
+            "supervisor": supervisor,
+            "puede_crud_supervisores": True,
+        },
+    )
 
 
 @login_required
 def exportar_excel(request):
     if not puede_ver_supervisores(request.user):
-        return HttpResponseForbidden("Sin permisos para exportar supervisores.")
+        return HttpResponseForbidden(
+            "Sin permisos para exportar supervisores."
+        )
 
     regiones = get_regiones_usuario(request.user)
+
     queryset = SupervisorQueryService.base(regiones)
-    queryset = SupervisorQueryService.por_regiones(queryset, regiones)
+    queryset = SupervisorQueryService.por_regiones(
+        queryset,
+        regiones,
+    )
     queryset = SupervisorQueryService.filtros(
         queryset,
         q=request.GET.get("q", "").strip(),
@@ -124,9 +191,16 @@ def exportar_excel(request):
     wb = Workbook()
     ws = wb.active
     ws.title = "Supervisores"
+
     ws.append([
-        "CUIL", "Apellido", "Nombres", "Regional", "Nivel",
-        "Situación", "Email", "Teléfono",
+        "CUIL",
+        "Apellido",
+        "Nombres",
+        "Regional",
+        "Nivel",
+        "Situación",
+        "Email",
+        "Teléfono",
     ])
 
     for supervisor in queryset:
@@ -136,6 +210,7 @@ def exportar_excel(request):
 
         for asignacion in supervisor.asignaciones_regionales.all():
             regiones_out.append(asignacion.region.nombre)
+
             niveles_out.extend(
                 str(nivel.nivel)
                 for nivel in asignacion.niveles.all()
@@ -160,12 +235,26 @@ def exportar_excel(request):
         ])
 
     for column in ws.columns:
-        max_length = max(len(str(cell.value or "")) for cell in column)
-        ws.column_dimensions[column[0].column_letter].width = min(max_length + 2, 60)
+        max_length = max(
+            len(str(cell.value or ""))
+            for cell in column
+        )
+
+        ws.column_dimensions[
+            column[0].column_letter
+        ].width = min(max_length + 2, 60)
 
     response = HttpResponse(
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        content_type=(
+            "application/"
+            "vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        )
     )
-    response["Content-Disposition"] = 'attachment; filename="supervisores_filtrados.xlsx"'
+
+    response["Content-Disposition"] = (
+        'attachment; filename="supervisores_filtrados.xlsx"'
+    )
+
     wb.save(response)
     return response
