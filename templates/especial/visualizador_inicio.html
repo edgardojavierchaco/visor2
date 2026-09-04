@@ -129,7 +129,7 @@
 <div class="especial-visualizador-page">
     <section class="especial-visualizador-intro" aria-labelledby="especial-visualizador-opciones">
         <h2 id="especial-visualizador-opciones" class="especial-visualizador-section-title">Elegí qué querés consultar</h2>
-        <p class="especial-visualizador-description">Seleccioná una opción para acceder a la información global del módulo Especial.</p>
+        <p class="especial-visualizador-description">Seleccioná una opción para acceder a la información de la escuela elegida.</p>
     </section>
 
     <section class="especial-visualizador-grid" aria-label="Opciones de visualización">
@@ -137,19 +137,19 @@
             <span class="especial-visualizador-icon" aria-hidden="true"><i class="fa-solid fa-user-graduate"></i></span>
             <h2>Alumnos</h2>
             <p>Consultar las secciones e inscripciones de un alumno.</p>
-            <a class="btn btn-primary btn-sm" href="{% url 'especial:visualizador_alumnos' %}">Visualizar</a>
+            <a class="btn btn-primary btn-sm" href="{% url 'especial:visualizador_alumnos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Visualizar</a>
         </article>
         <article class="especial-visualizador-card">
             <span class="especial-visualizador-icon" aria-hidden="true"><i class="fa-solid fa-chalkboard-user"></i></span>
             <h2>Docentes</h2>
             <p>Consultar las secciones y asignaciones de un docente.</p>
-            <a class="btn btn-primary btn-sm" href="{% url 'especial:visualizador_docentes' %}">Visualizar</a>
+            <a class="btn btn-primary btn-sm" href="{% url 'especial:visualizador_docentes' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Visualizar</a>
         </article>
         <article class="especial-visualizador-card">
             <span class="especial-visualizador-icon" aria-hidden="true"><i class="fa-solid fa-user-tie"></i></span>
             <h2>Directores</h2>
             <p>Consultar las escuelas relacionadas a un CUIL.</p>
-            <a class="btn btn-primary btn-sm" href="{% url 'especial:visualizador_directores' %}">Visualizar</a>
+            <a class="btn btn-primary btn-sm" href="{% url 'especial:visualizador_directores' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Visualizar</a>
         </article>
     </section>
 </div>

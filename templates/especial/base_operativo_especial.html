@@ -96,9 +96,6 @@
                     </select>
                 </div>
                 <div class="cef-context-actions">
-                    <button type="submit" class="btn btn-primary btn-sm" data-especial-context-submit>
-                        <i class="fa-solid fa-check"></i> Aplicar
-                    </button>
                     {% if especial_context.es_admin_especial %}
                         <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:administrar_ciclos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" data-especial-section-link data-especial-section="ciclos">
                             <i class="fa-solid fa-calendar-plus"></i> Ciclos
@@ -135,7 +132,7 @@
 </div>
 <script src="{% static 'especial/js/dropdowns.js' %}" defer></script>
 <script src="{% static 'especial/js/table_controls.js' %}" defer></script>
-<script src="{% static 'especial/js/context_selector.js' %}" defer></script>
+<script src="{% static 'especial/js/context_selector.js' %}?v=20260903-2" defer></script>
 <script src="{% static 'especial/js/busqueda_personas.js' %}" defer></script>
 <script src="{% static 'especial/js/busqueda_especial.js' %}?v=20260901-1" defer></script>
 <script src="{% static 'especial/js/alumnos.js' %}?v=20260901-1" defer></script>

@@ -42,11 +42,26 @@
         var cueSelect = form.querySelector("#id_contexto_cueanexo");
         var cicloSelect = form.querySelector("#id_contexto_ciclo");
         var submitButton = form.querySelector("[data-especial-context-submit]");
-        if (!cueSelect || !cicloSelect || !submitButton) return;
+        if (!cueSelect || !cicloSelect) return;
 
         var unchanged = selectValue(cueSelect) === String(form.dataset.appliedCueanexo || "").trim()
             && selectValue(cicloSelect) === String(form.dataset.appliedCiclo || "").trim();
-        submitButton.disabled = unchanged;
+        if (submitButton) submitButton.disabled = unchanged;
+    }
+
+    function submitContextChanges(form) {
+        if (!form || form.dataset.contextSubmitting === "1") return;
+        var cueSelect = form.querySelector("#id_contexto_cueanexo");
+        var cicloSelect = form.querySelector("#id_contexto_ciclo");
+        if (!cueSelect || !cicloSelect) return;
+        var unchanged = selectValue(cueSelect) === String(form.dataset.appliedCueanexo || "").trim()
+            && selectValue(cicloSelect) === String(form.dataset.appliedCiclo || "").trim();
+        if (unchanged) return;
+        form.dataset.contextSubmitting = "1";
+        var submitButton = form.querySelector("[data-especial-context-submit]");
+        if (submitButton) submitButton.disabled = false;
+        if (form.requestSubmit) form.requestSubmit();
+        else form.submit();
     }
 
     function initContextForm(form) {
@@ -56,6 +71,7 @@
             form.addEventListener("change", function (event) {
                 if (event.target.matches("#id_contexto_cueanexo, #id_contexto_ciclo")) {
                     syncContextSubmit(form);
+                    submitContextChanges(form);
                 }
             });
             form.addEventListener("submit", function (event) {
@@ -91,6 +107,7 @@
         });
         $select.on("change.especialContextSelector", function () {
             syncContextSubmit(form);
+            submitContextChanges(form);
         });
     }
 
