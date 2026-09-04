@@ -5,7 +5,6 @@
     var reloadChecked = false;
     var activeSearchRequest = null;
     var activeBajaRequest = null;
-    var sectionGroupTableSequence = 0;
 
     function helpers() {
         return window.EspecialBusquedaPersonas;
@@ -338,164 +337,181 @@
         }
     }
 
-    function alumnoSectionTables(root) {
-        var scope = root && root.querySelectorAll ? root : document;
-        var tables = [];
-        if (root && root.matches && root.matches("table[data-cef-alumnos-seccion-groups]")) {
-            tables.push(root);
-        }
-        if (scope.querySelectorAll) {
-            Array.prototype.push.apply(
-                tables,
-                scope.querySelectorAll("table[data-cef-alumnos-seccion-groups]")
-            );
-        }
-        return tables;
-    }
-
-    function buildAlumnoSectionGroups(table) {
-        var groups = [];
-        var rows = table.querySelectorAll(
-            "tbody tr[data-cef-alumno-seccion-header], tbody tr[data-cef-alumno-seccion-row]"
-        );
-
-        Array.prototype.forEach.call(rows, function (row) {
-            var key = row.getAttribute("data-cef-table-group-key") || "";
-            var group = groups.filter(function (candidate) { return candidate.key === key; })[0];
-            if (!group) {
-                group = {
-                    key: key,
-                    id: "grupo-" + (groups.length + 1),
-                    header: null,
-                    rows: []
-                };
-                groups.push(group);
-            }
-            row.dataset.cefAlumnoSeccionId = group.id;
-            if (row.hasAttribute("data-cef-alumno-seccion-header")) group.header = row;
-            else group.rows.push(row);
-        });
-
-        return groups.filter(function (group) { return group.header; });
-    }
-
-    function setAlumnoSectionArrow(toggle, expanded) {
-        var arrow = toggle.querySelector("[data-cef-alumno-seccion-arrow]");
-        if (!arrow) return;
-        var icon = arrow.querySelector("i") || arrow;
-        icon.classList.toggle("fa-chevron-right", !expanded);
-        icon.classList.toggle("fa-chevron-down", expanded);
-    }
-
-    function updateAlumnoSectionAccessibility(table, group) {
-        var toggle = group.header.querySelector("[data-cef-alumno-seccion-toggle]");
-        if (!toggle) return;
-
-        var baseId = "cef-alumno-seccion-" + table._cefAlumnoSectionPrefix + "-" + group.id;
-        group.header.id = baseId + "-encabezado";
-        toggle.id = baseId + "-toggle";
-        var controls = group.rows.map(function (row, index) {
-            row.id = baseId + "-fila-" + (index + 1);
-            return row.id;
-        });
-        if (controls.length) toggle.setAttribute("aria-controls", controls.join(" "));
-
-        var count = group.header.querySelector("[data-cef-alumno-seccion-count]");
-        if (count) {
-            var total = group.rows.length;
-            count.textContent = " · " + total + (total === 1 ? " alumno" : " alumnos");
-        }
-    }
-
-    function setAlumnoSectionState(group, expanded) {
-        var toggle = group.header.querySelector("[data-cef-alumno-seccion-toggle]");
-        if (toggle) {
-            toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
-            setAlumnoSectionArrow(toggle, expanded);
-        }
-        group.rows.forEach(function (row) {
-            row.classList.toggle("oculta-por-seccion", !expanded);
-        });
-    }
-
-    function refreshAlumnoSectionTable(table, reset) {
-        var groups = buildAlumnoSectionGroups(table);
-        var state = table._cefAlumnoSectionState || {};
-        table._cefAlumnoSectionGroups = groups;
-        if (reset) state = {};
-
-        groups.forEach(function (group) {
-            state[group.id] = Boolean(state[group.id]);
-            updateAlumnoSectionAccessibility(table, group);
-            setAlumnoSectionState(group, state[group.id]);
-        });
-        table._cefAlumnoSectionState = state;
-    }
-
-    function resetAlumnoSectionTable(table) {
-        refreshAlumnoSectionTable(table, true);
-    }
-
-    function toggleAlumnoSection(table, sectionId) {
-        var groups = table._cefAlumnoSectionGroups || [];
-        var group = groups.filter(function (candidate) {
-            return candidate.id === sectionId;
-        })[0];
-        if (!group) return;
-
-        var state = table._cefAlumnoSectionState || {};
-        state[group.id] = !state[group.id];
-        table._cefAlumnoSectionState = state;
-        setAlumnoSectionState(group, state[group.id]);
-    }
-
-    function bindAlumnoSectionTable(table) {
-        var root = table.closest(".cef-panel-body, .cef-panel") || document;
-        var pagination = root.querySelector("[data-cef-table-pagination]");
-        if (pagination) pagination.addEventListener("click", function () { resetAlumnoSectionTable(table); });
-
-        if (window.jQuery && window.jQuery.fn) {
-            window.jQuery(table)
-                .off("draw.dt.cefAlumnoSectionGroups")
-                .on("draw.dt.cefAlumnoSectionGroups", function () {
-                    resetAlumnoSectionTable(table);
-                });
-        }
-    }
-
-    function initAlumnoSectionTable(table) {
-        if (!table || table.dataset.cefAlumnoSectionReady === "1") return;
-        sectionGroupTableSequence += 1;
-        table._cefAlumnoSectionPrefix = "tabla-" + sectionGroupTableSequence;
-        table._cefAlumnoSectionState = {};
-        table.dataset.cefAlumnoSectionReady = "1";
-        bindAlumnoSectionTable(table);
-        resetAlumnoSectionTable(table);
-    }
-
-    function initAlumnoSectionTables(root) {
-        alumnoSectionTables(root).forEach(initAlumnoSectionTable);
-    }
-
     function installExpansion() {
         document.addEventListener("click", function (event) {
+            var actionOptionsToggle = event.target.closest("[data-especial-alumno-action-options-toggle]");
+            if (actionOptionsToggle) {
+                event.preventDefault();
+                var optionsId = actionOptionsToggle.getAttribute("aria-controls");
+                var options = optionsId && document.getElementById(optionsId);
+                if (!options) return;
+                var expanded = actionOptionsToggle.getAttribute("aria-expanded") === "true";
+                document.querySelectorAll("[data-especial-alumno-action-options]").forEach(function (otherOptions) {
+                    if (otherOptions === options) return;
+                    otherOptions.hidden = true;
+                    var otherToggle = document.querySelector(
+                        "[aria-controls='" + otherOptions.id + "']"
+                    );
+                    if (otherToggle) otherToggle.setAttribute("aria-expanded", "false");
+                });
+                options.hidden = expanded;
+                actionOptionsToggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+                if (!expanded) positionAlumnoActionOptions(actionOptionsToggle, options);
+                return;
+            }
+
             var toggle = event.target.closest("[data-cef-alumno-secciones-toggle]");
+            if (toggle) {
+                var secciones = toggle.closest(".cef-alumno-secciones");
+                if (!secciones) return;
+                event.preventDefault();
+                var expanded = toggle.getAttribute("aria-expanded") === "true";
+                secciones.querySelectorAll("[data-cef-alumno-seccion-adicional]").forEach(function (seccion) {
+                    seccion.hidden = expanded;
+                });
+                toggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+                if (expanded) {
+                    var restantes = toggle.getAttribute("data-cef-alumno-secciones-restantes");
+                    toggle.textContent = restantes === "1" ? "+ 1 sección más" : "+ " + restantes + " secciones más";
+                } else {
+                    toggle.textContent = "Mostrar menos";
+                }
+                return;
+            }
+
+            toggle = event.target.closest("[data-especial-historial-toggle]");
+            if (toggle) {
+                event.preventDefault();
+                toggleHistorial(toggle);
+                return;
+            }
+
+            toggle = event.target.closest("[data-especial-reincorporar-cancel]");
+            if (toggle) {
+                var cancelDialog = toggle.closest("dialog");
+                if (cancelDialog && typeof cancelDialog.close === "function") cancelDialog.close("cancel");
+                return;
+            }
+
+            toggle = event.target.closest("[data-especial-reincorporar-confirm]");
+            if (toggle) {
+                var confirmDialog = toggle.closest("dialog");
+                var confirmForm = confirmDialog && confirmDialog._especialReincorporarForm;
+                if (confirmDialog && typeof confirmDialog.close === "function") confirmDialog.close("confirm");
+                submitReincorporacion(confirmForm);
+                return;
+            }
+
+            toggle = event.target.closest("[data-especial-reincorporar-open]");
             if (!toggle) return;
-            var secciones = toggle.closest(".cef-alumno-secciones");
-            if (!secciones) return;
             event.preventDefault();
-            var expanded = toggle.getAttribute("aria-expanded") === "true";
-            secciones.querySelectorAll("[data-cef-alumno-seccion-adicional]").forEach(function (seccion) {
-                seccion.hidden = expanded;
-            });
-            toggle.setAttribute("aria-expanded", expanded ? "false" : "true");
-            if (expanded) {
-                var restantes = toggle.getAttribute("data-cef-alumno-secciones-restantes");
-                toggle.textContent = restantes === "1" ? "+ 1 sección más" : "+ " + restantes + " secciones más";
-            } else {
-                toggle.textContent = "Mostrar menos";
+            var form = toggle.closest("[data-especial-reincorporar-form]");
+            var dialog = document.querySelector("[data-especial-reincorporar-dialog]");
+            if (!form || !dialog) return;
+            var nombre = dialog.querySelector("[data-especial-reincorporar-nombre]");
+            if (nombre) nombre.textContent = toggle.getAttribute("data-alumno-nombre") || "este alumno";
+            dialog._especialReincorporarForm = form;
+            if (typeof dialog.showModal === "function") {
+                dialog.showModal();
+                var cancel = dialog.querySelector("[data-especial-reincorporar-cancel]");
+                if (cancel) cancel.focus();
+            } else if (window.confirm("Se iniciará un nuevo período activo en Educación Especial para el establecimiento y ciclo seleccionados.")) {
+                submitReincorporacion(form);
             }
         });
+    }
+
+    function setHistorialState(toggle, expanded) {
+        if (!toggle) return;
+        var detailId = toggle.getAttribute("data-especial-historial-detail")
+            || toggle.getAttribute("aria-controls");
+        var detail = detailId && document.getElementById(detailId);
+        if (!detail) return;
+        detail.hidden = !expanded;
+        detail.setAttribute("aria-hidden", expanded ? "false" : "true");
+        var scope = toggle.closest("table") || document;
+        scope.querySelectorAll("[data-especial-historial-toggle]").forEach(function (historyToggle) {
+            var controlledId = historyToggle.getAttribute("data-especial-historial-detail")
+                || historyToggle.getAttribute("aria-controls");
+            if (controlledId === detail.id) {
+                historyToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+            }
+        });
+    }
+
+    function toggleHistorial(toggle) {
+        var historyExpanded = toggle.getAttribute("aria-expanded") === "true";
+        var detailId = toggle.getAttribute("data-especial-historial-detail")
+            || toggle.getAttribute("aria-controls");
+        var detail = detailId && document.getElementById(detailId);
+        if (!detail) return;
+
+        var historyTable = toggle.closest("table");
+        if (!historyExpanded && historyTable) {
+            historyTable.querySelectorAll("[data-especial-historial-toggle]").forEach(function (otherToggle) {
+                var otherId = otherToggle.getAttribute("data-especial-historial-detail")
+                    || otherToggle.getAttribute("aria-controls");
+                if (otherId !== detail.id) setHistorialState(otherToggle, false);
+            });
+        }
+        setHistorialState(toggle, !historyExpanded);
+    }
+
+    function positionAlumnoActionOptions(toggle, options) {
+        if (!toggle || !options || options.hidden) return;
+
+        var viewportPadding = 8;
+        var gap = 8;
+        var width = Math.min(220, Math.max(120, window.innerWidth - viewportPadding * 2));
+        var toggleRect = toggle.getBoundingClientRect();
+
+        options.style.position = "fixed";
+        options.style.width = width + "px";
+        options.style.maxHeight = "none";
+        options.style.overflowY = "visible";
+
+        var contentHeight = Math.max(options.scrollHeight, 1);
+        var maxHeight = Math.max(40, window.innerHeight - viewportPadding * 2);
+        var height = Math.min(contentHeight, maxHeight);
+        var left = toggleRect.left - width - gap;
+        if (left < viewportPadding) left = toggleRect.right + gap;
+        left = Math.max(
+            viewportPadding,
+            Math.min(left, window.innerWidth - width - viewportPadding)
+        );
+
+        var top = toggleRect.top;
+        if (top + height > window.innerHeight - viewportPadding) {
+            top = window.innerHeight - height - viewportPadding;
+        }
+        top = Math.max(
+            viewportPadding,
+            Math.min(top, window.innerHeight - height - viewportPadding)
+        );
+
+        options.style.left = left + "px";
+        options.style.right = "auto";
+        options.style.top = top + "px";
+        options.style.bottom = "auto";
+        options.style.maxHeight = height + "px";
+        options.style.overflowY = contentHeight > height ? "auto" : "visible";
+        options.style.zIndex = "1095";
+    }
+
+    function repositionAlumnoActionOptions() {
+        document.querySelectorAll("[data-especial-alumno-action-options]").forEach(function (options) {
+            if (options.hidden) return;
+            var toggle = document.querySelector("[aria-controls='" + options.id + "']");
+            if (toggle) positionAlumnoActionOptions(toggle, options);
+        });
+    }
+
+    function submitReincorporacion(form) {
+        if (!form) return;
+        var confirm = form.querySelector("[data-especial-reincorporar-open]");
+        if (confirm) confirm.disabled = true;
+        if (typeof form.requestSubmit === "function") form.requestSubmit();
+        else form.submit();
     }
 
     function matriculaEditors(root) {
@@ -804,15 +820,6 @@
         installed = true;
         installExpansion();
         document.addEventListener("click", function (event) {
-            var toggle = event.target.closest("[data-cef-alumno-seccion-toggle]");
-            if (!toggle) return;
-            var table = toggle.closest("table[data-cef-alumnos-seccion-groups]");
-            if (!table) return;
-            if (table.dataset.cefAlumnoSectionReady !== "1") initAlumnoSectionTable(table);
-            event.preventDefault();
-            toggleAlumnoSection(table, toggle.closest("tr").dataset.cefAlumnoSeccionId);
-        });
-        document.addEventListener("click", function (event) {
             var opener = event.target.closest("[data-open-personas-modal]");
             if (opener && !event.defaultPrevented) {
                 var searchModal = document.getElementById("modalBusquedaAlumno");
@@ -874,12 +881,13 @@
         };
         if (document.readyState === "complete") onWindowLoad();
         else window.addEventListener("load", onWindowLoad, { once: true });
+        window.addEventListener("scroll", repositionAlumnoActionOptions, true);
+        window.addEventListener("resize", repositionAlumnoActionOptions);
     }
 
     function init(root) {
         initCuilInput(root);
         initMatricula(root);
-        initAlumnoSectionTables(root);
     }
 
     function rootOwnsModal(root, modal) {
