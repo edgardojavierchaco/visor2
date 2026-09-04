@@ -31,6 +31,7 @@ from .models import (
     PADRON_DB_ALIAS,
     SeccionEspecial,
     TurnoTipo,
+    cueanexo_tiene_oferta_matricula_compartida,
 )
 from .permisos import especial_required, get_permisos_especial_request
 from .views_contexto import contexto_base
@@ -1566,6 +1567,17 @@ def visualizador_alumnos(request):
             "filtros_panel_abierto": False,
         }
     )
+    try:
+        context["mostrar_columna_matricula_compartida"] = (
+            cueanexo_tiene_oferta_matricula_compartida(
+                context["especial_context"].get("cueanexo")
+            )
+        )
+    except (OperationalError, ProgrammingError):
+        logger.exception(
+            "No se pudo verificar Integración para el visualizador de alumnos."
+        )
+        context["mostrar_columna_matricula_compartida"] = False
 
     if errores:
         return render(request, "especial/visualizador_alumnos.html", context)

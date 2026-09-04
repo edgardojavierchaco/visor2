@@ -352,24 +352,27 @@ def get_ofertas_educativas_especiales(cueanexo, padron_queryset=None):
 
 
 def cueanexo_tiene_oferta_matricula_compartida(cueanexo):
-    """Indica si un CUE EEE tiene una oferta con Integración independiente."""
+    """Indica si el CUE tiene exactamente la oferta activa de Integración."""
     cueanexo = normalizar_cueanexo(cueanexo)
     if not cueanexo:
         return False
-    ofertas_eee = list(
+    ofertas_activas = list(
         get_escuelas_especiales_base_queryset()
         .filter(cueanexo=cueanexo)
+        .filter(
+            est_oferta__iexact="Activo",
+            estado_est__iexact="Activo",
+        )
+        .exclude(oferta__isnull=True)
+        .exclude(oferta__exact="")
         .values_list("oferta", flat=True)
     )
-    termino = _normalizar_oferta_matricula_compartida(
-        TERMINO_MATRICULA_COMPARTIDA
+    oferta_objetivo = _normalizar_oferta_matricula_compartida(
+        "Especial - Integración"
     )
     return any(
-        re.search(
-            r"\b" + re.escape(termino) + r"\b",
-            _normalizar_oferta_matricula_compartida(oferta),
-        )
-        for oferta in ofertas_eee
+        _normalizar_oferta_matricula_compartida(oferta) == oferta_objetivo
+        for oferta in ofertas_activas
     )
 
 
