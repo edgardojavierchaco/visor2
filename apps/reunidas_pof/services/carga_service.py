@@ -70,7 +70,7 @@ def validar_cabecera_reunida(anio, nivel):
     if errores:
         return {
             "ok": False,
-            "mensaje": "Hay errores en la Cabecera de Reunida.",
+            "mensaje": "Hay errores en la Cabecera POF.",
             "errores": errores,
         }
 
@@ -78,13 +78,13 @@ def validar_cabecera_reunida(anio, nivel):
     if not reunida:
         return {
             "ok": False,
-            "mensaje": "No existe una Reunida POF para ese año y nivel. Primero debe crearla.",
+            "mensaje": "No existe una POF para ese año y nivel. Primero debe crearla.",
             "errores": {"reunida": ["No existe una Reunida POF para ese año y nivel."]},
         }
 
     return {
         "ok": True,
-        "mensaje": "Cabecera de Reunida validada.",
+        "mensaje": "Cabecera POF validada.",
         "reunida": {
             "id": reunida.id,
             "anio": reunida.anio,

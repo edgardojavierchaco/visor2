@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from decimal import Decimal
 from io import BytesIO
 from urllib.parse import urlencode
@@ -7,7 +8,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.paginator import Paginator
-from django.db import IntegrityError, connection, transaction
+from django.db import DatabaseError, IntegrityError, connection, transaction
 from django.db.models import Max
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import HttpResponse, JsonResponse
@@ -38,7 +39,10 @@ from .permisos import (
 )
 from .services.carga_service import construir_contexto_carga, validar_cabecera_reunida
 from .services.consulta_service import construir_contexto_consulta
-from .services.exportacion_reunida import construir_contexto_exportacion
+from .services.exportacion_reunida import (
+    COLUMNAS_BUSQUEDA_EXPORTACION,
+    construir_contexto_exportacion,
+)
 from .services.grilla_pof import construir_grilla_pof_desde_cargos, obtener_cargos_grilla_reunida
 from .services.grilla_pof.detalle_rows import (
     obtener_grupo_operativo_detalle,
@@ -68,6 +72,7 @@ from .services.padron_materializadas_service import (
     buscar_ofertas_padron,
     construir_cueanexo_sin_guion,
     obtener_catalogos_padron_ingreso_manual_pof,
+    obtener_opciones_filtro_detalle_padron,
 )
 from .services.proyecto_especial_manual_service import (
     buscar_cuof_manual_proyecto_especial as buscar_cuof_manual_proyecto_especial_service,
@@ -98,6 +103,38 @@ from .utils.api_responses import (
 
 
 logger = logging.getLogger(__name__)
+
+_EXCEL_DOWNLOAD_TOKEN_PARAMETER = "download_token"
+_EXCEL_DOWNLOAD_READY_COOKIE = "pof_excel_download_ready"
+_EXCEL_DOWNLOAD_TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_-]{20,128}$")
+_EXCEL_DOWNLOAD_COOKIE_PATH = "/"
+_EXCEL_DOWNLOAD_COOKIE_MAX_AGE = 120
+
+
+def _obtener_token_descarga_excel(request):
+    """Devuelve un token de correlación válido, sin usarlo como autorización."""
+    token = request.GET.get(_EXCEL_DOWNLOAD_TOKEN_PARAMETER, "")
+    if not isinstance(token, str) or not (20 <= len(token) <= 128):
+        return ""
+    if _EXCEL_DOWNLOAD_TOKEN_PATTERN.fullmatch(token) is None:
+        return ""
+    return token
+
+
+def _marcar_descarga_excel_lista(request, response):
+    """Marca la respuesta XLSX lista mediante una cookie legible por el navegador."""
+    token = _obtener_token_descarga_excel(request)
+    if token:
+        response.set_cookie(
+            _EXCEL_DOWNLOAD_READY_COOKIE,
+            token,
+            max_age=_EXCEL_DOWNLOAD_COOKIE_MAX_AGE,
+            path=_EXCEL_DOWNLOAD_COOKIE_PATH,
+            secure=request.is_secure(),
+            httponly=False,
+            samesite="Lax",
+        )
+    return response
 
 
 def _obtener_niveles_ceic_validos(nivel_reunida):
@@ -245,6 +282,80 @@ def _valor_excel_exportacion(valor):
 
     return valor
 
+
+def _escribir_filas_excel_optimizado(
+    ws,
+    filas,
+    columnas,
+    mensaje="",
+    fila_encabezado=4,
+):
+    """
+    Escribe las mismas filas Excel y combina formato y anchos en una pasada.
+
+    - Conserva la conversion de `_valor_excel_exportacion`.
+    - Replica los formatos de texto, cantidades, puntos y totales vigentes.
+    - Mantiene los anchos minimo 10 y maximo 42 usados por el exportador.
+    - Aplica formatos de datos desde la fila siguiente al encabezado recibido.
+    - No altera filas, columnas, orden ni los bordes aplicados posteriormente.
+    """
+    from openpyxl.styles import Alignment
+    from openpyxl.utils import get_column_letter
+
+    metadata_columnas = [
+        (
+            _es_columna_texto_excel(columna),
+            _es_columna_numerica_excel(columna),
+            _es_columna_cantidad_entera_excel(columna),
+        )
+        for columna in columnas
+    ]
+    cuerpo_alignment = Alignment(
+        vertical="top",
+        wrap_text=True,
+    )
+
+    for fila in filas:
+        ws.append([_valor_excel_exportacion(valor) for valor in fila])
+
+    if mensaje and not filas:
+        ws.append([mensaje])
+
+    cantidad_columnas = max(ws.max_column, 1)
+    anchos_columnas = [10] * cantidad_columnas
+    fila_inicio_datos = fila_encabezado + 1
+    for numero_fila, fila in enumerate(
+        ws.iter_rows(min_row=fila_encabezado),
+        start=fila_encabezado,
+    ):
+        for indice_columna, celda in enumerate(fila):
+            if (
+                numero_fila >= fila_inicio_datos
+                and indice_columna < len(metadata_columnas)
+            ):
+                celda.alignment = cuerpo_alignment
+                es_texto, es_numerica, es_cantidad_entera = metadata_columnas[
+                    indice_columna
+                ]
+                if es_texto:
+                    if celda.value not in (None, ""):
+                        celda.value = str(celda.value)
+                    celda.number_format = "@"
+                elif es_numerica and isinstance(celda.value, (int, float)):
+                    celda.number_format = (
+                        "#,##0" if es_cantidad_entera else "#,##0.00"
+                    )
+
+            valor = "" if celda.value is None else str(celda.value)
+            anchos_columnas[indice_columna] = max(
+                anchos_columnas[indice_columna],
+                min(len(valor) + 4, 42),
+            )
+
+    for indice_columna, ancho in enumerate(anchos_columnas, start=1):
+        ws.column_dimensions[get_column_letter(indice_columna)].width = ancho
+
+
 def _normalizar_columna_excel(valor):
     return str(valor or "").strip().lower()
 
@@ -376,11 +487,24 @@ def _aplicar_bordes_secciones_excel(ws, secciones, fila_inicio, max_columna):
         fila_actual = ultima_fila + 1
 
 
-def _aplicar_bordes_grupos_visual_excel(ws, separadores_filas, fila_inicio, max_columna):
+def _aplicar_bordes_grupos_visual_excel(
+    ws,
+    separadores_filas,
+    fila_inicio,
+    max_columna,
+    color_anexo="111827",
+):
+    """
+    Aplica los separadores visuales de CUE y CUEANEXO al workbook.
+
+    - Usa medium azul para nuevos CUE.
+    - Usa thin con el color recibido para nuevos CUEANEXO.
+    - Permite conservar el color histórico de Proyecto Especial.
+    """
     from openpyxl.styles import Border, Side
 
     borde_cue = Side(style="medium", color="2444D8")
-    borde_anexo = Side(style="thin", color="CBD5E1")
+    borde_anexo = Side(style="thin", color=color_anexo)
 
     for indice, separador in enumerate(separadores_filas or []):
         if separador.get("es_inicio_cue"):
@@ -401,13 +525,48 @@ def _aplicar_bordes_grupos_visual_excel(ws, separadores_filas, fila_inicio, max_
             )
 
 
+def _texto_filtros_excel_exportacion(contexto):
+    """Describe el alcance y el filtro aplicado a una exportación POF."""
+    if contexto.get("es_proyecto_especial"):
+        return contexto.get("filtros_excel") or "Sin filtros"
+
+    if contexto.get("alcance_excel") == "todos":
+        return "Ninguno (exportación completa)"
+
+    busquedas = contexto.get("busquedas_columnas") or {}
+    if not busquedas:
+        return "Sin filtros"
+
+    partes = []
+    for columna_id, valor in busquedas.items():
+        etiqueta = next(
+            (
+                columna["label"]
+                for columna in COLUMNAS_BUSQUEDA_EXPORTACION
+                if columna["id"] == columna_id
+            ),
+            columna_id,
+        )
+        partes.append(f"{etiqueta}: {valor}")
+    return " · ".join(partes)
+
+
 def _crear_respuesta_excel_exportacion(contexto):
+    """
+    Genera el workbook Excel respetando el pipeline de filas ya construido.
+
+    - Optimiza solo Reunidas comunes combinando formato y anchos en una pasada.
+    - Conserva el recorrido baseline completo para Proyecto Especial.
+    - Agrega metadatos de generación sin cambiar filas ni columnas exportadas.
+    - Mantiene bordes, filtros, freeze panes y estilos funcionales existentes.
+    """
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font, PatternFill
 
     wb = Workbook()
     ws = wb.active
     reunida = contexto.get("reunida", {})
+    es_proyecto_especial = contexto.get("es_proyecto_especial", False)
     columnas = contexto.get("columnas", [])
     filas = contexto.get("filas_exportacion", [])
     separadores_filas = contexto.get("separadores_filas_exportacion", [])
@@ -419,12 +578,20 @@ def _crear_respuesta_excel_exportacion(contexto):
 
     ws.title = _normalizar_titulo_hoja(titulo_hoja)
     ws.append([titulo_excel])
+    ws.append([
+        timezone.localtime(timezone.now()).strftime("Generado el %d/%m/%Y %H:%M")
+    ])
+    ws.append([f"Filtros aplicados: {_texto_filtros_excel_exportacion(contexto)}"])
     ws.append(columnas)
 
     for celda in ws[1]:
         celda.font = Font(bold=True, size=13)
 
-    for celda in ws[2]:
+    ws[2][0].font = Font(size=10)
+    ws[3][0].font = Font(size=10)
+    ws[3][0].alignment = Alignment(wrap_text=True)
+
+    for celda in ws[4]:
         celda.font = Font(bold=True, color="FFFFFF")
         celda.fill = PatternFill("solid", fgColor="2444D8")
         celda.alignment = Alignment(
@@ -433,32 +600,50 @@ def _crear_respuesta_excel_exportacion(contexto):
             wrap_text=True,
         )
 
-    for fila in filas:
-        ws.append([_valor_excel_exportacion(valor) for valor in fila])
-
-    if mensaje and not filas:
-        ws.append([mensaje])
+    if es_proyecto_especial:
+        for fila in filas:
+            ws.append([_valor_excel_exportacion(valor) for valor in fila])
+        if mensaje and not filas:
+            ws.append([mensaje])
+    else:
+        _escribir_filas_excel_optimizado(
+            ws,
+            filas,
+            columnas,
+            mensaje=mensaje,
+            fila_encabezado=4,
+        )
 
     max_columna = max(len(columnas), 1)
-    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=max_columna)
-    ws.freeze_panes = "A3"
+    for numero_fila in (1, 2, 3):
+        ws.merge_cells(
+            start_row=numero_fila,
+            start_column=1,
+            end_row=numero_fila,
+            end_column=max_columna,
+        )
+    ws.freeze_panes = "A5"
 
-    _aplicar_autofiltro_excel(ws, fila_encabezado=2, max_columna=max_columna)
-    _aplicar_formato_columnas_excel(ws, columnas, fila_inicio=3)
-    _aplicar_bordes_secciones_excel(
-        ws,
-        secciones,
-        fila_inicio=3,
-        max_columna=max_columna,
-    )
+    _aplicar_autofiltro_excel(ws, fila_encabezado=4, max_columna=max_columna)
+    if es_proyecto_especial:
+        _aplicar_formato_columnas_excel(ws, columnas, fila_inicio=5)
+    if es_proyecto_especial:
+        _aplicar_bordes_secciones_excel(
+            ws,
+            secciones,
+            fila_inicio=5,
+            max_columna=max_columna,
+        )
     _aplicar_bordes_grupos_visual_excel(
         ws,
         separadores_filas,
-        fila_inicio=3,
+        fila_inicio=5,
         max_columna=max_columna,
+        color_anexo="CBD5E1" if es_proyecto_especial else "111827",
     )
 
-    _ajustar_ancho_columnas_excel(ws, fila_inicio=2)
+    if es_proyecto_especial:
+        _ajustar_ancho_columnas_excel(ws, fila_inicio=4)
 
     buffer = BytesIO()
     wb.save(buffer)
@@ -756,7 +941,7 @@ def crear_proyecto_especial(request):
     return render(
         request,
         "reunidas_pof/proyecto_especial_form.html",
-        {"form": form, "titulo": "📔 Crear Proyecto Especial"},
+        {"form": form, "titulo": "CREAR PROYECTO ESPECIAL"},
     )
 
 
@@ -880,7 +1065,8 @@ def visualizacion_cargos_localizacion_exportar_filtros(request):
         request,
         exportar_todo=False,
     )
-    return _respuesta_excel_visualizacion_cargos_localizacion(payload)
+    response = _respuesta_excel_visualizacion_cargos_localizacion(payload)
+    return _marcar_descarga_excel_lista(request, response)
 
 
 @pof_visualizacion_api_required
@@ -890,13 +1076,41 @@ def visualizacion_cargos_localizacion_exportar_todo(request):
         request,
         exportar_todo=True,
     )
-    return _respuesta_excel_visualizacion_cargos_localizacion(payload)
+    response = _respuesta_excel_visualizacion_cargos_localizacion(payload)
+    return _marcar_descarga_excel_lista(request, response)
 
 
 @pof_required
 def detalle_reunida(request):
     contexto = construir_contexto_detalle_reunida(request)
     return render(request, "reunidas_pof/detalle_reunida.html", contexto)
+
+
+@pof_api_required
+@require_GET
+def detalle_reunida_opciones_filtro(request):
+    """
+    Devuelve por JSON un catálogo remoto del Detalle común.
+
+    - Acepta únicamente campos validados por el servicio de Padrón.
+    - Ejecuta una consulta de lectura por solicitud y no persiste resultados.
+    - Responde errores genéricos sin exponer detalles de SQL o infraestructura.
+    """
+    campo = (request.GET.get("campo") or "").strip()
+    try:
+        opciones = obtener_opciones_filtro_detalle_padron(campo)
+    except ValueError:
+        return api_error_validacion(
+            "El campo de filtro no es válido.",
+            {"campo": ["El campo solicitado no está habilitado."]},
+        )
+    except DatabaseError:
+        logger.exception("Error al cargar el catálogo remoto del Detalle: %s", campo)
+        return api_error_interno(
+            "No se pudieron cargar las opciones del filtro.",
+        )
+
+    return JsonResponse({"ok": True, "campo": campo, "opciones": opciones})
 
 
 @pof_required
@@ -1147,7 +1361,7 @@ def detalle_reunida_grupo_cargos(request, reunida_id):
     except ReunidaPof.DoesNotExist:
         return api_error_no_encontrado(
             "No se encontro la Reunida solicitada.",
-            {"reunida_id": ["No se encontro la Reunida solicitada."]},
+            {"reunida_id": ["No se encontro la POF solicitada."]},
         )
 
     try:
@@ -1181,7 +1395,7 @@ def detalle_reunida_grupo_cargos(request, reunida_id):
         return api_error_no_encontrado(
             "No existe un grupo con el CUEANEXO indicado dentro de la Reunida.",
             {
-                "cueanexo": ["No existe un grupo con el CUEANEXO indicado en la Reunida."],
+                "cueanexo": ["No existe un grupo con el CUEANEXO indicado en la POF."],
             },
         )
 
@@ -1435,7 +1649,7 @@ def buscar_padron(request):
             return JsonResponse(
                 {
                     "ok": False,
-                    "mensaje": "Primero valide una Cabecera de Reunida con año y nivel.",
+                    "mensaje": "Primero valide una Cabecera POF con año y nivel.",
                     "errores": validacion_cabecera.get("errores", {}),
                     "resultados": [],
                 },
@@ -1857,6 +2071,7 @@ def guardar_carga_proyecto_especial(request):
 def exportar_reunida(request):
     contexto = construir_contexto_exportacion(request)
     if request.GET.get("accion") == "excel":
-        return _crear_respuesta_excel_exportacion(contexto)
+        response = _crear_respuesta_excel_exportacion(contexto)
+        return _marcar_descarga_excel_lista(request, response)
 
     return render(request, "reunidas_pof/exportar_reunida.html", contexto)

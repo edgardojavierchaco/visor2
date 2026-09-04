@@ -630,7 +630,7 @@ def _obtener_cabecera_movimiento(movimiento):
 
 def _resumir_cabecera(reunida, proyecto):
     if reunida:
-        return f"Reunida · {reunida.get_nivel_display()} {reunida.anio}"
+        return f"POF · {reunida.get_nivel_display()} {reunida.anio}"
     if proyecto:
         return f"Proyecto · {proyecto.nombre}"
     return GUION_VACIO
@@ -1120,7 +1120,7 @@ def _validar_cargos_historial(cargos, exigir_afectados=True):
     if not (pertenecen_reunida_normal or pertenecen_proyecto_especial):
         raise ValidationError({
             "cargo_ids": [
-                "Los cargos deben pertenecer a una misma Reunida POF normal "
+                "Los cargos deben pertenecer a una misma POF "
                 "o a un mismo Proyecto Especial."
             ],
         })

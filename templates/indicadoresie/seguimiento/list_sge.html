@@ -1,5 +1,53 @@
 {% extends 'archivos/base/layout.html' %}
+{% block head %}
+{{ block.super }}
+<script>
+(function() {
+    if (sessionStorage.getItem('indicadoresie_sidebar_state') === 'closed') {
+        document.documentElement.classList.add('indicadoresie-sidebar-initial-collapsed');
+    } else {
+        document.documentElement.classList.remove('indicadoresie-sidebar-initial-collapsed');
+    }
+})();
+</script>
+
+<style id="indicadoresie-sidebar-prepaint-stability">
+    html.indicadoresie-sidebar-initial-collapsed .content-wrapper,
+    html.indicadoresie-sidebar-initial-collapsed .main-header,
+    html.indicadoresie-sidebar-initial-collapsed .main-footer {
+        margin-left: 4.6rem !important;
+    }
+
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar,
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar::before {
+        width: 4.6rem !important;
+        overflow-x: hidden !important;
+    }
+
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar:hover,
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar:hover::before,
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar:focus-within,
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar:focus-within::before {
+        width: 250px !important;
+        overflow-x: visible !important;
+    }
+
+    @media (max-width: 991.98px) {
+        html.indicadoresie-sidebar-initial-collapsed .content-wrapper,
+        html.indicadoresie-sidebar-initial-collapsed .main-header,
+        html.indicadoresie-sidebar-initial-collapsed .main-footer {
+            margin-left: 0 !important;
+        }
+
+        html.indicadoresie-sidebar-initial-collapsed
+        .main-sidebar:not(:hover):not(:focus-within) {
+            transform: translateX(-250px) !important;
+        }
+    }
+</style>
+{% endblock %}
 {% block content %}
+{% include 'indicadoresie/seguimiento/nav_operativo_sge.html' %}
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css">
@@ -278,7 +326,7 @@
     .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_paginate { display: none !important; }
 
     /* ===== SPINNER DE CARGA ===== */
-    #loadingWrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5rem; background: #fff; border: 1px solid #dee2e6; border-radius: .5rem; }
+    #loadingWrapper { display: none; flex-direction: column; align-items: center; justify-content: center; padding: 5rem; background: #fff; border-radius: .5rem; }
 
     /* ===== TARJETA DE TABLA ===== */
     .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: .5rem; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,.04); }
@@ -482,7 +530,7 @@
                         <span class="col-badge active" data-cols="0">CUE-Anexo</span>
                         <span class="col-badge"        data-cols="1">Agente</span>
                         <span class="col-badge active" data-cols="2">Nombre Escuela</span>
-                        <span class="col-badge"        data-cols="3">Oferta</span>
+                        <span class="col-badge active" data-cols="3">Oferta</span>
                         <span class="col-badge"        data-cols="7">CUE</span>
                         <span class="col-badge"        data-cols="8">Anexo</span>
                     </div>
@@ -547,27 +595,9 @@
                         <label for="fOferta"><i class="fas fa-graduation-cap"></i>Según Oferta</label>
                         <select id="fOferta">
                             <option value="">-- Todas --</option>
-                            {% if cargo_usuario == "Director de Nivel Inicial" %}
-                                <option value="Inicial - Común">Común - Inicial</option>
-                            {% elif cargo_usuario == "Director de Nivel Primario" %}
-                                <option value="Primario - Común">Común - Primario</option>
-                            {% elif cargo_usuario == "Director de Nivel Secundario" %}
-                                <option value="Secundario - Común">Común - Secundario</option>
-                            {% elif cargo_usuario == "Director de Modalidad Adultos" %}
-                                <option value="Primario - Adultos">Adultos - Primario</option>
-                                <option value="Secundario - Adultos">Adultos - Secundario</option>
-                            {% elif cargo_usuario == "Director de Modalidad Especial" %}
-                                <option value="Inicial - Especial">Especial - Inicial</option>
-                                <option value="Primario - Especial">Especial - Primario</option>
-                            {% else %}
-                                <option value="Inicial - Común">Común - Inicial</option>
-                                <option value="Primario - Común">Común - Primario</option>
-                                <option value="Secundario - Común">Común - Secundario</option>
-                                <option value="Primario - Adultos">Adultos - Primario</option>
-                                <option value="Secundario - Adultos">Adultos - Secundario</option>
-                                <option value="Inicial - Especial">Especial - Inicial</option>
-                                <option value="Primario - Especial">Especial - Primario</option>
-                            {% endif %}
+                            {% for oferta in ofertas %}
+                                <option value="{{ oferta }}">{{ oferta }}</option>
+                            {% endfor %}
                         </select>
                     </div>
 
@@ -589,16 +619,17 @@
 
                     <div class="filter-item">
                         <label for="fAmbito"><i class="fas fa-map"></i>Ámbito</label>
-                        <select id="fAmbito"><option value="">-- Todos --</option><option>Urbano</option><option>Rural Disperso</option><option>Rural Aglomerado</option></select>
+                        <select id="fAmbito">
+                            <option value="">-- Todos --</option>
+                            {% for ambito in ambitos %}<option value="{{ ambito }}">{{ ambito }}</option>{% endfor %}
+                        </select>
                     </div>
 
                    <div class="filter-item">
                         <label for="fSector"><i class="fas fa-building"></i>Sector</label>
                         <select id="fSector">
                             <option value="">-- Todos --</option>
-                            <option value="Estatal">Estatal</option>
-                            <option value="Privado">Privado</option>
-                            <option value="Gestión Social/Cooperativa">Gestión Social/Cooperativa</option> 
+                            {% for sector in sectores %}<option value="{{ sector }}">{{ sector }}</option>{% endfor %}
                         </select>
                     </div>
 
@@ -776,7 +807,7 @@ document.getElementById('btnAyudaFiltros').addEventListener('click', function ()
 });
 
 $(document).ready(function () {
-    const DEFAULT_VISIBLE = [0, 2, 6, 17, 18];
+    const DEFAULT_VISIBLE = [0, 2, 3, 6, 17, 18];
     const ALL_COLS = Array.from({length: 19}, (_, i) => i);
 
     const filterLabels = {
@@ -887,6 +918,11 @@ $(document).ready(function () {
             actualizarChips(); applyAllFilters();
         }
     });
+
+    var loadingTimer = window.setTimeout(function () {
+        loadingTimer = null;
+        $('#loadingWrapper').css('display', 'flex');
+    }, 250);
 
     try {
         var table = $('#sgeTable').DataTable({
@@ -1084,6 +1120,7 @@ $(document).ready(function () {
             scrollX: false,
             autoWidth: false,
             initComplete: function() {
+                if (loadingTimer) { window.clearTimeout(loadingTimer); loadingTimer = null; }
                 try { $('#exportButtonsContainer').append(table.buttons().container()); } catch(e) {}
                 $('#loadingWrapper').hide();
                 $('#mainTableContainer').fadeIn('fast', function() { table.columns.adjust(); });
@@ -1092,6 +1129,7 @@ $(document).ready(function () {
             }
         });
     } catch (err) {
+        if (loadingTimer) { window.clearTimeout(loadingTimer); loadingTimer = null; }
         console.error("DataTables Error:", err);
         $('#loadingWrapper').hide(); $('#mainTableContainer').show(); $('#mini-totals').show();
     }
@@ -1382,7 +1420,7 @@ $(document).ready(function () {
             if (guardarBtn) { guardarBtn.disabled = false; guardarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar cambios'; }
         });
     }
-    {% endif %}
+{% endif %}
 });
 </script>
 {% endblock %}

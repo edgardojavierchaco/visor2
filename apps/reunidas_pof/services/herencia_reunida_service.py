@@ -88,10 +88,10 @@ def _validar_base(reunida_destino, reunida_base):
     - No corrige ni reasigna la base desde el servicio de herencia.
     """
     if reunida_base.nivel != reunida_destino.nivel:
-        raise ValidationError("La Reunida base no corresponde al mismo nivel.")
+        raise ValidationError("La POF base no corresponde al mismo nivel.")
 
     if reunida_base.anio != reunida_destino.anio - 1:
-        raise ValidationError("La Reunida base debe ser exactamente del año anterior.")
+        raise ValidationError("La POF base debe ser exactamente del año anterior.")
 
 
 def _cargar_localizaciones_origen(reunida_base):
@@ -146,7 +146,7 @@ def _validar_origen(reunida_base, localizaciones_origen):
             if cargo.lote_carga.localizacion_id != localizacion.id:
                 raise ValidationError("Un cargo origen no corresponde a su localización.")
             if cargo.lote_carga.reunida_id != reunida_base.id:
-                raise ValidationError("El lote de un cargo origen no corresponde a la Reunida base.")
+                raise ValidationError("El lote de un cargo origen no corresponde a la POF base.")
             if cargo.estado_pof not in estados_validos:
                 raise ValidationError("El estado de un cargo origen no es válido.")
             if cargo.unidad_cantidad not in unidades_validas:
@@ -272,7 +272,7 @@ def heredar_estado_inicial_reunida(reunida_destino, usuario=None):
     - Mantiene la fuente estrictamente en modo lectura y rechaza destinos ya poblados.
     """
     if not reunida_destino or not reunida_destino.pk:
-        raise ValidationError("La Reunida destino debe estar persistida antes de heredar.")
+        raise ValidationError("La POF destino debe estar persistida antes de heredar.")
 
     reunida_destino = ReunidaPof.objects.select_for_update().get(pk=reunida_destino.pk)
     resumen = _resumen_herencia(reunida_destino.reunida_base_anterior_id)
@@ -282,7 +282,7 @@ def heredar_estado_inicial_reunida(reunida_destino, usuario=None):
 
     if _destino_tiene_datos(reunida_destino):
         raise ValidationError(
-            "La Reunida destino ya contiene datos y no puede recibir una herencia inicial automática."
+            "La POF destino ya contiene datos y no puede recibir una herencia inicial automática."
         )
 
     reunida_base = ReunidaPof.objects.get(
@@ -359,7 +359,7 @@ def _validar_origen_proyecto(proyecto_base, localizaciones_origen):
     for localizacion in localizaciones_origen:
         if localizacion.reunida_id:
             raise ValidationError(
-                "La localización origen no puede pertenecer a una Reunida."
+                "La localización origen no puede pertenecer a una POF."
             )
         if localizacion.proyecto_especial_id != proyecto_base.id:
             raise ValidationError(
