@@ -34,6 +34,8 @@ from .models import (
 )
 from .permisos import especial_required, get_permisos_especial_request
 from .views_contexto import contexto_base
+from .views_alumnos import _alumnos_banco
+from .views_docentes import _docentes_especial
 
 
 logger = logging.getLogger(__name__)
@@ -42,12 +44,10 @@ VISUALIZADOR_ALUMNOS_PAGE_SIZE = 25
 VISUALIZADOR_PRUEBA_LIMITE = 10
 FILTROS_ALUMNOS_QUERYSTRING = {
     "modo",
+    "cueanexo",
+    "ciclo",
     "cuil",
-    "filtro_cueanexo",
-    "establecimiento",
-    "localidad",
     "estado",
-    "departamento",
     "filtro_ciclo",
     "modalidad",
     "nivel",
@@ -56,12 +56,10 @@ FILTROS_ALUMNOS_QUERYSTRING = {
 }
 
 FILTROS_DOCENTES_QUERYSTRING = {
+    "cueanexo",
+    "ciclo",
     "cuil",
-    "filtro_cueanexo",
-    "establecimiento",
-    "localidad",
     "estado",
-    "departamento",
     "filtro_ciclo",
     "modalidad",
     "nivel",
@@ -129,10 +127,10 @@ def _filtros_alumnos(request):
     """Normaliza únicamente los filtros operativos permitidos."""
     filtros = {
         "cuil": _solo_digitos(request.GET.get("cuil")),
-        "cueanexo": _solo_digitos(request.GET.get("filtro_cueanexo")),
-        "establecimiento": (request.GET.get("establecimiento") or "").strip(),
-        "localidad": (request.GET.get("localidad") or "").strip(),
-        "departamento": (request.GET.get("departamento") or "").strip(),
+        "cueanexo": "",
+        "establecimiento": "",
+        "localidad": "",
+        "departamento": "",
         "ciclo": (request.GET.get("filtro_ciclo") or "").strip(),
         "modalidad": (request.GET.get("modalidad") or "").strip(),
         "nivel": (request.GET.get("nivel") or "").strip(),
@@ -149,9 +147,6 @@ def _filtros_alumnos(request):
             validar_cuil(filtros["cuil"])
         except ValidationError:
             errores["cuil"] = "El CUIL no tiene un dígito verificador válido."
-    if request.GET.get("cueanexo") and len(filtros["cueanexo"]) != 9:
-        errores["cueanexo"] = "El CUE-Anexo debe contener exactamente 9 dígitos."
-
     estados_validos = {
         estado
         for estado, _ in EspecialAlumnoBanco.Estado.choices
@@ -227,9 +222,18 @@ def _section_scope_requested(filtros, padron_cues):
     )
 
 
-def _bancos_alumnos_visualizador(filtros):
-    """Query base del visualizador: siempre nace en especial.alumno_banco."""
-    queryset = EspecialAlumnoBanco.objects.all()
+def _bancos_alumnos_visualizador(filtros, especial_context=None):
+    """Obtiene alumnos desde el mismo banco que usa Gestión de Alumnos."""
+    usa_contexto_operativo = bool(
+        especial_context
+        and not filtros["ciclo"]
+        and filtros["estado"] in {"todos", EspecialAlumnoBanco.Estado.ACTIVO}
+    )
+    queryset = (
+        _alumnos_banco(especial_context, vista="actuales")
+        if usa_contexto_operativo
+        else EspecialAlumnoBanco.objects.all()
+    )
 
     if filtros["estado"] == "activo":
         queryset = queryset.filter(estado=EspecialAlumnoBanco.Estado.ACTIVO)
@@ -641,18 +645,7 @@ def _inscripciones_visualizador(alumno_ids, filtros=None, *, detalle=False):
             "-fecha_inscripcion",
         )
     )
-    if detalle:
-        docentes_queryset = DocenteSeccion.objects.order_by(
-            "rol", "docente_nombre_snapshot", "docente_cuil"
-        )
-        queryset = queryset.prefetch_related(
-            Prefetch(
-                "seccion__docentes",
-                queryset=docentes_queryset,
-                to_attr="visualizador_docentes",
-            )
-        )
-    elif filtros is not None:
+    if filtros is not None:
         padron_cues = _padron_cues_para_filtros(filtros)
         section_kwargs = _section_filter_kwargs(
             filtros,
@@ -671,6 +664,18 @@ def _inscripciones_visualizador(alumno_ids, filtros=None, *, detalle=False):
             queryset = queryset.filter(estado=AlumnoSeccion.Estado.ACTIVO)
         elif filtros["estado"] == EspecialAlumnoBanco.Estado.BAJA:
             queryset = queryset.filter(estado=AlumnoSeccion.Estado.BAJA)
+
+    if detalle:
+        docentes_queryset = DocenteSeccion.objects.order_by(
+            "rol", "docente_nombre_snapshot", "docente_cuil"
+        )
+        queryset = queryset.prefetch_related(
+            Prefetch(
+                "seccion__docentes",
+                queryset=docentes_queryset,
+                to_attr="visualizador_docentes",
+            )
+        )
     return queryset
 
 
@@ -719,6 +724,14 @@ def _filtros_querystring(request):
         for value in request.GET.getlist(key):
             parametros.append((key, value))
     return urlencode(parametros)
+
+
+def _aplicar_contexto_visualizador(filtros, especial_context):
+    """Usa la escuela seleccionada como alcance predeterminado."""
+    cueanexo_contexto = _solo_digitos(especial_context.get("cueanexo"))
+    if cueanexo_contexto:
+        filtros["cueanexo"] = cueanexo_contexto
+    return filtros
 
 
 def _error_busqueda(mensaje):
@@ -847,7 +860,7 @@ def visualizador_inicio(request):
     context = _persona_context(
         request,
         "Visualizador",
-        "Consultá globalmente alumnos, docentes y directores del módulo Especial.",
+        "Consultá alumnos, docentes y directores de la escuela seleccionada.",
     )
     context["opciones_visualizador"] = (
         ("alumno", "Buscar alumno", "fa-user-graduate"),
@@ -858,7 +871,6 @@ def visualizador_inicio(request):
 
 
 def _catalogos_filtros_alumnos():
-    padron = _padron_especial_queryset()
     secciones = (
         SeccionEspecial.objects.filter(
             alumnos__estado=AlumnoSeccion.Estado.ACTIVO,
@@ -871,32 +883,6 @@ def _catalogos_filtros_alumnos():
         .order_by("cueanexo", "ciclo__anio", "nombre_seccion")
     )
     return {
-        "cueanexos_filtro": (
-            EspecialAlumnoBanco.objects.values_list("cueanexo", flat=True)
-            .distinct()
-            .order_by("cueanexo")
-        ),
-        "establecimientos_filtro": (
-            padron.exclude(nom_est__isnull=True)
-            .exclude(nom_est="")
-            .values("nom_est")
-            .distinct()
-            .order_by("nom_est")
-        ),
-        "localidades_filtro": (
-            padron.exclude(localidad__isnull=True)
-            .exclude(localidad="")
-            .values_list("localidad", flat=True)
-            .distinct()
-            .order_by("localidad")
-        ),
-        "departamentos_filtro": (
-            padron.exclude(departamento__isnull=True)
-            .exclude(departamento="")
-            .values_list("departamento", flat=True)
-            .distinct()
-            .order_by("departamento")
-        ),
         "estados_filtro": EspecialAlumnoBanco.Estado.choices,
         "ciclos_filtro": EspecialCiclo.objects.order_by("-anio"),
         "modalidades_filtro": ModalidadDictadoTipo.objects.order_by("descripcion"),
@@ -910,10 +896,10 @@ def _filtros_docentes(request):
     """Normaliza los filtros de consulta del visualizador de docentes."""
     filtros = {
         "cuil": _solo_digitos(request.GET.get("cuil")),
-        "cueanexo": _solo_digitos(request.GET.get("filtro_cueanexo")),
-        "establecimiento": (request.GET.get("establecimiento") or "").strip(),
-        "localidad": (request.GET.get("localidad") or "").strip(),
-        "departamento": (request.GET.get("departamento") or "").strip(),
+        "cueanexo": "",
+        "establecimiento": "",
+        "localidad": "",
+        "departamento": "",
         "ciclo": (request.GET.get("filtro_ciclo") or "").strip(),
         "modalidad": (request.GET.get("modalidad") or "").strip(),
         "nivel": (request.GET.get("nivel") or "").strip(),
@@ -931,9 +917,6 @@ def _filtros_docentes(request):
             validar_cuil(filtros["cuil"])
         except ValidationError:
             errores["cuil"] = "El CUIL no tiene un dígito verificador válido."
-    if request.GET.get("filtro_cueanexo") and len(filtros["cueanexo"]) != 9:
-        errores["cueanexo"] = "El CUE-Anexo debe contener exactamente 9 dígitos."
-
     estados_validos = {
         estado
         for estado, _ in EspecialDocenteBanco.Estado.choices
@@ -1186,9 +1169,14 @@ def _asignaciones_docentes_scope(filtros, *, incluir_estado=False):
     return queryset, padron_cues
 
 
-def _bancos_docentes_visualizador(filtros):
+def _bancos_docentes_visualizador(filtros, especial_context=None):
     """Obtiene bancos de docentes sin duplicar por sus asignaciones."""
-    queryset = EspecialDocenteBanco.objects.all()
+    usa_contexto_operativo = bool(especial_context and not filtros["ciclo"])
+    queryset = (
+        _docentes_especial(especial_context)
+        if usa_contexto_operativo
+        else EspecialDocenteBanco.objects.all()
+    )
     filtros_sobre_asignacion = bool(
         filtros["establecimiento"]
         or filtros["localidad"]
@@ -1227,7 +1215,6 @@ def _bancos_docentes_visualizador(filtros):
 
 
 def _catalogos_filtros_docentes():
-    padron = _padron_especial_queryset()
     secciones = (
         SeccionEspecial.objects.filter(docentes__isnull=False)
         .select_related("ciclo")
@@ -1235,32 +1222,6 @@ def _catalogos_filtros_docentes():
         .order_by("cueanexo", "ciclo__anio", "nombre_seccion")
     )
     return {
-        "cueanexos_docentes_filtro": (
-            EspecialDocenteBanco.objects.values_list("cueanexo", flat=True)
-            .distinct()
-            .order_by("cueanexo")
-        ),
-        "establecimientos_docentes_filtro": (
-            padron.exclude(nom_est__isnull=True)
-            .exclude(nom_est="")
-            .values("nom_est")
-            .distinct()
-            .order_by("nom_est")
-        ),
-        "localidades_docentes_filtro": (
-            padron.exclude(localidad__isnull=True)
-            .exclude(localidad="")
-            .values_list("localidad", flat=True)
-            .distinct()
-            .order_by("localidad")
-        ),
-        "departamentos_docentes_filtro": (
-            padron.exclude(departamento__isnull=True)
-            .exclude(departamento="")
-            .values_list("departamento", flat=True)
-            .distinct()
-            .order_by("departamento")
-        ),
         "estados_docentes_filtro": EspecialDocenteBanco.Estado.choices,
         "ciclos_docentes_filtro": EspecialCiclo.objects.order_by("-anio"),
         "modalidades_docentes_filtro": ModalidadDictadoTipo.objects.order_by(
@@ -1440,15 +1401,19 @@ def visualizador_docentes(request):
             "docentes_visualizador": [],
             "page_obj": Paginator([], VISUALIZADOR_ALUMNOS_PAGE_SIZE).get_page(1),
             "consulta_error": "",
-            "filtros_panel_abierto": False,
-        }
+        "filtros_panel_abierto": False,
+    }
     )
 
     if errores:
         return render(request, "especial/visualizador_docentes.html", context)
 
     try:
-        bancos_queryset = _bancos_docentes_visualizador(filtros)
+        _aplicar_contexto_visualizador(filtros, context["especial_context"])
+        bancos_queryset = _bancos_docentes_visualizador(
+            filtros,
+            especial_context=context["especial_context"],
+        )
         cuiles_queryset = (
             bancos_queryset.values_list("docente_cuil", flat=True)
             .distinct()
@@ -1459,12 +1424,16 @@ def visualizador_docentes(request):
         cuiles = list(page_obj.object_list)
 
         bancos = list(
-            EspecialDocenteBanco.objects.filter(docente_cuil__in=cuiles)
+            bancos_queryset.filter(docente_cuil__in=cuiles)
             .select_related("ciclo")
             .order_by("docente_cuil", "-ciclo__anio", "-pk")
         )
+        asignaciones_queryset, _ = _asignaciones_docentes_scope(
+            filtros,
+            incluir_estado=filtros["estado"] != "todos",
+        )
         asignaciones = list(
-            DocenteSeccion.objects.filter(docente_cuil__in=cuiles)
+            asignaciones_queryset.filter(docente_cuil__in=cuiles)
             .select_related(
                 "seccion",
                 "seccion__ciclo",
@@ -1602,16 +1571,27 @@ def visualizador_alumnos(request):
         return render(request, "especial/visualizador_alumnos.html", context)
 
     try:
+        _aplicar_contexto_visualizador(filtros, context["especial_context"])
         if modo_prueba:
             alumnos_queryset = _alumnos_prueba_queryset(filtros)
+            alumnos_prueba_ids = alumnos_queryset.order_by().values("pk")
+            bancos_queryset = EspecialAlumnoBanco.objects.filter(
+                alumno_id__in=Subquery(alumnos_prueba_ids),
+            )
         else:
-            bancos_queryset, _ = _bancos_alumnos_visualizador(filtros)
+            bancos_queryset, _ = _bancos_alumnos_visualizador(
+                filtros,
+                especial_context=context["especial_context"],
+            )
+            alumno_ids_queryset = (
+                bancos_queryset.order_by()
+                .values_list("alumno_id", flat=True)
+                .distinct()
+            )
             alumnos_queryset = (
                 _alumno_model()
                 .objects.filter(
-                    pk__in=Subquery(
-                        bancos_queryset.values("alumno_id").distinct()
-                    )
+                    pk__in=Subquery(alumno_ids_queryset)
                 )
                 .order_by("apellidos", "nombres", "pk")
             )
@@ -1638,6 +1618,7 @@ def visualizador_alumnos(request):
         inscripciones = list(
             _inscripciones_visualizador(
                 alumno_ids,
+                filtros=filtros,
                 detalle=True,
             )
         )
@@ -1650,9 +1631,7 @@ def visualizador_alumnos(request):
             ).append(inscripcion)
 
         bancos = list(
-            EspecialAlumnoBanco.objects.filter(
-                alumno_id__in=alumno_ids,
-            )
+            bancos_queryset.filter(alumno_id__in=alumno_ids)
             .select_related("ciclo")
             .order_by("alumno_id", "-ciclo__anio", "-pk")
         )
@@ -1661,12 +1640,11 @@ def visualizador_alumnos(request):
         for banco in bancos:
             bancos_por_alumno.setdefault(banco.alumno_id, []).append(banco)
 
-        alumnos_con_seccion_activa = set(
-            AlumnoSeccion.objects.filter(
-                alumno_id__in=alumno_ids,
-                estado=AlumnoSeccion.Estado.ACTIVO,
-            ).values_list("alumno_id", flat=True)
-        )
+        alumnos_con_seccion_activa = {
+            inscripcion.alumno_id
+            for inscripcion in inscripciones
+            if inscripcion.estado == AlumnoSeccion.Estado.ACTIVO
+        }
 
         personas = {} if modo_prueba else _personas_por_cuil(alumnos)
         for alumno in alumnos:

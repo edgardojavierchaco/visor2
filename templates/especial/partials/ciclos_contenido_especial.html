@@ -341,7 +341,15 @@
                 {% endif %}
 
                 {% if form.non_field_errors %}
-                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% for error in form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% if 'uq_especial_ciclo_actual' in error %}
+                                Ya existe un ciclo marcado como actual. Desmarcá «Ciclo actual» o elegí otro ciclo.
+                            {% else %}
+                                {{ error }}
+                            {% endif %}
+                        </div>
+                    {% endfor %}
                 {% endif %}
 
                 <div class="cef-form-grid is-two-col">

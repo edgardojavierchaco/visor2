@@ -486,6 +486,10 @@ class EspecialCiclo(EspecialAuditoriaMixin):
                 fields=["actual"],
                 condition=Q(actual=True),
                 name="uq_especial_ciclo_actual",
+                violation_error_message=(
+                    "Ya existe un ciclo marcado como actual. "
+                    "Desmarcá «Ciclo actual» o elegí otro ciclo."
+                ),
             ),
         ]
 

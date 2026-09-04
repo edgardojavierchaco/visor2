@@ -25,8 +25,15 @@ function initPersona() {
             onCuilInput
         );
 
-        if (cuil.value.trim()) {
-            onCuilInput({target: cuil});
+        const personaId = document.querySelector("#persona_id");
+        if (personaId && personaId.value && validarCUIL(cuil.value)) {
+            personaActualId = personaId.value;
+            cuilValido = true;
+            setStatus(
+                "✔ Persona encontrada",
+                "green"
+            );
+            validarDniConCuil();
         }
 
     }
@@ -378,6 +385,12 @@ setValue(
 setValue(
     "id_nombre",
     data.nombre
+);
+
+
+setValue(
+    "id_f_nacimiento",
+    data.f_nacimiento
 );
 
 
