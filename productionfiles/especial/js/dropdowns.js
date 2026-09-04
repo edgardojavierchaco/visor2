@@ -90,6 +90,15 @@
         var toggle = dropdown.querySelector(descriptor.toggleSelector);
         var menu = menuFor(dropdown, descriptor);
         if (toggle) toggle.setAttribute("aria-expanded", "false");
+        if (descriptor.dropdownSelector === "[data-cef-row-actions]") {
+            dropdown.querySelectorAll("[data-especial-alumno-action-options]").forEach(function (options) {
+                options.hidden = true;
+                var optionsToggle = dropdown.querySelector(
+                    "[aria-controls='" + options.id + "']"
+                );
+                if (optionsToggle) optionsToggle.setAttribute("aria-expanded", "false");
+            });
+        }
         if (menu) {
             menu.classList.remove("show");
             menu.removeAttribute("style");
@@ -348,8 +357,13 @@
                 + "[data-cef-profesor-dropdown-menu], "
                 + "[data-cef-row-actions-menu]"
             ) : null;
+            var alumnoActionOptionsToggle = target && target.closest
+                ? target.closest("[data-especial-alumno-action-options-toggle]")
+                : null;
             if (!insideMenu) {
                 closeAll(null);
+            } else if (alumnoActionOptionsToggle) {
+                return;
             } else if (insideMenu.__cefPortalOwner
                 && !target.closest("[data-cef-profesor-dropdown-toggle]")) {
                 closeDropdown(insideMenu.__cefPortalOwner, DESCRIPTORS[2]);

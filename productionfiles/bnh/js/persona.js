@@ -25,6 +25,17 @@ function initPersona() {
             onCuilInput
         );
 
+        const personaId = document.querySelector("#persona_id");
+        if (personaId && personaId.value && validarCUIL(cuil.value)) {
+            personaActualId = personaId.value;
+            cuilValido = true;
+            setStatus(
+                "✔ Persona encontrada",
+                "green"
+            );
+            validarDniConCuil();
+        }
+
     }
 
     const dni =
@@ -374,6 +385,12 @@ setValue(
 setValue(
     "id_nombre",
     data.nombre
+);
+
+
+setValue(
+    "id_f_nacimiento",
+    data.f_nacimiento
 );
 
 

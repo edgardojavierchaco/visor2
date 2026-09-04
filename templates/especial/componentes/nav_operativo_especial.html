@@ -38,7 +38,7 @@
                         <a class="nav-link{% if active_menu == 'ciclos' %} active{% endif %}" href="{{ especial_ciclos_url }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" data-especial-section-link data-especial-section="ciclos"{% if active_menu == 'ciclos' %} aria-current="page"{% endif %}>Ciclos</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link{% if active_menu == 'visualizador' %} active{% endif %}" href="{{ especial_visualizador_url }}"{% if active_menu == 'visualizador' %} aria-current="page"{% endif %}>
+                        <a class="nav-link{% if active_menu == 'visualizador' %} active{% endif %}" href="{{ especial_visualizador_url }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}"{% if active_menu == 'visualizador' %} aria-current="page"{% endif %}>
                             Visualizador
                         </a>
                     </li>

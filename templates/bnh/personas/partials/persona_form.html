@@ -2,7 +2,7 @@
 
 {% csrf_token %}
 
-<input type="hidden" name="persona_id" id="persona_id">
+<input type="hidden" name="persona_id" id="persona_id" value="{% if persona %}{{ persona.pk }}{% endif %}">
 {% if especial_alta %}
 <input type="hidden" name="especial_callback_url" value="{{ especial_callback_url }}">
 <input type="hidden" name="especial_next_url" value="{{ especial_next_url }}">
