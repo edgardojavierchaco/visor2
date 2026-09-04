@@ -60,11 +60,12 @@
                 <div class="especial-visualizador-detail-section-header"><h3 class="especial-visualizador-detail-section-title"><i class="fa-solid fa-layer-group" aria-hidden="true"></i>Secciones y asignaciones</h3><span class="especial-visualizador-detail-section-count">{{ asignaciones|length }} registro{{ asignaciones|length|pluralize:"s" }}</span></div>
                 <div class="especial-visualizador-detail-table-scroll">
                     <table class="table especial-visualizador-detail-table">
-                        <thead><tr><th>Sección</th><th>CUE-Anexo</th><th>Establecimiento / ubicación</th><th>Rol</th><th>Estado</th><th>Desde</th><th>Hasta</th></tr></thead>
+                        <thead><tr><th>Sección</th><th>Oferta</th><th>CUE-Anexo</th><th>Establecimiento / ubicación</th><th>Rol</th><th>Estado</th><th>Desde</th><th>Hasta</th></tr></thead>
                         <tbody>
                             {% for item in asignaciones %}
                                 <tr>
                                     <td data-label="Sección"><strong class="detail-cell-primary">{{ item.seccion.nombre_seccion|default:"—" }}</strong></td>
+                                    <td data-label="Oferta"><span class="detail-cell-primary">{{ item.seccion.oferta|default:"—" }}</span></td>
                                     <td data-label="CUE-Anexo"><span class="especial-visualizador-detail-chip">{{ item.seccion.cueanexo|default:"—" }}</span></td>
                                     <td data-label="Establecimiento / ubicación"><strong class="detail-cell-primary">{{ item.visualizador_padron.nom_est|default:"—" }}</strong><small class="detail-cell-secondary">{{ item.visualizador_padron.localidad|default:"—" }}{% if item.visualizador_padron.departamento %} · {{ item.visualizador_padron.departamento }}{% endif %}</small></td>
                                     <td data-label="Rol"><span class="especial-visualizador-detail-role">{{ item.get_rol_display }}</span></td>
@@ -72,7 +73,7 @@
                                     <td data-label="Desde">{% if item.fecha_desde %}{{ item.fecha_desde|date:"d/m/Y" }}{% else %}—{% endif %}</td>
                                     <td data-label="Hasta">{% if item.fecha_hasta %}{{ item.fecha_hasta|date:"d/m/Y" }}{% else %}—{% endif %}</td>
                                 </tr>
-                            {% empty %}<tr><td class="detail-table-empty" colspan="7">No registra asignaciones.</td></tr>{% endfor %}
+                            {% empty %}<tr><td class="detail-table-empty" colspan="8">No registra asignaciones.</td></tr>{% endfor %}
                         </tbody>
                     </table>
                 </div>

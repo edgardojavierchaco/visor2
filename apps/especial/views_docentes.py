@@ -12,7 +12,7 @@ from django.core.paginator import Paginator
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
-from django.db.models import Min, Q
+from django.db.models import Min, OuterRef, Q, Subquery
 from django.db.models.functions import Lower
 from django.http import Http404, JsonResponse
 from django.shortcuts import redirect, render
@@ -383,6 +383,16 @@ def _docentes_especial(especial_context, estado=DOCENTES_ESTADO_DEFAULT):
         cueanexo=especial_context["cueanexo"],
         ciclo=especial_context["ciclo"],
     )
+    ultimo_periodo = (
+        EspecialDocenteBanco.objects.filter(
+            cueanexo=especial_context["cueanexo"],
+            ciclo=especial_context["ciclo"],
+            docente_cuil=OuterRef("docente_cuil"),
+        )
+        .order_by("-fecha_alta", "-pk")
+        .values("pk")[:1]
+    )
+    queryset = queryset.filter(pk=Subquery(ultimo_periodo))
     if estado in {"activo", "baja"}:
         queryset = queryset.filter(estado=estado)
     return queryset.order_by("docente_nombre_snapshot", "docente_cuil", "estado")

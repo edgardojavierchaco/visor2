@@ -434,12 +434,13 @@
                         {% if docente.visualizador_asignaciones %}
                             <div class="especial-visualizador-detail-table-scroll">
                                 <table class="table especial-visualizador-detail-table especial-visualizador-docentes-assignments">
-                                    <thead><tr><th>CUE-Anexo</th><th>Establecimiento / ubicación</th><th>Ciclo lectivo</th><th>Modalidad</th><th>Nivel / Estructura</th><th>Sección</th><th>Turno</th><th>Rol</th><th>Estado</th><th>Fechas</th><th>Observaciones</th></tr></thead>
+                                    <thead><tr><th>CUE-Anexo</th><th>Establecimiento / ubicación</th><th>Oferta</th><th>Ciclo lectivo</th><th>Modalidad</th><th>Nivel / Estructura</th><th>Sección</th><th>Turno</th><th>Rol</th><th>Estado</th><th>Fechas</th><th>Observaciones</th></tr></thead>
                                     <tbody>
                                         {% for asignacion in docente.visualizador_asignaciones %}
                                             <tr>
                                                 <td data-label="CUE-Anexo"><span class="especial-visualizador-detail-chip">{{ asignacion.seccion.cueanexo }}</span></td>
                                                 <td data-label="Establecimiento / ubicación"><strong class="detail-cell-primary">{{ asignacion.visualizador_padron.nom_est|default:"—" }}</strong><small class="detail-cell-secondary">{{ asignacion.visualizador_padron.localidad|default:"—" }}{% if asignacion.visualizador_padron.departamento %} · {{ asignacion.visualizador_padron.departamento }}{% endif %}</small></td>
+                                                <td data-label="Oferta">{{ asignacion.seccion.oferta|default:"—" }}</td>
                                                 <td data-label="Ciclo lectivo">{{ asignacion.seccion.ciclo.anio }}</td>
                                                 <td data-label="Modalidad">{{ asignacion.seccion.modalidad.descripcion|default:"—" }}</td>
                                                 <td data-label="Nivel / Estructura">{{ asignacion.seccion.tipo_estructura_especial.descripcion|default:"—" }}</td>

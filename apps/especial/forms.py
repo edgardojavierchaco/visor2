@@ -11,6 +11,7 @@ from .models import (
     CatalogoTipoEstructuraEspecial,
     CatalogoTipoRangoEtario,
     EspecialCiclo,
+    EspecialDatosCUEAnexo,
     EspecialAlumnoBanco,
     EspecialDocenteBanco,
     DocenteSeccion,
@@ -28,6 +29,13 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 
+from apps.cef.models import (
+    CefBeneficioSinoTipo,
+    CefEspacioComedorTipo,
+    CefFuenteFinanciamientoTipo,
+    CefPrestacionTipo,
+)
+
 def _aplicar_clases_bootstrap(field):
     widget = field.widget
     clases = widget.attrs.get("class", "")
@@ -43,6 +51,85 @@ def _aplicar_clases_bootstrap(field):
     else:
         nueva = "form-control"
     widget.attrs["class"] = f"{clases} {nueva}".strip()
+
+
+class EspecialDatosCUEAnexoForm(forms.ModelForm):
+    """Carga los datos institucionales usados por el registro BNH de Especial."""
+
+    class Meta:
+        model = EspecialDatosCUEAnexo
+        fields = [
+            "beneficio_alimentario_gratuito",
+            "fuente_financiamiento",
+            "prestacion_tipo",
+            "espacio_comedor",
+            "observaciones",
+        ]
+        widgets = {"observaciones": forms.Textarea(attrs={"rows": 3})}
+        labels = {
+            "beneficio_alimentario_gratuito": "Beneficio alimentario gratuito",
+            "fuente_financiamiento": "Fuente de financiamiento",
+            "prestacion_tipo": "Tipo de prestación",
+            "espacio_comedor": "Espacio comedor",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field, model in (
+            ("beneficio_alimentario_gratuito", CefBeneficioSinoTipo),
+            ("fuente_financiamiento", CefFuenteFinanciamientoTipo),
+            ("prestacion_tipo", CefPrestacionTipo),
+            ("espacio_comedor", CefEspacioComedorTipo),
+        ):
+            self.fields[field].queryset = model.objects.filter(activo=True)
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def _no_corresponde(self, modelo):
+        return modelo.objects.filter(activo=True, codigo=-1).first()
+
+    @property
+    def no_corresponde_fuente_id(self):
+        item = self._no_corresponde(CefFuenteFinanciamientoTipo)
+        return item.pk if item else ""
+
+    @property
+    def no_corresponde_prestacion_id(self):
+        item = self._no_corresponde(CefPrestacionTipo)
+        return item.pk if item else ""
+
+    def catalogos_faltantes(self):
+        faltantes = []
+        for etiqueta, modelo in (
+            ("Beneficio alimentario", CefBeneficioSinoTipo),
+            ("Fuente de financiamiento", CefFuenteFinanciamientoTipo),
+            ("Tipo de prestación", CefPrestacionTipo),
+            ("Espacio comedor", CefEspacioComedorTipo),
+        ):
+            if not modelo.objects.filter(activo=True).exists():
+                faltantes.append(etiqueta)
+        if not self._no_corresponde(CefFuenteFinanciamientoTipo):
+            faltantes.append("Fuente de financiamiento: opción No corresponde")
+        if not self._no_corresponde(CefPrestacionTipo):
+            faltantes.append("Tipo de prestación: opción No corresponde")
+        return faltantes
+
+    def clean(self):
+        cleaned_data = super().clean()
+        beneficio = cleaned_data.get("beneficio_alimentario_gratuito")
+        if beneficio and (
+            beneficio.codigo == -1
+            or (beneficio.nombre or "").strip().lower() in {"no", "sin información", "sin informacion"}
+        ):
+            fuente = self._no_corresponde(CefFuenteFinanciamientoTipo)
+            prestacion = self._no_corresponde(CefPrestacionTipo)
+            if not fuente or not prestacion:
+                raise forms.ValidationError(
+                    "Faltan catálogos para completar esta carga: opción No corresponde."
+                )
+            cleaned_data["fuente_financiamiento"] = fuente
+            cleaned_data["prestacion_tipo"] = prestacion
+        return cleaned_data
 
 class EspecialBusquedaAlumnoForm(forms.Form):
     """Formulario de búsqueda de alumno por CUIL."""
