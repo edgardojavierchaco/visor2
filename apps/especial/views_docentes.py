@@ -19,6 +19,7 @@ from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.shortcuts import get_object_or_404 # Asegúrate de tener este import
+from apps.bnhpersonas.models import Personas
 from .forms import EspecialBajaDocenteForm, EspecialDocenteSeccionForm
 
 from .forms import EspecialBusquedaDocenteForm
@@ -32,7 +33,11 @@ from .models import (
 )
 from .permisos import especial_required
 from .services.docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
-from .services.baja_docentes import dar_baja_docente_banco, preparar_baja_docente
+from .services.baja_docentes import (
+    dar_alta_docente_banco,
+    dar_baja_docente_banco,
+    preparar_baja_docente,
+)
 from .views_contexto import contexto_base, redirect_con_contexto, render_especial
 
 URL_CARGA_DOCENTE = "/bnh/carga-personal/"
@@ -43,6 +48,8 @@ logger = logging.getLogger(__name__)
 
 DOCENTES_VISTA_DEFAULT = "actuales"
 DOCENTES_VISTAS = {"actuales", "historial"}
+DOCENTES_ESTADO_DEFAULT = "todos"
+DOCENTES_ESTADOS = {"todos", "activo", "baja"}
 DOCENTES_POR_PAGINA = 10
 DOCENTES_BUSQUEDA_MAX_LENGTH = 100
 DOCENTES_BUSQUEDA_EQUIVALENCIAS = {
@@ -110,12 +117,18 @@ def _pagina_docentes_param(request):
     return max(pagina, 1)
 
 
+def _docentes_estado_param(request):
+    estado = (request.GET.get("estado") or DOCENTES_ESTADO_DEFAULT).strip().lower()
+    return estado if estado in DOCENTES_ESTADOS else DOCENTES_ESTADO_DEFAULT
+
+
 def _docentes_state_params(
     especial_context,
     *,
     vista=DOCENTES_VISTA_DEFAULT,
     termino="",
     pagina=None,
+    estado=DOCENTES_ESTADO_DEFAULT,
 ):
     params = {}
     if especial_context.get("cueanexo"):
@@ -126,6 +139,8 @@ def _docentes_state_params(
         params["vista"] = vista
     if termino:
         params["q"] = termino
+    if vista == DOCENTES_VISTA_DEFAULT and estado in {"activo", "baja"}:
+        params["estado"] = estado
     if pagina and pagina > 1:
         params["page"] = pagina
     return params
@@ -341,6 +356,10 @@ def _historial_docentes_paginado(especial_context, queryset, pagina):
             ),
             "",
         )
+        tuvo_baja = any(
+            banco.estado == EspecialDocenteBanco.Estado.BAJA
+            for banco in bancos_docente
+        )
         items.append(
             SimpleNamespace(
                 docente_cuil=docente_cuil,
@@ -349,28 +368,24 @@ def _historial_docentes_paginado(especial_context, queryset, pagina):
                 ciclo=banco_actual.ciclo,
                 estado=banco_actual.estado,
                 estado_label=banco_actual.get_estado_display(),
-                accion_actual="—",
+                accion_actual="Alta" if banco_actual.estado == EspecialDocenteBanco.Estado.ACTIVO and tuvo_baja else "—",
                 historial_periodos=periodos,
             )
         )
     return items, page_obj
 
 
-def _docentes_especial(especial_context):
+def _docentes_especial(especial_context, estado=DOCENTES_ESTADO_DEFAULT):
     if not especial_context["puede_consultar"]:
         return EspecialDocenteBanco.objects.none()
 
-    return (
-        EspecialDocenteBanco.objects.filter(
-            cueanexo=especial_context["cueanexo"],
-            ciclo=especial_context["ciclo"],
-        )
-        .order_by(
-            "docente_nombre_snapshot",
-            "docente_cuil",
-            "estado",
-        )
+    queryset = EspecialDocenteBanco.objects.filter(
+        cueanexo=especial_context["cueanexo"],
+        ciclo=especial_context["ciclo"],
     )
+    if estado in {"activo", "baja"}:
+        queryset = queryset.filter(estado=estado)
+    return queryset.order_by("docente_nombre_snapshot", "docente_cuil", "estado")
 
 
 def _asignaciones_por_docente(especial_context, docentes_banco):
@@ -528,6 +543,32 @@ def _url_carga_docente(
     return f"{URL_CARGA_DOCENTE}?{urlencode(params)}" if params else URL_CARGA_DOCENTE
 
 
+def _url_edicion_docente(cuil, next_url=None, return_label="Volver a Especial"):
+    """Devuelve la edición de BNH para una persona ya existente.
+
+    Especial sólo persiste el CUIL del docente; BNH requiere el ID de su
+    registro para cargar la instancia en el formulario. La consulta es de
+    lectura y la vista de BNH vuelve a aplicar su propio alcance de permisos.
+    """
+    cuil_normalizado = _solo_digitos(cuil)
+    persona_id = (
+        Personas.objects
+        .filter(cuil=cuil_normalizado, archivada=False)
+        .values_list("pk", flat=True)
+        .first()
+    )
+    if persona_id:
+        params = {}
+        if next_url:
+            params["next"] = next_url
+        if return_label:
+            params["return_label"] = return_label
+        url = reverse("bnhpersonas:carga_personal_edit", args=[persona_id])
+        return f"{url}?{urlencode(params)}" if params else url
+
+    return _url_carga_docente(cuil, next_url, return_label)
+
+
 def _url_modal_docentes(especial_context, cuil=""):
     params = {}
     if especial_context.get("cueanexo"):
@@ -588,12 +629,14 @@ def _url_docentes(
     vista=DOCENTES_VISTA_DEFAULT,
     termino="",
     pagina=None,
+    estado=DOCENTES_ESTADO_DEFAULT,
 ):
     params = _docentes_state_params(
         especial_context,
         vista=vista,
         termino=termino,
         pagina=pagina,
+        estado=estado,
     )
     querystring = urlencode(params)
     url = reverse("especial:docentes")
@@ -604,9 +647,9 @@ def _errores_form(form):
     return " ".join(error for errors in form.errors.values() for error in errors)
 
 
-def _docentes_fragment_context(especial_context, url_docentes):
+def _docentes_fragment_context(especial_context, url_docentes, estado=DOCENTES_ESTADO_DEFAULT):
     """Arma el contexto mínimo para refrescar la tabla de Docentes."""
-    docentes = list(_docentes_especial(especial_context))
+    docentes = list(_docentes_especial(especial_context, estado))
     asignaciones_por_docente = _asignaciones_por_docente(especial_context, docentes)
     secciones_disponibles = list(_secciones_disponibles(especial_context))
 
@@ -636,7 +679,7 @@ def _docentes_fragment_context(especial_context, url_docentes):
         ]
         item.secciones_bloqueadas = asignaciones_activas
         item.url_baja_docente = _url_baja_docente(especial_context, item.pk)
-        item.url_editar_docente = _url_carga_docente(
+        item.url_editar_docente = _url_edicion_docente(
             item.docente_cuil,
             url_docentes,
             "Volver a Docentes Especial",
@@ -650,8 +693,8 @@ def _docentes_fragment_context(especial_context, url_docentes):
     }
 
 
-def _docentes_fragment_response(request, especial_context, url_docentes):
-    fragment_context = _docentes_fragment_context(especial_context, url_docentes)
+def _docentes_fragment_response(request, especial_context, url_docentes, estado=DOCENTES_ESTADO_DEFAULT):
+    fragment_context = _docentes_fragment_context(especial_context, url_docentes, estado)
     html_tabla = render_to_string(
         "especial/partials/docentes_tabla_especial.html",
         fragment_context,
@@ -764,6 +807,7 @@ def docentes(request):
     context = contexto_base(request, "docentes")
     especial_context = context["especial_context"]
     vista = _docentes_vista_param(request)
+    estado_docentes = _docentes_estado_param(request)
     termino_busqueda, busqueda_error = _docentes_busqueda_param(request)
     pagina_solicitada = _pagina_docentes_param(request)
     if request.method == "POST" and especial_context.get("ciclo_cerrado"):
@@ -819,10 +863,36 @@ def docentes(request):
         vista=vista,
         termino=termino_busqueda,
         pagina=pagina_solicitada if vista == "historial" else None,
+        estado=estado_docentes,
     )
 
     if request.method == "POST":
         accion = request.POST.get("accion")
+
+        if accion == "alta_docente_especial":
+            if not especial_context["puede_operar"]:
+                messages.warning(request, "Seleccioná un CUE-Anexo y un ciclo para operar.")
+                return redirect(url_docentes)
+            try:
+                dar_alta_docente_banco(
+                    banco_id=request.POST.get("docente_banco_id"),
+                    cueanexo=especial_context["cueanexo"],
+                    ciclo=especial_context["ciclo"],
+                    user=request.user,
+                )
+            except (ValidationError, IntegrityError) as exc:
+                messages.error(request, "; ".join(exc.messages) if isinstance(exc, ValidationError) else "El docente ya se encuentra activo en este establecimiento y ciclo.")
+            else:
+                messages.success(request, "Docente dado de alta en Educación Especial correctamente.")
+                return redirect(
+                    _url_docentes(
+                        especial_context,
+                        vista="historial",
+                        termino=termino_busqueda,
+                        pagina=1,
+                    )
+                )
+            return redirect(url_docentes)
 
         if accion == "baja_docente_especial":
             abrir_modal = False
@@ -893,7 +963,7 @@ def docentes(request):
             else:
                 message = "Asignación dada de baja correctamente."
                 if _is_ajax(request):
-                    return _docentes_fragment_response(request, especial_context, url_docentes)
+                    return _docentes_fragment_response(request, especial_context, url_docentes, estado_docentes)
                 messages.success(request, message)
             return redirect(url_docentes)
 
@@ -991,7 +1061,7 @@ def docentes(request):
                     return redirect(url_docentes)
                 
                 if _is_ajax(request):
-                    docentes_actualizados = list(_docentes_especial(especial_context))
+                    docentes_actualizados = list(_docentes_especial(especial_context, estado_docentes))
                     asignaciones_actualizadas = _asignaciones_por_docente(especial_context, docentes_actualizados)
                     secciones_disp = list(_secciones_disponibles(especial_context))
                     
@@ -1012,7 +1082,7 @@ def docentes(request):
                         item.secciones_asignables = [s for s in secciones_disp if s.pk not in ids_ocupadas]
                         item.secciones_bloqueadas = activas
                         item.url_baja_docente = _url_baja_docente(especial_context, item.pk)
-                        item.url_editar_docente = _url_carga_docente(item.docente_cuil, url_docentes, "Volver a Docentes Especial")
+                        item.url_editar_docente = _url_edicion_docente(item.docente_cuil, url_docentes, "Volver a Docentes Especial")
 
                     ctx_fragmento = {
                         "docentes": docentes_actualizados,
@@ -1139,7 +1209,7 @@ def docentes(request):
             docentes_banco_tabla_pendiente = True
     else:
         try:
-            docentes = list(_docentes_especial(especial_context))
+            docentes = list(_docentes_especial(especial_context, estado_docentes))
             if docente and not docente_en_banco:
                 docente_en_banco = _docente_en_banco_activo(docente, especial_context)
         except (OperationalError, ProgrammingError):
@@ -1177,7 +1247,7 @@ def docentes(request):
             ]
             item.secciones_bloqueadas = asignaciones_activas
             item.url_baja_docente = _url_baja_docente(especial_context, item.pk)
-            item.url_editar_docente = _url_carga_docente(
+            item.url_editar_docente = _url_edicion_docente(
                 item.docente_cuil,
                 url_docentes,
                 "Volver a Docentes Especial",
@@ -1204,6 +1274,25 @@ def docentes(request):
         especial_context,
         vista=DOCENTES_VISTA_DEFAULT,
         termino=termino_busqueda,
+        estado=estado_docentes,
+    )
+    docentes_todos_url = _url_docentes(
+        especial_context,
+        vista=DOCENTES_VISTA_DEFAULT,
+        termino=termino_busqueda,
+        estado="todos",
+    )
+    docentes_altas_url = _url_docentes(
+        especial_context,
+        vista=DOCENTES_VISTA_DEFAULT,
+        termino=termino_busqueda,
+        estado="activo",
+    )
+    docentes_bajas_url = _url_docentes(
+        especial_context,
+        vista=DOCENTES_VISTA_DEFAULT,
+        termino=termino_busqueda,
+        estado="baja",
     )
     docentes_historial_url = _url_docentes(
         especial_context,
@@ -1239,9 +1328,13 @@ def docentes(request):
             "docente_row": _docente_row(docente),
             "docentes": docentes,
             "docentes_actuales_url": docentes_actuales_url,
+            "docentes_todos_url": docentes_todos_url,
+            "docentes_altas_url": docentes_altas_url,
+            "docentes_bajas_url": docentes_bajas_url,
             "docentes_historial_url": docentes_historial_url,
             "modo_historial_docentes": vista == "historial",
             "vista_docentes": vista,
+            "estado_docentes": estado_docentes,
             "termino_busqueda_docentes": termino_busqueda,
             "busqueda_error_docentes": busqueda_error,
             "pagina_anterior_docentes_url": pagina_anterior_docentes_url,
