@@ -786,7 +786,7 @@ class RegistroActividades(AuditoriaModel):
 
     ceic = models.ForeignKey('NomencladorCeic', on_delete=models.PROTECT)
     
-    grado_anio = models.CharField(max_length=2)
+    grado_anio = models.ForeignKey('Grado_anio', on_delete=models.PROTECT)
     
     turno=models.CharField(max_length=20, choices=[
         ('MAÑANA', 'MAÑANA'),
@@ -797,7 +797,7 @@ class RegistroActividades(AuditoriaModel):
         default='MAÑANA'
     )
     
-    secciones=models.CharField(max_length=2, null=False, blank=False)
+    secciones=models.ForeignKey('Secciones', on_delete=models.PROTECT)
     
     espacios = models.ForeignKey(
         'TitulosEspacios',

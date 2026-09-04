@@ -170,9 +170,11 @@ def buscar_persona(request):
         "dni": persona.dni,
         "apellido": persona.apellido,
         "nombre": persona.nombre,
+        "f_nacimiento": persona.f_nacimiento.isoformat() if persona.f_nacimiento else "",
         "sexo": persona.sexo_id,
         "provincia": persona.provincia_id,
         "localidad": persona.localidad_id,
+        "codigo_area": persona.codigo_area_id,
         "telefono": persona.telefono or "",
         "whatsapp": bool(persona.whatsapp),
     })
@@ -218,6 +220,10 @@ def carga_personal(request, pk=None):
             Personas,
             pk=pk
         )
+    else:
+        cuil = "".join(filter(str.isdigit, request.GET.get("cuil", "")))
+        if cuil:
+            persona = Personas.objects.filter(cuil=cuil).first()
 
 
     persona_form = PersonaForm(
