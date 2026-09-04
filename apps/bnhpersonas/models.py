@@ -399,7 +399,10 @@ class Grado_anio(models.Model):
     c_niv_grado=models.IntegerField()
     t_niv_grado=models.CharField(max_length=100,null=True, blank=True)
     
+    c_modalidad = models.IntegerField(null=True, blank=True)
+
     class Meta:
+        indexes = [models.Index(fields=["c_modalidad", "c_niv_grado", "estado"], name="bnh_grado_parent_idx")]
         verbose_name="Grado_Anio"
         verbose_name_plural="Grados_Anios"
         db_table="grado_anio"
@@ -418,7 +421,10 @@ class Secciones(models.Model):
     c_niv_seccion=models.IntegerField()
     t_niv_seccion=models.CharField(max_length=100,null=True, blank=True)
     
+    c_modalidad = models.IntegerField(null=True, blank=True)
+
     class Meta:
+        indexes = [models.Index(fields=["c_modalidad", "c_niv_seccion", "estado"], name="bnh_seccion_parent_idx")]
         verbose_name="Seccion"
         verbose_name_plural="Secciones"
         db_table="Secciones"
@@ -832,6 +838,15 @@ class RegistroActividades(AuditoriaModel):
             errors["f_hasta"] = "Indique la fecha de finalización."
         if self.categoria == "NO DOCENTE" and any((self.grado_anio_id, self.secciones_id, self.espacios_id)):
             errors["categoria"] = "Para personal no docente deje vacíos grado, sección y espacio curricular."
+        if self.modalidad_id and self.niveles_id:
+            from .domain.catalogs import available_levels, activity_catalogs
+            if not available_levels(self.modalidad_id).filter(pk=self.niveles_id).exists():
+                errors["niveles"] = "El nivel no pertenece a la modalidad seleccionada."
+            _, grados, secciones = activity_catalogs(self.modalidad_id, self.niveles_id, self.grado_anio_id)
+            if self.grado_anio_id and not grados.filter(pk=self.grado_anio_id).exists():
+                errors["grado_anio"] = "El grado no pertenece a esta modalidad y nivel, o está inactivo."
+            if self.secciones_id and not secciones.filter(pk=self.secciones_id).exists():
+                errors["secciones"] = "Seleccione un grado válido y una sección de la misma modalidad y nivel."
         if errors:
             raise ValidationError(errors)
 
