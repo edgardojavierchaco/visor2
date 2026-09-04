@@ -66,6 +66,11 @@ urlpatterns = [
         views_carga_cueanexo.carga_cueanexo,
         name="carga_cueanexo",
     ),
+    path(
+        "carga/cueanexo/editar/",
+        views_carga_cueanexo.editar_datos_cueanexo,
+        name="editar_datos_cueanexo",
+    ),
     # Secciones (Grupos)
     path(
         "carga/secciones/",

@@ -10,6 +10,12 @@ from django.db.models import CharField, Func, Q, Value
 from django.db.models.functions import Cast
 from django.utils import timezone
 from apps.bnhalumnos.models import Alumno
+from apps.cef.models import (
+    CefBeneficioSinoTipo,
+    CefEspacioComedorTipo,
+    CefFuenteFinanciamientoTipo,
+    CefPrestacionTipo,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -514,6 +520,90 @@ class EspecialCiclo(EspecialAuditoriaMixin):
 
     def __str__(self):
         return str(self.anio)
+
+
+class EspecialDatosCUEAnexo(EspecialAuditoriaMixin):
+    """Datos institucionales complementarios de un CUE-Anexo y ciclo.
+
+    Los catálogos se comparten con CEF porque representan el mismo dominio
+    institucional. La tabla y los datos cargados pertenecen exclusivamente a
+    Especial.
+    """
+
+    ciclo = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="datos_cueanexo",
+    )
+    cueanexo = models.CharField(max_length=9, db_index=True)
+    beneficio_alimentario_gratuito = models.ForeignKey(
+        CefBeneficioSinoTipo,
+        on_delete=models.PROTECT,
+        related_name="datos_especial_beneficio",
+    )
+    fuente_financiamiento = models.ForeignKey(
+        CefFuenteFinanciamientoTipo,
+        on_delete=models.PROTECT,
+        related_name="datos_especial_fuente",
+    )
+    prestacion_tipo = models.ForeignKey(
+        CefPrestacionTipo,
+        on_delete=models.PROTECT,
+        related_name="datos_especial_prestacion",
+    )
+    espacio_comedor = models.ForeignKey(
+        CefEspacioComedorTipo,
+        on_delete=models.PROTECT,
+        related_name="datos_especial_espacio",
+    )
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        db_table = '"especial"."datos_cueanexo"'
+        ordering = ["cueanexo", "-ciclo__anio"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cueanexo", "ciclo"],
+                name="uq_esp_datos_cue_cic",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["cueanexo", "ciclo"], name="idx_esp_datos_cue_cic"),
+        ]
+
+    def _beneficio_requiere_no_corresponde(self):
+        if not self.beneficio_alimentario_gratuito_id:
+            return False
+        nombre = (self.beneficio_alimentario_gratuito.nombre or "").strip().lower()
+        nombre = nombre.translate(str.maketrans("áéíóúüñ", "aeiouun"))
+        return (
+            self.beneficio_alimentario_gratuito.es_no_corresponde
+            or nombre in {"no", "sin informacion"}
+        )
+
+    def clean(self):
+        errors = {}
+        cueanexo_normalizado = normalizar_cueanexo(self.cueanexo)
+        if not cueanexo_normalizado:
+            errors["cueanexo"] = "CUE-Anexo inválido."
+        else:
+            self.cueanexo = cueanexo_normalizado
+
+        if self._beneficio_requiere_no_corresponde():
+            if self.fuente_financiamiento_id and self.fuente_financiamiento.codigo != -1:
+                errors["fuente_financiamiento"] = (
+                    "Debe seleccionar No corresponde cuando no hay beneficio alimentario."
+                )
+            if self.prestacion_tipo_id and self.prestacion_tipo.codigo != -1:
+                errors["prestacion_tipo"] = (
+                    "Debe seleccionar No corresponde cuando no hay beneficio alimentario."
+                )
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 # ============================================================
