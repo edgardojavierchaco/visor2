@@ -107,9 +107,22 @@
                                     </li>
                                 {% endif %}
                                     <li>
-                                    <a class="btn btn-danger btn-sm docentes-action-baja" href="{{ docente_banco.url_baja_docente }}" data-docente-baja-open>
-                                        <i class="fa-solid fa-user-slash"></i> Dar de baja
-                                    </a>
+                                    {% if docente_banco.estado == 'baja' %}
+                                        <form method="post" action="{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-confirm-title="Dar de alta docente" data-cef-confirm-message="Se creará un nuevo período activo y se conservará la baja en el historial." data-cef-confirm-entity="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="accion" value="alta_docente_especial">
+                                            <input type="hidden" name="docente_banco_id" value="{{ docente_banco.pk }}">
+                                            <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                                            {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
+                                            <button class="btn btn-success btn-sm docentes-action-alta" type="submit">
+                                                <i class="fa-solid fa-user-check"></i> Dar de alta
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <a class="btn btn-danger btn-sm docentes-action-baja" href="{{ docente_banco.url_baja_docente }}" data-docente-baja-open>
+                                            <i class="fa-solid fa-user-slash"></i> Dar de baja
+                                        </a>
+                                    {% endif %}
                                     </li>
                                 </ul>
                             </div>

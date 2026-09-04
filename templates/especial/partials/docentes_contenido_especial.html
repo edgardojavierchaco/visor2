@@ -23,6 +23,13 @@
                     <span class="especial-material-symbol cef-search-icon" aria-hidden="true">tab_search</span>
                     <input id="searchProfesores" type="text" value="{{ termino_busqueda_docentes }}" placeholder="Buscar por nombre, CUIL, DNI o sección..." maxlength="100" autocomplete="off" data-especial-search-input aria-label="Buscar docentes por nombre, CUIL, DNI o sección">
                 </div>
+                {% if not modo_historial_docentes %}
+                    <div class="btn-group" role="group" aria-label="Filtrar docentes por estado">
+                        <a class="btn btn-sm {% if estado_docentes == 'todos' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ docentes_todos_url }}" data-especial-search-state-link data-especial-subview-link data-especial-subview="actuales" data-especial-section="docentes" data-especial-target-selector="[data-especial-search-results]">Mostrar todos</a>
+                        <a class="btn btn-sm {% if estado_docentes == 'activo' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ docentes_altas_url }}" data-especial-search-state-link data-especial-subview-link data-especial-subview="actuales" data-especial-section="docentes" data-especial-target-selector="[data-especial-search-results]">Mostrar docentes en alta</a>
+                        <a class="btn btn-sm {% if estado_docentes == 'baja' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{{ docentes_bajas_url }}" data-especial-search-state-link data-especial-subview-link data-especial-subview="actuales" data-especial-section="docentes" data-especial-target-selector="[data-especial-search-results]">Mostrar docentes en baja</a>
+                    </div>
+                {% endif %}
             </div>
             <div class="cef-tools-right" data-especial-current-only>
                 <span class="cef-tools-label">Mostrar</span>

@@ -87,6 +87,47 @@ def dar_baja_docente_banco(
         return banco
 
 
+def dar_alta_docente_banco(*, banco_id, cueanexo, ciclo, user):
+    """Crea un nuevo período activo a partir de un banco dado de baja."""
+    try:
+        banco_id = int(banco_id)
+    except (TypeError, ValueError) as exc:
+        raise ValidationError("El docente seleccionado no es válido.") from exc
+
+    with transaction.atomic():
+        try:
+            banco_baja = (
+                EspecialDocenteBanco.objects.select_for_update()
+                .get(pk=banco_id, cueanexo=cueanexo, ciclo=ciclo)
+            )
+        except EspecialDocenteBanco.DoesNotExist as exc:
+            raise ValidationError(
+                "El docente seleccionado no pertenece al CUE-Anexo y ciclo actuales."
+            ) from exc
+        if banco_baja.estado != EspecialDocenteBanco.Estado.BAJA:
+            raise ValidationError("Solo se puede dar de alta un docente dado de baja.")
+
+        if EspecialDocenteBanco.objects.filter(
+            cueanexo=cueanexo,
+            ciclo=ciclo,
+            docente_cuil=banco_baja.docente_cuil,
+            estado=EspecialDocenteBanco.Estado.ACTIVO,
+        ).exists():
+            raise ValidationError(
+                "El docente ya se encuentra activo en este establecimiento y ciclo."
+            )
+
+        return EspecialDocenteBanco.objects.create(
+            cueanexo=cueanexo,
+            ciclo=ciclo,
+            docente_cuil=banco_baja.docente_cuil,
+            estado=EspecialDocenteBanco.Estado.ACTIVO,
+            fecha_alta=timezone.localdate(),
+            creado_por=user,
+            actualizado_por=user,
+        )
+
+
 def aplicar_traslados_docentes(ciclo_destino, user, cueanexo=None):
     """Aplica traslados pendientes al crear el ciclo destino, sin copiar cargos."""
     filtros = {
