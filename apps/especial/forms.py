@@ -21,6 +21,8 @@ from .models import (
     SeccionEspecial,
     SeccionTipo,
     TurnoTipo,
+    _normalizar_oferta_matricula_compartida,
+    cueanexo_tiene_oferta_matricula_compartida,
     cueanexo_tiene_oferta_no_especial,
     get_ofertas_educativas_especiales,
     normalizar_cueanexo,
@@ -398,6 +400,19 @@ class EspecialSeccionForm(forms.ModelForm):
 
         oferta_actual = (self.instance.oferta or "").strip()
         ofertas = get_ofertas_educativas_especiales(self.cueanexo)
+        self.establecimiento_tiene_integracion = (
+            cueanexo_tiene_oferta_matricula_compartida(self.cueanexo)
+        )
+        oferta_integracion = _normalizar_oferta_matricula_compartida(
+            "Especial - Integración"
+        )
+        if not self.establecimiento_tiene_integracion:
+            ofertas = [
+                oferta
+                for oferta in ofertas
+                if _normalizar_oferta_matricula_compartida(oferta)
+                != oferta_integracion
+            ]
         self.ofertas_educativas = tuple(ofertas)
         self.oferta_educativa_sin_configurar = bool(
             self.cueanexo and not ofertas
@@ -457,6 +472,19 @@ class EspecialSeccionForm(forms.ModelForm):
                 "La oferta educativa no corresponde al CUE-Anexo seleccionado."
             )
         return oferta
+
+    def clean(self):
+        cleaned_data = super().clean()
+        oferta_enviada = str(self.data.get(self.add_prefix("oferta")) or "").strip()
+        es_integracion = (
+            _normalizar_oferta_matricula_compartida(oferta_enviada)
+            == _normalizar_oferta_matricula_compartida("Especial - Integración")
+        )
+        if es_integracion and not self.establecimiento_tiene_integracion:
+            self._errors["oferta"] = self.error_class(
+                ["Este establecimiento no posee oferta de Integración."]
+            )
+        return cleaned_data
 
     def save(self, commit=True):
         seccion = super().save(commit=False)
