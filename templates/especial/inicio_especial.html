@@ -75,6 +75,100 @@
         justify-content: center;
         margin-bottom: 1rem;
         width: 46px;
+        transition: background-color .18s ease, border-color .18s ease, transform .12s ease;
+    }
+
+    .especial-home-icon i {
+        --especial-icon-motion: especial-icon-bounce;
+        display: inline-block;
+        transform-origin: center 75%;
+    }
+
+    .especial-home-icon :is(.fa-chalkboard-user, .fa-school, .fa-people-group, .fa-calendar-days) {
+        --especial-icon-motion: especial-icon-sway;
+    }
+
+    .especial-home-icon .fa-binoculars {
+        --especial-icon-motion: especial-icon-look;
+    }
+
+    .especial-home-card:focus-visible .especial-home-icon {
+        background: var(--blue-100);
+        border-color: var(--blue-300);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+        .especial-home-card:hover .especial-home-icon {
+            background: var(--blue-100);
+            border-color: var(--blue-300);
+        }
+    }
+
+    .especial-home-card:active .especial-home-icon {
+        background: var(--blue-200);
+        border-color: var(--primary);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        .especial-home-card:focus-visible .especial-home-icon i {
+            animation: var(--especial-icon-motion) .7s ease-in-out;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .especial-home-card:hover .especial-home-icon i {
+                animation: var(--especial-icon-motion) .7s ease-in-out;
+            }
+        }
+
+        .especial-home-card:active {
+            transform: translateY(0);
+        }
+
+        .especial-home-card:active .especial-home-icon {
+            transform: scale(.88);
+            transition-duration: .06s;
+        }
+
+        .especial-home-card:active .especial-home-icon i {
+            animation: none;
+            transform: scale(.9);
+        }
+    }
+
+    @keyframes especial-icon-bounce {
+        0%, 100% { transform: translateY(0) scale(1); }
+        30% { transform: translateY(-6px) scale(1.08); }
+        55% { transform: translateY(1px) scale(.96); }
+        75% { transform: translateY(-2px) scale(1.03); }
+    }
+
+    @keyframes especial-icon-sway {
+        0%, 100% { transform: rotate(0); }
+        25% { transform: rotate(-12deg); }
+        50% { transform: rotate(10deg); }
+        75% { transform: rotate(-5deg); }
+    }
+
+    @keyframes especial-icon-look {
+        0%, 100% { transform: translateX(0) rotate(0); }
+        25% { transform: translateX(-3px) rotate(-8deg); }
+        60% { transform: translateX(3px) rotate(8deg); }
+        80% { transform: translateX(-1px) rotate(-3deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .especial-home-card,
+        .especial-home-card .especial-home-icon {
+            transition: none;
+        }
+
+        .especial-home-card .especial-home-icon i {
+            animation: none;
+        }
+
+        .especial-home-card:is(:hover, :focus, :active) {
+            transform: none;
+        }
     }
 
     .especial-home-card h2 {
@@ -126,14 +220,14 @@
 
     <div class="especial-home-grid">
         {% for acceso in especial_accesos_rapidos %}
-            <a class="especial-home-card" href="{{ acceso.url }}">
+            <a class="especial-home-card" href="{{ acceso.url }}"{% if acceso.menu == 'localizaciones' %} data-especial-page-loading-link{% endif %}>
                 <span class="especial-home-icon"><i class="fa-solid {{ acceso.icon }}" aria-hidden="true"></i></span>
                 <h2>{{ acceso.title }}</h2>
                 <p>{{ acceso.subtitle }}</p>
             </a>
         {% endfor %}
         {% if especial_context.es_admin_especial %}
-            <a class="especial-home-card" href="{% url 'especial:visualizador_inicio' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
+            <a class="especial-home-card" href="{% url 'especial:visualizador_inicio' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" data-especial-page-loading-link>
                 <span class="especial-home-icon"><i class="fa-solid fa-binoculars" aria-hidden="true"></i></span>
                 <h2>Visualizador</h2>
                 <p>Consultar alumnos, docentes y directores por escuela y ciclo.</p>
