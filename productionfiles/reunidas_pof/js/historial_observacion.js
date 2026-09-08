@@ -43,9 +43,9 @@
         return url.toString();
     }
 
-    function crearItemResumen(label, valor, ancho) {
+    function crearItemResumen(label, valor, clase) {
         const item = document.createElement("div");
-        item.className = "pof-detail-item" + (ancho ? " pof-quantity-history-summary-wide" : "");
+        item.className = "pof-detail-item" + (clase ? " " + clase : "");
         const nombre = document.createElement("span");
         const contenido = document.createElement("strong");
         nombre.textContent = label;
@@ -58,16 +58,17 @@
     function renderizarResumen(cargo) {
         limpiarElemento(summary);
         summary.appendChild(crearItemResumen("CEIC", cargo.ceic));
-        summary.appendChild(crearItemResumen("Cargo", cargo.cargo, true));
+        summary.appendChild(crearItemResumen("Cargo", cargo.cargo));
         summary.appendChild(crearItemResumen("CUEANEXO", cargo.cueanexo));
         summary.appendChild(crearItemResumen("CUOF", cargo.cuof));
-        summary.appendChild(crearItemResumen("Observación actual", cargo.observacion_actual, true));
+        summary.appendChild(crearItemResumen("Observación actual", cargo.observacion_actual, "pof-observation-history-summary-observation"));
         summary.classList.remove("pof-hidden");
     }
 
-    function crearCelda(valor) {
+    function crearCelda(valor, etiqueta) {
         const celda = document.createElement("td");
         celda.textContent = valorVisible(valor);
+        celda.dataset.label = etiqueta;
         return celda;
     }
 
@@ -92,9 +93,9 @@
         section.appendChild(title);
 
         const wrap = document.createElement("div");
-        wrap.className = "pof-table-wrap";
+        wrap.className = "pof-table-wrap pof-observation-history-table-wrap";
         const table = document.createElement("table");
-        table.className = "pof-grid-table";
+        table.className = "pof-grid-table pof-observation-history-table";
         const thead = document.createElement("thead");
         const headerRow = document.createElement("tr");
         ["Fecha", "Anterior", "Nueva", "Usuario"].forEach(function (titulo) {
@@ -106,10 +107,10 @@
         const tbody = document.createElement("tbody");
         movimientos.forEach(function (movimiento) {
             const row = document.createElement("tr");
-            row.appendChild(crearCelda(movimiento.fecha));
-            row.appendChild(crearCelda(movimiento.observacion_anterior));
-            row.appendChild(crearCelda(movimiento.observacion_nueva));
-            row.appendChild(crearCelda(movimiento.usuario));
+            row.appendChild(crearCelda(movimiento.fecha, "Fecha"));
+            row.appendChild(crearCelda(movimiento.observacion_anterior, "Anterior"));
+            row.appendChild(crearCelda(movimiento.observacion_nueva, "Nueva"));
+            row.appendChild(crearCelda(movimiento.usuario, "Usuario"));
             tbody.appendChild(row);
         });
         table.appendChild(tbody);
