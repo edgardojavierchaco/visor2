@@ -1,0 +1,19 @@
+<section id="alumnos-curso" class="cef-course-section cef-course-section-students">
+    <div class="cef-course-section-head">
+        <h3 class="mb-0">Alumnos del grupo</h3>
+        <span class="cef-section-count" data-cef-section-count="alumnos">{{ inscripciones|length }} registros</span>
+        {% if grupo.estado == 'activo' %}<a class="btn btn-outline-primary btn-sm" href="{% url 'cef:asistencia_grupo' grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}{% if modo_historial %}{% if cef_context.querystring %}&{% else %}?{% endif %}modo=historial{% endif %}">
+            <i class="fa-solid fa-user-check"></i> Ver asistencia del grupo
+        </a>{% endif %}
+        {% if vista_alumnos == 'actuales' and not gestionar_solo_lectura and grupo.estado == 'activo' and cef_context.puede_operar %}<button class="btn btn-outline-primary btn-sm" type="button" data-open-personas-modal>
+            <i class="fa-solid fa-user-plus"></i> Inscribir alumno
+        </button>{% endif %}
+    </div>
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><a class="nav-link{% if vista_alumnos == 'actuales' %} active{% endif %}" href="{{ url_alumnos_actuales }}" data-cef-course-view-link data-cef-course-view="alumnos">Activos</a></li>
+        <li class="nav-item"><a class="nav-link{% if vista_alumnos == 'historial' %} active{% endif %}" href="{{ url_alumnos_historial }}" data-cef-course-view-link data-cef-course-view="alumnos">Historial</a></li>
+    </ul>
+    <div data-cef-fragment="inscripciones-grupo">
+        {% include "cef/inscripciones_grupo_lista_cef.html" %}
+    </div>
+</section>

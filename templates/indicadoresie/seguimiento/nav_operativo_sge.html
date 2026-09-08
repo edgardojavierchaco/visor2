@@ -1,0 +1,503 @@
+{% url 'indicsie:seguimiento' as sge_inicio_url %}
+{% url 'indicsie:seguimiento_listado' as sge_listado_url %}
+{% url 'indicsie:comparativa_sge_ra' as sge_comparativa_ra_url %}
+{% url 'indicsie:dashboard_seguimiento_sie' as sge_graficos_url %}
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+
+<style id="sge-module-nav-style">
+    .sge-module-nav {
+        background: linear-gradient(135deg, #252A4A 0%, #30365F 100%) !important;
+        border: 1px solid rgba(255,255,255,.18);
+        border-bottom: 2px solid #7168D9;
+        border-radius: 10px;
+        box-shadow: var(--shadow-sm, 0 1px 4px rgba(15,23,42,.13), 0 1px 2px rgba(15,23,42,.08));
+        font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+        font-size: .95rem;
+        line-height: 1.5;
+        margin-bottom: .95rem;
+        min-height: 48px;
+        padding: .12rem .85rem;
+    }
+
+    .sge-module-nav .container-fluid {
+        min-width: 0;
+        padding: 0;
+    }
+
+    .sge-module-nav .navbar-brand {
+        color: #fff !important;
+        font-size: 1rem;
+        font-weight: 800;
+        letter-spacing: .04em;
+        margin-right: 0;
+        opacity: .96;
+        padding: .58rem 0;
+    }
+
+    .sge-module-nav .navbar-brand::after {
+        content: "|";
+        margin: 0 .7rem;
+        opacity: .3;
+    }
+
+    .sge-module-nav .nav-link {
+        border-radius: 6px;
+        color: rgba(255,255,255,.72) !important;
+        font-size: var(--fs-sm, .8125rem);
+        font-weight: 700;
+        letter-spacing: 0;
+        padding: .46rem .72rem !important;
+        transition: color .18s ease, background .18s ease;
+    }
+
+    .sge-module-nav .nav-link.active {
+        background: rgba(113,104,217,.4);
+        color: #fff !important;
+        font-weight: 700;
+    }
+
+    .sge-module-nav .nav-link:hover {
+        background: rgba(113,104,217,.25);
+        color: rgba(255,255,255,.94) !important;
+        text-decoration: none;
+    }
+
+    .sge-module-nav .nav-link:focus-visible {
+        box-shadow: 0 0 0 3px rgba(241,240,251,.3);
+        outline: none;
+    }
+
+    .sge-context-card {
+        background: var(--surface, #fff);
+        border: 1px solid var(--border, #d7dce5);
+        border-top: 3px solid #7168D9;
+        border-radius: var(--r-lg, 12px);
+        box-shadow: var(--shadow-xs, 0 1px 3px rgba(15,23,42,.1));
+        margin-bottom: 1.25rem;
+        padding: .95rem 1.25rem 1rem;
+        transition: box-shadow .2s ease;
+    }
+
+    .sge-context-card:hover {
+        box-shadow: var(--shadow-md, 0 4px 12px rgba(15,23,42,.12));
+    }
+
+    .sge-context-grid {
+        align-items: end;
+        display: grid;
+        gap: .85rem;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .sge-context-grid > * {
+        min-width: 0;
+    }
+
+    .sge-context-label {
+        color: #1f2937;
+        display: block;
+        font-size: .75rem;
+        font-weight: 800;
+        letter-spacing: .09em;
+        margin-bottom: .3rem;
+        text-transform: uppercase;
+    }
+
+    #sgeCueanexoContexto {
+        appearance: auto;
+        background: var(--surface, #fff);
+        border: 1.5px solid var(--border-strong, #94a3b8);
+        border-radius: var(--r-sm, 6px);
+        color: #334155;
+        cursor: pointer;
+        font-size: .875rem;
+        font-weight: 600;
+        height: 40px;
+        min-height: 40px;
+        padding: .4rem 2.25rem .4rem .8rem;
+        transition: border-color .15s ease, box-shadow .15s ease;
+        width: 100%;
+    }
+
+    #sgeCueanexoContexto:hover:not(:focus) {
+        border-color: #64748b;
+    }
+
+    #sgeCueanexoContexto:focus {
+        border-color: #7168D9;
+        box-shadow: 0 0 0 3px rgba(113,104,217,.18);
+        outline: none;
+    }
+
+    .sge-context-card [data-sge-select] + .select2-container {
+        display: block;
+        max-width: 100%;
+        min-width: 0;
+        width: 100% !important;
+    }
+
+    .sge-context-card [data-sge-select] + .select2-container .select2-selection--single {
+        align-items: center;
+        background: var(--surface, #fff);
+        border: 1.5px solid var(--border-strong, #94a3b8);
+        border-radius: var(--r-sm, 6px);
+        display: flex;
+        height: 40px;
+        min-height: 40px;
+    }
+
+    .sge-context-card [data-sge-select] + .select2-container .select2-selection__rendered {
+        color: #334155;
+        font-size: .875rem;
+        font-weight: 600;
+        line-height: 1.3;
+        overflow: hidden;
+        padding: .45rem 2.25rem .45rem .8rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .sge-context-card [data-sge-select] + .select2-container .select2-selection__arrow {
+        height: 100%;
+        right: .35rem;
+        top: 0;
+    }
+
+    .sge-context-card [data-sge-select] + .select2-container.select2-container--focus .select2-selection--single,
+    .sge-context-card [data-sge-select] + .select2-container.select2-container--open .select2-selection--single {
+        border-color: #7168D9;
+        box-shadow: 0 0 0 3px rgba(113,104,217,.18);
+    }
+
+    .sge-select2-dropdown {
+        border-color: var(--border-strong, #94a3b8);
+        border-radius: var(--r-sm, 6px);
+        box-shadow: var(--shadow-lg, 0 10px 24px rgba(15,23,42,.16));
+        color: #334155;
+        max-width: calc(100vw - 24px);
+        z-index: 1095;
+    }
+
+    .sge-select2-dropdown .select2-results__options {
+        max-height: min(20rem, calc(100vh - 9rem));
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .sge-select2-dropdown .select2-results__option {
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+        padding: .55rem .7rem;
+        white-space: normal;
+    }
+
+    .sge-select2-dropdown .select2-search__field {
+        border: 1px solid var(--border-strong, #94a3b8);
+        border-radius: var(--r-sm, 6px);
+        width: 100%;
+    }
+
+    .sge-select2-dropdown .select2-results__option--highlighted[aria-selected] {
+        background: #f1f0fb;
+        color: #252A4A;
+    }
+
+    .sge-context-actions {
+        align-items: center;
+        align-self: end;
+        display: flex;
+        gap: .4rem;
+        justify-content: flex-end;
+        min-height: 38px;
+        white-space: nowrap;
+    }
+
+    .sge-context-actions .btn {
+        height: 38px;
+        min-height: 38px;
+        padding-bottom: 0;
+        padding-top: 0;
+    }
+
+    .sge-context-apply {
+        background: #625BC7;
+        border-color: #625BC7;
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .sge-context-apply:hover,
+    .sge-context-apply:focus {
+        background: #5149B5;
+        border-color: #5149B5;
+        color: #fff;
+    }
+
+    @media (max-width: 1199.98px) {
+        .sge-module-nav {
+            padding: .12rem .7rem;
+        }
+    }
+
+    @media (max-width: 991.98px) {
+        .sge-module-nav {
+            margin-bottom: .9rem;
+        }
+
+        .sge-context-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .sge-context-actions {
+            justify-content: flex-start;
+            white-space: normal;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .sge-context-actions,
+        .sge-context-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<nav class="navbar navbar-expand-xl navbar-dark sge-module-nav" aria-label="Navegación interna SGE">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{{ sge_inicio_url }}" data-sge-page-loading-link>SGE</a>
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#sgeModuleNav" aria-controls="sgeModuleNav" aria-expanded="false" aria-label="Alternar navegación">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="sgeModuleNav">
+            <ul class="navbar-nav me-auto mb-2 mb-xl-0">
+                <li class="nav-item">
+                    <a class="nav-link{% if active_menu == 'inicio' %} active{% endif %}" href="{{ sge_inicio_url }}" data-sge-page-loading-link>Inicio</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if active_menu == 'listado' %} active{% endif %}" href="{{ sge_listado_url }}" data-sge-page-loading-link>Listado</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if active_menu == 'comparativa_ra' %} active{% endif %}" href="{{ sge_comparativa_ra_url }}" data-sge-page-loading-link>Comparativa RA-SGE</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if active_menu == 'graficos' %} active{% endif %}" href="{{ sge_graficos_url }}" data-sge-page-loading-link>Gráficos</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+{% if sge_context.mostrar_selector_cueanexo %}
+    <section class="sge-context-card" aria-label="Contexto de establecimiento SGE">
+        <form method="get" class="sge-context-grid" id="sgeContextForm">
+            <div>
+                <label class="sge-context-label" for="sgeCueanexoContexto">CUE-Anexo</label>
+                <select
+                    class="form-select form-select-sm"
+                    id="sgeCueanexoContexto"
+                    name="cueanexo_contexto_sge"
+                    data-sge-select="true"
+                    {% if not sge_context.cueanexo_opciones %}disabled{% endif %}>
+                    {% for opcion in sge_context.cueanexo_opciones %}
+                        <option value="{{ opcion.cueanexo }}" title="{{ opcion.cueanexo }} - {{ opcion.nombre }}" {% if opcion.cueanexo == sge_context.cueanexo_actual %}selected{% endif %}>{{ opcion.cueanexo }} - {{ opcion.nombre }}</option>
+                    {% empty %}
+                        <option value="">Sin CUE-Anexos autorizados</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="sge-context-actions">
+                <button type="submit" class="btn btn-sm sge-context-apply" {% if not sge_context.cueanexo_opciones %}disabled{% endif %}>
+                    <i class="fas fa-check"></i> Aplicar
+                </button>
+            </div>
+        </form>
+    </section>
+{% endif %}
+
+<script>
+(function () {
+    "use strict";
+
+    function loadScript(id, src, callback) {
+        var existing = document.getElementById(id) || document.querySelector('script[src="' + src + '"]');
+        if (existing) {
+            if (existing.dataset.loaded === "true") callback();
+            else existing.addEventListener("load", callback, { once: true });
+            return;
+        }
+
+        var script = document.createElement("script");
+        script.id = id;
+        script.src = src;
+        script.addEventListener("load", function () {
+            script.dataset.loaded = "true";
+            callback();
+        }, { once: true });
+        document.head.appendChild(script);
+    }
+
+    function initCueanexoSelect() {
+        var select = document.getElementById("sgeCueanexoContexto");
+        if (!select) return;
+
+        function applySelect2() {
+            var $select = window.jQuery(select);
+            if ($select.data("select2")) return;
+            $select.select2({
+                width: "100%",
+                dropdownCssClass: "sge-select2-dropdown",
+                minimumResultsForSearch: 0,
+                language: {
+                    searching: function () { return "Buscando..."; },
+                    noResults: function () { return "No se encontraron resultados"; }
+                }
+            });
+        }
+
+        function ensureSelect2() {
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+                applySelect2();
+                return;
+            }
+            loadScript(
+                "sge-select2-script",
+                "https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js",
+                applySelect2
+            );
+        }
+
+        if (window.jQuery) {
+            ensureSelect2();
+        } else {
+            loadScript(
+                "sge-jquery-script",
+                "https://code.jquery.com/jquery-3.6.0.min.js",
+                ensureSelect2
+            );
+        }
+    }
+
+    function isNormalNavigationClick(event, link) {
+        if (!link || event.defaultPrevented || event.button !== 0) return false;
+        if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return false;
+        if (link.hasAttribute("download") || link.hasAttribute("data-bs-toggle")) return false;
+        if ((link.getAttribute("target") || "_self").toLowerCase() !== "_self") return false;
+
+        var href = (link.getAttribute("href") || "").trim();
+        if (!href || href.charAt(0) === "#" || href.toLowerCase().indexOf("javascript:") === 0) return false;
+
+        var url = new URL(link.href, window.location.href);
+        if (url.origin !== window.location.origin || url.href === window.location.href) return false;
+        if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return false;
+        return true;
+    }
+
+    function syncActiveMenu(destination) {
+        var nav = document.querySelector(".sge-module-nav");
+        if (!nav) return;
+
+        var destinationUrl = destination instanceof URL
+            ? destination
+            : new URL(destination, window.location.href);
+
+        nav.querySelectorAll(".nav-link").forEach(function (navLink) {
+            var navUrl = new URL(navLink.href, window.location.href);
+            var isActive = navUrl.origin === destinationUrl.origin
+                && navUrl.pathname === destinationUrl.pathname;
+            navLink.classList.toggle("active", isActive);
+        });
+    }
+
+    function init() {
+        document.addEventListener("click", function (event) {
+            var target = event.target;
+            var link = target && target.closest ? target.closest("[data-sge-page-loading-link]") : null;
+            if (isNormalNavigationClick(event, link)) {
+                syncActiveMenu(new URL(link.href, window.location.href));
+            }
+        }, true);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+
+    window.addEventListener("pageshow", function () {
+        syncActiveMenu(window.location);
+    });
+
+    window.addEventListener("load", initCueanexoSelect, { once: true });
+})();
+</script>
+
+<script>
+(function() {
+    var STORAGE_KEY = 'indicadoresie_sidebar_state';
+    var INITIAL_CLASS = 'indicadoresie-sidebar-initial-collapsed';
+
+    function syncIndicadoresieSidebar() {
+        if (!document.body) {
+            return;
+        }
+
+        if (sessionStorage.getItem(STORAGE_KEY) === 'closed') {
+            document.documentElement.classList.add(INITIAL_CLASS);
+            document.body.classList.add('sidebar-collapse');
+            document.body.classList.remove('sidebar-open', 'sidebar-expanded');
+            return;
+        }
+
+        document.documentElement.classList.remove(INITIAL_CLASS);
+        document.body.classList.remove('sidebar-collapse', 'sidebar-closed');
+        document.body.classList.add('sidebar-open', 'sidebar-expanded');
+    }
+
+    syncIndicadoresieSidebar();
+
+    window.setTimeout(syncIndicadoresieSidebar, 120);
+    window.setTimeout(syncIndicadoresieSidebar, 420);
+
+    document.addEventListener(
+        'DOMContentLoaded',
+        syncIndicadoresieSidebar
+    );
+
+    window.addEventListener(
+        'pageshow',
+        syncIndicadoresieSidebar
+    );
+
+    window.addEventListener(
+        'load',
+        syncIndicadoresieSidebar
+    );
+
+    document.addEventListener('click', function(event) {
+        var target = event.target;
+
+        if (
+            target &&
+            target.closest &&
+            target.closest(
+                '[data-widget="pushmenu"], [data-toggle="push-menu"], .sidebar-toggle'
+            )
+        ) {
+            window.setTimeout(function() {
+                var isClosed =
+                    document.body &&
+                    document.body.classList.contains('sidebar-collapse');
+
+                sessionStorage.setItem(
+                    STORAGE_KEY,
+                    isClosed ? 'closed' : 'open'
+                );
+
+                syncIndicadoresieSidebar();
+            }, 80);
+        }
+    }, true);
+})();
+</script>

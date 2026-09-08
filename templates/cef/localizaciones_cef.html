@@ -1,8 +1,10 @@
 {% extends 'archivos/base/layout.html' %}
-{% load mis_filtros %}
-{% block content %}
-
-{# Mantiene el estado del menu lateral antes de pintar la pantalla para evitar saltos visuales. #}
+{% load static mis_filtros %}
+{% block head %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+<link rel="stylesheet" href="{% static 'cef/cef_loading.css' %}?v=20260811-4">
 <script>
 (function() {
     var sidebarState = sessionStorage.getItem('padron_sidebar_state');
@@ -13,9 +15,35 @@
     }
 })();
 </script>
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+<style id="cef-localizaciones-prepaint-stability">
+    .content-wrapper > .content-header { display: none !important; }
+    .content-wrapper,
+    .main-header,
+    .main-sidebar,
+    .main-footer { transition: none !important; animation: none !important; }
+    html.padron-sidebar-initial-collapsed .content-wrapper,
+    html.padron-sidebar-initial-collapsed .main-header,
+    html.padron-sidebar-initial-collapsed .main-footer { margin-left: 4.6rem !important; }
+    html.padron-sidebar-initial-collapsed .main-sidebar,
+    html.padron-sidebar-initial-collapsed .main-sidebar::before { width: 4.6rem !important; overflow-x: hidden !important; }
+    html.padron-sidebar-initial-collapsed .main-sidebar:hover,
+    html.padron-sidebar-initial-collapsed .main-sidebar:hover::before,
+    html.padron-sidebar-initial-collapsed .main-sidebar:focus-within,
+    html.padron-sidebar-initial-collapsed .main-sidebar:focus-within::before { width: 250px !important; overflow-x: visible !important; }
+    .content-wrapper > .content { padding: .45rem .55rem 0 !important; }
+    .content-wrapper > .content > .container-fluid { max-width: 100% !important; min-width: 0 !important; padding: 0 !important; }
+    @media (max-width: 991.98px) {
+        html.padron-sidebar-initial-collapsed .content-wrapper,
+        html.padron-sidebar-initial-collapsed .main-header,
+        html.padron-sidebar-initial-collapsed .main-footer { margin-left: 0 !important; }
+        html.padron-sidebar-initial-collapsed .main-sidebar:not(:hover):not(:focus-within) { transform: translateX(-250px) !important; }
+    }
+    @media (max-width: 768px) {
+        .content-wrapper > .content { padding-left: .35rem !important; padding-right: .35rem !important; }
+    }
+</style>
+{% endblock %}
+{% block content %}
 
 {# Estilos propios de la pantalla de Localizaciones CEF. #}
 <style id="cef-localizaciones-padron-style">
@@ -73,41 +101,6 @@
 
     html { overflow-y: scroll; }
 
-    .content-wrapper > .content-header { display: none !important; }
-    .content-wrapper,
-    .main-header,
-    .main-sidebar,
-    .main-footer {
-        transition: none !important;
-        animation: none !important;
-    }
-
-    html.padron-sidebar-initial-collapsed .content-wrapper,
-    html.padron-sidebar-initial-collapsed .main-header,
-    html.padron-sidebar-initial-collapsed .main-footer {
-        margin-left: 4.6rem !important;
-    }
-
-    html.padron-sidebar-initial-collapsed .main-sidebar,
-    html.padron-sidebar-initial-collapsed .main-sidebar::before {
-        width: 4.6rem !important;
-        overflow-x: hidden !important;
-    }
-
-    html.padron-sidebar-initial-collapsed .main-sidebar:hover,
-    html.padron-sidebar-initial-collapsed .main-sidebar:hover::before,
-    html.padron-sidebar-initial-collapsed .main-sidebar:focus-within,
-    html.padron-sidebar-initial-collapsed .main-sidebar:focus-within::before {
-        width: 250px !important;
-        overflow-x: visible !important;
-    }
-
-    .content-wrapper > .content > .container-fluid {
-        max-width: 100% !important;
-        min-width: 0 !important;
-        padding-top: 0 !important;
-    }
-
     .fa,
     .fas,
     .far,
@@ -123,11 +116,13 @@
     }
 
     .padron-page-wrapper {
-        max-width: 1480px;
+        --cef-local-page-gutter: clamp(.75rem, 2vw, 1.5rem);
+        max-width: 100%;
         min-width: 0;
         margin: 0 auto;
-        padding: 1rem clamp(.75rem, 2vw, 1.5rem) 2.5rem;
+        padding: .9rem var(--cef-local-page-gutter) 2.5rem;
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        font-size: .95rem;
     }
 
     .card,
@@ -2179,7 +2174,8 @@
 
     @media (max-width: 768px) {
         .padron-page-wrapper {
-            padding: .8rem .5rem 2rem;
+            --cef-local-page-gutter: .5rem;
+            padding-bottom: 2rem;
         }
 
         .search-slot,
@@ -3275,17 +3271,12 @@
     }
 
     syncPadronSidebar();
-    window.setTimeout(syncPadronSidebar, 120);
-    window.setTimeout(syncPadronSidebar, 420);
-    document.addEventListener('DOMContentLoaded', syncPadronSidebar);
-    window.addEventListener('pageshow', syncPadronSidebar);
-    window.addEventListener('load', syncPadronSidebar);
     document.addEventListener('click', function(event) {
         if (event.target.closest('[data-widget="pushmenu"], [data-toggle="push-menu"], .sidebar-toggle')) {
             window.setTimeout(function() {
                 var isClosed = document.body && document.body.classList.contains('sidebar-collapse');
                 sessionStorage.setItem('padron_sidebar_state', isClosed ? 'closed' : 'open');
-                syncPadronSidebar();
+                document.documentElement.classList.toggle('padron-sidebar-initial-collapsed', isClosed);
             }, 80);
         }
     }, true);
@@ -3754,8 +3745,8 @@
                     </nav>
                 {% endif %}
             </div>
-        </div>
     </div>
+</div>
 </div>
 
 <div class="filter-dialog" id="dialog_filtro" aria-hidden="true">
@@ -6433,5 +6424,7 @@
     }, true);
 })();
 </script>
+
+<script src="{% static 'cef/cef_loading.js' %}?v=20260811-4"></script>
 
 {% endblock %}

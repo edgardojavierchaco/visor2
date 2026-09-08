@@ -1,0 +1,84 @@
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <h2 class="cef-panel-title">Inventario</h2>
+        {% if cef_context.puede_operar %}
+            <div class="cef-panel-actions">
+                {% if catalogo_estados_disponible %}
+                    <a class="btn btn-primary" href="{% url 'cef:carga_inventario' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}accion=agregar">
+                        <i class="fa-solid fa-plus"></i> Agregar material
+                    </a>
+                {% else %}
+                    <button type="button" class="btn btn-primary" disabled>
+                        <i class="fa-solid fa-plus"></i> Agregar material
+                    </button>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="cef-panel-body">
+        {% if cef_context.puede_operar and not catalogo_estados_disponible %}
+            <div class="alert alert-warning mb-3">{{ mensaje_catalogo_vacio }}</div>
+        {% endif %}
+
+        {% include "cef/inventario_lista_cef.html" %}
+    </div>
+</div>
+
+{% if mostrar_form and form and cef_context.puede_operar %}
+    <div class="cef-edit-panel">
+        <h3>
+            <i class="fa-solid fa-plus-circle me-2"></i>
+            Agregar material
+        </h3>
+        <form method="post" action="{% url 'cef:carga_inventario' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="guardar_material">
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="cef-form-grid">
+                {% for field in form %}
+                    <div class="cef-field {% if field.name == 'observaciones' %}span-3{% endif %}">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                            <div class="cef-error">{{ field.errors|join:", " }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+
+                {% if estado_inicial_form %}
+                    <div class="cef-field span-3">
+                        <h4 class="h6 mb-0">Estado inicial</h4>
+                    </div>
+                    {% if estado_inicial_form.non_field_errors %}
+                        <div class="cef-field span-3">
+                            <div class="alert alert-danger mb-0">{{ estado_inicial_form.non_field_errors }}</div>
+                        </div>
+                    {% endif %}
+                    {% for field in estado_inicial_form %}
+                        <div class="cef-field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="cef-error">{{ field.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div class="cef-form-actions mt-4">
+                <a class="btn btn-outline-secondary" href="{% url 'cef:carga_inventario' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
+                    <i class="fa-solid fa-xmark"></i> Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary" {% if not catalogo_estados_disponible %}disabled{% endif %}>
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar material
+                </button>
+            </div>
+        </form>
+    </div>
+{% endif %}

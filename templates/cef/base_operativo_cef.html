@@ -1,27 +1,70 @@
 {% extends 'archivos/base/layout.html' %}
-{% block content %}
-
+{% load static %}
+{% block head %}
+{{ block.super }}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=optional" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+<link rel="stylesheet" href="{% static 'cef/cef_loading.css' %}?v=20260811-4">
+<link rel="stylesheet" href="{% static 'cef/cef_async_blocks.css' %}">
+<script>
+(function () {
+    document.documentElement.classList.toggle(
+        "padron-sidebar-initial-collapsed",
+        sessionStorage.getItem("padron_sidebar_state") === "closed"
+    );
+})();
+</script>
+<style id="cef-prepaint-stability">
+    .content-wrapper > .content-header { display: none !important; }
+    .content-wrapper,
+    .main-header,
+    .main-sidebar,
+    .main-footer { transition: none !important; animation: none !important; }
+    html.padron-sidebar-initial-collapsed .content-wrapper,
+    html.padron-sidebar-initial-collapsed .main-header,
+    html.padron-sidebar-initial-collapsed .main-footer { margin-left: 4.6rem !important; }
+    html.padron-sidebar-initial-collapsed .main-sidebar,
+    html.padron-sidebar-initial-collapsed .main-sidebar::before { width: 4.6rem !important; overflow-x: hidden !important; }
+    html.padron-sidebar-initial-collapsed .main-sidebar:hover,
+    html.padron-sidebar-initial-collapsed .main-sidebar:hover::before,
+    html.padron-sidebar-initial-collapsed .main-sidebar:focus-within,
+    html.padron-sidebar-initial-collapsed .main-sidebar:focus-within::before { width: 250px !important; overflow-x: visible !important; }
+    .content-wrapper > .content { padding: .45rem .55rem 0 !important; }
+    .content-wrapper > .content > .container-fluid { max-width: 100% !important; min-width: 0 !important; padding: 0 !important; }
+    @media (max-width: 991.98px) {
+        html.padron-sidebar-initial-collapsed .content-wrapper,
+        html.padron-sidebar-initial-collapsed .main-header,
+        html.padron-sidebar-initial-collapsed .main-footer { margin-left: 0 !important; }
+        html.padron-sidebar-initial-collapsed .main-sidebar:not(:hover):not(:focus-within) { transform: translateX(-250px) !important; }
+    }
+    @media (max-width: 768px) {
+        .content-wrapper > .content { padding-left: .35rem !important; padding-right: .35rem !important; }
+    }
+</style>
+{% endblock %}
+{% block content %}
 
 <script>
 (function () {
-    document.documentElement.classList.add("cef-js");
-
+    var root = document.documentElement;
     var STORAGE_KEY = "padron_sidebar_state";
 
-    function restoreSidebar() {
+    function syncSidebar() {
         if (!document.body) return;
-        if (sessionStorage.getItem(STORAGE_KEY) === "closed") {
+        var savedState = sessionStorage.getItem(STORAGE_KEY);
+        if (savedState === "closed") {
             document.body.classList.add("sidebar-collapse");
             document.body.classList.remove("sidebar-open", "sidebar-expanded");
+        } else if (savedState === "open") {
+            document.body.classList.remove("sidebar-collapse", "sidebar-closed");
+            document.body.classList.add("sidebar-open", "sidebar-expanded");
         }
     }
 
-    restoreSidebar();
-    document.addEventListener("DOMContentLoaded", restoreSidebar);
-    window.addEventListener("pageshow", restoreSidebar);
+    syncSidebar();
 
     document.addEventListener("click", function (event) {
         if (!event.target.closest('[data-widget="pushmenu"], [data-toggle="push-menu"], .sidebar-toggle')) {
@@ -30,6 +73,7 @@
         window.setTimeout(function () {
             var isClosed = document.body && document.body.classList.contains("sidebar-collapse");
             sessionStorage.setItem(STORAGE_KEY, isClosed ? "closed" : "open");
+            root.classList.toggle("padron-sidebar-initial-collapsed", isClosed);
         }, 120);
     }, true);
 })();
@@ -143,9 +187,9 @@
         /* Typography scale */
         --fs-xs:   0.7rem;
         --fs-sm:   0.8125rem;
-        --fs-base: 0.875rem;
-        --fs-md:   0.9375rem;
-        --fs-lg:   1.0625rem;
+        --fs-base: 0.95rem;
+        --fs-md:   1rem;
+        --fs-lg:   1.125rem;
         --fs-xl:   1.25rem;
         --fs-2xl:  1.5rem;
         --fs-3xl:  1.875rem;
@@ -157,11 +201,6 @@
     html { overflow-y: scroll; }
 
     .content-wrapper { background: #f1f4f8; }
-    .content-wrapper > .content-header { display: none !important; }
-    .content-wrapper > .content > .container-fluid {
-        max-width: 100% !important;
-        padding-top: 0 !important;
-    }
     .main-header .navbar-nav:first-child .nav-item:not(:first-child) {
         display: none !important;
     }
@@ -184,20 +223,62 @@
     .cef-wrap .form-select {
         max-width: 100%;
         min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
     }
 
     .cef-wrap .dropdown-menu {
-        max-width: min(420px, calc(100vw - 2rem));
+        box-sizing: border-box;
+        max-width: min(420px, calc(100vw - 24px));
+        min-width: 0;
         overflow-x: hidden;
     }
 
     .cef-wrap .dropdown-item {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        height: auto;
+        min-width: 0;
+        overflow-wrap: break-word;
+        white-space: normal;
+        word-break: normal;
+    }
+
+    .cef-row-actions-menu,
+    .cef-alumno-dropdown-menu,
+    .cef-profesor-dropdown-menu {
+        max-height: min(24rem, calc(100vh - 24px));
+        max-height: min(24rem, calc(100dvh - 24px));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .cef-row-actions-menu {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-lg);
+        min-width: 210px;
+        padding: .35rem;
+    }
+
+    .cef-row-actions-menu .dropdown-item {
+        align-items: center;
+        background: transparent;
+        border: 0;
+        border-radius: var(--r-sm);
+        color: var(--slate-800);
+        display: flex;
+        gap: .5rem;
+        justify-content: flex-start;
+        padding: .45rem .6rem;
+        text-align: left;
+        width: 100%;
+    }
+
+    .cef-row-actions-menu .dropdown-item:hover,
+    .cef-row-actions-menu .dropdown-item:focus {
+        background: var(--blue-50);
+        color: var(--blue-900);
+    }
+
+    .cef-row-actions-menu .dropdown-item i {
+        color: var(--blue-800);
+        width: 1rem;
     }
 
     /* ============================================================
@@ -205,7 +286,7 @@
        ============================================================ */
     .cef-main {
         margin: 0 auto;
-        max-width: 1480px;
+        max-width: none;
         padding: 1rem clamp(.75rem, 2vw, 1.5rem) 0;
     }
 
@@ -364,18 +445,11 @@
         cursor: pointer;
         font-size: var(--fs-sm);
         font-weight: 600;
+        height: 36px;
         min-height: 36px;
         padding: .3rem 2.25rem .3rem .75rem;
         transition: border-color .15s ease, box-shadow .15s ease;
         width: 100%;
-    }
-
-    #id_contexto_cueanexo option,
-    #id_contexto_ciclo option,
-    .cef-wrap select option {
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
 
     #id_contexto_cueanexo:hover:not(:focus),
@@ -388,6 +462,113 @@
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(45,125,210,.15);
         outline: none;
+    }
+
+    .cef-wrap [data-cef-select] + .select2-container {
+        display: block;
+        max-width: 100%;
+        min-width: 0;
+        width: 100% !important;
+    }
+
+    .cef-wrap [data-cef-select] + .select2-container .select2-selection--single {
+        align-items: center;
+        background: var(--surface);
+        border: 1.5px solid var(--border-strong);
+        border-radius: var(--r-sm);
+        display: flex;
+        height: auto;
+        min-height: 36px;
+    }
+
+    .cef-context-card [data-cef-select] + .select2-container .select2-selection--single {
+        height: 36px;
+        min-height: 36px;
+    }
+
+    .cef-wrap [data-cef-select] + .select2-container .select2-selection__rendered {
+        color: var(--slate-800);
+        font-size: var(--fs-base);
+        font-weight: 600;
+        line-height: 1.3;
+        overflow: visible;
+        overflow-wrap: anywhere;
+        padding: .45rem 2.25rem .45rem .75rem;
+        text-overflow: clip;
+        white-space: normal;
+        word-break: normal;
+    }
+
+    .cef-context-card [data-cef-select] + .select2-container .select2-selection__rendered {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .cef-wrap [data-cef-select] + .select2-container .select2-selection__arrow {
+        height: 100%;
+        right: .35rem;
+        top: 0;
+    }
+
+    .cef-wrap [data-cef-select] + .select2-container.select2-container--focus .select2-selection--single,
+    .cef-wrap [data-cef-select] + .select2-container.select2-container--open .select2-selection--single {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(45,125,210,.15);
+    }
+
+    .cef-wrap [data-cef-select] + .select2-container.select2-container--disabled .select2-selection--single {
+        background: var(--surface-muted);
+        cursor: not-allowed;
+    }
+
+    .cef-select2-dropdown {
+        border-color: var(--border-strong);
+        border-radius: var(--r-sm);
+        box-sizing: border-box;
+        box-shadow: var(--shadow-lg);
+        color: var(--slate-800);
+        font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        max-width: calc(100vw - 24px);
+        min-width: 0;
+        z-index: 1095;
+    }
+
+    .cef-select2-dropdown .select2-results__options {
+        max-height: min(20rem, calc(100vh - 9rem));
+        max-height: min(20rem, calc(100dvh - 9rem));
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .cef-select2-dropdown .select2-results__option {
+        height: auto;
+        line-height: 1.3;
+        max-width: 100%;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        padding: .55rem .7rem;
+        white-space: normal;
+        word-break: normal;
+    }
+
+    .cef-select2-dropdown .select2-search__field {
+        border-color: var(--border-strong);
+        border-radius: var(--r-sm);
+        box-sizing: border-box;
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .cef-select2-dropdown .select2-results__option--highlighted[aria-selected] {
+        background: var(--blue-50);
+        color: var(--blue-900);
+    }
+
+    .cef-select2-dropdown .select2-results__option[aria-selected="true"] {
+        background: var(--blue-100);
+        color: var(--blue-900);
     }
 
     .cef-context-actions {
@@ -925,7 +1106,8 @@
         font-weight: 600;
     }
 
-    .cef-tools select {
+    .cef-tools select,
+    .cef-metricas-chart-type {
         appearance: auto;
         background: var(--surface);
         border: 1.5px solid var(--border-strong);
@@ -938,7 +1120,8 @@
         transition: border-color .15s ease, box-shadow .15s ease;
     }
 
-    .cef-tools select:focus {
+    .cef-tools select:focus,
+    .cef-metricas-chart-type:focus {
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(45,125,210,.12);
         outline: none;
@@ -1058,7 +1241,7 @@
         background: var(--slate-50);
     }
 
-    .cef-dt tbody tr:hover {
+    .cef-dt > tbody > tr:hover {
         background: var(--blue-50);
     }
 
@@ -1084,6 +1267,107 @@
 
     .cef-dt tbody tr:last-child td {
         border-bottom: none;
+    }
+
+    .cef-dt > tbody > tr.cef-history-detail-row,
+    .cef-dt > tbody > tr.cef-history-detail-row:hover {
+        background: var(--surface-soft);
+    }
+
+    .cef-dt > tbody > tr.cef-history-detail-row > td {
+        border-bottom: 2px solid var(--blue-100);
+    }
+
+    .cef-history-detail-panel {
+        background: var(--surface);
+        border: 1px solid var(--blue-200);
+        border-left: 4px solid var(--primary);
+        border-radius: var(--r-md);
+        box-shadow: var(--shadow-xs);
+        margin: .75rem 1rem 1rem;
+        overflow: hidden;
+    }
+
+    .cef-history-detail-head {
+        align-items: center;
+        background: var(--blue-50);
+        border-bottom: 1px solid var(--blue-200);
+        color: var(--blue-900);
+        display: flex;
+        flex-wrap: wrap;
+        font-size: var(--fs-sm);
+        gap: .5rem;
+        justify-content: space-between;
+        padding: .55rem .75rem;
+    }
+
+    .cef-history-detail-head strong {
+        align-items: center;
+        display: inline-flex;
+        gap: .4rem;
+    }
+
+    .cef-history-detail-head span:last-child {
+        color: var(--slate-600);
+        font-size: var(--fs-xs);
+        font-weight: 700;
+    }
+
+    .cef-history-detail-table-wrap {
+        border: 0;
+        border-radius: 0;
+    }
+
+    .cef-history-detail-table > thead > tr {
+        background: var(--blue-100);
+        border-bottom-color: var(--blue-400);
+    }
+
+    .cef-history-detail-table > thead > tr > th {
+        color: var(--blue-900);
+    }
+
+    .cef-history-detail-table > tbody > tr > td {
+        vertical-align: top;
+    }
+
+    .cef-history-assignment-list {
+        display: grid;
+        gap: .45rem;
+        min-width: 20rem;
+    }
+
+    .cef-history-assignment-item {
+        background: var(--surface);
+        border: 1px solid var(--blue-200);
+        border-radius: var(--r-sm);
+        padding: .55rem .65rem;
+    }
+
+    .cef-history-assignment-head {
+        align-items: center;
+        color: var(--slate-800);
+        display: flex;
+        flex-wrap: wrap;
+        gap: .4rem;
+        justify-content: space-between;
+    }
+
+    .cef-history-assignment-meta {
+        color: var(--slate-600);
+        display: flex;
+        flex-wrap: wrap;
+        font-size: var(--fs-xs);
+        gap: .3rem .75rem;
+        margin-top: .35rem;
+    }
+
+    .cef-history-assignment-reason {
+        border-top: 1px solid var(--slate-200);
+        color: var(--slate-600);
+        font-size: var(--fs-xs);
+        margin-top: .4rem;
+        padding-top: .4rem;
     }
 
     /* ============================================================
@@ -1208,6 +1492,82 @@
         justify-content: center;
         min-width: 32px;
         padding: 0 .5rem;
+    }
+
+    .cef-docente-overlay {
+        align-items: center;
+        background: rgba(7, 26, 51, .55);
+        backdrop-filter: blur(3px);
+        bottom: 0;
+        display: none;
+        justify-content: center;
+        left: 0;
+        overflow-y: auto;
+        padding: 24px 18px;
+        position: fixed;
+        right: 0;
+        top: 0;
+        z-index: 1080;
+    }
+
+    .cef-docente-overlay.is-open { display: flex; }
+
+    .cef-docente-modal {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 24px 60px rgba(7,26,51,.28), 0 8px 20px rgba(7,26,51,.12);
+        color: #0f172a;
+        max-height: calc(100vh - 48px);
+        max-width: 980px;
+        overflow: hidden;
+        width: min(980px, 92vw);
+    }
+
+    .cef-docente-modal-head {
+        align-items: center;
+        background: linear-gradient(135deg, #0d2748 0%, #071a33 100%);
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem 1.5rem;
+    }
+
+    .cef-docente-modal-title {
+        color: #fff;
+        font-size: 1.2rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .cef-docente-modal-title span {
+        color: rgba(255,255,255,.55);
+        font-size: 1rem;
+        font-weight: 400;
+    }
+
+    .cef-docente-close {
+        align-items: center;
+        background: rgba(255,255,255,.1);
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: 8px;
+        color: rgba(255,255,255,.75);
+        display: inline-flex;
+        height: 34px;
+        justify-content: center;
+        text-decoration: none;
+        width: 34px;
+    }
+
+    .cef-docente-close:hover { color: #fff; }
+
+    .cef-docente-close:focus-visible {
+        box-shadow: 0 0 0 3px rgba(147,197,253,.45);
+        outline: none;
+    }
+
+    .cef-docente-modal-body {
+        max-height: calc(100vh - 130px);
+        overflow-y: auto;
+        padding: 1.25rem 1.5rem 1.5rem;
     }
 
     /* ============================================================
@@ -1452,19 +1812,24 @@
         align-self: end;
     }
 
-    .cef-switch-line {
+    .cef-switch-line,
+    .cef-field label.cef-switch-line {
         align-items: center;
         background: var(--surface);
         border: 1.5px solid var(--border-strong);
         border-radius: var(--r-sm);
         color: var(--slate-900);
         cursor: pointer;
-        display: inline-flex;
+        display: flex;
         gap: .5rem;
+        justify-content: flex-start;
+        letter-spacing: 0;
+        margin-bottom: 0;
         min-height: 38px;
         max-width: 100%;
         padding: .45rem .75rem;
         text-transform: none;
+        width: 100%;
         white-space: normal;
     }
 
@@ -1472,6 +1837,7 @@
         flex: 0 0 auto;
         float: none;
         margin: 0;
+        position: static;
     }
 
     .cef-switch-line span {
@@ -1708,6 +2074,27 @@
     /* ============================================================
        BOOTSTRAP CONFIRMATION MODAL
        ============================================================ */
+    #cefConfirmActionModal.cef-confirm-modal {
+        align-items: center;
+        background: rgba(15, 23, 42, .48);
+        display: flex;
+        inset: 0;
+        overflow-y: auto;
+        padding: 1rem;
+        position: fixed;
+        z-index: 2000;
+    }
+
+    #cefConfirmActionModal.cef-confirm-modal[hidden] {
+        display: none !important;
+    }
+
+    #cefConfirmActionModal .modal-dialog {
+        margin: auto;
+        max-width: 32rem;
+        width: 100%;
+    }
+
     .cef-wrap .modal-content {
         border: 1px solid var(--border);
         border-radius: var(--r-lg);
@@ -1727,6 +2114,63 @@
     .cef-wrap .modal-title {
         color: var(--slate-900);
         font-weight: 800;
+    }
+
+    .cef-confirm-summary {
+        align-items: center;
+        background: var(--blue-50);
+        border: 1px solid var(--blue-200);
+        border-left: 4px solid var(--primary);
+        border-radius: var(--r-md);
+        display: flex;
+        gap: .75rem;
+        margin-top: 1rem;
+        padding: .7rem .8rem;
+    }
+
+    .cef-confirm-summary[hidden] {
+        display: none !important;
+    }
+
+    .cef-confirm-summary-icon {
+        align-items: center;
+        background: var(--blue-100);
+        border-radius: 50%;
+        color: var(--blue-700);
+        display: inline-flex;
+        flex: 0 0 2.25rem;
+        height: 2.25rem;
+        justify-content: center;
+    }
+
+    .cef-confirm-summary-copy {
+        display: grid;
+        gap: .12rem;
+        min-width: 0;
+    }
+
+    .cef-confirm-summary-label {
+        color: var(--slate-600);
+        font-size: var(--fs-xs);
+        font-weight: 800;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+    }
+
+    .cef-confirm-summary-value {
+        color: var(--blue-900);
+        font-size: var(--fs-md);
+        font-weight: 800;
+    }
+
+    .cef-ajax-feedback {
+        left: auto;
+        margin: 0;
+        max-width: min(28rem, calc(100vw - 2rem));
+        position: fixed;
+        right: 1rem;
+        top: 1rem;
+        z-index: 2010;
     }
 
     /* ============================================================
@@ -1875,10 +2319,10 @@
         {% block cef_context_selector %}
             <!-- CONTEXT CARD -->
             <section class="cef-context-card">
-                <form method="get" class="cef-context-grid">
+                <form method="get"{% if cef_context.selector_action %} action="{{ cef_context.selector_action }}"{% endif %} class="cef-context-grid">
                     <div>
                         <label class="cef-context-label" for="id_contexto_cueanexo">CEF</label>
-                        <select id="id_contexto_cueanexo" name="cueanexo" class="form-select form-select-sm">
+                        <select id="id_contexto_cueanexo" name="cueanexo" class="form-select form-select-sm" data-cef-select="true" data-cef-select-search="always">
                             {% for option in cef_context.cueanexo_options %}
                                 <option value="{{ option.cueanexo }}" title="{{ option.cueanexo }} - {{ option.nombre }}" {% if option.cueanexo == cef_context.cueanexo %}selected{% endif %}>{{ option.cueanexo }} - {{ option.nombre }}</option>
                             {% empty %}
@@ -1889,9 +2333,9 @@
 
                     <div>
                         <label class="cef-context-label" for="id_contexto_ciclo">Año / ciclo</label>
-                        <select id="id_contexto_ciclo" name="ciclo" class="form-select form-select-sm">
+                        <select id="id_contexto_ciclo" name="ciclo" class="form-select form-select-sm" data-cef-select="true">
                             {% for ciclo in cef_context.ciclos %}
-                                <option value="{{ ciclo.pk }}" {% if cef_context.ciclo and ciclo.pk == cef_context.ciclo.pk %}selected{% endif %}>{{ ciclo.anio }}{% if ciclo.actual %} &middot; actual{% endif %}</option>
+                                <option value="{{ ciclo.pk }}" {% if cef_context.ciclo and ciclo.pk == cef_context.ciclo.pk %}selected{% endif %}>{{ ciclo.anio }}{% if ciclo.cerrado %} &middot; cerrado{% endif %}{% if ciclo.actual %} &middot; actual{% endif %}</option>
                             {% empty %}
                                 <option value="">Sin ciclo activo</option>
                             {% endfor %}
@@ -1913,15 +2357,20 @@
         {% endblock %}
 
         {% if cef_context.sin_cueanexo %}
-            <div class="alert alert-warning">No hay CUE-Anexos cargables para tu usuario.</div>
+            <div class="alert alert-warning">No hay CUE-Anexos disponibles para tu usuario.</div>
         {% endif %}
         {% if cef_context.sin_ciclo %}
             <div class="alert alert-warning">No hay ciclo lectivo actual para realizar esta carga.</div>
         {% endif %}
+        {% if cef_context.ciclo_cerrado %}
+            <div class="alert alert-warning">Ciclo {{ cef_context.ciclo.anio }} cerrado. La información se encuentra en modo sólo lectura.</div>
+        {% endif %}
 
-        {% block cef_content %}{% endblock %}
+        <div id="cef-content-region" data-cef-content-region>
+            {% block cef_content %}{% endblock %}
+        </div>
 
-        <div class="modal fade" id="cefConfirmActionModal" tabindex="-1" aria-hidden="true">
+        <div class="cef-confirm-modal" id="cefConfirmActionModal" tabindex="-1" aria-hidden="true" hidden>
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -1931,6 +2380,21 @@
                     <div class="modal-body">
                         <p class="mb-1" data-cef-confirm-message>¿Confirmás esta acción?</p>
                         <p class="small text-muted mb-0" data-cef-confirm-entity></p>
+                        <div class="cef-confirm-summary" data-cef-confirm-summary hidden>
+                            <span class="cef-confirm-summary-icon"><i class="fa-solid fa-user-check" aria-hidden="true"></i></span>
+                            <span class="cef-confirm-summary-copy">
+                                <span class="cef-confirm-summary-label" data-cef-confirm-summary-label></span>
+                                <strong class="cef-confirm-summary-value" data-cef-confirm-summary-value></strong>
+                            </span>
+                        </div>
+                        <div class="mt-3" data-cef-confirm-fecha-inscripcion-wrap hidden>
+                            <label class="form-label" for="cefConfirmFechaInscripcion">Fecha de incorporación al grupo</label>
+                            <input id="cefConfirmFechaInscripcion" type="date" class="form-control" data-cef-confirm-fecha-inscripcion>
+                        </div>
+                        <div class="mt-3" data-cef-confirm-motivo-wrap hidden>
+                            <label class="form-label" for="cefConfirmMotivoBaja">Motivo de baja (opcional)</label>
+                            <textarea id="cefConfirmMotivoBaja" class="form-control" rows="3" maxlength="255" data-cef-confirm-motivo></textarea>
+                        </div>
                         <div class="alert alert-danger mt-3 mb-0 d-none" data-cef-confirm-feedback></div>
                     </div>
                     <div class="modal-footer">
@@ -1954,7 +2418,16 @@
                 table.dataset.cefTableReady = "1";
 
                 var root = tableRoot(table);
-                var rows = Array.prototype.slice.call(table.querySelectorAll("tbody tr"));
+                var body = table.tBodies.length ? table.tBodies[0] : null;
+                var bodyRows = body
+                    ? Array.prototype.slice.call(body.rows)
+                    : [];
+                var detailRows = bodyRows.filter(function(row) {
+                    return row.hasAttribute("data-cef-history-detail");
+                });
+                var rows = bodyRows.filter(function(row) {
+                    return !row.hasAttribute("data-cef-history-detail");
+                });
                 var search = root.querySelector("[data-cef-table-search]");
                 var size = root.querySelector("[data-cef-page-size]");
                 var count = root.querySelector("[data-cef-table-count]");
@@ -1975,8 +2448,18 @@
                     page = Math.min(page, pages);
 
                     rows.forEach(function(row) { row.style.display = "none"; });
+                    detailRows.forEach(function(row) { row.style.display = "none"; });
                     visible.slice((page - 1) * pageSize, page * pageSize).forEach(function(row) {
                         row.style.display = "";
+                    });
+                    detailRows.forEach(function(detailRow) {
+                        var ownerId = detailRow.dataset.cefHistoryDetail;
+                        var ownerRow = rows.find(function(row) {
+                            return row.dataset.cefHistoryOwner === ownerId;
+                        });
+                        if (ownerRow && ownerRow.style.display !== "none" && !detailRow.hidden) {
+                            detailRow.style.display = "";
+                        }
                     });
 
                     if (count) {
@@ -2008,6 +2491,24 @@
 
                 if (search) search.addEventListener("input", function() { page = 1; render(); });
                 if (size) size.addEventListener("change", function() { page = 1; render(); });
+                table.addEventListener("click", function(event) {
+                    var toggle = event.target.closest("[data-cef-history-toggle]");
+                    if (!toggle) return;
+                    var detailId = toggle.dataset.cefHistoryToggle;
+                    var detailRow = detailRows.find(function(row) {
+                        return row.dataset.cefHistoryDetail === detailId;
+                    });
+                    if (!detailRow) return;
+                    var opening = detailRow.hidden;
+                    detailRow.hidden = !opening;
+                    toggle.setAttribute("aria-expanded", opening ? "true" : "false");
+                    var icon = toggle.querySelector("i");
+                    if (icon) {
+                        icon.classList.toggle("fa-chevron-up", opening);
+                        icon.classList.toggle("fa-chevron-down", !opening);
+                    }
+                    render();
+                });
                 if (paginEl) {
                     paginEl.addEventListener("click", function(event) {
                         if (event.target.hasAttribute("data-page-prev")) page = Math.max(1, page - 1);
@@ -2026,8 +2527,6 @@
             window.initCefProfesoresTable = window.initCefTables;
             window.initCefInscripcionTable = window.initCefTables;
             window.initCefDocentesGrupoTable = window.initCefTables;
-
-            window.initCefTables();
 
             function dismissAlert(alert) {
                 if (!alert) return;
@@ -2055,28 +2554,33 @@
             function submitFormFallback(form) {
                 if (!form) return;
                 form.dataset.cefConfirmed = "1";
+                if (window.CEFLoading) {
+                    window.CEFLoading.submitForm(form);
+                    return;
+                }
                 form.submit();
             }
 
             function modalController() {
                 if (!confirmModal) return null;
-                if (window.bootstrap && window.bootstrap.Modal) {
-                    return window.bootstrap.Modal.getOrCreateInstance(confirmModal);
-                }
                 return {
                     show: function() {
-                        confirmModal.classList.add("show");
-                        confirmModal.style.display = "block";
+                        confirmModal.hidden = false;
                         confirmModal.removeAttribute("aria-hidden");
                         confirmModal.setAttribute("aria-modal", "true");
-                        document.body.classList.add("modal-open");
+                        var fechaInscripcion = confirmModal.querySelector("[data-cef-confirm-fecha-inscripcion]");
+                        var motivo = confirmModal.querySelector("[data-cef-confirm-motivo]");
+                        var accept = confirmModal.querySelector("[data-cef-confirm-accept]");
+                        window.requestAnimationFrame(function() {
+                            if (fechaInscripcion && !fechaInscripcion.closest("[hidden]")) fechaInscripcion.focus();
+                            else if (motivo && !motivo.closest("[hidden]")) motivo.focus();
+                            else if (accept) accept.focus();
+                        });
                     },
                     hide: function() {
-                        confirmModal.classList.remove("show");
-                        confirmModal.style.display = "none";
+                        confirmModal.hidden = true;
                         confirmModal.setAttribute("aria-hidden", "true");
                         confirmModal.removeAttribute("aria-modal");
-                        document.body.classList.remove("modal-open");
                     }
                 };
             }
@@ -2093,13 +2597,142 @@
                 feedback.classList.toggle("d-none", !message);
             }
 
-            function showPageFeedback(message, ok) {
+            function confirmRequiresMotivo(form) {
+                if (!form) return false;
+                var action = form.querySelector("input[name='accion']");
+                var actionValue = action ? action.value : "";
+                return form.hasAttribute("data-cef-require-motivo")
+                    || actionValue.indexOf("baja") !== -1;
+            }
+
+            function prepareConfirmMotivo(form) {
+                var wrap = confirmModal ? confirmModal.querySelector("[data-cef-confirm-motivo-wrap]") : null;
+                var input = confirmModal ? confirmModal.querySelector("[data-cef-confirm-motivo]") : null;
+                var required = confirmRequiresMotivo(form);
+                if (wrap) wrap.hidden = !required;
+                if (input) input.value = "";
+            }
+
+            function prepareConfirmFechaInscripcion(form) {
+                var wrap = confirmModal ? confirmModal.querySelector("[data-cef-confirm-fecha-inscripcion-wrap]") : null;
+                var input = confirmModal ? confirmModal.querySelector("[data-cef-confirm-fecha-inscripcion]") : null;
+                var required = Boolean(form && form.hasAttribute("data-cef-require-fecha-inscripcion"));
+                if (wrap) wrap.hidden = !required;
+                if (input) {
+                    input.required = required;
+                    input.value = "";
+                }
+            }
+
+            function prepareConfirmSummary(form) {
+                var summary = confirmModal ? confirmModal.querySelector("[data-cef-confirm-summary]") : null;
+                if (!summary) return;
+                var value = form ? (form.dataset.cefConfirmSummaryValue || "").trim() : "";
+                summary.hidden = !value;
+                setConfirmText(
+                    "[data-cef-confirm-summary-label]",
+                    form ? form.dataset.cefConfirmSummaryLabel || "Detalle de la acción" : ""
+                );
+                setConfirmText("[data-cef-confirm-summary-value]", value);
+            }
+
+            function applyConfirmMotivo(form) {
+                if (!confirmRequiresMotivo(form)) return true;
+                var input = confirmModal ? confirmModal.querySelector("[data-cef-confirm-motivo]") : null;
+                var motivo = input ? input.value.trim() : "";
+                var hidden = form.querySelector("input[name='motivo_baja']");
+                if (!hidden) {
+                    hidden = document.createElement("input");
+                    hidden.type = "hidden";
+                    hidden.name = "motivo_baja";
+                    form.appendChild(hidden);
+                }
+                hidden.value = motivo;
+                return true;
+            }
+
+            function applyConfirmFechaInscripcion(form) {
+                if (!form || !form.hasAttribute("data-cef-require-fecha-inscripcion")) return true;
+                var input = confirmModal ? confirmModal.querySelector("[data-cef-confirm-fecha-inscripcion]") : null;
+                var fechaInscripcion = input ? input.value : "";
+                if (!fechaInscripcion) {
+                    setConfirmFeedback("Indicá la fecha de incorporación al grupo.");
+                    if (input) input.focus();
+                    return false;
+                }
+                var hidden = form.querySelector("input[name='fecha_inscripcion']");
+                if (!hidden) {
+                    hidden = document.createElement("input");
+                    hidden.type = "hidden";
+                    hidden.name = "fecha_inscripcion";
+                    form.appendChild(hidden);
+                }
+                hidden.value = fechaInscripcion;
+                return true;
+            }
+
+            function openConfirmForm(form) {
+                if (!form) return false;
+                var controller = modalController();
+                if (!controller) return false;
+                pendingConfirmForm = form;
+                setConfirmText("[data-cef-confirm-title]", form.dataset.cefConfirmTitle || "Confirmar acción");
+                setConfirmText("[data-cef-confirm-message]", form.dataset.cefConfirmMessage || "¿Confirmás esta acción?");
+                setConfirmText("[data-cef-confirm-entity]", form.dataset.cefConfirmEntity || "");
+                setConfirmFeedback("");
+                prepareConfirmSummary(form);
+                prepareConfirmFechaInscripcion(form);
+                prepareConfirmMotivo(form);
+                try {
+                    controller.show();
+                } catch (error) {
+                    pendingConfirmForm = null;
+                    return false;
+                }
+                return true;
+            }
+
+            function captureAjaxViewport(source) {
+                var anchor = null;
+                if (source && source.matches && source.matches(".cef-course-section")) {
+                    anchor = source;
+                } else if (source && source.closest) {
+                    anchor = source.closest(".cef-course-section");
+                }
+                return {
+                    anchor: anchor,
+                    anchorTop: anchor ? anchor.getBoundingClientRect().top : null,
+                    scrollY: window.scrollY
+                };
+            }
+
+            function restoreAjaxViewport(viewport) {
+                if (!viewport) return;
+                if (viewport.anchor && viewport.anchor.isConnected) {
+                    var delta = viewport.anchor.getBoundingClientRect().top - viewport.anchorTop;
+                    if (Math.abs(delta) > 0.5) window.scrollBy(0, delta);
+                    return;
+                }
+                if (Math.abs(window.scrollY - viewport.scrollY) > 0.5) {
+                    window.scrollTo(0, viewport.scrollY);
+                }
+            }
+
+            function scheduleAjaxViewportRestore(viewport) {
+                window.requestAnimationFrame(function() {
+                    window.requestAnimationFrame(function() {
+                        restoreAjaxViewport(viewport);
+                    });
+                });
+            }
+
+            function showPageFeedback(message, ok, viewport) {
                 if (!message) return;
-                var panelBody = document.querySelector(".cef-panel-body") || document.querySelector(".cef-panel") || document.body;
                 var alert = document.createElement("div");
-                alert.className = "alert alert-" + (ok ? "success" : "danger") + " mb-3";
+                alert.className = "alert alert-" + (ok ? "success" : "danger") + " cef-ajax-feedback";
+                alert.setAttribute("role", "status");
                 alert.textContent = message;
-                panelBody.insertBefore(alert, panelBody.firstChild);
+                document.body.appendChild(alert);
                 window.setTimeout(function() {
                     if (alert.parentNode) alert.parentNode.removeChild(alert);
                 }, 4200);
@@ -2108,12 +2741,14 @@
             function replaceAjaxFragment(selector, html) {
                 var target = selector ? document.querySelector(selector) : null;
                 if (!target || typeof html !== "string") return false;
+                if (window.CEFSelects) window.CEFSelects.destroy(target);
                 target.innerHTML = html;
                 window.initCefTables(target);
+                if (window.initCefSelects) window.initCefSelects(target);
                 return true;
             }
 
-            function applyAjaxPayload(data) {
+            function applyAjaxPayload(data, viewport) {
                 if (!data || typeof data !== "object") return false;
                 var replaced = true;
                 if (Array.isArray(data.fragments)) {
@@ -2125,12 +2760,13 @@
                     replaced = replaceAjaxFragment(data.fragment_selector, data.fragment_html);
                     if (!replaced) return false;
                 }
-                showPageFeedback(data.message, !!data.ok);
+                showPageFeedback(data.message, !!data.ok, viewport);
                 return true;
             }
 
             function submitAjaxForm(form, submitter) {
                 var controller = modalController();
+                var viewport = captureAjaxViewport(form);
                 var button = submitter || (confirmModal ? confirmModal.querySelector("[data-cef-confirm-accept]") : null);
                 if (button) button.disabled = true;
                 setConfirmFeedback("");
@@ -2152,7 +2788,7 @@
                     })
                     .then(function(data) {
                         if (!data) return;
-                        if (!applyAjaxPayload(data)) {
+                        if (!applyAjaxPayload(data, viewport)) {
                             submitFormFallback(form);
                             return;
                         }
@@ -2162,6 +2798,7 @@
                         } else if (!data.ok) {
                             setConfirmFeedback(data.message || "No se pudo completar la acción.");
                         }
+                        scheduleAjaxViewportRestore(viewport);
                     })
                     .catch(function() {
                         submitFormFallback(form);
@@ -2174,23 +2811,19 @@
             document.addEventListener("submit", function(event) {
                 var form = event.target.closest("[data-cef-confirm-submit]");
                 if (!form || form.dataset.cefConfirmed === "1") return;
-                var controller = modalController();
-                if (!controller) return;
                 event.preventDefault();
-                pendingConfirmForm = form;
-                setConfirmText("[data-cef-confirm-title]", form.dataset.cefConfirmTitle || "Confirmar acción");
-                setConfirmText("[data-cef-confirm-message]", form.dataset.cefConfirmMessage || "¿Confirmás esta acción?");
-                setConfirmText("[data-cef-confirm-entity]", form.dataset.cefConfirmEntity || "");
-                setConfirmFeedback("");
-                try {
-                    controller.show();
-                } catch (error) {
-                    pendingConfirmForm = null;
-                    submitFormFallback(form);
-                }
-            });
+                openConfirmForm(form);
+            }, true);
 
             document.addEventListener("click", function(event) {
+                var openButton = event.target.closest("[data-cef-confirm-open]");
+                if (openButton) {
+                    event.preventDefault();
+                    var openForm = openButton.closest("[data-cef-confirm-submit]");
+                    openConfirmForm(openForm);
+                    return;
+                }
+
                 if (event.target.closest("[data-cef-confirm-cancel]")) {
                     var controller = modalController();
                     if (controller) controller.hide();
@@ -2200,15 +2833,34 @@
 
                 if (!event.target.closest("[data-cef-confirm-accept]")) return;
                 if (!pendingConfirmForm) return;
+                if (!applyConfirmFechaInscripcion(pendingConfirmForm)) return;
+                if (!applyConfirmMotivo(pendingConfirmForm)) return;
                 if (pendingConfirmForm.hasAttribute("data-cef-ajax-post")) {
                     submitAjaxForm(pendingConfirmForm, event.target.closest("[data-cef-confirm-accept]"));
                     return;
                 }
                 submitFormFallback(pendingConfirmForm);
-            });
+            }, true);
+
+            document.addEventListener("keydown", function(event) {
+                if (event.key !== "Escape" || !confirmModal || confirmModal.hidden) return;
+                var controller = modalController();
+                if (controller) controller.hide();
+                pendingConfirmForm = null;
+            }, true);
+
+            window.initCefTables();
         })();
         </script>
     </div>
 </div>
+
+<script src="{% static 'cef/cef_loading.js' %}?v=20260811-4"></script>
+<script src="{% static 'cef/cef_inventario.js' %}"></script>
+<script src="{% static 'cef/cef_context_selector.js' %}"></script>
+<script src="{% static 'cef/cef_dropdowns.js' %}"></script>
+<script src="{% static 'cef/cef_profesores.js' %}"></script>
+<script src="{% static 'cef/cef_partial_navigation.js' %}"></script>
+<script src="{% static 'cef/cef_asistencia.js' %}?v=20260810-3"></script>
 
 {% endblock %}

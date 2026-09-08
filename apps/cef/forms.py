@@ -13,10 +13,12 @@ from .models import (
     CefDiaSemana,
     CefDocenteGrupo,
     CefEspacioComedorTipo,
+    CefEstadoMaterialTipo,
     CefFuenteFinanciamientoTipo,
     CefGrupo,
     CefInscripcion,
     CefInventarioMaterial,
+    CefInventarioMaterialEstado,
     CefMaterial,
     CefNivelActividad,
     CefOrientacionTipo,
@@ -24,6 +26,7 @@ from .models import (
     CefRangoEtario,
     CefTurno,
 )
+from .services import validar_fecha_inscripcion_grupo
 
 
 def _solo_digitos(valor):
@@ -39,7 +42,30 @@ def _queryset_activos(modelo):
     return modelo.objects.filter(activo=True)
 
 
+def _normalizar_placeholder_vacio(field):
+    if (
+        isinstance(field, forms.ModelChoiceField)
+        and getattr(field, "empty_label", None) == "---------"
+    ):
+        field.empty_label = "Seleccione"
+        return
+
+    if isinstance(field, forms.ChoiceField) and not isinstance(
+        field,
+        forms.ModelChoiceField,
+    ):
+        choices = list(field.choices)
+        if (
+            choices
+            and choices[0][0] in ("", None)
+            and str(choices[0][1]) == "---------"
+        ):
+            choices[0] = (choices[0][0], "Seleccione")
+            field.choices = choices
+
+
 def _aplicar_clases_bootstrap(field):
+    _normalizar_placeholder_vacio(field)
     widget = field.widget
     clases = widget.attrs.get("class", "")
 
@@ -53,6 +79,8 @@ def _aplicar_clases_bootstrap(field):
         nueva = "form-control"
     elif isinstance(widget, forms.Select):
         nueva = "form-select"
+        if not isinstance(widget, forms.SelectMultiple):
+            widget.attrs["data-cef-select"] = "true"
     else:
         nueva = "form-control"
 
@@ -71,12 +99,12 @@ class CefCicloForm(forms.Form):
         max_length=120,
     )
     fecha_inicio = forms.DateField(
-        label="Fecha inicio",
+        label="Fecha inicio (referencia)",
         required=False,
         widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
     )
     fecha_fin = forms.DateField(
-        label="Fecha fin",
+        label="Fecha fin (referencia)",
         required=False,
         widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
     )
@@ -130,6 +158,67 @@ class CefCicloForm(forms.Form):
         )
 
 
+class CefCicloEdicionForm(forms.ModelForm):
+    class Meta:
+        model = CefCiclo
+        fields = ["descripcion", "fecha_fin"]
+        widgets = {
+            "fecha_fin": forms.DateInput(
+                format="%Y-%m-%d",
+                attrs={"type": "date"},
+            ),
+        }
+        labels = {
+            "descripcion": "Descripción",
+            "fecha_fin": "Fecha fin (referencia)",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def clean_fecha_fin(self):
+        fecha_fin = self.cleaned_data.get("fecha_fin")
+        if (
+            self.instance.fecha_inicio
+            and fecha_fin
+            and fecha_fin < self.instance.fecha_inicio
+        ):
+            raise forms.ValidationError(
+                "La fecha de fin no puede ser anterior a la fecha de inicio."
+            )
+        return fecha_fin
+
+    def save(self, user=None):
+        ciclo = super().save(commit=False)
+        ciclo.actualizado_por = user
+        ciclo.save(
+            update_fields=[
+                "descripcion",
+                "fecha_fin",
+                "actualizado_por",
+                "actualizado_en",
+            ]
+        )
+        return ciclo
+
+
+class CefAsistenciaFechaForm(forms.Form):
+    fecha = forms.DateField(
+        label="Fecha de asistencia",
+        widget=forms.DateInput(
+            format="%Y-%m-%d",
+            attrs={"type": "date", "autocomplete": "off"},
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+
 class CefDatosRelevamientoForm(forms.ModelForm):
     class Meta:
         model = CefDatosRelevamiento
@@ -139,7 +228,6 @@ class CefDatosRelevamientoForm(forms.ModelForm):
             "prestacion_tipo",
             "espacio_comedor",
             "c_orientacion",
-            "nombre_seccion",
             "observaciones",
         ]
         widgets = {
@@ -151,7 +239,6 @@ class CefDatosRelevamientoForm(forms.ModelForm):
             "prestacion_tipo": "Tipo de prestación",
             "espacio_comedor": "Espacio comedor",
             "c_orientacion": "Orientación",
-            "nombre_seccion": "Nombre de sección",
         }
 
     def __init__(self, *args, **kwargs):
@@ -246,7 +333,6 @@ class CefGrupoForm(forms.ModelForm):
             "hora_inicio",
             "hora_fin",
             "cupo_maximo",
-            "estado",
             "observaciones",
         ]
         widgets = {
@@ -262,7 +348,6 @@ class CefGrupoForm(forms.ModelForm):
             "hora_inicio": "Hora inicio",
             "hora_fin": "Hora fin",
             "cupo_maximo": "Cupo máximo",
-            "estado": "Estado",
         }
 
     def __init__(self, *args, ciclo=None, **kwargs):
@@ -274,11 +359,9 @@ class CefGrupoForm(forms.ModelForm):
         )
         self.fields["nivel"].queryset = _queryset_activos(CefNivelActividad)
         self.fields["rango_etario"].queryset = _queryset_activos(CefRangoEtario)
-        self.fields["turno"].queryset = (
-            CefTurno.objects.filter(activo=True, ciclo=ciclo)
-            if ciclo
-            else CefTurno.objects.none()
-        )
+        self.fields["turno"].queryset = CefTurno.objects.filter(
+            activo=True
+        ).order_by("orden", "nombre")
         self.fields["cupo_maximo"].required = False
 
         for field in self.fields.values():
@@ -309,19 +392,14 @@ class CefInventarioMaterialForm(forms.ModelForm):
         model = CefInventarioMaterial
         fields = [
             "material",
-            "cantidad",
-            "estado_descripcion",
             "observaciones",
         ]
         widgets = {
-            "estado_descripcion": forms.Textarea(attrs={"rows": 2}),
             "observaciones": forms.Textarea(attrs={"rows": 2}),
         }
         labels = {
             "material": "Material",
-            "cantidad": "Cantidad",
-            "estado_descripcion": "Estado",
-            "observaciones": "Observaciones",
+            "observaciones": "Observaciones generales",
         }
 
     def __init__(self, *args, **kwargs):
@@ -332,6 +410,106 @@ class CefInventarioMaterialForm(forms.ModelForm):
         )
         for field in self.fields.values():
             _aplicar_clases_bootstrap(field)
+
+
+class CefInventarioMaterialObservacionesForm(forms.ModelForm):
+    class Meta:
+        model = CefInventarioMaterial
+        fields = ["observaciones"]
+        widgets = {
+            "observaciones": forms.Textarea(attrs={"rows": 2}),
+        }
+        labels = {
+            "observaciones": "Observaciones generales",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _aplicar_clases_bootstrap(self.fields["observaciones"])
+
+
+class CefInventarioMaterialEstadoForm(forms.ModelForm):
+    class Meta:
+        model = CefInventarioMaterialEstado
+        fields = [
+            "estado",
+            "cantidad",
+        ]
+        labels = {
+            "estado": "Estado",
+            "cantidad": "Cantidad de unidades",
+        }
+
+    def __init__(self, *args, **kwargs):
+        inventario_material = kwargs.pop("inventario_material", None)
+        super().__init__(*args, **kwargs)
+
+        if inventario_material is not None:
+            self.instance.inventario_material = inventario_material
+
+        estados = CefEstadoMaterialTipo.objects.filter(activo=True).order_by(
+            "orden",
+            "codigo",
+            "nombre",
+        )
+        inventario_material = getattr(
+            self.instance,
+            "inventario_material",
+            None,
+        )
+        if inventario_material and getattr(inventario_material, "pk", None):
+            usados = CefInventarioMaterialEstado.objects.filter(
+                inventario_material=inventario_material,
+                estado_id__isnull=False,
+            ).exclude(pk=getattr(self.instance, "pk", None)).values_list(
+                "estado_id",
+                flat=True,
+            )
+            estados = estados.exclude(pk__in=usados)
+
+            if self.is_bound:
+                estado_enviado = self.data.get(self.add_prefix("estado"))
+                if estado_enviado and str(estado_enviado).isdigit():
+                    estados = estados | CefEstadoMaterialTipo.objects.filter(
+                        activo=True,
+                        pk=estado_enviado,
+                    )
+
+        estado_field = self.fields["estado"]
+        estado_field.queryset = estados.order_by("orden", "codigo", "nombre")
+        estado_field.required = True
+        estado_field.empty_label = "Seleccioná un estado"
+        estado_field.label_from_instance = lambda estado: estado.nombre
+
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        estado = cleaned_data.get("estado")
+
+        inventario_material = getattr(
+            self.instance,
+            "inventario_material",
+            None,
+        )
+        if (
+            estado
+            and inventario_material
+            and getattr(inventario_material, "pk", None)
+        ):
+            repetido = CefInventarioMaterialEstado.objects.filter(
+                inventario_material=inventario_material,
+                estado=estado,
+            ).exclude(pk=getattr(self.instance, "pk", None))
+            if repetido.exists():
+                self.add_error(
+                    "estado",
+                    "Ese estado ya está cargado para el material. "
+                    "Editá su cantidad.",
+                )
+
+        return cleaned_data
 
 
 class CefBusquedaAlumnoForm(forms.Form):
@@ -356,14 +534,28 @@ class CefBusquedaAlumnoForm(forms.Form):
         return cuil
 
 
+class CefBajaMotivoForm(forms.Form):
+    motivo_baja = forms.CharField(
+        label="Motivo de baja",
+        max_length=255,
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def clean_motivo_baja(self):
+        return (self.cleaned_data.get("motivo_baja") or "").strip()
+
+
 class CefInscripcionForm(forms.ModelForm):
     class Meta:
         model = CefInscripcion
         fields = [
-            "estado",
             "fecha_inscripcion",
-            "fecha_baja",
-            "motivo_baja",
             "observaciones",
         ]
         widgets = {
@@ -371,26 +563,32 @@ class CefInscripcionForm(forms.ModelForm):
                 format="%Y-%m-%d",
                 attrs={"type": "date"},
             ),
-            "fecha_baja": forms.DateInput(
-                format="%Y-%m-%d",
-                attrs={"type": "date"},
-            ),
             "observaciones": forms.Textarea(attrs={"rows": 2}),
         }
         labels = {
-            "estado": "Estado",
-            "fecha_inscripcion": "Fecha de inscripción",
-            "fecha_baja": "Fecha de baja",
-            "motivo_baja": "Motivo de baja",
+            "fecha_inscripcion": "Fecha de incorporación al grupo",
             "observaciones": "Observaciones",
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, grupo=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.grupo = grupo
+        if self.grupo is None and getattr(self.instance, "pk", None):
+            self.grupo = self.instance.grupo
+        self.fields["fecha_inscripcion"].required = True
         if not self.is_bound and not getattr(self.instance, "pk", None):
-            self.fields["fecha_inscripcion"].initial = timezone.localdate
+            self.fields["fecha_inscripcion"].initial = None
+            self.initial["fecha_inscripcion"] = None
         for field in self.fields.values():
             _aplicar_clases_bootstrap(field)
+
+    def clean_fecha_inscripcion(self):
+        fecha_inscripcion = self.cleaned_data.get("fecha_inscripcion")
+        if self.grupo is None:
+            raise forms.ValidationError(
+                "No se pudo validar el ciclo del grupo seleccionado."
+            )
+        return validar_fecha_inscripcion_grupo(self.grupo, fecha_inscripcion)
 
 
 class CefBusquedaDocenteForm(forms.Form):
@@ -420,9 +618,7 @@ class CefDocenteGrupoForm(forms.ModelForm):
         model = CefDocenteGrupo
         fields = [
             "rol",
-            "estado",
             "fecha_desde",
-            "fecha_hasta",
             "observaciones",
         ]
         widgets = {
@@ -430,22 +626,17 @@ class CefDocenteGrupoForm(forms.ModelForm):
                 format="%Y-%m-%d",
                 attrs={"type": "date"},
             ),
-            "fecha_hasta": forms.DateInput(
-                format="%Y-%m-%d",
-                attrs={"type": "date"},
-            ),
             "observaciones": forms.Textarea(attrs={"rows": 2}),
         }
         labels = {
             "rol": "Rol en el grupo",
-            "estado": "Estado en este grupo",
             "fecha_desde": "Fecha de asignación",
-            "fecha_hasta": "Fecha de finalización",
             "observaciones": "Observaciones",
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["fecha_desde"].required = True
         if not self.is_bound and not getattr(self.instance, "pk", None):
             self.fields["fecha_desde"].initial = timezone.localdate
         for field in self.fields.values():

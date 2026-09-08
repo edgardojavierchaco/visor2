@@ -3,6 +3,7 @@ from django.views.generic import RedirectView
 
 from . import (
     views_alumnos,
+    views_asistencia,
     views_carga_cueanexo,
     views_carga_grupo,
     views_ciclo,
@@ -10,6 +11,7 @@ from . import (
     views_inscripcion_grupo,
     views_inventario,
     views_localizaciones,
+    views_metricas,
     views_docentes_grupo,
     views_profesores,
 )
@@ -41,14 +43,49 @@ urlpatterns = [
         name="visualizacion_localizaciones",
     ),
     path(
+        "metricas/",
+        views_metricas.metricas,
+        name="metricas",
+    ),
+    path(
+        "metricas/consulta/",
+        views_metricas.metricas_consulta,
+        name="metricas_consulta",
+    ),
+    path(
+        "metricas/exportar/",
+        views_metricas.metricas_exportar,
+        name="metricas_exportar",
+    ),
+    path(
         "alumnos/",
         views_alumnos.alumnos,
         name="alumnos",
     ),
     path(
+        "alumnos/fragmento/lista/",
+        views_alumnos.alumnos_fragmento,
+        name="alumnos_fragmento",
+    ),
+    path(
         "profesores/",
         views_profesores.profesores,
         name="profesores",
+    ),
+    path(
+        "profesores/fragmento/lista/",
+        views_profesores.profesores_fragmento,
+        name="profesores_fragmento",
+    ),
+    path(
+        "asistencia/",
+        views_asistencia.asistencia,
+        name="asistencia",
+    ),
+    path(
+        "asistencia/grupos/<int:grupo_id>/",
+        views_asistencia.asistencia_grupo,
+        name="asistencia_grupo",
     ),
     path(
         "carga/cueanexo/",
@@ -66,6 +103,11 @@ urlpatterns = [
         name="carga_grupo",
     ),
     path(
+        "carga/grupos/fragmento/lista/",
+        views_carga_grupo.grupos_fragmento,
+        name="grupos_fragmento",
+    ),
+    path(
         "carga/grupos/nuevo/",
         views_carga_grupo.carga_grupo_form,
         name="carga_grupo_nuevo",
@@ -79,6 +121,11 @@ urlpatterns = [
         "carga/grupos/<int:grupo_id>/gestionar/",
         views_carga_grupo.gestionar_grupo,
         name="gestionar_grupo",
+    ),
+    path(
+        "carga/grupos/<int:grupo_id>/asistencia/",
+        views_asistencia.asistencia_grupo,
+        name="asistencia_grupo_legacy",
     ),
     path(
         "carga/grupos/<int:grupo_id>/inscripciones/",
@@ -106,6 +153,11 @@ urlpatterns = [
         name="carga_inventario",
     ),
     path(
+        "carga/inventario/fragmento/lista/",
+        views_inventario.inventario_fragmento,
+        name="inventario_fragmento",
+    ),
+    path(
         "carga/inventario/<int:item_id>/",
         views_inventario.carga_inventario,
         name="editar_inventario",
@@ -114,5 +166,15 @@ urlpatterns = [
         "carga/ciclos/",
         views_ciclo.administrar_ciclos,
         name="administrar_ciclos",
+    ),
+    path(
+        "carga/ciclos/prevalidacion/<int:ciclo_id>/",
+        views_ciclo.prevalidar_ciclo_anual,
+        name="prevalidar_ciclo_anual",
+    ),
+    path(
+        "carga/ciclos/generar/<int:ciclo_id>/",
+        views_ciclo.generar_ciclo_anual,
+        name="generar_ciclo_anual",
     ),
 ]

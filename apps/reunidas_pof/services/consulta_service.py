@@ -171,7 +171,7 @@ def _derivar_anexo(cueanexo):
 def _resumir_cabecera(localizacion):
     reunida = localizacion.reunida
     if reunida:
-        return f"Reunida {reunida.anio} - {reunida.get_nivel_display()}"
+        return f"POF {reunida.anio} - {reunida.get_nivel_display()}"
 
     proyecto = localizacion.proyecto_especial
     if proyecto:

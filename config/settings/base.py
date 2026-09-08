@@ -176,7 +176,19 @@ DATABASES = {
         'OPTIONS': {
             'options': '-c search_path=evaluacion,public',
         }
-    }
+    },
+
+    'sge_nacion': {
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        'NAME': os.environ.get('SGE_NACION_DB_NAME'),
+        'USER': os.environ.get('SGE_NACION_DB_USER'),
+        'PASSWORD': os.environ.get('SGE_NACION_DB_PASSWORD'),
+        'HOST': os.environ.get('SGE_NACION_DB_HOST'),
+        'PORT': os.environ.get('SGE_NACION_DB_PORT'),
+        'OPTIONS': {
+            'options': '-c search_path=public',
+        }
+    },
 }
 
 DATABASE_ROUTERS = ['apps.evaluaciones_educativas.routers.SecondaryDBRouter']

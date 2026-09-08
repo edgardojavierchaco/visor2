@@ -1,6 +1,6 @@
 {% extends "cef/base_operativo_cef.html" %}
 
-{% block cef_subtitle %}Carga y edición de cursos/grupos del CEF activo.{% endblock %}
+{% block cef_subtitle %}Carga y edición de grupos del CEF activo.{% endblock %}
 
 {% block cef_content %}
 <div class="cef-panel">
@@ -8,7 +8,7 @@
         <h2 class="cef-panel-title">{{ form_title }}</h2>
         <div class="cef-panel-actions">
             <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-arrow-left"></i> Volver a grupos
+                <i class="fa-solid fa-arrow-left"></i> Volver a Grupos
             </a>
         </div>
     </div>
@@ -81,7 +81,7 @@
 
             <div class="cef-form-actions mt-4">
                 <a class="btn btn-outline-secondary" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
-                    <i class="fa-solid fa-arrow-left"></i> Volver a grupos
+                    <i class="fa-solid fa-arrow-left"></i> Volver a Grupos
                 </a>
                 <button type="submit" class="btn btn-primary">
                     <i class="fa-solid fa-floppy-disk"></i> Guardar

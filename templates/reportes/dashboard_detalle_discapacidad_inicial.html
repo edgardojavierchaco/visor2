@@ -174,6 +174,18 @@
             </div>
 
             <div class="filter-group">
+                <div class="filter-label" onclick="toggleFilter('relevamiento')">
+                    <i class="fas fa-calendar-alt"></i> Relevamiento <span class="required-badge">REQ</span>
+                    <button class="filter-toggle active" id="toggle-relevamiento"></button>
+                </div>
+                <div class="filter-control visible" id="fc-relevamiento">
+                    <select id="sel-relevamiento" onchange="aplicarFiltros()">
+                        <option value="ra_carga2025" selected>2025</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-group">
                 <div class="filter-label" onclick="toggleFilter('vista')">
                     <i class="fas fa-layer-group"></i> Modalidad / Oferta <span class="required-badge">REQ</span>
                     <button class="filter-toggle active" id="toggle-vista"></button>
@@ -400,7 +412,7 @@
             <div class="content-header-bar">
                 <div>
                     <h4 id="main-title"><i class="fas fa-chart-bar me-2"></i>Matrícula con Discapacidad - Inicial</h4>
-                    <div class="subtitle" id="header-subtitle">Seleccione Modalidad-Oferta para comenzar</div>
+                    <div class="subtitle" id="header-subtitle">2025 — Seleccione Modalidad-Oferta para comenzar</div>
                 </div>
             </div>
 
@@ -480,6 +492,7 @@
 // ── Estado de filtros activos ──────────────────────────────────────────────────
 // ── Estado de filtros activos ──────────────────────────────────────────────────
 const filtersState = {
+    relevamiento: true,
     vista:        true,
     cueanexo:     false,
     ambito:       false,
@@ -653,6 +666,11 @@ function actualizarFiltrosJerarquicos() {
 
 // ── Toggle ────────────────────────────────────────────────────────────────────
 function toggleFilter(name) {
+    if (name === 'relevamiento') {
+        document.getElementById('sel-relevamiento').value = 'ra_carga2025';
+        return;
+    }
+
     const btn = document.getElementById('toggle-' + name);
     const fc  = document.getElementById('fc-' + name);
     filtersState[name] = !filtersState[name];
@@ -683,18 +701,33 @@ function mostrarEstado(id) {
     if (id !== 'table-container') document.getElementById('totals-bar').style.display = 'none';
 }
 
+function getFiltros() {
+    return {
+        Relevamiento: document.getElementById('sel-relevamiento')?.value || 'ra_carga2025',
+        Vista:        document.getElementById('sel-vista')?.value || '',
+        Cueanexo:     filtersState.cueanexo     ? (document.getElementById('inp-cueanexo')?.value || '') : '',
+        Ambito:       filtersState.ambito        ? (document.getElementById('sel-ambito')?.value || '') : '',
+        Sector:       filtersState.sector        ? (document.getElementById('sel-sector')?.value || '') : '',
+        Region:       filtersState.region        ? (document.getElementById('sel-region')?.value || '') : '',
+        Departamento: filtersState.departamento  ? (document.getElementById('sel-departamento')?.value || '') : '',
+        Localidad:    filtersState.localidad     ? (document.getElementById('sel-localidad')?.value || '') : '',
+        csrfmiddlewaretoken: '{{ csrf_token }}'
+    };
+}
+
 function actualizarChips(f) {
     const container = document.getElementById('chips-container');
     const msg = document.getElementById('no-filters-msg');
     container.innerHTML = '';
-    const etiquetas = { Vista: 'Modalidad', Cueanexo: 'CUE', Ambito: 'Ámbito', Sector: 'Sector', Region: 'Región', Departamento: 'Depto', Localidad: 'Loc' };
+    const etiquetas = { Relevamiento: 'Relevamiento', Vista: 'Modalidad', Cueanexo: 'CUE', Ambito: 'Ámbito', Sector: 'Sector', Region: 'Región', Departamento: 'Depto', Localidad: 'Loc' };
     let activos = 0;
     Object.entries(f).forEach(([k, v]) => {
         if (v && k !== 'csrfmiddlewaretoken') {
             let displayVal = v;
             const sel = document.getElementById('sel-' + k.toLowerCase());
             if (sel && sel.selectedIndex >= 0) displayVal = sel.options[sel.selectedIndex].text;
-            container.innerHTML += `<span class="filter-chip"><b>${etiquetas[k]}:</b>&nbsp;${displayVal} <span class="remove-chip ms-1" onclick="quitarFiltro('${k}')">×</span></span>`;
+            const removeChip = k === 'Relevamiento' ? '' : ` <span class="remove-chip ms-1" onclick="quitarFiltro('${k}')">×</span>`;
+            container.innerHTML += `<span class="filter-chip"><b>${etiquetas[k]}:</b>&nbsp;${displayVal}${removeChip}</span>`;
             activos++;
         }
     });
@@ -702,21 +735,33 @@ function actualizarChips(f) {
 }
 
 function quitarFiltro(k) {
-    if (k === 'Vista') { document.getElementById('sel-vista').value = ''; }
+    if (k === 'Relevamiento') {
+        document.getElementById('sel-relevamiento').value = 'ra_carga2025';
+    } else if (k === 'Vista') { document.getElementById('sel-vista').value = ''; }
     else { toggleFilter(k.toLowerCase()); }
     aplicarFiltros();
+}
+
+function actualizarSubtitle(filtros) {
+    const rel = document.getElementById('sel-relevamiento');
+    const vis = document.getElementById('sel-vista');
+    const relText = rel.options[rel.selectedIndex]?.text || '2025';
+    const vistaText = filtros.Vista ? (vis.options[vis.selectedIndex]?.text || '') : 'Seleccione Modalidad-Oferta para comenzar';
+    document.getElementById('header-subtitle').textContent = relText + ' — ' + vistaText;
 }
 
 // ── AJAX ──────────────────────────────────────────────────────────────────────
 function aplicarFiltros() {
     if (typeof actualizarFiltrosJerarquicos === 'function') actualizarFiltrosJerarquicos();
 
-    const vista    = document.getElementById('sel-vista').value;
-    const subtitle = document.getElementById('header-subtitle');
+    const filtros = getFiltros();
+    const vista   = filtros.Vista;
 
-    if (!vista) {
+    actualizarChips(filtros);
+    actualizarSubtitle(filtros);
+
+    if (!filtros.Relevamiento || !vista) {
         mostrarEstado('state-initial');
-        subtitle.innerText = "Seleccione Modalidad-Oferta para comenzar";
         return;
     }
 
@@ -734,21 +779,7 @@ function aplicarFiltros() {
         }
     }
 
-    subtitle.innerText = "Modalidad: " + document.getElementById('sel-vista').options[document.getElementById('sel-vista').selectedIndex].text;
     mostrarEstado('state-loading');
-
-    const filtros = {
-        Vista:        vista,
-        Cueanexo:     filtersState.cueanexo     ? (document.getElementById('inp-cueanexo')?.value || '') : '',
-        Ambito:       filtersState.ambito        ? document.getElementById('sel-ambito').value : '',
-        Sector:       filtersState.sector        ? document.getElementById('sel-sector').value : '',
-        Region:       filtersState.region        ? document.getElementById('sel-region').value : '',
-        Departamento: filtersState.departamento  ? document.getElementById('sel-departamento').value : '',
-        Localidad:    filtersState.localidad     ? document.getElementById('sel-localidad').value : '',
-        csrfmiddlewaretoken: '{{ csrf_token }}'
-    };
-
-    actualizarChips(filtros);
 
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
@@ -784,10 +815,10 @@ function renderTabla(data, filtrosParams) {
         const vis  = parseInt(item.visual)      || 0;
         const aud  = parseInt(item.auditiva)    || 0;
         const otr  = parseInt(item.otros)       || 0;
-        const tot  = parseInt(item.total)       || 0;
+        const totalVisible = int_ + tea + mot + vis + aud + otr;
 
         tInt += int_; tTea += tea; tMot += mot;
-        tVis += vis;  tAud += aud; tOtr += otr; tAlu += tot;
+        tVis += vis;  tAud += aud; tOtr += otr; tAlu += totalVisible;
 
         tbody.innerHTML += `<tr>
             <td>${item.cueanexo}</td>
@@ -799,7 +830,7 @@ function renderTabla(data, filtrosParams) {
             <td>${vis}</td>
             <td>${aud}</td>
             <td>${otr}</td>
-            <td>${tot}</td>
+            <td>${totalVisible}</td>
         </tr>`;
     });
 
@@ -822,7 +853,9 @@ function renderTabla(data, filtrosParams) {
 
     // Texto de exportación
     var filtrosActivos = [];
+    var relevamientoText = document.getElementById('sel-relevamiento').options[document.getElementById('sel-relevamiento').selectedIndex].text;
     var vistaText = document.getElementById('sel-vista').options[document.getElementById('sel-vista').selectedIndex].text;
+    filtrosActivos.push("Relevamiento: " + relevamientoText);
     filtrosActivos.push("Modalidad: " + vistaText);
     if (filtrosParams.Cueanexo)     filtrosActivos.push("Cueanexo: "     + filtrosParams.Cueanexo);
     if (filtrosParams.Ambito)       filtrosActivos.push("Ámbito: "       + filtrosParams.Ambito);
@@ -904,6 +937,8 @@ $(document).ready(async function() {
     if (selRegion)       selRegion.addEventListener('change', actualizarFiltrosJerarquicos);
     if (selDepartamento) selDepartamento.addEventListener('change', actualizarFiltrosJerarquicos);
     if (selLocalidad)    selLocalidad.addEventListener('change', actualizarFiltrosJerarquicos);
+
+    aplicarFiltros();
 });
 </script>
 </body>

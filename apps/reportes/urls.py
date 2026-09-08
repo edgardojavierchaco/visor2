@@ -21,14 +21,6 @@ from .views_matric_disc_prim_cueanexo import (
     matric_disc_prim_ajax   # <-- CORRECCIÓN 1: VISTA IMPORTADA
 )
 
-# IMPORTACIÓN DE TUS VISTAS DE DISCAPACIDAD SECUNDARIA (NUEVAS Y VIEJAS)
-from .views_matric_disc_sec_cueanexo import (
-    filter_data_matric_disc_sec_cueanexo, 
-    filtrado_matric_disc_sec_cueanexo,
-    dashboard_matric_discapacidad_secundaria,
-    matric_disc_sec_ajax
-)
-
 from .views_tabla import tabla_view, get_table_data, obtener_columnas_cargos
 from .view_bloques import obtener_tablas, sql_builder, ejecutar_sql
 
@@ -46,7 +38,6 @@ urlpatterns = [
     # ── NUEVAS RUTAS DISCAPACIDAD (PÁGINAS COMPLETAS) ──
     path('dashboard-matricula-discapacidad/', dashboard_matric_discapacidad, name='dashboard_matric_disc'),
     path('dashboard-matricula-discapacidad-prim/', filtrado_matric_disc_prim_cueanexo, name='dashboard_matric_disc_prim'),
-    path('dashboard-matricula-discapacidad-sec/', dashboard_matric_discapacidad_secundaria, name='dashboard_matric_disc_sec'),
     
     # ── ENDPOINTS AJAX (DATATABLES) ──
     path('ajax/cargos/',          views.cargos_ajax,          name='cargos_ajax'),
@@ -64,7 +55,6 @@ urlpatterns = [
     # AJAX para Discapacidad
     path('ajax/matricula-discapacidad/', matric_disc_ajax, name='ajax_matric_disc'),
     path('ajax/matricula-discapacidad-prim/', matric_disc_prim_ajax, name='ajax_matric_disc_prim'), # <-- CORRECCIÓN 2: RUTA HABILITADA
-    path('ajax/matricula-discapacidad-sec/', matric_disc_sec_ajax, name='ajax_matric_disc_sec'),
 
     # ── MATRÍCULA Y OTROS REPORTES ──
     path('filtrado_horas/', views.filtrado_horas, name='filtrado_horas'),
@@ -79,7 +69,6 @@ urlpatterns = [
     # Los nombres viejos de los botones ahora apuntan a las vistas de los nuevos Dashboards
     path('filtrado_matri_disc_ini_cueanexo/', dashboard_matric_discapacidad, name='filtrado_matri_disc_ini_cueanexo'),
     path('filtrado_matri_disc_prim_cueanexo/', filtrado_matric_disc_prim_cueanexo, name='filtrado_matri_disc_prim_cueanexo'),
-    path('filtrado_matri_disc_sec_cueanexo/', dashboard_matric_discapacidad_secundaria, name='filtrado_matri_disc_sec_cueanexo'),
     
     path('horas/', views.filter_data_horas, name='horas'), # type: ignore
     path('aborigen/', views_matric.filter_data_aborigen, name='aborigen'), # type: ignore
@@ -104,7 +93,6 @@ urlpatterns = [
     # ── MATRÍCULA CUEANEXO (PROCESAMIENTO) ──
     path('matric_disc_ini_cueanexo/', filter_data_matric_disc_ini_cueanexo, name='matric_disc_ini_cueanexo'), # type: ignore
     path('matric_disc_prim_cueanexo/', filter_data_matric_disc_prim_cueanexo, name='matric_disc_prim_cueanexo'), # type: ignore
-    path('matric_disc_sec_cueanexo/', filter_data_matric_disc_sec_cueanexo, name='matric_disc_sec_cueanexo'), # type: ignore
     
     # ── SQL BUILDER Y TABLAS DINÁMICAS ──
     path('tabla/', tabla_view, name='tabla'),

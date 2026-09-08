@@ -35,9 +35,20 @@
 
 let map = L.map('map').setView([-27.45, -58.98], 7); // Chaco
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap'
-}).addTo(map);
+L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2s9h_1_bd646db33e2c8813a2d9b537",
+        {
+            subdomains: "abcd",
+
+            maxZoom: 20,
+
+            attribution:
+                '&copy; OpenStreetMap contributors ' +
+                '&copy; CARTO'
+        }
+    ).addTo(
+        map
+    );
 
 let markersLayer = L.layerGroup().addTo(map);
 

@@ -2662,48 +2662,6 @@ function ensureMiniTableLoader() {
         updateColumnCounters(visible, toggles.length);
     }
 
-    function getTableDataRowsArray() {
-        return Array.prototype.slice.call(document.querySelectorAll('.table-padron tbody tr')).filter(function(row) {
-            return !row.classList.contains('warning-cols') && !row.classList.contains('padron-table-empty-row');
-        });
-    }
-
-    function filterCurrentResponsablesRows(searchState) {
-        var state = searchState || {};
-        var needle = normalizeText(state.trimmedValue || '').toLowerCase();
-        var dbCol = state.dbCol || '';
-        var isAllColumnsSearch = dbCol === SEARCH_ALL_VALUE || dbCol === SEARCH_ACTION_VALUE;
-        var colClass = getColumnClassByDbCol(dbCol);
-        var visibleMatches = 0;
-
-        getTableDataRowsArray().forEach(function(row) {
-            var haystack = '';
-            var targetCell;
-            var matches;
-
-            if (!needle) {
-                row.style.display = '';
-                visibleMatches += 1;
-                return;
-            }
-
-            if (isAllColumnsSearch || !colClass) {
-                haystack = normalizeText(row.textContent || '').toLowerCase();
-            } else {
-                targetCell = row.querySelector('td.' + colClass);
-                haystack = normalizeText(targetCell ? targetCell.textContent : '').toLowerCase();
-            }
-
-            matches = haystack.indexOf(needle) !== -1;
-            row.style.display = matches ? '' : 'none';
-            if (matches) {
-                visibleMatches += 1;
-            }
-        });
-
-        return visibleMatches;
-    }
-
     function renderLiveSearch(state) {
         var mount = document.getElementById('liveSearchMount');
         var params = new URLSearchParams(window.location.search);
@@ -2720,7 +2678,7 @@ function ensureMiniTableLoader() {
         }
 
         options = getVisibleHeaderOptions();
-        initialColLabel = params.get('smart_ui_col') || (options[0] ? options[0].label : '');
+        initialColLabel = params.get('smart_ui_col') || FILTER_FIELD_LABELS.cuil_cuit;
         var selectedDbCol = desiredDbCol || getSpecialSearchValueByLabel(initialColLabel) || getHeaderDbColByText(initialColLabel) || (options[0] ? options[0].value : '');
         var html = '' +
             '<div class="input-group input-group-sm shadow-sm flex-nowrap" id="liveSearchContainer">' +
@@ -2748,33 +2706,18 @@ function ensureMiniTableLoader() {
             var selectedOption = select.options[select.selectedIndex];
             var selectedLabel = selectedOption ? selectedOption.text : '';
             var selectedDbCol = select.value || '';
-            var liveSearchState = {
-                rawValue: rawValue,
-                trimmedValue: trimmedValue,
-                colName: selectedLabel,
-                dbCol: selectedDbCol
-            };
-            var visibleMatches = filterCurrentResponsablesRows(liveSearchState);
 
             document.getElementById('liveSearchClear').style.display = trimmedValue ? 'inline-flex' : 'none';
             clearTimeout(liveSearchTimer);
             abortActiveTableRequest();
-            if (trimmedValue && visibleMatches === 0) {
-                scheduleTableSoftDim(0, 0.38);
-            } else if (trimmedValue) {
-                hideTableOverlay();
-                cancelTableSoftDim(true);
-            } else {
-                hideTableOverlay();
-                cancelTableSoftDim(true);
-            }
+            hideTableOverlay();
+            cancelTableSoftDim(true);
 
             liveSearchTimer = setTimeout(function() {
                 var params = new URLSearchParams(window.location.search);
                 var campos = params.getAll('campo_filtro');
                 var opers = params.getAll('operador_filtro');
                 var valores = params.getAll('valor_filtro');
-                var shouldDimServerSearch = trimmedValue && filterCurrentResponsablesRows(liveSearchState) === 0;
                 var prevSmartCol = params.get('smart_ui_col');
                 var prevSmartVal = params.get('smart_ui_val');
                 var prevSmartDbCol = getHeaderDbColByText(prevSmartCol);
@@ -2819,7 +2762,7 @@ function ensureMiniTableLoader() {
                 var refreshOptions = {
                     useFade: false,
                     allowHardReload: false,
-                    enableSoftDim: shouldDimServerSearch,
+                    enableSoftDim: true,
                     softDimDelayMs: 0,
                     softDimOpacity: 0.38,
                     showMiniLoader: false,

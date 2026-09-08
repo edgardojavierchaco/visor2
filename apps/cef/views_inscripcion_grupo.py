@@ -7,26 +7,45 @@ from django.apps import apps
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.db.utils import OperationalError, ProgrammingError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import NoReverseMatch, reverse
-from django.utils import timezone
 
-from .forms import CefBusquedaAlumnoForm, CefInscripcionForm
+from .forms import CefBajaMotivoForm, CefBusquedaAlumnoForm, CefInscripcionForm
 from .models import CefGrupo, CefInscripcion
 from .permisos import cef_required
-from .views_alumnos import MSG_BANCO_ALUMNOS_PENDIENTE, _asegurar_alumno_banco
-from .views_contexto import contexto_base, redirect_con_contexto
+from .services import (
+    asegurar_alumno_banco_activo,
+    crear_inscripcion_activa,
+    dar_baja_inscripcion,
+    reinscribir_alumno,
+    validar_ciclo_escribible,
+    validar_fecha_inscripcion_grupo,
+)
+from .views_alumnos import MSG_BANCO_ALUMNOS_PENDIENTE, _calcular_edad
+from .views_contexto import (
+    contexto_base,
+    normalizar_vista_cef,
+    redirect_con_contexto,
+    resolver_origen_gestion_grupo,
+)
 
 
 ESTADOS_INSCRIPCION_ABIERTA = [
     CefInscripcion.Estado.ACTIVO,
 ]
 
+ORIGENES_INSCRIPCION = {"alumnos", "cursos"}
+
 
 def _solo_digitos(valor):
     return re.sub(r"\D", "", str(valor or ""))
+
+
+def _origen_inscripcion(valor):
+    return valor if valor in ORIGENES_INSCRIPCION else "cursos"
 
 
 def _is_ajax(request):
@@ -56,11 +75,16 @@ def _dias_texto(grupo):
 
 
 def _inscripciones_grupo(grupo):
-    return (
+    inscripciones = list(
         CefInscripcion.objects.filter(grupo=grupo)
         .select_related("alumno", "alumno__sexo")
         .order_by("alumno__apellidos", "alumno__nombres")
     )
+    for inscripcion in inscripciones:
+        inscripcion.edad = _calcular_edad(
+            getattr(inscripcion.alumno, "fecha_nacimiento", None)
+        )
+    return inscripciones
 
 
 def _buscar_alumno(cuil):
@@ -92,7 +116,7 @@ def _alumno_row(alumno):
     }
 
 
-def _url_carga_alumno(cuil, next_url, return_label="Volver al curso"):
+def _url_carga_alumno(cuil, next_url, return_label="Volver al grupo"):
     try:
         base = reverse("bnhalumnos:carga_alumno")
     except NoReverseMatch:
@@ -108,38 +132,69 @@ def _url_carga_alumno(cuil, next_url, return_label="Volver al curso"):
     return f"{base}?{urlencode(params)}" if params else base
 
 
-def _url_modal_grupo(grupo, cef_context, cuil=""):
+def _url_modal_grupo(
+    grupo,
+    cef_context,
+    cuil="",
+    origen="cursos",
+    destino="",
+    *,
+    vista_alumnos="actuales",
+    vista_docentes="actuales",
+):
     params = {}
     if cef_context.get("cueanexo"):
         params["cueanexo"] = cef_context["cueanexo"]
     if cef_context.get("ciclo"):
         params["ciclo"] = cef_context["ciclo"].pk
+    params["origen"] = (
+        resolver_origen_gestion_grupo(origen)
+        if destino == "gestionar"
+        else _origen_inscripcion(origen)
+    )
+    if destino == "gestionar":
+        params["destino"] = "gestionar"
+        params["vista_alumnos"] = normalizar_vista_cef(vista_alumnos)
+        params["vista_docentes"] = normalizar_vista_cef(vista_docentes)
     params["abrir_modal_alumno"] = "1"
     if cuil:
         params["cuil"] = cuil
     return f"{reverse('cef:inscripcion_grupo', kwargs={'grupo_id': grupo.pk})}?{urlencode(params)}"
 
 
-def _url_inscripcion_grupo(grupo, cef_context):
+def _url_inscripcion_grupo(grupo, cef_context, origen="cursos"):
     params = {}
     if cef_context.get("cueanexo"):
         params["cueanexo"] = cef_context["cueanexo"]
     if cef_context.get("ciclo"):
         params["ciclo"] = cef_context["ciclo"].pk
+    params["origen"] = _origen_inscripcion(origen)
     querystring = urlencode(params)
     url = reverse("cef:inscripcion_grupo", kwargs={"grupo_id": grupo.pk})
     return f"{url}?{querystring}" if querystring else url
 
 
-def _url_gestionar_grupo(grupo, cef_context):
+def _url_gestionar_grupo(
+    grupo,
+    cef_context,
+    origen="grupos",
+    ancla="",
+    *,
+    vista_alumnos="actuales",
+    vista_docentes="actuales",
+):
     params = {}
     if cef_context.get("cueanexo"):
         params["cueanexo"] = cef_context["cueanexo"]
     if cef_context.get("ciclo"):
         params["ciclo"] = cef_context["ciclo"].pk
+    params["origen"] = resolver_origen_gestion_grupo(origen)
+    params["vista_alumnos"] = normalizar_vista_cef(vista_alumnos)
+    params["vista_docentes"] = normalizar_vista_cef(vista_docentes)
     querystring = urlencode(params)
     url = reverse("cef:gestionar_grupo", kwargs={"grupo_id": grupo.pk})
-    return f"{url}?{querystring}" if querystring else url
+    url = f"{url}?{querystring}" if querystring else url
+    return f"{url}#{ancla}" if ancla else url
 
 
 def _errores_form(form):
@@ -182,44 +237,11 @@ def _ajax_inscripciones_fragment_response(request, context, ok, message):
     )
 
 
-def dar_baja_inscripcion_grupo(inscripcion, user):
-    if inscripcion.estado != CefInscripcion.Estado.ACTIVO:
-        raise ValidationError("La inscripción ya se encuentra dada de baja.")
-
-    inscripcion.estado = CefInscripcion.Estado.BAJA
-    if not inscripcion.fecha_baja:
-        inscripcion.fecha_baja = timezone.localdate()
-    inscripcion.actualizado_por = user
-    inscripcion.save()
-    return inscripcion
-
-
-def dar_alta_inscripcion_grupo(inscripcion, user):
-    if inscripcion.estado == CefInscripcion.Estado.ACTIVO:
-        raise ValidationError("La inscripción ya se encuentra activa.")
-
-    inscripcion_activa = CefInscripcion.objects.filter(
-        grupo=inscripcion.grupo,
-        alumno=inscripcion.alumno,
-        estado=CefInscripcion.Estado.ACTIVO,
-    ).exists()
-    if inscripcion_activa:
-        raise ValidationError("El alumno ya tiene una inscripción activa en este grupo.")
-
-    try:
-        with transaction.atomic():
-            return CefInscripcion.objects.create(
-                grupo=inscripcion.grupo,
-                alumno=inscripcion.alumno,
-                estado=CefInscripcion.Estado.ACTIVO,
-                creado_por=user,
-                actualizado_por=user,
-            )
-    except (IntegrityError, ValidationError):
-        raise ValidationError("No se pudo reinscribir al alumno. Verificá que no exista una inscripción activa.")
-
-
 def _baja_alumno_grupo(request, grupo, cef_context):
+    baja_form = CefBajaMotivoForm(request.POST)
+    if not baja_form.is_valid():
+        return False, _errores_form(baja_form)
+
     try:
         inscripcion_id = int(request.POST.get("inscripcion_id"))
     except (TypeError, ValueError):
@@ -234,8 +256,12 @@ def _baja_alumno_grupo(request, grupo, cef_context):
         pk=inscripcion_id,
     )
     try:
-        dar_baja_inscripcion_grupo(inscripcion, request.user)
-        return True, "Alumno dado de baja del curso correctamente."
+        dar_baja_inscripcion(
+            inscripcion,
+            request.user,
+            baja_form.cleaned_data["motivo_baja"],
+        )
+        return True, "Alumno dado de baja del grupo correctamente."
     except ValidationError as exc:
         return False, "; ".join(exc.messages)
 
@@ -255,7 +281,11 @@ def _alta_alumno_grupo(request, grupo, cef_context):
         pk=inscripcion_id,
     )
     try:
-        dar_alta_inscripcion_grupo(inscripcion, request.user)
+        reinscribir_alumno(
+            inscripcion,
+            request.user,
+            fecha_inscripcion=request.POST.get("fecha_inscripcion"),
+        )
         return True, "Alumno reinscripto correctamente."
     except ValidationError as exc:
         return False, "; ".join(exc.messages)
@@ -265,8 +295,23 @@ def _alta_alumno_grupo(request, grupo, cef_context):
 def inscripcion_grupo(request, grupo_id):
     context = contexto_base(request, "grupos", "Inscripción de alumnos CEF")
     cef_context = context["cef_context"]
+    destino_gestionar = (
+        request.GET.get("destino") or request.POST.get("destino")
+    ) == "gestionar"
+    origen_solicitado = request.GET.get("origen") or request.POST.get("origen")
+    vista_alumnos = normalizar_vista_cef(
+        request.GET.get("vista_alumnos") or request.POST.get("vista_alumnos")
+    )
+    vista_docentes = normalizar_vista_cef(
+        request.GET.get("vista_docentes") or request.POST.get("vista_docentes")
+    )
+    origen = (
+        resolver_origen_gestion_grupo(origen_solicitado)
+        if destino_gestionar
+        else _origen_inscripcion(origen_solicitado)
+    )
 
-    if not cef_context["puede_operar"]:
+    if not cef_context["puede_consultar"]:
         messages.warning(
             request,
             "Seleccioná un CUE-Anexo y un ciclo lectivo para administrar inscripciones.",
@@ -274,6 +319,56 @@ def inscripcion_grupo(request, grupo_id):
         return redirect(redirect_con_contexto("cef:carga_grupo", cef_context))
 
     grupo = _grupo_seguro(grupo_id, cef_context)
+    if request.method == "POST" and not cef_context["puede_operar"]:
+        mensaje = "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+        if _is_ajax(request):
+            return JsonResponse({"ok": False, "message": mensaje})
+        messages.error(request, mensaje)
+        return redirect(
+            _url_gestionar_grupo(
+                grupo,
+                cef_context,
+                origen,
+                vista_alumnos=vista_alumnos,
+                vista_docentes=vista_docentes,
+            )
+        )
+    if request.method == "POST" and grupo.estado != CefGrupo.Estado.ACTIVO:
+        mensaje = "El grupo está dado de baja y solo puede consultarse."
+        if _is_ajax(request):
+            return JsonResponse({"ok": False, "message": mensaje})
+        messages.error(request, mensaje)
+        return redirect(
+            _url_gestionar_grupo(
+                grupo,
+                cef_context,
+                origen,
+                vista_alumnos=vista_alumnos,
+                vista_docentes=vista_docentes,
+            )
+        )
+    inscripcion_grupo_url = _url_inscripcion_grupo(grupo, cef_context, origen)
+    gestionar_grupo_url = _url_gestionar_grupo(
+        grupo,
+        cef_context,
+        origen,
+        "alumnos-curso",
+        vista_alumnos=vista_alumnos,
+        vista_docentes=vista_docentes,
+    )
+    context.update(
+        {
+            "origen": origen,
+            "inscripcion_grupo_url": inscripcion_grupo_url,
+            "volver_url": redirect_con_contexto(
+                "cef:alumnos" if origen == "alumnos" else "cef:carga_grupo",
+                cef_context,
+            ),
+            "volver_label": (
+                "Volver a alumnos" if origen == "alumnos" else "Volver a Grupos"
+            ),
+        }
+    )
     alumno = None
     inscripcion_abierta = None
     cuil_buscado = ""
@@ -292,7 +387,7 @@ def inscripcion_grupo(request, grupo_id):
                 messages.success(request, ajax_message)
             else:
                 messages.error(request, ajax_message)
-            return redirect(_url_inscripcion_grupo(grupo, cef_context))
+            return redirect(inscripcion_grupo_url)
 
         context.update(
             {
@@ -311,6 +406,15 @@ def inscripcion_grupo(request, grupo_id):
     if request.method == "POST":
         busqueda_form = CefBusquedaAlumnoForm(request.POST)
         abrir_modal = True
+        fecha_inscripcion = None
+        fecha_inscripcion_error = ""
+        try:
+            fecha_inscripcion = validar_fecha_inscripcion_grupo(
+                grupo,
+                request.POST.get("fecha_inscripcion"),
+            )
+        except ValidationError as exc:
+            fecha_inscripcion_error = "; ".join(exc.messages)
 
         if busqueda_form.is_valid():
             cuil_buscado = busqueda_form.cleaned_data["cuil"]
@@ -321,6 +425,10 @@ def inscripcion_grupo(request, grupo_id):
 
         if not alumno:
             ajax_message = "Primero buscá un alumno existente por CUIL."
+            if not _is_ajax(request):
+                messages.error(request, ajax_message)
+        elif fecha_inscripcion_error:
+            ajax_message = fecha_inscripcion_error
             if not _is_ajax(request):
                 messages.error(request, ajax_message)
         else:
@@ -336,14 +444,15 @@ def inscripcion_grupo(request, grupo_id):
                     messages.info(request, ajax_message)
             else:
                 try:
-                    _, _, banco_pendiente = _asegurar_alumno_banco(
-                        alumno,
-                        cef_context,
-                        request.user,
+                    asegurar_alumno_banco_activo(
+                        alumno=alumno,
+                        cueanexo=cef_context["cueanexo"],
+                        ciclo=cef_context["ciclo"],
+                        user=request.user,
                     )
-                    if banco_pendiente:
-                        if not _is_ajax(request):
-                            messages.warning(request, MSG_BANCO_ALUMNOS_PENDIENTE)
+                except (OperationalError, ProgrammingError):
+                    if not _is_ajax(request):
+                        messages.warning(request, MSG_BANCO_ALUMNOS_PENDIENTE)
                 except (IntegrityError, ValidationError):
                     if not _is_ajax(request):
                         messages.warning(
@@ -352,14 +461,12 @@ def inscripcion_grupo(request, grupo_id):
                         )
 
                 try:
-                    with transaction.atomic():
-                        CefInscripcion.objects.create(
-                            grupo=grupo,
-                            alumno=alumno,
-                            estado=CefInscripcion.Estado.ACTIVO,
-                            creado_por=request.user,
-                            actualizado_por=request.user,
-                        )
+                    crear_inscripcion_activa(
+                        grupo=grupo,
+                        alumno=alumno,
+                        user=request.user,
+                        fecha_inscripcion=fecha_inscripcion,
+                    )
                     if _is_ajax(request):
                         inscripcion_abierta = CefInscripcion.objects.filter(
                             grupo=grupo,
@@ -371,13 +478,15 @@ def inscripcion_grupo(request, grupo_id):
                     else:
                         messages.success(request, "Alumno inscripto correctamente.")
                         return redirect(
-                            redirect_con_contexto(
-                                "cef:inscripcion_grupo",
-                                cef_context,
-                                grupo_id=grupo.pk,
-                            )
+                            gestionar_grupo_url
+                            if destino_gestionar
+                            else inscripcion_grupo_url
                         )
-                except (IntegrityError, ValidationError):
+                except ValidationError as exc:
+                    ajax_message = "; ".join(exc.messages)
+                    if not _is_ajax(request):
+                        messages.error(request, ajax_message)
+                except IntegrityError:
                     ajax_message = "No se pudo crear la inscripción. Verificá que no exista una inscripción activa."
                     if not _is_ajax(request):
                         messages.error(request, ajax_message)
@@ -399,7 +508,15 @@ def inscripcion_grupo(request, grupo_id):
             cuil_buscado = _solo_digitos(request.GET.get("cuil"))
             cuil_error = _errores_form(busqueda_form)
 
-    next_url = _url_modal_grupo(grupo, cef_context, cuil_buscado)
+    next_url = _url_modal_grupo(
+        grupo,
+        cef_context,
+        cuil_buscado,
+        origen,
+        "gestionar" if destino_gestionar else "",
+        vista_alumnos=vista_alumnos,
+        vista_docentes=vista_docentes,
+    )
     context.update(
         {
             "grupo": grupo,
@@ -414,15 +531,41 @@ def inscripcion_grupo(request, grupo_id):
             "url_carga_alumno": _url_carga_alumno(cuil_buscado, next_url),
             "url_editar_alumno": _url_carga_alumno(cuil_buscado, next_url),
             "modal_alumno_abierto": abrir_modal,
-            "modal_action_url": _url_modal_grupo(grupo, cef_context),
+            "modal_action_url": _url_modal_grupo(
+                grupo,
+                cef_context,
+                origen=origen,
+                destino="gestionar" if destino_gestionar else "",
+                vista_alumnos=vista_alumnos,
+                vista_docentes=vista_docentes,
+            ),
             "modal_tiene_grupo": True,
-            "modal_volver_url": _url_inscripcion_grupo(grupo, cef_context),
+            "modal_volver_url": (
+                gestionar_grupo_url
+                if destino_gestionar
+                else inscripcion_grupo_url
+            ),
             "modal_feedback": ajax_message,
             "modal_feedback_level": "success" if ajax_ok else "error",
         }
     )
     if request.method == "POST" and _is_ajax(request):
+        if destino_gestionar:
+            from .views_carga_grupo import _ajax_gestionar_fragment_response
+
+            return _ajax_gestionar_fragment_response(
+                request,
+                grupo,
+                cef_context,
+                ajax_ok,
+                ajax_message,
+                origen,
+                "cef/modal_busqueda_alumno_cef.html",
+                context,
+            )
         return _ajax_inscripcion_response(request, context, ajax_ok, ajax_message)
+    if request.method == "POST" and destino_gestionar:
+        return redirect(gestionar_grupo_url)
     return render(request, "cef/inscripcion_grupo_cef.html", context)
 
 
@@ -434,7 +577,9 @@ def editar_inscripcion_grupo(request, grupo_id, inscripcion_id):
     if not cef_context["puede_operar"]:
         messages.warning(
             request,
-            "Seleccioná un CUE-Anexo y un ciclo lectivo para administrar inscripciones.",
+            "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+            if cef_context["ciclo_cerrado"]
+            else "Seleccioná un CUE-Anexo y un ciclo lectivo para administrar inscripciones.",
         )
         return redirect(redirect_con_contexto("cef:carga_grupo", cef_context))
 
@@ -443,32 +588,66 @@ def editar_inscripcion_grupo(request, grupo_id, inscripcion_id):
         request.GET.get("volver") == "gestionar"
         or request.POST.get("volver") == "gestionar"
     )
-    volver_url = (
-        _url_gestionar_grupo(grupo, cef_context)
-        if volver_gestionar
-        else _url_inscripcion_grupo(grupo, cef_context)
+    origen_solicitado = request.GET.get("origen") or request.POST.get("origen")
+    vista_alumnos = normalizar_vista_cef(
+        request.GET.get("vista_alumnos") or request.POST.get("vista_alumnos")
     )
+    vista_docentes = normalizar_vista_cef(
+        request.GET.get("vista_docentes") or request.POST.get("vista_docentes")
+    )
+    origen = (
+        resolver_origen_gestion_grupo(origen_solicitado)
+        if volver_gestionar
+        else _origen_inscripcion(origen_solicitado)
+    )
+    volver_url = (
+        _url_gestionar_grupo(
+            grupo,
+            cef_context,
+            origen,
+            "alumnos-curso",
+            vista_alumnos=vista_alumnos,
+            vista_docentes=vista_docentes,
+        )
+        if volver_gestionar
+        else _url_inscripcion_grupo(grupo, cef_context, origen)
+    )
+    volver_label = (
+        "Volver a Gestionar grupo"
+        if volver_gestionar
+        else "Volver a inscripción"
+    )
+    if grupo.estado != CefGrupo.Estado.ACTIVO:
+        messages.error(request, "El grupo está dado de baja y no puede editarse.")
+        return redirect(volver_url)
     inscripcion = get_object_or_404(
         CefInscripcion.objects.filter(
             grupo=grupo,
             grupo__cueanexo=cef_context["cueanexo"],
             grupo__ciclo=cef_context["ciclo"],
+            estado=CefInscripcion.Estado.ACTIVO,
         ).select_related("alumno", "alumno__sexo"),
         pk=inscripcion_id,
     )
 
     if request.method == "POST":
-        form = CefInscripcionForm(request.POST, instance=inscripcion)
+        form = CefInscripcionForm(request.POST, instance=inscripcion, grupo=grupo)
         if form.is_valid():
             inscripcion = form.save(commit=False)
             inscripcion.actualizado_por = request.user
-            inscripcion.save()
-            messages.success(request, "Inscripción actualizada correctamente.")
-            return redirect(volver_url)
+            try:
+                with transaction.atomic():
+                    validar_ciclo_escribible(grupo.ciclo_id)
+                    inscripcion.save()
+            except ValidationError as exc:
+                form.add_error(None, "; ".join(exc.messages))
+            else:
+                messages.success(request, "Inscripción actualizada correctamente.")
+                return redirect(volver_url)
 
         messages.error(request, "Revisá los datos de la inscripción.")
     else:
-        form = CefInscripcionForm(instance=inscripcion)
+        form = CefInscripcionForm(instance=inscripcion, grupo=grupo)
 
     context.update(
         {
@@ -477,7 +656,11 @@ def editar_inscripcion_grupo(request, grupo_id, inscripcion_id):
             "inscripcion": inscripcion,
             "form": form,
             "volver_url": volver_url,
+            "volver_label": volver_label,
             "volver_gestionar": volver_gestionar,
+            "origen": origen,
+            "vista_alumnos": vista_alumnos,
+            "vista_docentes": vista_docentes,
         }
     )
     return render(request, "cef/inscripcion_grupo_form_cef.html", context)

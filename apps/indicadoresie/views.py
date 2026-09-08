@@ -3,7 +3,7 @@ import json
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
-from django.views.generic import ListView
+from django.views.generic import ListView, TemplateView
 from django.db.models import Count, F, Value, Q
 from django.db.models.functions import Concat, Coalesce
 from django.shortcuts import render
@@ -16,11 +16,24 @@ from .models import (
 )
 
 # Importamos las funciones de lógica que creamos en el paso anterior
-from .views_dash import obtener_regiones_permitidas, obtener_cargo_usuario
+from .views_dash import (
+    filtrar_queryset_sge,
+    obtener_cargo_usuario,
+    resolver_contexto_sge,
+)
 
 # =====================================================================
 # VISTAS DE SEGUIMIENTO
 # =====================================================================
+
+class InicioSGEView(TemplateView):
+    template_name = 'indicadoresie/seguimiento/inicio_sge.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['sge_context'] = resolver_contexto_sge(self.request)
+        context['active_menu'] = 'inicio'
+        return context
 
 class SeguimientoSIE2025ListView(ListView):
     """
@@ -58,52 +71,34 @@ class SeguimientoSIE2025ListView(ListView):
         context['seguimientos'] = self.get_queryset()
         # Pasamos el cargo al contexto por las dudas
         context['cargo_usuario'] = obtener_cargo_usuario(self.request.user) 
+        context['active_menu'] = 'listado'
         return context
 
 
 class InformeSGEListView(ListView):
     """
-    VISTA PRINCIPAL: Aquí aplicamos el Filtro Maestro por Nivel/Oferta
-    y validamos el 'lapicito' de edición.
+    VISTA PRINCIPAL: aplica el contexto territorial SGE compartido
+    y valida el 'lapicito' de edición.
     """
     model = InformeSGE
     template_name = 'indicadoresie/seguimiento/list_sge.html' 
 
     def get_queryset(self):
-        user = self.request.user
-        cargo = obtener_cargo_usuario(user)
-        
-        # 1. Jurisdicción: Obtenemos regiones permitidas
-        regiones_asignadas = obtener_regiones_permitidas(user)
-        
-        if regiones_asignadas == "TODAS":
-            queryset = InformeSGE.objects.all()
-        elif not regiones_asignadas:
-            queryset = InformeSGE.objects.none()
-        else:
-            queryset = InformeSGE.objects.filter(regional__in=regiones_asignadas)
-
-        # 2. COMPETENCIA: Aplicamos el Filtro Maestro por Nivel/Modalidad
-        MAPA_OFERTAS = {
-            "Director de Nivel Inicial": ["Inicial - Común"],
-            "Director de Nivel Primario": ["Primario - Común"],
-            "Director de Nivel Secundario": ["Secundario - Común"],
-            "Director de Modalidad Adultos": ["Primario - Adultos", "Secundario - Adultos"],
-            "Director de Modalidad Especial": ["Inicial - Especial", "Primario - Especial"],
-        }
-
-        if cargo in MAPA_OFERTAS:
-            # Recortamos los datos para que el Director solo vea su oferta
-            queryset = queryset.filter(tipo_oferta__in=MAPA_OFERTAS[cargo])
-            
-        return queryset
+        contexto_sge = resolver_contexto_sge(self.request)
+        return filtrar_queryset_sge(
+            InformeSGE.objects.all(),
+            contexto_sge,
+            campo_region="regional",
+            campo_cueanexo="cueanexo",
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user = self.request.user
-        cargo = obtener_cargo_usuario(user)
+        contexto_sge = resolver_contexto_sge(self.request)
+        cargo = contexto_sge['cargo']
         
         context['titulo'] = "Informe SGE 2025-2026"
+        context['sge_context'] = contexto_sge
         
         # ACA ESTÁ LA MAGIA: Le enviamos el cargo al HTML para que lo imprima y filtre
         context['cargo_usuario'] = cargo
@@ -116,9 +111,20 @@ class InformeSGEListView(ListView):
         context['ultima_fecha'] = obj_fecha.fecha if obj_fecha else None
         
         # Regiones para el selector de filtros (basado en lo que puede ver)
-        queryset_usuario = self.get_queryset()
-        regiones_crudas = queryset_usuario.values_list('regional', flat=True).distinct()
-        context['regiones'] = sorted([r for r in list(regiones_crudas) if r and r.strip()])
+        queryset_usuario = context['object_list']
+
+        def valores_filtro(campo):
+            valores = queryset_usuario.order_by().values_list(campo, flat=True).distinct()
+            return sorted(
+                {str(valor).strip() for valor in valores if valor and str(valor).strip()},
+                key=str.casefold,
+            )
+
+        context['regiones'] = valores_filtro('regional')
+        context['ofertas'] = valores_filtro('tipo_oferta')
+        context['ambitos'] = valores_filtro('ambito')
+        context['sectores'] = valores_filtro('sector')
+        context['active_menu'] = 'listado'
         
         return context
 

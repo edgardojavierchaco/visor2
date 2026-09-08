@@ -1,0 +1,222 @@
+{% extends 'archivos/base/layout.html' %}
+{% block head %}
+{{ block.super }}
+<script>
+(function() {
+    if (sessionStorage.getItem('indicadoresie_sidebar_state') === 'closed') {
+        document.documentElement.classList.add('indicadoresie-sidebar-initial-collapsed');
+    } else {
+        document.documentElement.classList.remove('indicadoresie-sidebar-initial-collapsed');
+    }
+})();
+</script>
+
+<style id="indicadoresie-sidebar-prepaint-stability">
+    html.indicadoresie-sidebar-initial-collapsed .content-wrapper,
+    html.indicadoresie-sidebar-initial-collapsed .main-header,
+    html.indicadoresie-sidebar-initial-collapsed .main-footer {
+        margin-left: 4.6rem !important;
+    }
+
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar,
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar::before {
+        width: 4.6rem !important;
+        overflow-x: hidden !important;
+    }
+
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar:hover,
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar:hover::before,
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar:focus-within,
+    html.indicadoresie-sidebar-initial-collapsed .main-sidebar:focus-within::before {
+        width: 250px !important;
+        overflow-x: visible !important;
+    }
+
+    @media (max-width: 991.98px) {
+        html.indicadoresie-sidebar-initial-collapsed .content-wrapper,
+        html.indicadoresie-sidebar-initial-collapsed .main-header,
+        html.indicadoresie-sidebar-initial-collapsed .main-footer {
+            margin-left: 0 !important;
+        }
+
+        html.indicadoresie-sidebar-initial-collapsed
+        .main-sidebar:not(:hover):not(:focus-within) {
+            transform: translateX(-250px) !important;
+        }
+    }
+</style>
+{% endblock %}
+{% block content %}
+{% include 'indicadoresie/seguimiento/nav_operativo_sge.html' %}
+
+<style>
+    .sge-home-hero {
+        background: linear-gradient(135deg, #353B72 0%, #4A4FA1 55%, #625BC7 100%);
+        border: 1px solid rgba(255,255,255,.16);
+        border-radius: var(--r-lg, 12px);
+        box-shadow: var(--shadow-lg, 0 10px 24px rgba(15,23,42,.16));
+        color: #fff;
+        margin-bottom: 1.25rem;
+        overflow: hidden;
+        padding: 1.7rem 1.8rem;
+        position: relative;
+    }
+
+    .sge-home-hero::after {
+        background: rgba(255,255,255,.08);
+        border-radius: 999px;
+        content: "";
+        height: 170px;
+        position: absolute;
+        right: -44px;
+        top: -64px;
+        width: 170px;
+    }
+
+    .sge-home-hero h1 {
+        font-size: 2.25rem;
+        font-weight: 800;
+        line-height: 1.12;
+        margin: 0 0 .55rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .sge-home-hero p {
+        color: rgba(255,255,255,.86);
+        font-size: var(--fs-md, 1rem);
+        font-weight: 500;
+        margin: 0;
+        max-width: 760px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .sge-home-section-title {
+        align-items: center;
+        color: #30365F;
+        display: flex;
+        font-size: var(--fs-md, 1rem);
+        font-weight: 800;
+        gap: .65rem;
+        letter-spacing: 0;
+        margin: 0 0 .9rem;
+        text-transform: uppercase;
+    }
+
+    .sge-home-section-title::after {
+        background: rgba(113,104,217,.35);
+        content: "";
+        flex: 1;
+        height: 1px;
+    }
+
+    .sge-home-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sge-home-card {
+        background: var(--surface, #fff);
+        border: 1.5px solid rgba(113,104,217,.35);
+        border-top: 3px solid #7168D9;
+        border-radius: var(--r-md, 10px);
+        box-shadow: var(--shadow-sm, 0 1px 4px rgba(15,23,42,.13));
+        color: #30365F;
+        display: flex;
+        flex-direction: column;
+        min-height: 168px;
+        padding: 1.25rem;
+        text-decoration: none;
+        transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+
+    .sge-home-card:hover,
+    .sge-home-card:focus {
+        border-color: #7168D9;
+        box-shadow: var(--shadow-md, 0 4px 12px rgba(15,23,42,.16));
+        color: #30365F;
+        text-decoration: none;
+        transform: translateY(-2px);
+    }
+
+    .sge-home-card:focus-visible {
+        box-shadow: 0 0 0 3px rgba(113,104,217,.22), var(--shadow-md, 0 4px 12px rgba(15,23,42,.16));
+        outline: none;
+    }
+
+    .sge-home-icon {
+        align-items: center;
+        background: #F1F0FB;
+        border: 1px solid rgba(113,104,217,.45);
+        border-radius: var(--r-md, 10px);
+        color: #30365F;
+        display: inline-flex;
+        font-size: 1.25rem;
+        height: 46px;
+        justify-content: center;
+        margin-bottom: 1rem;
+        width: 46px;
+    }
+
+    .sge-home-card h2 {
+        color: #30365F;
+        font-size: var(--fs-lg, 1.15rem);
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 0 0 .45rem;
+    }
+
+    .sge-home-card p {
+        color: #30365F;
+        font-size: var(--fs-base, 1rem);
+        font-weight: 500;
+        line-height: 1.45;
+        margin: 0;
+    }
+
+    @media (max-width: 575.98px) {
+        .sge-home-hero {
+            padding: 1.35rem;
+        }
+
+        .sge-home-hero h1 {
+            font-size: 1.85rem;
+        }
+
+        .sge-home-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<section class="sge-home-hero">
+    <h1>Seguimiento SGE 2026</h1>
+    <p>Consulta el listado institucional y analiza el avance de inscripciones mediante los gráficos de seguimiento.</p>
+</section>
+
+<section aria-labelledby="sge-home-acceso-rapido">
+    <h2 id="sge-home-acceso-rapido" class="sge-home-section-title">Acceso rápido</h2>
+
+    <div class="sge-home-grid">
+        <a class="sge-home-card" href="{% url 'indicsie:seguimiento_listado' %}" data-sge-page-loading-link>
+            <span class="sge-home-icon"><i class="fas fa-list"></i></span>
+            <h2>Listado</h2>
+            <p>Consultar el listado de seguimiento SGE con sus filtros y acciones actuales.</p>
+        </a>
+
+        <a class="sge-home-card" href="{% url 'indicsie:comparativa_sge_ra' %}" data-sge-page-loading-link>
+            <span class="sge-home-icon"><i class="fas fa-balance-scale"></i></span>
+            <h2>Comparativa RA-SGE</h2>
+            <p>Revisar las situaciones detectadas entre RA 2026 y SGE 2026 por CUE-Anexo.</p>
+        </a>
+
+        <a class="sge-home-card" href="{% url 'indicsie:dashboard_seguimiento_sie' %}" data-sge-page-loading-link>
+            <span class="sge-home-icon"><i class="fas fa-chart-line"></i></span>
+            <h2>Gráficos</h2>
+            <p>Visualizar los gráficos comparativos de seguimiento por regional y nivel.</p>
+        </a>
+    </div>
+</section>
+{% endblock %}

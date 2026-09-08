@@ -1,0 +1,46 @@
+<div class="border rounded p-3 mb-3">
+    <div><strong>Alumno:</strong> {{ baja_modal_alumno.alumno_nombre_snapshot|default:baja_modal_alumno.alumno }}</div>
+    <div><strong>CUIL:</strong> {{ baja_modal_alumno.alumno_cuil_snapshot|default:baja_modal_alumno.alumno.cuil|default:"—" }}</div>
+    <div><strong>CEF / CUE-Anexo:</strong> {% if cef_context.establecimiento %}{{ cef_context.establecimiento.nom_est|default:"CEF" }} · {% endif %}{{ baja_modal_alumno.cueanexo }}</div>
+    <div><strong>Ciclo:</strong> {{ baja_modal_alumno.ciclo }}</div>
+    <div><strong>Estado actual:</strong> {{ baja_modal_alumno.get_estado_display }}</div>
+</div>
+{% if baja_modal_alumno.estado != 'activo' %}
+    <div class="alert alert-warning mb-3">El alumno ya no se encuentra activo en este CEF y ciclo.</div>
+    <div class="cef-form-actions mt-4">
+        <button class="btn btn-outline-secondary" type="button" data-cef-baja-close><i class="fa-solid fa-xmark"></i> Cerrar</button>
+    </div>
+{% elif baja_modal_alumno.inscripciones_activas %}
+    <div class="alert alert-danger mb-3"><strong>No se puede dar de baja al alumno del CEF.</strong></div>
+    <p><strong>{{ baja_modal_alumno.alumno_nombre_snapshot|default:baja_modal_alumno.alumno }}</strong> todavía posee inscripciones activas en este CEF y ciclo.</p>
+    <p class="mb-2"><strong>Inscripciones activas:</strong></p>
+    {% for inscripcion in baja_modal_alumno.inscripciones_activas %}
+        <div class="border rounded p-3 mb-2 d-flex flex-wrap gap-3 align-items-center justify-content-between">
+            <strong>{{ inscripcion.grupo.actividad }} Nro. {{ inscripcion.grupo.numero }}</strong>
+            <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:gestionar_grupo' inscripcion.grupo.pk %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}origen=alumnos#alumnos-curso">
+                <i class="fa-solid fa-clipboard-list"></i> Gestionar grupo
+            </a>
+        </div>
+    {% endfor %}
+    <p class="text-muted mt-3 mb-0">Primero debe dar de baja estas inscripciones desde la gestión de cada grupo.</p>
+    <div class="cef-form-actions mt-4">
+        <button class="btn btn-outline-secondary" type="button" data-cef-baja-close><i class="fa-solid fa-xmark"></i> Cerrar</button>
+    </div>
+{% else %}
+    <form method="post" action="{{ baja_action_url }}" data-cef-baja-form data-cef-baja-modal-id="modalBajaAlumnoCef">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="baja_cef">
+        <input type="hidden" name="alumno_banco_id" value="{{ baja_modal_alumno.pk }}">
+        <p>¿Confirmás que querés dar de baja del CEF a este alumno?</p>
+        <p class="text-muted">Esta acción lo dejará en estado "Baja" dentro del CEF {{ cef_context.cueanexo }} para el ciclo {{ cef_context.ciclo }}.</p>
+        <div class="mb-3">
+            <label class="form-label" for="{{ baja_form.motivo_baja.id_for_label }}">Motivo de baja (opcional)</label>
+            {{ baja_form.motivo_baja }}
+            {% for error in baja_form.motivo_baja.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+        </div>
+        <div class="cef-form-actions mt-4">
+            <button class="btn btn-outline-secondary" type="button" data-cef-baja-close><i class="fa-solid fa-xmark"></i> Cancelar</button>
+            <button class="btn btn-danger" type="submit"><i class="fa-solid fa-user-slash"></i> Dar de baja del CEF</button>
+        </div>
+    </form>
+{% endif %}

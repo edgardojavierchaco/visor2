@@ -18,9 +18,8 @@ from openpyxl.utils import get_column_letter
 from .models import (
     get_cefs_visualizacion_usuario,
     normalizar_cueanexo,
-    usuario_es_admin_cef,
 )
-from .permisos import cef_required
+from .permisos import cef_required, get_permisos_cef_request
 
 
 logger = logging.getLogger(__name__)
@@ -947,40 +946,24 @@ def _exportar_excel_cef(datos, formato, request, cef_selector_options=None):
 
 def _base_cef_queryset(request):
     started = time.perf_counter()
-    qs = get_cefs_visualizacion_usuario(request.user)
+    qs = get_cefs_visualizacion_usuario(
+        request.user,
+        permisos=get_permisos_cef_request(request),
+    )
     _log_perf("get_cefs_visualizacion_usuario", started)
     return qs
 
 
-def _get_cueanexos_visibles_usuario(user):
-    cueanexos = []
-
-    queryset = get_cefs_visualizacion_usuario(user)
-
-    for cueanexo in (
-        queryset
-        .values_list("cueanexo", flat=True)
-        .distinct()
-    ):
-        cueanexo_normalizado = normalizar_cueanexo(cueanexo)
-
-        if (
-            cueanexo_normalizado
-            and cueanexo_normalizado not in cueanexos
-        ):
-            cueanexos.append(cueanexo_normalizado)
-
-    return cueanexos
-
-
-def _resolver_cueanexos_visualizacion_desde_request(request):
+def _resolver_cueanexos_visualizacion_desde_request(request, cefs_visualizacion):
     """
     Resuelve la seleccion de CEF desde GET y la cruza con lo permitido al usuario.
     """
 
-    cueanexos_visibles = set(
-        _get_cueanexos_visibles_usuario(request.user)
-    )
+    cueanexos_visibles = {
+        normalizar_cueanexo(item.get("cueanexo", ""))
+        for item in cefs_visualizacion
+    }
+    cueanexos_visibles.discard("")
 
     if not cueanexos_visibles:
         return []
@@ -1040,7 +1023,10 @@ def _resolver_cueanexos_seleccionados_explicitamente(request, cefs_visualizacion
     seleccion_raw_normalizada = {normalizar_cueanexo(raw) for raw in seleccion_raw}
     seleccion_raw_normalizada.discard(None)
     seleccion_raw_normalizada.discard("")
-    seleccion_resuelta = _resolver_cueanexos_visualizacion_desde_request(request)
+    seleccion_resuelta = _resolver_cueanexos_visualizacion_desde_request(
+        request,
+        cefs_visualizacion,
+    )
     seleccion_valida = [
         cueanexo
         for cueanexo in seleccion_resuelta
@@ -1125,7 +1111,11 @@ def visualizacion_localizaciones(request):
     context = {
         "title": "Localizaciones CEF",
         "active_menu": "localizaciones",
-        "es_admin_cef": usuario_es_admin_cef(request.user),
+        "es_admin_cef": get_permisos_cef_request(request)["es_admin"],
+        "puede_metricas": get_permisos_cef_request(request).get(
+            "puede_metricas",
+            False,
+        ),
         "cefs_visualizacion": [],
         "cef_selector_options": cef_selector_options,
         "cueanexos_seleccionados": cueanexos_selector,
