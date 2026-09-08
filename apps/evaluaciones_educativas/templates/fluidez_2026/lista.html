@@ -353,7 +353,18 @@
                     <a href="{% url 'evaluaciones_educativas:fluidez_2026:carga_alumno'  fid_actual=fid_actual grado_public_id=grado.public_id%}" class="btn btn-success px-4 fw-bold shadow-sm" style="border-radius: 10px;">
                         <i class="bi bi-person-plus"></i> Cargar Alumno
                     </a>
+
+                    <!-- Botón Nueva Sección -->
+                    <button type="button"
+                            class="btn btn-warning px-4 fw-bold shadow-sm"
+                            style="border-radius: 10px;"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalCrearSeccion"
+                            id="btn-nueva-seccion">
+                        <i class="bi bi-plus-circle"></i> Añadir Sección
+                    </button>
                     {% endif %}
+
                     <a href="{% url 'evaluaciones_educativas:fluidez_2026:lista_examen' %}" class="btn btn-primary px-4 fw-bold shadow-sm" style="border-radius: 10px;">
                         <i class="bi bi-journal-check me-1"></i> Exámenes
                     </a>
@@ -715,5 +726,136 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
     </script>
+
+  <!-- ============================================================
+       MODAL: CREAR NUEVA SECCIÓN
+       ============================================================ -->
+  {% if grado.public_id %}
+  <div class="modal fade" id="modalCrearSeccion" tabindex="-1" aria-labelledby="modalCrearSeccionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius: 16px; overflow: hidden;">
+
+        <div class="modal-header" style="background: linear-gradient(90deg, #0066cc, #004a99); color: white;">
+          <h5 class="modal-title fw-bold" id="modalCrearSeccionLabel">
+            <i class="bi bi-diagram-3-fill me-2"></i>Nueva Sección
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+
+        <div class="modal-body p-4">
+
+          <div class="alert alert-info d-flex align-items-center gap-2 py-2 mb-4" style="border-radius: 10px; font-size: 0.9rem;">
+            <i class="bi bi-info-circle-fill"></i>
+            <span>Grado: <strong>{{ grado.nombre_grado }}</strong> &mdash; Cueanexo: <strong>{{ grado.cueanexo }}</strong></span>
+          </div>
+
+          <div id="modal-seccion-alerta" class="alert d-none mb-3" style="border-radius: 10px; font-size: 0.9rem;" role="alert"></div>
+
+          <form id="form-crear-seccion" novalidate>
+            {% csrf_token %}
+            <div class="row g-3">
+              <div class="col-6">
+                <label for="input-seccion" class="form-label fw-semibold">Sección</label>
+                <select class="form-select" id="input-seccion" name="seccion" required>
+                  <option value="">-- Elegir --</option>
+                  {% for val, label in opciones_secciones_choices %}
+                    <option value="{{ val }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-6">
+                <label for="input-turno" class="form-label fw-semibold">Turno</label>
+                <select class="form-select" id="input-turno" name="turno" required>
+                  <option value="">-- Elegir --</option>
+                  {% for val, label in opciones_turnos_choices %}
+                    <option value="{{ val }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </form>
+
+        </div>
+
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary fw-semibold" data-bs-dismiss="modal" style="border-radius: 10px;">Cancelar</button>
+          <button type="button" class="btn btn-warning fw-bold px-4" id="btn-confirmar-seccion" style="border-radius: 10px;">
+            <i class="bi bi-plus-circle-fill me-1"></i> Crear Sección
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+  document.getElementById('btn-confirmar-seccion').addEventListener('click', function () {
+    const seccion   = document.getElementById('input-seccion').value;
+    const turno     = document.getElementById('input-turno').value;
+    const alerta    = document.getElementById('modal-seccion-alerta');
+    const csrfToken = document.querySelector('#form-crear-seccion [name=csrfmiddlewaretoken]').value;
+
+    alerta.className = 'alert d-none mb-3';
+    alerta.textContent = '';
+
+    if (!seccion || !turno) {
+      alerta.className = 'alert alert-warning mb-3';
+      alerta.textContent = 'Por favor seleccioná una sección y un turno.';
+      return;
+    }
+
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Creando...';
+
+    const url = "{% url 'evaluaciones_educativas:fluidez_2026:crear_seccion' grado_public_id=grado.public_id %}";
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `seccion=${encodeURIComponent(seccion)}&turno=${encodeURIComponent(turno)}&csrfmiddlewaretoken=${encodeURIComponent(csrfToken)}`,
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        alerta.className = 'alert alert-success mb-3';
+        alerta.textContent = data.mensaje;
+
+        // Agregar la nueva opción a todos los selects de sección_turno de la tabla
+        document.querySelectorAll('select[name="seccion_turno"]').forEach(sel => {
+          const opt = document.createElement('option');
+          opt.value = data.public_id;
+          opt.textContent = `Sección: ${data.seccion} Turno: ${data.turno}`;
+          sel.appendChild(opt);
+        });
+
+        document.getElementById('input-seccion').value = '';
+        document.getElementById('input-turno').value   = '';
+
+        setTimeout(() => {
+          bootstrap.Modal.getInstance(document.getElementById('modalCrearSeccion')).hide();
+          alerta.className = 'alert d-none mb-3';
+        }, 1500);
+
+      } else {
+        alerta.className = 'alert alert-danger mb-3';
+        alerta.textContent = data.error;
+      }
+    })
+    .catch(() => {
+      alerta.className = 'alert alert-danger mb-3';
+      alerta.textContent = 'Error de red. Intentá de nuevo.';
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-plus-circle-fill me-1"></i> Crear Sección';
+    });
+  });
+  </script>
+  {% endif %}
+
   </body>
 </html>
