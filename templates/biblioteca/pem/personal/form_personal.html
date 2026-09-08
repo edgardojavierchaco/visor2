@@ -1,27 +1,21 @@
 {% extends 'biblioteca/layout.html' %}
-{% load static %}
 {% load widget_tweaks %}
 
-{% block head %}
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260908-5">
+{% block head %}    
 {% endblock %}
 
-{% block content_header %}{% endblock %}
-
 {% block content %}
-<main class="biblioteca-crud biblioteca-crud--formulario">
-    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='badge' %}
-    <form method="post" action="." enctype="multipart/form-data" class="biblioteca-crud__form">
-        <div class="card biblioteca-crud__panel">
+
+    <form method="post" action="." enctype="multipart/form-data">
+        <div class="card card-primary">
             <div class="card-header">
                 <h3 class="card-title">
                     {% if action == 'add' %}
-                        <span class="biblioteca-symbol" aria-hidden="true">add</span>
-                        Nuevo registro
+                        <i class="fas fa-plus"></i>
                     {% else %}
-                        <span class="biblioteca-symbol" aria-hidden="true">edit</span>
-                        Edición del registro
+                        <i class="fas fa-edit"></i>
                     {% endif %}
+                    {{ title }}
                 </h3>
             </div>
             <div class="card-body">
@@ -31,8 +25,7 @@
                 <!-- 🔥 BLOQUEO VISUAL -->
                 {% if bloqueado %}
                     <div class="alert alert-danger">
-                        <h5><span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">lock</span> Período bloqueado</h5>
-                        El último informe ya fue ENVIADO. No se puede modificar este período.
+                        ⚠ El último informe ya fue ENVIADO. No se puede modificar este período.
                     </div>
                 {% endif %}
 
@@ -52,119 +45,119 @@
             <!-- CUEANEXO -->    
             <div class="form-group row">
                 <div class="col-md-4">
-                    <label for="id_cueanexo">CUE Anexo</label>
+                    <label>CUE Anexo</label>
                     <input type="text" id="id_cueanexo" name="cueanexo" class="form-control" value="{{ cueanexo }}" readonly>
                 </div>
 
                 <div class="col-md-4">
-                    <label for="id_mes">Mes</label>
+                    <label>Mes</label>
                     {{ form.mes|add_class:"form-control"|attr:"id:id_mes"  }}
                 </div>
 
                 <div class="col-md-4">
-                    <label for="id_anio">Año</label>
+                    <label>Año</label>
                     {{ form.anio|add_class:"form-control"|attr:"id:id_anio"  }}
                 </div>
             </div>
 
             <div class="form-group row">
                 <div class="col-md-4">
-                    <label for="id_t_doc">Tipo Doc</label>
+                    <label>Tipo Doc</label>
                     {{ form.t_doc|add_class:"form-control" }}
                 </div>
 
                 <div class="col-md-4">
-                    <label for="id_n_doc">N.° Documento</label>
+                    <label>N° Documento</label>
                     {{ form.n_doc|add_class:"form-control text-right" }}
                 </div>
 
                 <div class="col-md-4">
-                    <label for="id_cuil">CUIL</label>
+                    <label>CUIL</label>
                     {{ form.cuil|add_class:"form-control text-right" }}
                 </div>
             </div>
 
             <div class="form-group row">
                 <div class="col-md-3">
-                    <label for="id_apellidos">Apellidos</label>
+                    <label>Apellidos</label>
                     {{ form.apellidos|add_class:"form-control" }}
                 </div>
 
                 <div class="col-md-3">
-                    <label for="id_nombres">Nombres</label>
+                    <label>Nombres</label>
                     {{ form.nombres|add_class:"form-control" }}
                 </div>
 
                 <div class="col-md-3">
-                    <label for="id_f_nac">Fecha Nac.</label>
+                    <label>Fecha Nac</label>
                     {{ form.f_nac|add_class:"form-control text-right" }}
                 </div>
 
                 <div class="col-md-3">
-                    <label for="id_cargo">Cargo</label>
+                    <label>Cargo</label>
                     {{ form.cargo|add_class:"form-control" }}
                 </div>
             </div>
 
             <div class="form-group row">
                 <div class="col-md-3">
-                    <label for="id_situacion_revista">Situación Revista</label>
+                    <label>Situación Revista</label>
                     {{ form.situacion_revista|add_class:"form-control" }}
                 </div>
 
                 <div class="col-md-3">
-                    <label for="id_f_ingreso">Fecha Ingreso</label>
+                    <label>Fecha Ingreso</label>
                     {{ form.f_ingreso|add_class:"form-control text-right" }}
                 </div>
 
                 <div class="col-md-3">
-                    <label for="id_f_hasta">Fecha Hasta</label>
+                    <label>Fecha Hasta</label>
                     {{ form.f_hasta|add_class:"form-control text-right" }}
                 </div>
 
                 <div class="col-md-3">
-                    <label for="id_turno">Turno</label>
+                    <label>Turno</label>
                     {{ form.turno|add_class:"form-control" }}
                 </div>
             </div>
 
             <div class="form-group row">
                 <div class="col-md-3">
-                    <label for="id_cuof">CUOF</label>
+                    <label>CUOF</label>
                     {{ form.cuof|add_class:"form-control" }}
                 </div>
 
                 <div class="col-md-3">
-                    <label for="id_cuof_anexo">CUOF Anexo</label>
+                    <label>CUOF Anexo</label>
                     {{ form.cuof_anexo|add_class:"form-control" }}
                 </div>
             </div>
 
             <div class="form-group row">
                 <div class="col-md-4">
-                    <label for="id_licencia_permiso">Licencia</label>
+                    <label>Licencia</label>
                     {{ form.licencia_permiso|add_class:"form-control" }}
                 </div>
 
                 <div class="col-md-4">
-                    <label for="id_f_desde_lic">Desde</label>
+                    <label>Desde</label>
                     {{ form.f_desde_lic|add_class:"form-control text-right" }}
                 </div>
 
                 <div class="col-md-4">
-                    <label for="id_f_hasta_lic">Hasta</label>
+                    <label>Hasta</label>
                     {{ form.f_hasta_lic|add_class:"form-control text-right" }}
                 </div>
             </div>
 
             <div class="form-group row">
                 <div class="col-md-6">
-                    <label for="id_observaciones">Observaciones</label>
+                    <label>Observaciones</label>
                     {{ form.observaciones|add_class:"form-control" }}
                 </div>
 
                 <div class="col-md-6">
-                    <label for="id_situacion_laboral">Situación Laboral</label>
+                    <label>Situación Laboral</label>
                     {{ form.situacion_laboral|add_class:"form-control" }}
                 </div>
             </div>
@@ -172,15 +165,14 @@
         </div>
             <div class="card-footer">
                 <button type="submit" class="btn btn-primary btn-flat">
-                    <span class="biblioteca-symbol" aria-hidden="true">save</span> Guardar registro
+                    <i class="fas fa-save"></i> Guardar registro
                 </button>
-                <a href="{{ list_url }}" class="btn btn-light btn-flat">
-                    <span class="biblioteca-symbol" aria-hidden="true">close</span> Cancelar
+                <a href="{{ list_url }}" class="btn btn-danger btn-flat">
+                    <i class="fas fa-times"></i> Cancelar
                 </a>
             </div>
         </div>
     </form>
-</main>
 <!-- ========================= -->
 <!-- 🔥 JAVASCRIPT -->
 <!-- ========================= -->

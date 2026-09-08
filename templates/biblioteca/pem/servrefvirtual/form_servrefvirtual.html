@@ -1,26 +1,20 @@
 {% extends 'biblioteca/layout.html' %}
-{% load static %}
 {% load widget_tweaks %}
 {% block head %}
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260908-5">
     {% block head_form %}
     {% endblock %}
 {% endblock %}
-{% block content_header %}{% endblock %}
 {% block content %}
-<main class="biblioteca-crud biblioteca-crud--formulario">
-    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='language' %}
-    <form id="formulario" method="post" action="." enctype="multipart/form-data" class="biblioteca-crud__form">
-        <div class="card biblioteca-crud__panel">
+    <form method="post" action="." enctype="multipart/form-data">
+        <div class="card card-primary">
             <div class="card-header">
                 <h3 class="card-title">
                     {% if action == 'add' %}
-                        <span class="biblioteca-symbol" aria-hidden="true">add</span>
-                        Nuevo registro
+                        <i class="fas fa-plus"></i>
                     {% else %}
-                        <span class="biblioteca-symbol" aria-hidden="true">edit</span>
-                        Edición del registro
+                        <i class="fas fa-edit"></i>
                     {% endif %}
+                    {{ title }}
                 </h3>
             </div>
             <div class="card-body">
@@ -30,7 +24,7 @@
                 {% if form.errors %}
                     <div class="alert alert-danger alert-dismissible">
                         <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                        <h5><span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">error</span> Ha ocurrido un error al querer guardar el registro</h5>
+                        <h5><i class="icon fas fa-ban"></i> Ha ocurrido un error al querer guardar el registro</h5>
                         <ul>
                             {% for field in form %}
                                 {% for error in field.errors %}
@@ -42,17 +36,17 @@
                 {% endif %}
 
                 <!-- Botón para mostrar el popup en la fila superior -->
-                <div class="form-group row biblioteca-crud__info-row">
+                <div class="form-group row">
                     <div class="col-md-12 text-right">
                         <button type="button" class="btn btn-info" id="showPopupBtn">
-                            <span class="biblioteca-symbol" aria-hidden="true">info</span> Información
+                            <i class="fas fa-info-circle"></i> Información 
                         </button>
                     </div>
                 </div>
 
                 <!-- Campo CUE Anexo (Solo lectura) -->
                 <div class="form-group row">
-                    <div class="col-md-4">
+                    <div class="col-md*4">
                         <label for="id_cueanexo">CUE Anexo:</label>
                         <input type="text" id="id_cueanexo" name="cueanexo" class="form-control" value="{{ cueanexo }}" readonly>
                     </div>
@@ -78,27 +72,26 @@
                         {{ form.turnos|add_class:"form-control" }}
                     </div>
                     <div class="col-md-3">
-                    <label for="id_varones">Varones:</label>
+                        <label for="id_tmaterial">Varones:</label>
                         {{ form.varones|add_class:"form-control text-center" }}
                     </div>
                     <div class="col-md-3">
-                    <label for="id_total">Total:</label>
+                        <label for="id_cantidad">Total:</label>
                         {{ form.total|add_class:"form-control text-center" }}
                     </div>
                 </div>               
 
             </div>
             <div class="card-footer">
-                <button type="submit" id="btnSubmit" class="btn btn-primary btn-flat">
-                    <span class="biblioteca-symbol" aria-hidden="true">save</span> Guardar registro
+                <button type="submit" class="btn btn-primary btn-flat">
+                    <i class="fas fa-save"></i> Guardar registro
                 </button>
-                <a href="{{ list_url }}" class="btn btn-light btn-flat">
-                    <span class="biblioteca-symbol" aria-hidden="true">close</span> Cancelar
+                <a href="{{ list_url }}" class="btn btn-danger btn-flat">
+                    <i class="fas fa-times"></i> Cancelar
                 </a>
             </div>
         </div>
     </form>
-</main>
 
 <!-- ========================= -->
 <!-- 🔥 JAVASCRIPT -->
@@ -214,7 +207,7 @@
     $('#showPopupBtn').click(function () {
         Swal.fire({
             title: 'Información',
-            html: `<p>En esta sección se cargan los registros de referencia virtual del período.</p>`,
+            html: `<p>En esta sección se carga el material bibliográfico correspondiente.</p>`,
             icon: 'info'
         });
     });
@@ -237,5 +230,16 @@ document.getElementById("id_cueanexo").value = "{{ cueanexo }}";
 document.getElementById("id_mes").value = "{{ mes }}";
 document.getElementById("id_anio").value = "{{ anno }}";
 
+        // Mostrar el popup con las traducciones cuando se hace clic en el botón
+        $('#showPopupBtn').click(function() {
+            Swal.fire({
+                title: 'Información',
+                html: `
+                    <p>En esta sección, ...</p>
+                    
+                `,
+                icon: 'info'
+            });
+        });
     </script>
 {% endblock %}
