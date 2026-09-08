@@ -1,33 +1,28 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
+{% block section_header %}
+    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='badge' %}
+{% endblock %}
+
 {% block head_list %}
     
 {% endblock %}
-<p>CREATE URL: {{ create_url }}</p>
 {% block columns %}
-   <thead>
-        <tr>
-            <th scope="col" style="width: 15%;">CUEANEXO</th>            
-            <th scope="col" style="width: 15%;">CUIL</th>            
-            <th scope="col" style="width: 20%;">APELLIDOS</th>
-            <th scope="col" style="width: 20%;">NOMBRES</th>
-            <th scope="col" style="width: 20%;">CARGO</th>
-            <th scope="col" style="width: 20%;">SIT_REVISTA</th>
-            <th scope="col" style="width: 20%;">F_INGRESO</th>
-            <th scope="col" style="width: 20%;">F_HASTA</th>
-            <th scope="col" style="width: 20%;">TURNO</th>
-            <th scope="col" style="width: 15%;">MES</th>
-            <th scope="col" style="width: 10%;">AÑO</th>
-            <th scope="col" style="width: 20%;">Botones</th>
-        </tr>
-    </thead>
-    <tbody>
-        <!-- Se cargan los datos vía AJAX -->
-    </tbody>
-    <tfoot>
-        
-    </tfoot> 
+    <tr>
+        <th scope="col" style="width: 15%;">CUEANEXO</th>
+        <th scope="col" style="width: 15%;">CUIL</th>
+        <th scope="col" style="width: 20%;">APELLIDOS</th>
+        <th scope="col" style="width: 20%;">NOMBRES</th>
+        <th scope="col" style="width: 20%;">CARGO</th>
+        <th scope="col" style="width: 20%;">SIT_REVISTA</th>
+        <th scope="col" style="width: 20%;">F_INGRESO</th>
+        <th scope="col" style="width: 20%;">F_HASTA</th>
+        <th scope="col" style="width: 20%;">TURNO</th>
+        <th scope="col" style="width: 15%;">MES</th>
+        <th scope="col" style="width: 10%;">AÑO</th>
+        <th scope="col" style="width: 20%;">Botones</th>
+    </tr>
 {% endblock %}
 
 {% block javascript %}

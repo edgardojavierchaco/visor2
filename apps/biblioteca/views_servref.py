@@ -400,6 +400,11 @@ class ServiciosReferenciaListView(LoginRequiredMixin, ListView):
         context['cueanexo'] = cueanexo
         context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
 
+        mes = self.request.GET.get('mes')
+        anio = self.request.GET.get('anio')
+
+        context['mes'] = mes
+        context['anno'] = anio
         context['title'] = 'Listado de Servicios de Referencia'
         context['create_url'] = reverse_lazy('bibliotecas:servref_create')
         context['list_url'] = reverse_lazy('bibliotecas:servref_list')
