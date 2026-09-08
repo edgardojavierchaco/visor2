@@ -62,9 +62,13 @@ class SeccionFluidez2026(models.Model):
 	
 	]
 	OPCIONES_TURNO = [
-	('MAÑANA', 'Mañana'),
-	('TARDE', 'Tarde'),
 	('DOBLE', 'Doble'),
+	('DOBLE EXTENDIDA', 'Doble Extendida'),
+	('MAÑANA', 'Mañana'),
+	('MAÑANA EXTENDIDA', 'Mañana Extendida'),
+	('TARDE', 'Tarde'),
+	('TARDE EXTENDIDA', 'Tarde Extendida'),
+	('VESPERTINO', 'Vespertino'),
 	]
 	public_id = models.UUIDField(default=uuid.uuid4,editable=False,unique=True)
 	seccion = models.CharField(max_length=20, choices=OPCIONES_SECCION, blank=True)

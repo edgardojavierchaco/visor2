@@ -163,7 +163,10 @@ def lista(request,fid_actual=None):
 		'opciones_comunidad_indigena': AlumnoFluidez2026.OPCIONES_COMUNIDAD_INDIGENA,
 		'opciones_discapacidad': AlumnoFluidez2026.OPCIONES_DISCAPACIDAD,
 		'fid_actual': fid_actual,
+		'opciones_secciones_choices': SeccionFluidez2026.OPCIONES_SECCION,
+		'opciones_turnos_choices': SeccionFluidez2026.OPCIONES_TURNO,
 	}
+
 	
 	return render(request, "fluidez_2026/lista.html", contexto)
 
@@ -220,6 +223,54 @@ def actualizar_seccion(request, alumno_public_id):
 	return redirect('evaluaciones_educativas:fluidez_2026:lista')
 
 #------------------fin logica de actualizar seccion-------------------
+
+
+@login_required
+def crear_seccion(request, grado_public_id):
+	"""
+	Crea una SeccionFluidez2026 para el grado recibido.
+	Responde siempre con JSON (para usarse desde un modal AJAX).
+	"""
+	if request.method != 'POST':
+		return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+	grado = get_object_or_404(GradoFluidez2026, public_id=grado_public_id)
+	seccion_val = request.POST.get('seccion', '').strip()
+	turno_val   = request.POST.get('turno', '').strip()
+
+	if not seccion_val or not turno_val:
+		return JsonResponse({'ok': False, 'error': 'Sección y turno son obligatorios.'}, status=400)
+
+	# Validar que los valores pertenezcan a las opciones del modelo
+	opciones_seccion = [s[0] for s in SeccionFluidez2026.OPCIONES_SECCION]
+	opciones_turno   = [t[0] for t in SeccionFluidez2026.OPCIONES_TURNO]
+
+	if seccion_val not in opciones_seccion:
+		return JsonResponse({'ok': False, 'error': 'Sección inválida.'}, status=400)
+	if turno_val not in opciones_turno:
+		return JsonResponse({'ok': False, 'error': 'Turno inválido.'}, status=400)
+
+	obj, created = SeccionFluidez2026.objects.get_or_create(
+		seccion=seccion_val,
+		turno=turno_val,
+		grado=grado,
+	)
+
+	if created:
+		return JsonResponse({
+			'ok': True,
+			'mensaje': f'Sección {seccion_val} - {obj.get_turno_display()} creada correctamente.',
+			'public_id': str(obj.public_id),
+			'seccion': seccion_val,
+			'turno': obj.get_turno_display(),
+		})
+	else:
+		return JsonResponse({
+			'ok': False,
+			'error': f'La sección {seccion_val} - {obj.get_turno_display()} ya existe para este grado.',
+		}, status=409)
+
+
 
 
 
