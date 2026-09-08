@@ -1,15 +1,12 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
-{% block section_header %}
-    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='menu_book' %}
-{% endblock %}
-
 {% block head_list %}
 <script src="{% static 'biblioteca/pem/matbibl/js/list_matbibl.js' %}"></script>
 {% endblock %}
 
 {% block columns %}
+<thead>
 <tr>
     <th>CUEANEXO</th>
     <th>MES</th>
@@ -20,14 +17,17 @@
     <th>CANTIDAD</th>
     <th>ACCIONES</th>
 </tr>
-{% endblock %}
+</thead>
 
-{% block footer %}
+<tbody></tbody>
+
+<tfoot>
 <tr>
     <th colspan="6">TOTAL</th>
     <th id="totales">0</th>
     <th></th>
 </tr>
+</tfoot>
 {% endblock %}
 
 {% block javascript %}

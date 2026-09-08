@@ -1,24 +1,12 @@
 {% extends 'biblioteca/layout.html' %}
-{% load static %}
 {% load widget_tweaks %}
-
-{% block head %}
-<link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260908-5">
-{% endblock %}
-
-{% block content_header %}{% endblock %}
-
 {% block content %}
-<main class="biblioteca-crud biblioteca-crud--eliminar">
-    {% block section_header %}
-        {% include 'biblioteca/includes/crud_section_header.html' with material_icon='delete' %}
-    {% endblock %}
-    <form method="post" action="." class="biblioteca-crud__form">
-        <div class="card biblioteca-crud__panel">
+    <form method="post" action=".">
+        <div class="card card-primary">
             <div class="card-header">
                 <h3 class="card-title">
-                    <span class="biblioteca-symbol" aria-hidden="true">delete</span>
-                    Confirmar eliminación
+                    <i class="fas fa-trash"></i>
+                    {{ title }}
                 </h3>
             </div>
             <div class="card-body">
@@ -27,7 +15,7 @@
                 {% if form.errors %}
                     <div class="alert alert-danger alert-dismissible">
                         <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                        <h5><span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">error</span> Ha ocurrido un error al querer guardar el registro</h5>
+                        <h5><i class="icon fas fa-ban"></i> Ha ocurrido un error al querer guardar el registro</h5>
                         <ul>
                             {% for field in form %}
                                 {% for error in field.errors %}
@@ -37,27 +25,21 @@
                         </ul>
                     </div>
                 {% endif %}
-                <div class="alert alert-danger biblioteca-crud__delete-message" role="alert">
-                    <span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">warning</span>
-                    <div>
-                        <h5>Esta acción eliminará el registro</h5>
-                        ¿Estás seguro de eliminar el registro N.° {{ object.id }}?
-                    </div>
+                <div class="alert alert-danger alert-dismissible">
+                    <h5><i class="icon fas fa-ban"></i> Notificación!</h5>
+                    ¿Estas seguro de eliminar el registro N°{{ object.id }}?
                 </div>
             </div>
             <div class="card-footer">
-                <button type="submit" class="btn btn-danger btn-flat">
-                    <span class="biblioteca-symbol" aria-hidden="true">delete</span>
-                    Sí, eliminar
+                <button type="submit" class="btn btn-primary btn-flat">
+                    <i class="fas fa-save"></i> Si, aceptar
                 </button>
-                <a href="{{ list_url }}" class="btn btn-light btn-flat">
-                    <span class="biblioteca-symbol" aria-hidden="true">close</span>
-                    Cancelar
+                <a href="{{ list_url }}" class="btn btn-danger btn-flat">
+                    <i class="fas fa-times"></i> Cancelar
                 </a>
             </div>
         </div>
     </form>
-</main>
     <script>
         $('form').on('submit', function (e) {
             e.preventDefault();

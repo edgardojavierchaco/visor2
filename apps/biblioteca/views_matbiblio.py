@@ -384,13 +384,6 @@ class MaterialBibliograficoListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        cueanexo = self.request.session.get('cueanexo_activo')
-        mes = self.request.GET.get('mes')
-        anio = self.request.GET.get('anio')
-
-        context['cueanexo'] = cueanexo
-        context['mes'] = mes
-        context['anno'] = anio
         context['title'] = 'Listado de Material Bibliográfico'
         context['create_url'] = reverse_lazy('bibliotecas:materialbibliografico_create')
         context['list_url'] = reverse_lazy('bibliotecas:materialbibliografico_list')

@@ -401,11 +401,6 @@ class ServiciosRefVirtualListView(LoginRequiredMixin, ListView):
         context['cueanexo'] = cueanexo
         context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
         
-        mes = self.request.GET.get('mes')
-        anio = self.request.GET.get('anio')
-
-        context['mes'] = mes
-        context['anno'] = anio
         context['title'] = 'Listado de Servicios de Referencia Virtual cargado'
         context['create_url'] = reverse_lazy('bibliotecas:servrefvirtual_create')
         context['list_url'] = reverse_lazy('bibliotecas:servrefvirtual_list')
