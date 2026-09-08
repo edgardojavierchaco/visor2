@@ -445,6 +445,10 @@
                     <div class="val" id="tot-interinos">—</div>
                     <div class="lbl">Interinos</div>
                 </div>
+                <div class="total-card">
+                    <div class="val" id="tot-sin_cubrir">—</div>
+                    <div class="lbl">Sin Cubrir</div>
+                </div>
             </div>
 
             <div class="table-section">
@@ -469,6 +473,7 @@
                                 <th>TOTALES</th>
                                 <th>TITULARES</th>
                                 <th>INTERINOS</th>
+                                <th>SIN CUBRIR</th>
                             </tr>
                         </thead>
                         <tbody id="table-body"></tbody>
@@ -478,6 +483,7 @@
                                 <th id="ft-total"></th>
                                 <th id="ft-titulares"></th>
                                 <th id="ft-interinos"></th>
+                                <th id="ft-sin_cubrir"></th>
                             </tr>
                         </tfoot>
                     </table>
@@ -807,7 +813,7 @@ function inicializarDT() {
             language: { url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" },
             columnDefs: [
                 { type: 'string', targets: [0] },
-                { type: 'num',    targets: [1, 2, 3] }
+                { type: 'num',    targets: [1, 2, 3, 4] }
             ],
             dom: '<"top"lBf>rt<"bottom"ip>',
             buttons: [
@@ -834,6 +840,7 @@ function inicializarDT() {
                             var totTotal     = limpiarNumero('ft-total');
                             var totTitulares = limpiarNumero('ft-titulares');
                             var totInterinos = limpiarNumero('ft-interinos');
+                            var totSinCubrir = limpiarNumero('ft-sin_cubrir');
 
                             var lastRow = $('sheetData row:last', sheet);
                             var newRow  = '<row>' +
@@ -841,6 +848,7 @@ function inicializarDT() {
                                 '<c s="' + estiloNumero + '"><v>' + totTotal     + '</v></c>' +
                                 '<c s="' + estiloNumero + '"><v>' + totTitulares + '</v></c>' +
                                 '<c s="' + estiloNumero + '"><v>' + totInterinos + '</v></c>' +
+                                '<c s="' + estiloNumero + '"><v>' + totSinCubrir + '</v></c>' +
                             '</row>';
                             lastRow.after(newRow);
 
@@ -889,6 +897,7 @@ function inicializarDT() {
                         var totTotal     = document.getElementById('ft-total').textContent     || '0';
                         var totTitulares = document.getElementById('ft-titulares').textContent || '0';
                         var totInterinos = document.getElementById('ft-interinos').textContent || '0';
+                        var totSinCubrir = document.getElementById('ft-sin_cubrir').textContent || '0';
 
                         $(win.document.body).find('table tbody').append(
                             '<tr style="background-color:#1a3a5c; color:#ffffff; font-weight:bold;">' +
@@ -896,6 +905,7 @@ function inicializarDT() {
                                 '<td>' + totTotal     + '</td>' +
                                 '<td>' + totTitulares + '</td>' +
                                 '<td>' + totInterinos + '</td>' +
+                                '<td>' + totSinCubrir + '</td>' +
                             '</tr>'
                         );
                     }
@@ -920,30 +930,34 @@ function renderTabla(data) {
     if (dt) { dt.destroy(); dt = null; }
     const tbody = document.getElementById('table-body');
     tbody.innerHTML = '';
-    let totTotal = 0, totTit = 0, totInt = 0;
+    let totTotal = 0, totTit = 0, totInt = 0, totSin = 0;
 
     data.forEach(item => {
         const nombreHora = item.horas || item.horas_catedra || item.descripcion || item.cargo || '-';
         const total      = parseInt(item.total)     || 0;
         const titular    = parseInt(item.titulares) || parseInt(item.titular) || 0;
         const interino   = parseInt(item.interinos) || 0;
+        const sinCubrir  = parseInt(item.sin_cubrir) || 0;
 
         totTotal += total;
         totTit   += titular;
         totInt   += interino;
+        totSin   += sinCubrir;
 
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${nombreHora}</td><td>${total}</td><td>${titular}</td><td>${interino}</td>`;
+        tr.innerHTML = `<td>${nombreHora}</td><td>${total}</td><td>${titular}</td><td>${interino}</td><td>${sinCubrir}</td>`;
         tbody.appendChild(tr);
     });
 
     document.getElementById('ft-total').textContent     = totTotal;
     document.getElementById('ft-titulares').textContent = totTit;
     document.getElementById('ft-interinos').textContent = totInt;
+    document.getElementById('ft-sin_cubrir').textContent = totSin;
 
     document.getElementById('tot-total').textContent     = totTotal.toLocaleString('es-AR');
     document.getElementById('tot-titulares').textContent = totTit.toLocaleString('es-AR');
     document.getElementById('tot-interinos').textContent = totInt.toLocaleString('es-AR');
+    document.getElementById('tot-sin_cubrir').textContent = totSin.toLocaleString('es-AR');
     document.getElementById('totals-bar').style.display  = 'flex';
 
     setTimeout(function() { if (dt) dt.columns.adjust(); }, 10);

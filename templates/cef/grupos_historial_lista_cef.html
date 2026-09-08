@@ -1,0 +1,80 @@
+<h3 class="mb-3">Bajas del ciclo {{ cef_context.ciclo.anio }}</h3>
+<div class="cef-table-section mb-4" data-cef-table-root>
+    <div class="cef-tools">
+        <div class="cef-tools-left"><span class="cef-tools-label">Mostrar</span><select data-cef-page-size><option value="10">10</option><option value="25">25</option><option value="50">50</option></select><span class="cef-tools-label">registros</span></div>
+        <div class="cef-tools-right"><div class="cef-search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input type="search" placeholder="Buscar…" data-cef-table-search><button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda"><i class="fa-solid fa-xmark"></i></button></div></div>
+    </div>
+    {% if grupos_bajas_ciclo %}
+        <div class="cef-table-wrap"><table class="cef-dt" data-cef-table>
+            <thead><tr><th>Actividad</th><th>Nro.</th><th>Estado</th><th>Turno</th><th>Horario</th><th>Días</th><th>Acciones</th></tr></thead>
+            <tbody>{% for grupo in grupos_bajas_ciclo %}<tr class="cef-row-inactive">
+                <td><strong>{{ grupo.actividad }}</strong></td><td>{{ grupo.numero }}</td>
+                <td><span class="badge text-bg-secondary">{{ grupo.get_estado_display }}</span><div class="small text-muted mt-1">{{ grupo.fecha_baja|date:"d/m/Y"|default:"-" }}</div><div class="small text-muted">{{ grupo.motivo_baja|default:"Sin motivo" }}</div></td>
+                <td>{{ grupo.turno_nombre_snapshot|default:grupo.turno }}</td><td>{{ grupo.hora_inicio|time:"H:i" }}–{{ grupo.hora_fin|time:"H:i" }}</td><td>{{ grupo.dias_texto|default:"-" }}</td>
+                <td class="cef-act-cell"><div class="d-flex flex-wrap gap-1 align-items-center">
+                        <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:gestionar_grupo' grupo.pk %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}origen=grupos&desde_historial=1">Ver grupo</a>
+                    {% if cef_context.puede_operar %}
+                        <a class="btn btn-outline-success btn-sm" href="{% url 'cef:carga_grupo' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}vista=historial&abrir_modal_reactivar=1&grupo_id={{ grupo.pk }}" data-cef-baja-open data-cef-baja-modal-id="modalBajaGrupoCef" data-cef-baja-modal-title="» Reactivar grupo" data-template-id="cef-reactivar-grupo-{{ grupo.pk }}"><i class="fa-solid fa-rotate-left"></i> Reactivar</a>
+                        <template id="cef-reactivar-grupo-{{ grupo.pk }}">{% include "cef/grupo_reactivar_cef_contenido.html" with reactivar_modal_grupo=grupo %}</template>
+                    {% endif %}
+                </div></td>
+            </tr>{% endfor %}</tbody>
+        </table></div>
+    {% elif cef_context.puede_consultar %}<div class="cef-empty-state">No hay bajas registradas en el ciclo seleccionado.</div>
+    {% else %}<div class="cef-empty-state">Seleccioná un CUE-Anexo para consultar historial.</div>{% endif %}
+    <div class="cef-tfoot"><span class="cef-tfoot-count" data-cef-table-count>{{ grupos_bajas_ciclo|length }} registros</span><div class="cef-tfoot-pagination" data-cef-table-pagination></div></div>
+</div>
+
+<h3 class="mb-3">Ciclos anteriores</h3>
+<div class="cef-table-section" data-cef-table-root>
+    <div class="cef-tools">
+        <div class="cef-tools-left">
+            <span class="cef-tools-label">Mostrar</span>
+            <select data-cef-page-size><option value="10">10</option><option value="25">25</option><option value="50">50</option></select>
+            <span class="cef-tools-label">registros</span>
+        </div>
+        <div class="cef-tools-right">
+            <div class="cef-search-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="search" placeholder="Buscar…" data-cef-table-search>
+                <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+    </div>
+    {% if grupos_historial %}
+        <div class="cef-table-wrap">
+            <table class="cef-dt" data-cef-table>
+                <thead><tr><th>Ciclo</th><th>Actividad</th><th>Nro.</th><th>Estado</th><th>Turno</th><th>Horario</th><th>Días</th><th>Consulta</th></tr></thead>
+                <tbody>
+                    {% for grupo in grupos_historial %}
+                        <tr class="{% if grupo.estado != 'activo' %}cef-row-inactive{% endif %}">
+                            <td><strong>{{ grupo.ciclo.anio }}</strong></td>
+                            <td>{{ grupo.actividad_nombre_snapshot|default:grupo.actividad }}</td>
+                            <td>{{ grupo.numero }}</td>
+                            <td>
+                                {% if grupo.ciclo.cerrado and grupo.estado == 'activo' %}
+                                    <span class="badge text-bg-secondary">Activo al cierre</span>
+                                {% else %}
+                                    <span class="badge text-bg-{% if grupo.estado == 'activo' %}success{% else %}secondary{% endif %}">{{ grupo.get_estado_display }}</span>
+                                {% endif %}
+                                {% if grupo.estado == 'baja' %}
+                                    <div class="small text-muted mt-1">{{ grupo.fecha_baja|date:"d/m/Y"|default:"-" }}</div>
+                                    <div class="small text-muted">{{ grupo.motivo_baja|default:"Sin motivo" }}</div>
+                                {% endif %}
+                            </td>
+                            <td>{{ grupo.turno_nombre_snapshot|default:grupo.turno }}</td>
+                            <td>{{ grupo.hora_inicio|time:"H:i" }}–{{ grupo.hora_fin|time:"H:i" }}</td>
+                            <td>{{ grupo.dias_texto|default:"-" }}</td>
+                            <td><a class="btn btn-outline-primary btn-sm" href="{% url 'cef:gestionar_grupo' grupo.pk %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}origen=grupos&modo=historial">Ver grupo</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% elif cef_context.puede_consultar %}
+        <div class="cef-empty-state">No hay registros de ciclos anteriores.</div>
+    {% else %}
+        <div class="cef-empty-state">Seleccioná un CUE-Anexo para consultar historial.</div>
+    {% endif %}
+    <div class="cef-tfoot"><span class="cef-tfoot-count" data-cef-table-count>{{ grupos_historial|length }} registros</span><div class="cef-tfoot-pagination" data-cef-table-pagination></div></div>
+</div>

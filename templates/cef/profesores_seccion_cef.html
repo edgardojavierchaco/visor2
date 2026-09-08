@@ -1,0 +1,95 @@
+<style>
+    .cef-profesor-dropdown-menu {
+        border-color: var(--border-strong);
+        box-shadow: var(--shadow-lg);
+        min-width: 260px;
+        padding: .35rem;
+    }
+
+    .cef-profesor-dropdown-menu .dropdown-item {
+        background: transparent;
+        border: 0;
+        border-radius: var(--r-sm);
+        color: var(--slate-800);
+        display: block;
+        font-size: var(--fs-sm);
+        height: auto;
+        justify-content: flex-start;
+        line-height: 1.25;
+        margin: 0;
+        min-height: 0;
+        padding: .45rem .55rem;
+        text-align: left;
+        white-space: normal;
+        width: 100%;
+    }
+
+    .cef-profesor-dropdown-menu .dropdown-item:hover,
+    .cef-profesor-dropdown-menu .dropdown-item:focus {
+        background: var(--blue-50);
+        color: var(--blue-900);
+    }
+
+    .cef-profesor-dropdown-menu .dropdown-item.disabled {
+        background: var(--surface-soft);
+        color: var(--slate-600);
+        cursor: default;
+        opacity: .85;
+    }
+
+    .cef-profesor-dropdown-menu .dropdown-item span,
+    .cef-profesor-dropdown-menu .dropdown-item small {
+        display: block;
+    }
+
+    .cef-profesor-dropdown-menu .dropdown-item small {
+        color: var(--text-faint);
+        font-size: var(--fs-xs);
+        margin-top: .15rem;
+    }
+
+    .cef-profesor-dropdown-menu .dropdown-item.disabled small {
+        color: var(--green-700);
+        font-weight: 700;
+    }
+</style>
+
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <h2 class="cef-panel-title">Profesores</h2>
+        {% if vista == 'actuales' and cef_context.puede_operar %}<div class="cef-panel-actions">
+            {% if cef_partial %}
+                <a class="btn btn-primary" href="{{ modal_action_url }}">
+                    <i class="fa-solid fa-chalkboard-user"></i> Agregar profesor
+                </a>
+            {% else %}
+                <button class="btn btn-primary" type="button" data-open-docentes-modal>
+                    <i class="fa-solid fa-chalkboard-user"></i> Agregar profesor
+                </button>
+            {% endif %}
+        </div>{% endif %}
+    </div>
+
+    <div class="cef-panel-body">
+        <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+                <a class="nav-link{% if vista == 'actuales' %} active{% endif %}" href="{% url 'cef:profesores' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=actuales" data-cef-view-link data-cef-fragment-url="{% url 'cef:profesores_fragmento' %}">Actuales</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link{% if vista == 'historial' %} active{% endif %}" href="{% url 'cef:profesores' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=historial" data-cef-view-link data-cef-fragment-url="{% url 'cef:profesores_fragmento' %}">Historial</a>
+            </li>
+        </ul>
+        <div data-cef-fragment="profesores-banco" data-cef-view-content>
+            {% if vista == 'historial' %}
+                {% include "cef/profesores_historial_lista_cef.html" %}
+            {% else %}
+                {% include "cef/profesores_lista_cef.html" %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if cef_partial and cef_context.puede_operar %}
+    {% include "cef/asignar_profesor_grupo_modal_cef.html" %}
+    {% if vista == 'actuales' %}{% include "cef/profesor_baja_cef_modal.html" %}{% endif %}
+{% endif %}

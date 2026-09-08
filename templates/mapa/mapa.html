@@ -95,7 +95,7 @@ const API_URL = "{% url 'mapas:api_mapa' %}";
 
 const map = L.map('map').setView([-25.38, -60.99], 8);
 
-const osm = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+const osm = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2s9h_1_bd646db33e2c8813a2d9b537', {
     subdomains: 'abcd',
     attribution: '&copy; <a href="https://www.carto.com/">CARTO</a> &copy; OpenStreetMap',
     maxZoom: 20

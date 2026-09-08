@@ -1,0 +1,211 @@
+{% extends "cef/base_operativo_cef.html" %}
+
+{% block cef_subtitle %}Previsualización sin escritura previa a la generación anual real.{% endblock %}
+
+{% block cef_content %}
+<div class="cef-panel">
+    <div class="cef-panel-head">
+        <div>
+            <span class="cef-section-kicker">Previsualización anual</span>
+            <h2 class="cef-panel-title">
+                Ciclo {{ resultado.origen.anio }}
+                <span>→ {{ resultado.destino_anio }}</span>
+            </h2>
+        </div>
+        <div class="cef-panel-actions">
+            <span class="badge text-bg-{% if resultado.bloqueado %}danger{% else %}success{% endif %}">
+                {% if resultado.bloqueado %}BLOQUEADO{% else %}LISTO{% endif %}
+            </span>
+            <a class="btn btn-outline-secondary" href="{{ volver_url }}">
+                <i class="fa-solid fa-arrow-left"></i> Volver a Ciclos
+            </a>
+        </div>
+    </div>
+
+    <div class="cef-panel-body">
+        <div class="alert alert-info">
+            <strong>PREVISUALIZACIÓN · sin escritura.</strong>
+            Este análisis responde qué ocurriría si el siguiente ciclo se generara hoy. No crea ciclos, no copia filas, no cambia estados y no produce bajas.
+        </div>
+
+        <div class="cef-context-summary mb-4">
+            <div class="cef-context-summary-item">
+                <span>Ciclo origen</span>
+                <strong>{{ resultado.origen.anio }} · {% if resultado.origen.cerrado %}Cerrado{% else %}Actual y abierto{% endif %}</strong>
+            </div>
+            <div class="cef-context-summary-item">
+                <span>Ciclo proyectado</span>
+                <strong>{{ resultado.destino_anio }}</strong>
+            </div>
+            <div class="cef-context-summary-item">
+                <span>Fecha simulada</span>
+                <strong>{{ resultado.fecha_generacion_prevista|date:"d/m/Y" }}</strong>
+            </div>
+            <div class="cef-context-summary-item">
+                <span>CEF involucrados</span>
+                <strong>{{ resultado.cantidad_cueanexos }}</strong>
+            </div>
+        </div>
+
+        <section class="cef-card mb-4">
+            <div class="cef-card-header">
+                <h3><i class="fa-solid fa-list-check me-2"></i>Conteos de la proyección</h3>
+                <span class="badge text-bg-{% if resultado.bloqueado %}danger{% else %}success{% endif %}">
+                    {{ resultado.totales.errores }} errores · {{ resultado.totales.advertencias }} advertencias
+                </span>
+            </div>
+            <div class="cef-card-body">
+                <div class="cef-table-wrap">
+                    <table class="cef-dt">
+                        <thead>
+                            <tr>
+                                <th>Entidad</th>
+                                <th>Encontrados en {{ resultado.origen.anio }}</th>
+                                <th>Proyectables a {{ resultado.destino_anio }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for categoria in resultado.categorias %}
+                                <tr>
+                                    <td><strong>{{ categoria.label }}</strong></td>
+                                    <td>{{ categoria.total.encontrados }}</td>
+                                    <td>{{ categoria.total.proyectables }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="cef-card mb-4">
+            <div class="cef-card-header">
+                <h3><i class="fa-solid fa-circle-exclamation me-2"></i>Inconsistencias bloqueantes</h3>
+                <span class="badge text-bg-{% if resultado.errores %}danger{% else %}success{% endif %}">
+                    {{ resultado.errores|length }}
+                </span>
+            </div>
+            <div class="cef-card-body">
+                {% if resultado.errores %}
+                    {% for error in resultado.errores %}
+                        <div class="alert alert-danger mb-2">
+                            {% if error.cueanexo %}<strong>CEF {{ error.cueanexo }}:</strong>{% endif %}
+                            {{ error.mensaje }}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="alert alert-success mb-0">
+                        No se detectaron inconsistencias estructurales bloqueantes.
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="cef-card mb-4">
+            <div class="cef-card-header">
+                <h3><i class="fa-solid fa-triangle-exclamation me-2"></i>Advertencias</h3>
+                <span class="badge text-bg-warning">{{ resultado.advertencias|length }}</span>
+            </div>
+            <div class="cef-card-body">
+                {% if resultado.advertencias %}
+                    {% for advertencia in resultado.advertencias %}
+                        <div class="alert alert-warning mb-2">
+                            {% if advertencia.cueanexo %}<strong>CEF {{ advertencia.cueanexo }}:</strong>{% endif %}
+                            {{ advertencia.mensaje }}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="cef-empty-state">No hay advertencias informativas.</div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="cef-card mb-4">
+            <div class="cef-card-header">
+                <h3><i class="fa-solid fa-building me-2"></i>Desglose por CUE-Anexo</h3>
+                <span class="badge text-bg-primary">{{ resultado.por_cef|length }} CEF</span>
+            </div>
+            <div class="cef-card-body">
+                {% if resultado.por_cef %}
+                    <div class="cef-table-wrap">
+                        <table class="cef-dt">
+                            <thead>
+                                <tr>
+                                    <th>CUE-Anexo</th>
+                                    <th>Datos</th>
+                                    <th>Grupos</th>
+                                    <th>Días</th>
+                                    <th>Alumnos</th>
+                                    <th>Profesores</th>
+                                    <th>Inscripciones</th>
+                                    <th>Asignaciones</th>
+                                    <th>Materiales</th>
+                                    <th>Distribuciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cef in resultado.por_cef %}
+                                    <tr>
+                                        <td><strong>{{ cef.cueanexo }}</strong></td>
+                                        <td>{{ cef.conteos.datos_relevamiento.proyectables }}</td>
+                                        <td>{{ cef.conteos.grupos.proyectables }}</td>
+                                        <td>{{ cef.conteos.dias.proyectables }}</td>
+                                        <td>{{ cef.conteos.alumnos.proyectables }}</td>
+                                        <td>{{ cef.conteos.docentes.proyectables }}</td>
+                                        <td>{{ cef.conteos.inscripciones.proyectables }}</td>
+                                        <td>{{ cef.conteos.asignaciones.proyectables }}</td>
+                                        <td>{{ cef.conteos.inventario_materiales.proyectables }}</td>
+                                        <td>{{ cef.conteos.inventario_distribuciones.proyectables }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-muted small mt-2 mb-0">Cantidad de registros que se copiarán al nuevo ciclo.</p>
+                {% else %}
+                    <div class="cef-empty-state">No se encontraron datos asociados a CUE-Anexo en el ciclo origen.</div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="cef-card">
+            <div class="cef-card-header">
+                <h3><i class="fa-solid fa-calendar-check me-2"></i>Generar nuevo ciclo</h3>
+                <span class="badge text-bg-{% if resultado.bloqueado or resultado.requiere_cierre %}secondary{% else %}primary{% endif %}">
+                    {% if resultado.bloqueado %}Revisión pendiente{% elif resultado.requiere_cierre %}Requiere cierre{% else %}Listo para generar{% endif %}
+                </span>
+            </div>
+            <div class="cef-card-body">
+                {% if resultado.bloqueado %}
+                    <div class="alert alert-warning mb-0">
+                        Corregí las inconsistencias bloqueantes y volvé a ejecutar la previsualización antes de generar el ciclo.
+                    </div>
+                {% elif resultado.requiere_cierre %}
+                    <div class="alert alert-warning">
+                        El ciclo {{ resultado.origen.anio }} aún está abierto. Cerralo antes de generar el ciclo {{ resultado.destino_anio }}.
+                    </div>
+                    <a class="btn btn-outline-primary" href="{{ volver_url }}">
+                        <i class="fa-solid fa-arrow-left me-1"></i>Volver a Ciclos para cerrarlo
+                    </a>
+                {% else %}
+                    <p>
+                        Al confirmar, se creará el ciclo {{ resultado.destino_anio }} con la información detallada en esta previsualización. El ciclo {{ resultado.origen.anio }} seguirá cerrado y no se modificará.
+                    </p>
+                    <form method="post"
+                          action="{% url 'cef:generar_ciclo_anual' resultado.origen.id %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}"
+                          data-cef-confirm-submit
+                          data-cef-confirm-title="Generar ciclo {{ resultado.destino_anio }}"
+                          data-cef-confirm-message="Se creará el ciclo {{ resultado.destino_anio }} con la información mostrada en esta previsualización."
+                          data-cef-confirm-entity="El ciclo {{ resultado.origen.anio }} seguirá cerrado y no se modificará.">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa-solid fa-calendar-plus me-1"></i>Generar ciclo {{ resultado.destino_anio }}
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </section>
+
+    </div>
+</div>
+{% endblock %}

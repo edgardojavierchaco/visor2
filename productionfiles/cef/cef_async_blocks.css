@@ -1,0 +1,22 @@
+.cef-inline-loading,
+.cef-async-error,
+.cef-async-empty {
+    align-items: center;
+    color: var(--text-muted, #475569);
+    display: flex;
+    flex-direction: column;
+    gap: .65rem;
+    justify-content: center;
+    min-height: 9rem;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.cef-inline-loading .spinner-border {
+    color: var(--primary, #2d7dd2);
+}
+
+.cef-async-error {
+    color: var(--red-700, #b91c1c);
+}
+
