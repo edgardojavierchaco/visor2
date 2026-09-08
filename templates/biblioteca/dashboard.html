@@ -1,1 +1,91 @@
 {% extends 'biblioteca/layout.html' %}
+{% load static %}
+
+{% block head %}
+<link rel="stylesheet" href="{% static 'biblioteca/css/inicio.css' %}?v=20260908">
+{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+<main class="biblioteca-screen biblioteca-inicio" aria-labelledby="biblioteca-inicio-titulo">
+    {% include 'biblioteca/includes/operational_hero.html' with hero_id='biblioteca-inicio-titulo' hero_icon='local_library' hero_title='BIBLIOTECA' hero_subtitle='Relevamiento y declaración estadística de bibliotecas educativas' hero_period=periodo_pendiente only %}
+
+    <section class="biblioteca-periodo" aria-labelledby="biblioteca-periodo-titulo">
+        <div class="biblioteca-periodo__cabecera">
+            {% if periodo_pendiente %}
+                <span class="biblioteca-periodo__cabecera-icono" aria-hidden="true">
+                    <span class="biblioteca-symbol">event_note</span>
+                </span>
+            {% endif %}
+            <div>
+                <p class="biblioteca-periodo__rotulo">PERÍODO ACTUAL</p>
+                <h2 id="biblioteca-periodo-titulo">
+                    {% if periodos_pendientes_ambiguos %}
+                        No se pudo determinar un único período
+                    {% elif periodo_pendiente %}
+                        Relevamiento pendiente de envío
+                    {% else %}
+                        Sin período pendiente
+                    {% endif %}
+                </h2>
+            </div>
+        </div>
+
+        {% if periodos_pendientes_ambiguos %}
+            <div class="biblioteca-periodo__aviso" role="status">
+                <span class="biblioteca-periodo__icono" aria-hidden="true">
+                    <span class="biblioteca-symbol">warning</span>
+                </span>
+                <div>
+                    <p class="biblioteca-periodo__mensaje">Hay más de un período pendiente de envío.</p>
+                    <p class="biblioteca-periodo__detalle">
+                        No se seleccionó uno como período actual porque el sistema no define cuál corresponde.
+                    </p>
+                </div>
+            </div>
+        {% elif periodo_pendiente %}
+            <dl class="biblioteca-periodo__datos">
+                <div class="biblioteca-periodo__dato biblioteca-periodo__dato--principal">
+                    <dt>Mes y año</dt>
+                    <dd>{{ periodo_pendiente.meses|capfirst }} {{ periodo_pendiente.annos }}</dd>
+                </div>
+                <div class="biblioteca-periodo__dato">
+                    <dt>CUE-Anexo</dt>
+                    <dd>{{ periodo_pendiente.cueanexo }}</dd>
+                </div>
+                <div class="biblioteca-periodo__dato">
+                    <dt>Estado</dt>
+                    <dd><span class="biblioteca-periodo__estado">PENDIENTE DE ENVÍO</span></dd>
+                </div>
+            </dl>
+
+            <div class="biblioteca-periodo__pie">
+                <p>Podés continuar con la carga y revisar el informe antes de finalizar el envío.</p>
+                <a class="btn btn-primary biblioteca-periodo__accion"
+                   href="{% url 'bibliotecas:carga' %}">
+                    Ir a carga
+                    <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
+                </a>
+            </div>
+        {% else %}
+            <div class="biblioteca-periodo__vacio">
+                <span class="biblioteca-periodo__icono" aria-hidden="true">
+                    <span class="biblioteca-symbol">event</span>
+                </span>
+                <div class="biblioteca-periodo__vacio-contenido">
+                    <p class="biblioteca-periodo__mensaje">No hay un período pendiente de carga.</p>
+                    <p class="biblioteca-periodo__detalle">
+                        Creá un nuevo período para comenzar el próximo relevamiento.
+                    </p>
+                </div>
+                <a class="btn btn-primary biblioteca-periodo__accion"
+                   href="{% url 'bibliotecas:generar_info' %}">
+                    Nuevo período
+                    <span class="biblioteca-symbol" aria-hidden="true">add</span>
+                </a>
+            </div>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}

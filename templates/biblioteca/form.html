@@ -1,21 +1,28 @@
 {% extends 'biblioteca/layout.html' %}
+{% load static %}
 {% load widget_tweaks %}
 
 {% block head %}
+<link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260908-5">
 {% endblock %}
 
+{% block content_header %}{% endblock %}
+
 {% block content %}
-<form method="post" action="." enctype="multipart/form-data">
-    <div class="card card-primary">
+<main class="biblioteca-crud biblioteca-crud--formulario">
+{% include 'biblioteca/includes/crud_section_header.html' with material_icon='menu_book' %}
+<form method="post" action="." enctype="multipart/form-data" class="biblioteca-crud__form">
+    <div class="card biblioteca-crud__panel">
         
         <div class="card-header">
             <h3 class="card-title">
                 {% if action == 'add' %}
-                    <i class="fas fa-plus"></i>
+                    <span class="biblioteca-symbol" aria-hidden="true">add</span>
+                    Nuevo registro
                 {% else %}
-                    <i class="fas fa-edit"></i>
+                    <span class="biblioteca-symbol" aria-hidden="true">edit</span>
+                    Edición del registro
                 {% endif %}
-                {{ title }}
             </h3>
         </div>
 
@@ -27,7 +34,8 @@
             <!-- 🔥 BLOQUEO VISUAL -->
             {% if bloqueado %}
                 <div class="alert alert-danger">
-                    ⚠ El último informe ya fue ENVIADO. No se puede modificar este período.
+                    <h5><span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">lock</span> Período bloqueado</h5>
+                    El último informe ya fue ENVIADO. No se puede modificar este período.
                 </div>
             {% endif %}
 
@@ -35,7 +43,7 @@
             {% if form.errors %}
                 <div class="alert alert-danger alert-dismissible">
                     <button type="button" class="close" data-dismiss="alert">×</button>
-                    <h5><i class="icon fas fa-ban"></i> Error al guardar</h5>
+                    <h5><span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">error</span> Error al guardar</h5>
                     <ul>
                         {% for field in form %}
                             {% for error in field.errors %}
@@ -47,28 +55,27 @@
             {% endif %}
 
             <!-- BOTÓN INFO -->
-            <div class="form-group row">
-                <div class="col-md-12 text-right">
+            <div class="biblioteca-crud__info-row">
                     <button type="button" class="btn btn-info" id="showPopupBtn">
-                        <i class="fas fa-info-circle"></i> Información
+                        <span class="biblioteca-symbol" aria-hidden="true">info</span>
+                        Información
                     </button>
-                </div>
             </div>
 
             <!-- CUEANEXO -->
             <div class="form-group row">
                 <div class="col-md-4">
-                    <label>CUE Anexo:</label>
+                    <label for="id_cueanexo">CUE Anexo:</label>
                     <input type="text" class="form-control" name="cueanexo" id="id_cueanexo" value="{{ cueanexo }}" readonly>
                 </div>
 
                 <div class="col-md-4">
-                    <label>Mes:</label>
+                    <label for="id_mes">Mes:</label>
                     {{ form.mes|add_class:"form-control"|attr:"id:id_mes" }}
                 </div>
 
                 <div class="col-md-4">
-                    <label>Año:</label>
+                    <label for="id_anio">Año:</label>
                     {{ form.anio|add_class:"form-control"|attr:"id:id_anio" }}
                 </div>
             </div>
@@ -76,22 +83,22 @@
             <!-- CAMPOS -->
             <div class="row mt-3">
                 <div class="col-md-3">
-                    <label>Servicio:</label>
+                    <label for="id_servicio">Servicio:</label>
                     {{ form.servicio|add_class:"form-control" }}
                 </div>
 
                 <div class="col-md-3">
-                    <label>Turnos:</label>
+                    <label for="id_turnos">Turnos:</label>
                     {{ form.turnos|add_class:"form-control" }}
                 </div>
 
                 <div class="col-md-3">
-                    <label>Tipo Material:</label>
+                    <label for="id_t_material">Tipo Material:</label>
                     {{ form.t_material|add_class:"form-control text-center" }}
                 </div>
 
                 <div class="col-md-3">
-                    <label>Cantidad:</label>
+                    <label for="id_cantidad">Cantidad:</label>
                     {{ form.cantidad|add_class:"form-control text-center" }}
                 </div>
             </div>
@@ -100,16 +107,19 @@
 
         <div class="card-footer">
             <button type="submit" class="btn btn-primary btn-flat">
-                <i class="fas fa-save"></i> Guardar registro
+                <span class="biblioteca-symbol" aria-hidden="true">save</span>
+                Guardar registro
             </button>
 
-            <a href="{{ list_url }}" class="btn btn-danger btn-flat">
-                <i class="fas fa-times"></i> Cancelar
+            <a href="{{ list_url }}" class="btn btn-light btn-flat">
+                <span class="biblioteca-symbol" aria-hidden="true">close</span>
+                Cancelar
             </a>
         </div>
 
     </div>
 </form>
+</main>
 
 <!-- ========================= -->
 <!-- 🔥 JAVASCRIPT -->
