@@ -1,0 +1,49 @@
+{% load biblioteca_nav %}
+{% with current=request.resolver_match.url_name %}
+{% with section=current|biblioteca_nav_section %}
+<nav class="biblioteca-module-nav" aria-label="Navegación de Biblioteca">
+    <div class="biblioteca-module-nav__list">
+        <span class="biblioteca-module-nav__brand">
+            <span class="biblioteca-module-nav__brand-icon" aria-hidden="true">
+                <span class="biblioteca-symbol">local_library</span>
+            </span>
+            <span class="biblioteca-module-nav__brand-copy">
+                <strong>Biblioteca</strong>
+                <small>Relevamiento estadístico</small>
+            </span>
+        </span>
+
+        <a href="{% url 'bibliotecas:dashboard' %}"
+           class="biblioteca-module-nav__link"
+           {% if section == 'inicio' %}aria-current="page"{% endif %}>
+            <span class="biblioteca-symbol" aria-hidden="true">home</span>
+            <span>Inicio</span>
+        </a>
+        <a href="{% url 'bibliotecas:periodos' %}"
+           class="biblioteca-module-nav__link"
+           {% if section == 'periodos' %}aria-current="page"{% endif %}>
+            <span class="biblioteca-symbol" aria-hidden="true">calendar_month</span>
+            <span>Períodos</span>
+        </a>
+        <a href="{% url 'bibliotecas:carga' %}"
+           class="biblioteca-module-nav__link"
+           {% if section == 'carga' %}aria-current="page"{% endif %}>
+            <span class="biblioteca-symbol" aria-hidden="true">edit_note</span>
+            <span>Carga</span>
+        </a>
+        <a href="{% url 'bibliotecas:informe' %}"
+           class="biblioteca-module-nav__link"
+           {% if section == 'informe' %}aria-current="page"{% endif %}>
+            <span class="biblioteca-symbol" aria-hidden="true">description</span>
+            <span>Informe</span>
+        </a>
+        <span class="biblioteca-module-nav__link biblioteca-module-nav__link--disabled"
+              aria-disabled="true"
+              title="Sección aún no disponible">
+            <span class="biblioteca-symbol" aria-hidden="true">help</span>
+            <span>Guía de uso</span>
+        </span>
+    </div>
+</nav>
+{% endwith %}
+{% endwith %}

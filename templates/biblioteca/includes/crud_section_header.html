@@ -1,0 +1,31 @@
+<header class="biblioteca-crud__encabezado">
+    <div class="biblioteca-crud__identidad">
+        <span class="biblioteca-crud__icono" aria-hidden="true">
+            <span class="biblioteca-symbol">{{ material_icon }}</span>
+        </span>
+        <div class="biblioteca-crud__titulo">
+            <p class="biblioteca-crud__rotulo">Sección del relevamiento</p>
+            <h1>{{ title }}</h1>
+            {% if cueanexo or mes or anno %}
+                <div class="biblioteca-crud__contexto" aria-label="Contexto del relevamiento">
+                    {% if cueanexo %}
+                        <span>
+                            <span class="biblioteca-symbol" aria-hidden="true">{% if cue_icon %}{{ cue_icon }}{% else %}account_balance{% endif %}</span>
+                            CUE-Anexo <strong>{{ cueanexo }}</strong>
+                        </span>
+                    {% endif %}
+                    {% if mes or anno %}
+                        <span>
+                            <span class="biblioteca-symbol" aria-hidden="true">calendar_month</span>
+                            Período <strong>{{ mes|default:"—"|capfirst }} {{ anno|default:"" }}</strong>
+                        </span>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <a href="{% url 'bibliotecas:carga' %}" class="btn biblioteca-crud__volver">
+        <span class="biblioteca-symbol" aria-hidden="true">arrow_back</span>
+        Volver a Carga
+    </a>
+</header>

@@ -44,6 +44,7 @@ class GenerarInformeView(LoginRequiredMixin, FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['title'] = 'Biblioteca | Nuevo período'
         context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
         return context
 

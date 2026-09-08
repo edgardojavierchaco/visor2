@@ -1,0 +1,117 @@
+{% extends 'biblioteca/layout.html' %}
+{% load static %}
+
+{% block head %}
+<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260908">
+{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+<main class="biblioteca-screen biblioteca-operativa biblioteca-carga" aria-labelledby="biblioteca-carga-titulo">
+    {% include 'biblioteca/includes/operational_hero.html' with hero_id='biblioteca-carga-titulo' hero_icon='edit_note' hero_title='CARGA DEL INFORME' hero_subtitle='Completá las secciones del relevamiento' hero_period=periodo_pendiente only %}
+
+    {% if periodos_pendientes_ambiguos %}
+        <section class="biblioteca-bloque" aria-labelledby="biblioteca-carga-ambigua">
+            <div class="biblioteca-aviso biblioteca-aviso--advertencia" role="status">
+                <span class="biblioteca-aviso__icono" aria-hidden="true">
+                    <span class="biblioteca-symbol">warning</span>
+                </span>
+                <div>
+                    <h2 id="biblioteca-carga-ambigua" class="biblioteca-aviso__titulo">
+                        Hay más de un período pendiente de envío.
+                    </h2>
+                    <p class="biblioteca-aviso__texto">
+                        No se habilitó la carga porque no existe una regla segura para elegir uno.
+                    </p>
+                    <a href="{% url 'bibliotecas:periodos' %}" class="biblioteca-aviso__enlace">
+                        Volver a Períodos
+                    </a>
+                </div>
+            </div>
+        </section>
+    {% elif not periodo_pendiente %}
+        <section class="biblioteca-bloque" aria-labelledby="biblioteca-carga-vacia">
+            <div class="biblioteca-aviso biblioteca-aviso--vacio" role="status">
+                <span class="biblioteca-aviso__icono" aria-hidden="true">
+                    <span class="biblioteca-symbol">folder_open</span>
+                </span>
+                <div>
+                    <h2 id="biblioteca-carga-vacia" class="biblioteca-aviso__titulo">
+                        No hay un período pendiente de carga.
+                    </h2>
+                    <p class="biblioteca-aviso__texto">
+                        Revisá el historial o creá un nuevo período desde Períodos.
+                    </p>
+                    <a href="{% url 'bibliotecas:periodos' %}" class="biblioteca-aviso__enlace">
+                        Ir a Períodos
+                    </a>
+                </div>
+            </div>
+        </section>
+    {% else %}
+        <section class="biblioteca-carga__resumen" aria-labelledby="biblioteca-carga-periodo">
+            <div class="biblioteca-carga__periodo">
+                <p class="biblioteca-operativa__rotulo">PERÍODO PENDIENTE</p>
+                <h2 id="biblioteca-carga-periodo">
+                    {{ periodo_pendiente.meses|capfirst }} {{ periodo_pendiente.annos }}
+                </h2>
+                <span>CUE-Anexo {{ periodo_pendiente.cueanexo }}</span>
+            </div>
+            <div class="biblioteca-carga__avance">
+                <strong>{{ secciones_con_registros }} de 11</strong>
+                <span>secciones con registros</span>
+            </div>
+            <span class="biblioteca-estado biblioteca-estado--pendiente">PENDIENTE DE ENVÍO</span>
+            {% if primera_sin_registros %}
+                <a class="btn btn-primary biblioteca-operativa__accion"
+                    href="{{ primera_sin_registros.url }}">
+                    Continuar carga
+                    <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
+                </a>
+            {% endif %}
+        </section>
+
+        {% if todas_con_registros %}
+            <p class="biblioteca-carga__todas" role="status">
+                <span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">check_circle</span>
+                Las 11 secciones tienen registros.
+            </p>
+        {% endif %}
+
+        <section aria-labelledby="biblioteca-secciones-titulo">
+            <div class="biblioteca-carga__secciones-encabezado">
+                <div>
+                    <p class="biblioteca-operativa__rotulo">SECCIONES DEL RELEVAMIENTO</p>
+                    <h2 id="biblioteca-secciones-titulo">Mesa de trabajo</h2>
+                </div>
+                <p>Los estados corresponden al CUE-Anexo y período indicados.</p>
+            </div>
+
+            <ol class="biblioteca-carga__grilla">
+                {% for seccion in secciones %}
+                    <li>
+                        <a class="biblioteca-seccion" href="{{ seccion.url }}">
+                            <span class="biblioteca-seccion__numero">{{ seccion.numero|stringformat:"02d" }}</span>
+                            {% include 'biblioteca/includes/section_material_icon.html' with seccion=seccion only %}
+                            <span class="biblioteca-seccion__contenido">
+                                <strong>{{ seccion.nombre }}</strong>
+                                <span>
+                                    {{ seccion.cantidad }}
+                                    {% if seccion.cantidad == 1 %}registro{% else %}registros{% endif %}
+                                </span>
+                            </span>
+                            {% if seccion.tiene_registros %}
+                                <span class="biblioteca-seccion__estado biblioteca-seccion__estado--con">Con registros</span>
+                            {% else %}
+                                <span class="biblioteca-seccion__estado">Sin registros</span>
+                            {% endif %}
+                            <span class="biblioteca-symbol biblioteca-seccion__flecha" aria-hidden="true">chevron_right</span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ol>
+        </section>
+    {% endif %}
+</main>
+{% endblock %}

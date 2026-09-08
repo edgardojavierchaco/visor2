@@ -1,6 +1,7 @@
 {% extends 'biblioteca/layout.html' %}
 {% load static %}
 {% block head %}
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260908-5">
     <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
     <link rel="stylesheet"
           href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
@@ -8,6 +9,7 @@
     <script src="{% static 'lib/datatables-1.10.20/js/dataTables.bootstrap4.min.js' %}"></script>
     <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/dataTables.responsive.min.js' %}"></script>
     <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/responsive.bootstrap4.min.js' %}"></script>
+    <script src="{% static 'biblioteca/js/crud-list.js' %}?v=20260908-2"></script>
 
     {% block head_list %}
 
@@ -15,59 +17,83 @@
 
 {% endblock %}
 
+{% block content_header %}{% endblock %}
+
 {% block content %}
-    <div class="card card-primary">
+<main class="biblioteca-crud biblioteca-crud--listado">
+    {% with cue_icon='location_on' %}
+        {% block section_header %}
+            {% include 'biblioteca/includes/crud_section_header.html' with material_icon='table_rows' cue_icon=cue_icon %}
+        {% endblock %}
+    {% endwith %}
+
+    <div class="card biblioteca-crud__panel">
         <div class="card-header">
             <h3 class="card-title">
-                <i class="fas fa-search"></i>
-                {{ title }}
+                <span class="biblioteca-symbol" aria-hidden="true">table_rows</span>
+                Registros cargados
             </h3>
         </div>
         <div class="card-body">
-            <table class="table table-bordered" id="data">
-                <thead>
-                {% block columns %}
-
-                {% endblock %}
-                </thead>
-                <tbody>
-                {% block rows %}
-
-                {% endblock %}
-                </tbody>
-                <tfoot>
-                {% block footer %}
-                
-                {% endblock %}
-            </tfoot>
-            </table>
-        </div>
-        <div class="card-footer">
-            {% block buttons_list %}
+            <div class="biblioteca-crud__list-toolbar">
                 <a href="{{ create_url }}" class="btn btn-primary btn-flat btnTest">
-                    <i class="fas fa-plus"></i> Nuevo registro
+                    <span class="biblioteca-symbol" aria-hidden="true">add_notes</span>
+                    Nuevo registro
                 </a>
-                <a href="{{ list_url }}" class="btn btn-warning btn-flat">
-                    <i class="fas fa-sync-alt fa-spin"></i> Actualizar
-                </a>                
-                {% if not hide_lock_button %}                                   
-                    <a href="{{ before_url }}" class="btn btn-success btn-flat">
-                        <i class="fas fa-arrow-left"></i> Anterior
-                    </a>
-                {% endif %}
-                {% if not hide_lock_button %}                                   
-                    <a href="{{ next_url }}" class="btn btn-danger btn-flat">
-                        <i class="fas fa-arrow-right"></i> Siguiente
-                    </a>
-                {% endif %}
-                {% if not generar_pdf_button %}                                   
-                    <a href="{{ generar_pdf_url }}" class="btn btn-file btn-flat" target="_blank">
-                        <i class="fas fa-file-upload"></i> Generar PDF
-                    </a>
-                {% endif %}
-            {% endblock %}
+                <label class="biblioteca-crud__list-search" for="biblioteca-crud-search">
+                    <span class="biblioteca-symbol biblioteca-crud__filter-icon" aria-hidden="true">document_search</span>
+                    <span class="sr-only">Buscar registro</span>
+                    <input type="search"
+                           id="biblioteca-crud-search"
+                           class="form-control biblioteca-crud__list-search-input"
+                           placeholder="Buscar registro"
+                           aria-label="Buscar registro"
+                           autocomplete="off"
+                           data-crud-list-search>
+                </label>
+            </div>
+            <div class="biblioteca-crud__table-wrap">
+                <table class="table table-bordered"
+                       id="data"
+                       data-page-length="10"
+                       data-length-change="false">
+                    <thead>
+                    {% block columns %}
+
+                    {% endblock %}
+                    </thead>
+                    <tbody>
+                    {% block rows %}
+
+                    {% endblock %}
+                    </tbody>
+                    <tfoot>
+                    {% block footer %}
+
+                    {% endblock %}
+                    </tfoot>
+                </table>
+            </div>
         </div>
+        {% if not hide_lock_button %}
+            <div class="card-footer biblioteca-crud__section-nav-wrap">
+                {% block buttons_list %}
+                <nav class="biblioteca-crud__section-nav" aria-label="Navegación entre secciones">
+                    <a href="{{ before_url }}" class="btn btn-light btn-flat">
+                        <span class="biblioteca-symbol" aria-hidden="true">arrow_back</span>
+                        Anterior
+                    </a>
+                    <span class="biblioteca-crud__section-nav-label">Navegación entre secciones</span>
+                    <a href="{{ next_url }}" class="btn btn-light btn-flat">
+                        Siguiente
+                        <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
+                    </a>
+                </nav>
+                {% endblock %}
+            </div>
+        {% endif %}
     </div>
+</main>
 {% endblock %}
 
 {% block javascript %}
