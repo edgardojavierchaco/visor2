@@ -414,6 +414,11 @@ class BibliotecariosCueListView(LoginRequiredMixin, ListView):
         context['cueanexo'] = cueanexo
         context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
     
+        mes = self.request.GET.get('mes')
+        anio = self.request.GET.get('anio')
+
+        context['mes'] = mes
+        context['anno'] = anio
         context['title'] = 'Listado de Personal Bibliotecario'
         context['create_url'] = reverse_lazy('bibliotecas:bibliotecario_create')
         context['list_url'] = reverse_lazy('bibliotecas:bibliotecario_list')

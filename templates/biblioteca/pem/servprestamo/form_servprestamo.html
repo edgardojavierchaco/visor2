@@ -1,20 +1,26 @@
 {% extends 'biblioteca/layout.html' %}
+{% load static %}
 {% load widget_tweaks %}
 {% block head %}
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260908-5">
     {% block head_form %}
     {% endblock %}
 {% endblock %}
+{% block content_header %}{% endblock %}
 {% block content %}
-    <form method="post" action="." enctype="multipart/form-data">
-        <div class="card card-primary">
+<main class="biblioteca-crud biblioteca-crud--formulario">
+    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='swap_horiz' %}
+    <form method="post" action="." enctype="multipart/form-data" class="biblioteca-crud__form">
+        <div class="card biblioteca-crud__panel">
             <div class="card-header">
                 <h3 class="card-title">
                     {% if action == 'add' %}
-                        <i class="fas fa-plus"></i>
+                        <span class="biblioteca-symbol" aria-hidden="true">add</span>
+                        Nuevo registro
                     {% else %}
-                        <i class="fas fa-edit"></i>
+                        <span class="biblioteca-symbol" aria-hidden="true">edit</span>
+                        Edición del registro
                     {% endif %}
-                    {{ title }}
                 </h3>
             </div>
             <div class="card-body">
@@ -24,7 +30,7 @@
                 {% if form.errors %}
                     <div class="alert alert-danger alert-dismissible">
                         <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                        <h5><i class="icon fas fa-ban"></i> Ha ocurrido un error al querer guardar el registro</h5>
+                        <h5><span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">error</span> Ha ocurrido un error al querer guardar el registro</h5>
                         <ul>
                             {% for field in form %}
                                 {% for error in field.errors %}
@@ -36,10 +42,10 @@
                 {% endif %}
 
                 <!-- Botón para mostrar el popup en la fila superior -->
-                <div class="form-group row">
+                <div class="form-group row biblioteca-crud__info-row">
                     <div class="col-md-12 text-right">
                         <button type="button" class="btn btn-info" id="showPopupBtn">
-                            <i class="fas fa-info-circle"></i> Información 
+                            <span class="biblioteca-symbol" aria-hidden="true">info</span> Información
                         </button>
                     </div>
                 </div>
@@ -72,11 +78,11 @@
                         {{ form.turnos|add_class:"form-control" }}
                     </div>
                     <div class="col-md-3">
-                        <label for="id_tmaterial">Instalación:</label>
+                    <label for="id_instalacion">Instalación:</label>
                         {{ form.instalacion|add_class:"form-control text-center" }}
                     </div>
                     <div class="col-md-3">
-                        <label for="id_cantidad">Total:</label>
+                    <label for="id_total">Total:</label>
                         {{ form.total|add_class:"form-control text-center" }}
                     </div>
                 </div>               
@@ -84,14 +90,15 @@
             </div>
             <div class="card-footer">
                 <button type="submit" class="btn btn-primary btn-flat">
-                    <i class="fas fa-save"></i> Guardar registro
+                    <span class="biblioteca-symbol" aria-hidden="true">save</span> Guardar registro
                 </button>
-                <a href="{{ list_url }}" class="btn btn-danger btn-flat">
-                    <i class="fas fa-times"></i> Cancelar
+                <a href="{{ list_url }}" class="btn btn-light btn-flat">
+                    <span class="biblioteca-symbol" aria-hidden="true">close</span> Cancelar
                 </a>
             </div>
         </div>
     </form>
+</main>
 
     <!-- ========================= -->
     <!-- 🔥 JAVASCRIPT -->
@@ -141,7 +148,7 @@
         $('#showPopupBtn').click(function () {
             Swal.fire({
                 title: 'Información',
-                html: `<p>En esta sección se carga el material bibliográfico correspondiente.</p>`,
+                html: `<p>En esta sección se cargan los registros de préstamos del período.</p>`,
                 icon: 'info'
             });
         });
@@ -164,16 +171,5 @@
         document.getElementById("id_mes").value = "{{ mes }}";
         document.getElementById("id_anio").value = "{{ anno }}";
 
-        // Mostrar el popup con las traducciones cuando se hace clic en el botón
-        $('#showPopupBtn').click(function() {
-            Swal.fire({
-                title: 'Información',
-                html: `
-                    <p>En esta sección, deberán cargar la cantidad de estudiantes varones y mujeres que tienen en sus escuelas, en cada nivel educativo, grado y sección, que pertenezcan a alguna de estas comunidades indígenas: Mocoit, Qom, Wichi; y/o cuya lengua materna sea alguna de ellas.</p>
-                    
-                `,
-                icon: 'info'
-            });
-        });
     </script>
 {% endblock %}
