@@ -131,7 +131,7 @@ def crear_inscripcion_activa(
 ):
     """Crea o reactiva una inscripción validando contexto, banco y cupo."""
     with transaction.atomic():
-        bloquear_alumno_banco_activo(
+        banco_activo = bloquear_alumno_banco_activo(
             alumno=alumno,
             cueanexo=seccion.cueanexo,
             ciclo=seccion.ciclo,
@@ -168,7 +168,7 @@ def crear_inscripcion_activa(
         )
         if inscripcion_baja:
             inscripcion_nueva = _reactivar_inscripcion_bloqueada(
-                inscripcion_baja, user, seccion_bloqueada
+                inscripcion_baja, user, seccion_bloqueada, banco_activo
             )
             return inscripcion_nueva, False
 
@@ -185,6 +185,7 @@ def crear_inscripcion_activa(
             AlumnoSeccion.objects.create(
                 seccion=seccion_bloqueada,
                 alumno=alumno,
+                alumno_banco=banco_activo,
                 estado=AlumnoSeccion.Estado.ACTIVO,
                 creado_por=user,
                 actualizado_por=user,
@@ -193,7 +194,15 @@ def crear_inscripcion_activa(
         )
 
 
-def _reactivar_inscripcion_bloqueada(inscripcion_bloqueada, user, seccion):
+def _reactivar_inscripcion_bloqueada(
+    inscripcion_bloqueada,
+    user,
+    seccion,
+    banco_activo,
+    *,
+    fecha_inscripcion=None,
+    observaciones=None,
+):
     duplicado = AlumnoSeccion.objects.filter(
         seccion=seccion,
         alumno_id=inscripcion_bloqueada.alumno_id,
@@ -216,9 +225,14 @@ def _reactivar_inscripcion_bloqueada(inscripcion_bloqueada, user, seccion):
     return AlumnoSeccion.objects.create(
         seccion=seccion,
         alumno_id=inscripcion_bloqueada.alumno_id,
+        alumno_banco=banco_activo,
         estado=AlumnoSeccion.Estado.ACTIVO,
-        fecha_inscripcion=timezone.localdate(),
-        observaciones=inscripcion_bloqueada.observaciones,
+        fecha_inscripcion=fecha_inscripcion or timezone.localdate(),
+        observaciones=(
+            inscripcion_bloqueada.observaciones
+            if observaciones is None
+            else observaciones
+        ),
         creado_por=user,
         actualizado_por=user,
     )
@@ -242,7 +256,7 @@ def dar_alta_inscripcion_seccion(
                 "Para reinscribir en una sección de Integración debe usar "
                 "Agregar alumno y validar nuevamente la matrícula compartida."
             )
-        bloquear_alumno_banco_activo(
+        banco_activo = bloquear_alumno_banco_activo(
             alumno=inscripcion.alumno_id,
             cueanexo=seccion_sin_bloqueo.cueanexo,
             ciclo=seccion_sin_bloqueo.ciclo_id,
@@ -259,9 +273,14 @@ def dar_alta_inscripcion_seccion(
         )
         if inscripcion_bloqueada.estado == AlumnoSeccion.Estado.ACTIVO:
             raise ValidationError("La inscripción ya está activa.")
-        inscripcion_bloqueada.fecha_inscripcion = inscripcion.fecha_inscripcion
-        inscripcion_bloqueada.observaciones = inscripcion.observaciones
-        _reactivar_inscripcion_bloqueada(inscripcion_bloqueada, user, seccion)
+        _reactivar_inscripcion_bloqueada(
+            inscripcion_bloqueada,
+            user,
+            seccion,
+            banco_activo,
+            fecha_inscripcion=inscripcion.fecha_inscripcion,
+            observaciones=inscripcion.observaciones,
+        )
 
 
 def dar_baja_inscripcion_seccion(inscripcion, user, *, motivo_baja="Baja desde gestión"):

@@ -397,6 +397,7 @@ def inscribir_alumno_en_seccion(
                 inscripcion_baja,
                 user,
                 seccion_bloqueada,
+                banco_destino,
                 using=using,
             )
             return inscripcion_nueva, False, banco_destino
@@ -411,6 +412,7 @@ def inscribir_alumno_en_seccion(
         inscripcion = AlumnoSeccion.objects.using(using).create(
             seccion=seccion_bloqueada,
             alumno=alumno_bloqueado,
+            alumno_banco=banco_destino,
             estado=AlumnoSeccion.Estado.ACTIVO,
             creado_por=user,
             actualizado_por=user,
@@ -418,7 +420,9 @@ def inscribir_alumno_en_seccion(
         return inscripcion, True, banco_destino
 
 
-def _crear_nueva_inscripcion_desde_baja(inscripcion_baja, user, seccion, *, using):
+def _crear_nueva_inscripcion_desde_baja(
+    inscripcion_baja, user, seccion, banco_destino, *, using
+):
     """Conserva la baja y registra una nueva alta como otro período."""
     total_activos = AlumnoSeccion.objects.using(using).filter(
         seccion_id=seccion.pk,
@@ -430,6 +434,7 @@ def _crear_nueva_inscripcion_desde_baja(inscripcion_baja, user, seccion, *, usin
     return AlumnoSeccion.objects.using(using).create(
         seccion=seccion,
         alumno_id=inscripcion_baja.alumno_id,
+        alumno_banco=banco_destino,
         estado=AlumnoSeccion.Estado.ACTIVO,
         fecha_inscripcion=timezone.localdate(),
         observaciones=inscripcion_baja.observaciones,

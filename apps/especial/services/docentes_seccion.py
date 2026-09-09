@@ -25,16 +25,18 @@ def dar_alta_docente_seccion(asignacion, user, rol=None, observaciones=None):
         if asignacion_bloqueada.estado == DocenteSeccion.Estado.ACTIVO:
             raise ValidationError("La asignación ya está activa.")
 
-        if rol:
-            asignacion_bloqueada.rol = rol
-        if observaciones is not None:
-            asignacion_bloqueada.observaciones = observaciones
+        rol_nuevo = rol or asignacion_bloqueada.rol
+        observaciones_nuevas = (
+            asignacion_bloqueada.observaciones
+            if observaciones is None
+            else observaciones
+        )
 
         duplicado = DocenteSeccion.objects.filter(
             seccion=seccion,
-            rol=asignacion_bloqueada.rol,
+            docente_cuil=asignacion_bloqueada.docente_cuil,
             estado=DocenteSeccion.Estado.ACTIVO,
-        ).exclude(pk=asignacion_bloqueada.pk).exists()
+        ).exists()
 
         if duplicado:
             raise ValidationError(
@@ -42,21 +44,21 @@ def dar_alta_docente_seccion(asignacion, user, rol=None, observaciones=None):
                 f"en esta sección. Dalo de baja antes de reasignar."
             )
 
-        asignacion_bloqueada.estado = DocenteSeccion.Estado.ACTIVO
-        asignacion_bloqueada.fecha_hasta = None
-        asignacion_bloqueada.actualizado_por = user
         try:
-            asignacion_bloqueada.save(
-                update_fields=[
-                    "rol", "estado", "fecha_hasta", "observaciones",
-                    "actualizado_por", "actualizado_en",
-                ]
+            return DocenteSeccion.objects.create(
+                seccion=seccion,
+                docente_cuil=asignacion_bloqueada.docente_cuil,
+                rol=rol_nuevo,
+                estado=DocenteSeccion.Estado.ACTIVO,
+                fecha_desde=timezone.localdate(),
+                observaciones=observaciones_nuevas,
+                creado_por=user,
+                actualizado_por=user,
             )
         except IntegrityError as exc:
             raise ValidationError(
                 "No se pudo reactivar la asignación porque existe un conflicto con otra asignación activa."
             ) from exc
-        return asignacion_bloqueada
 
 
 def dar_baja_docente_seccion(asignacion, user):
