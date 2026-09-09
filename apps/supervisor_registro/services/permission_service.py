@@ -1,135 +1,657 @@
-#services/permission_service.py
-from ..models import ResponsableRegional
+# apps/supervisor_registro/services/permission_service.py
+
+# apps/supervisor_registro/services/permission_service.py
+
 from apps.supervisa2.models import Region
 
+from ..models import ResponsableRegional
 
-ROLES_ADMIN = {
-    "Administrador",
-    "Funcionario",
+
+# ============================================================
+# ROLES
+# ============================================================
+
+# ÚNICOS que pueden hacer CRUD
+ROLES_CRUD = {
+    "administrador",
+    "gestor",
+}
+
+
+# Visualización provincial completa
+ROLES_VISUALIZACION_GLOBAL = {
+    "administrador",
+    "gestor",
+    "funcionario",
+}
+
+
+# Visualización restringida territorialmente
+ROLES_REGIONALES = {
+    "regional",
 }
 
 
 class PermissionDenied(Exception):
     """Excepción de dominio para permisos del módulo."""
+    pass
+
+
+# ============================================================
+# UTILIDADES
+# ============================================================
+
+def _normalizar_rol(valor):
+    """
+    Convierte el nivel de acceso a un valor comparable.
+    """
+
+    if valor is None:
+        return ""
+
+    return str(valor).strip().lower()
+
+
+def get_rol_usuario(user):
+    """
+    Devuelve el nivel de acceso normalizado.
+    """
+
+    if not user:
+        return ""
+
+    if not getattr(
+        user,
+        "is_authenticated",
+        False,
+    ):
+        return ""
+
+    nivel = getattr(
+        user,
+        "nivelacceso",
+        None,
+    )
+
+    if nivel is None:
+        return ""
+
+    # Compatibilidad en caso de que nivelacceso
+    # pase a ser FK/objeto.
+    for atributo in (
+        "nombre",
+        "descripcion",
+        "nivel",
+        "rol",
+        "codigo",
+    ):
+
+        if hasattr(nivel, atributo):
+
+            valor = getattr(
+                nivel,
+                atributo,
+                None,
+            )
+
+            if valor:
+                return _normalizar_rol(
+                    valor
+                )
+
+    return _normalizar_rol(
+        nivel
+    )
+
+
+# ============================================================
+# CRUD
+# ============================================================
+
+def puede_administrar_supervisores(user):
+    """
+    Sólo:
+
+        - Administrador
+        - Gestor
+        - superuser
+
+    pueden hacer CRUD.
+    """
+
+    if not user:
+        return False
+
+    if not getattr(
+        user,
+        "is_authenticated",
+        False,
+    ):
+        return False
+
+    if getattr(
+        user,
+        "is_superuser",
+        False,
+    ):
+        return True
+
+    return (
+        get_rol_usuario(user)
+        in ROLES_CRUD
+    )
 
 
 def es_admin(user):
-    if not user or not getattr(user, "is_authenticated", False):
-        return False
-    if getattr(user, "is_superuser", False):
-        return True
-    return getattr(user, "nivelacceso", None) in ROLES_ADMIN
+    """
+    Alias para compatibilidad.
 
+    En este módulo significa:
+    usuario autorizado para CRUD.
+    """
+
+    return puede_administrar_supervisores(
+        user
+    )
+
+
+def puede_crear_supervisor(user):
+    return puede_administrar_supervisores(
+        user
+    )
+
+
+def puede_modificar_supervisor(user):
+    return puede_administrar_supervisores(
+        user
+    )
+
+
+def puede_eliminar_supervisor(user):
+    return puede_administrar_supervisores(
+        user
+    )
+
+
+# ============================================================
+# RESPONSABLE REGIONAL
+# ============================================================
 
 def get_responsable(user):
-    if not user or not getattr(user, "is_authenticated", False):
+    """
+    Obtiene el ResponsableRegional vinculado al usuario.
+
+    Se intenta primero mediante el related_name del OneToOne
+    y luego mediante consulta directa.
+
+    Esto evita problemas de resolución del responsable regional.
+    """
+
+    if not user:
+        return None
+
+    if not getattr(
+        user,
+        "is_authenticated",
+        False,
+    ):
+        return None
+
+    # --------------------------------------------------------
+    # PRIMER MÉTODO
+    # relación OneToOne inversa
+    # --------------------------------------------------------
+
+    try:
+
+        responsable = (
+            user.responsable_regional
+        )
+
+        if responsable and responsable.activo:
+
+            # Precarga explícita de regiones.
+            return (
+                ResponsableRegional.objects
+                .prefetch_related(
+                    "regiones"
+                )
+                .filter(
+                    pk=responsable.pk,
+                    activo=True,
+                )
+                .first()
+            )
+
+    except (
+        ResponsableRegional.DoesNotExist,
+        AttributeError,
+    ):
+        pass
+
+    # --------------------------------------------------------
+    # SEGUNDO MÉTODO
+    # búsqueda directa por PK del usuario
+    # --------------------------------------------------------
+
+    user_pk = getattr(
+        user,
+        "pk",
+        None,
+    )
+
+    if user_pk is None:
         return None
 
     return (
         ResponsableRegional.objects
-        .filter(usuario=user, activo=True)
-        .prefetch_related("regiones")
+        .filter(
+            usuario_id=user_pk,
+            activo=True,
+        )
+        .prefetch_related(
+            "regiones"
+        )
         .first()
     )
 
 
 def assert_responsable(user):
-    obj = get_responsable(user)
-    if not obj:
-        raise PermissionDenied("No responsable regional asignado")
-    return obj
-
-
-def get_regiones_usuario(user):
     """
-    None  -> acceso global (Administrador/Funcionario/superuser)
-    [ids] -> regiones permitidas para un Responsable Regional
-    []    -> usuario sin alcance
+    Devuelve el ResponsableRegional o genera excepción.
     """
-    if es_admin(user):
-        return None
 
-    responsable = get_responsable(user)
+    responsable = get_responsable(
+        user
+    )
+
+    if not responsable:
+
+        raise PermissionDenied(
+            "El usuario Regional no posee "
+            "un ResponsableRegional activo asociado."
+        )
+
+    return responsable
+
+
+# ============================================================
+# REGIONES ASIGNADAS
+# ============================================================
+
+def get_ids_regiones_responsable(user):
+    """
+    Devuelve exclusivamente los IDs de las regiones asignadas
+    al ResponsableRegional del usuario.
+
+    Siempre devuelve lista.
+    """
+
+    responsable = get_responsable(
+        user
+    )
+
     if not responsable:
         return []
 
     return list(
-        responsable.regiones.values_list("id", flat=True)
+        responsable.regiones
+        .values_list(
+            "pk",
+            flat=True,
+        )
+        .distinct()
     )
 
 
-def get_regiones_queryset(user):
-    """QuerySet de Region visible para el usuario."""
-    regiones = get_regiones_usuario(user)
-    if regiones is None:
-        return Region.objects.all().order_by("nombre")
-    if not regiones:
-        return Region.objects.none()
-    return Region.objects.filter(id__in=regiones).order_by("nombre")
-
+# ============================================================
+# VISUALIZACIÓN
+# ============================================================
 
 def puede_ver_supervisores(user):
-    return es_admin(user) or get_responsable(user) is not None
-
-
-def puede_operar_region(user, region_id, accion="modificar"):
     """
-    Comprueba acceso a una región y, para responsables regionales,
-    respeta las banderas de operación.
-    """
-    if es_admin(user):
-        return True
+    Todos los usuarios autenticados pueden ingresar
+    a las funciones de consulta.
 
-    responsable = get_responsable(user)
-    if not responsable:
+    El alcance territorial se controla por separado.
+    """
+
+    if not user:
         return False
 
-    if not responsable.regiones.filter(pk=region_id).exists():
-        return False
-
-    permisos = {
-        "crear": responsable.puede_crear_supervisores,
-        "modificar": responsable.puede_modificar_supervisores,
-        "eliminar": responsable.puede_eliminar_supervisores,
-        "ver": True,
-    }
-    return permisos.get(accion, False)
+    return bool(
+        getattr(
+            user,
+            "is_authenticated",
+            False,
+        )
+    )
 
 
-def puede_operar_supervisor(user, supervisor, accion="modificar"):
-    """Comprueba que el usuario puede operar sobre el supervisor."""
-    if es_admin(user):
-        return True
+# ============================================================
+# ALCANCE TERRITORIAL
+# ============================================================
 
-    regiones = get_regiones_usuario(user)
+def get_regiones_usuario(user):
+    """
+    Devuelve el alcance territorial.
+
+    RETORNOS
+    ========================================================
+
+    None
+        Puede ver TODAS las regiones.
+
+    [1, 2, 5]
+        Sólo puede ver esas regiones.
+
+    []
+        No posee regiones habilitadas.
+
+
+    REGLAS
+    ========================================================
+
+    Administrador
+        todas las regiones
+
+    Gestor
+        todas las regiones
+
+    Funcionario
+        todas las regiones
+
+    Regional
+        EXCLUSIVAMENTE las regiones que tenga
+        en ResponsableRegional.regiones
+
+    Otros roles
+        sólo lectura provincial
+    """
+
+    if not user:
+
+        return []
+
+    if not getattr(
+        user,
+        "is_authenticated",
+        False,
+    ):
+
+        return []
+
+    # --------------------------------------------------------
+    # SUPERUSER
+    # --------------------------------------------------------
+
+    if getattr(
+        user,
+        "is_superuser",
+        False,
+    ):
+
+        return None
+
+    rol = get_rol_usuario(
+        user
+    )
+
+    # --------------------------------------------------------
+    # REGIONAL
+    #
+    # IMPORTANTE:
+    # debe evaluarse ANTES que cualquier acceso global.
+    # --------------------------------------------------------
+
+    if rol in ROLES_REGIONALES:
+
+        return get_ids_regiones_responsable(
+            user
+        )
+
+    # --------------------------------------------------------
+    # ADMINISTRADOR / GESTOR / FUNCIONARIO
+    # --------------------------------------------------------
+
+    if rol in ROLES_VISUALIZACION_GLOBAL:
+
+        return None
+
+    # --------------------------------------------------------
+    # RESTO DE USUARIOS
+    #
+    # Sólo lectura provincial.
+    # --------------------------------------------------------
+
+    return None
+
+
+# ============================================================
+# QUERYSET REGIONES
+# ============================================================
+
+def get_regiones_queryset(user):
+    """
+    Devuelve las regiones que pueden aparecer en los filtros,
+    selects y formularios de consulta.
+    """
+
+    regiones = get_regiones_usuario(
+        user
+    )
+
+    # --------------------------------------------------------
+    # ACCESO GLOBAL
+    # --------------------------------------------------------
+
+    if regiones is None:
+
+        return (
+            Region.objects
+            .all()
+            .order_by(
+                "nombre"
+            )
+        )
+
+    # --------------------------------------------------------
+    # SIN REGIONES
+    # --------------------------------------------------------
+
     if not regiones:
+
+        return Region.objects.none()
+
+    # --------------------------------------------------------
+    # REGIONAL
+    # --------------------------------------------------------
+
+    return (
+        Region.objects
+        .filter(
+            pk__in=regiones
+        )
+        .order_by(
+            "nombre"
+        )
+    )
+
+
+# ============================================================
+# VERIFICAR REGIÓN
+# ============================================================
+
+def puede_operar_region(
+    user,
+    region_id,
+    accion="ver",
+):
+    """
+    CRUD:
+        sólo Administrador/Gestor.
+
+    Consulta:
+        se controla territorialmente.
+    """
+
+    if not user:
+
         return False
 
-    return supervisor.asignaciones_regionales.filter(
-        activo=True,
-        region_id__in=regiones,
-    ).exists() and _permiso_accion(user, accion)
+    if not getattr(
+        user,
+        "is_authenticated",
+        False,
+    ):
 
-
-def _permiso_accion(user, accion):
-    responsable = get_responsable(user)
-    if not responsable:
         return False
-    return {
-        "crear": responsable.puede_crear_supervisores,
-        "modificar": responsable.puede_modificar_supervisores,
-        "eliminar": responsable.puede_eliminar_supervisores,
-        "ver": True,
-    }.get(accion, False)
+
+    # ========================================================
+    # CRUD
+    # ========================================================
+
+    if accion in {
+        "crear",
+        "modificar",
+        "eliminar",
+    }:
+
+        return puede_administrar_supervisores(
+            user
+        )
+
+    # ========================================================
+    # VER
+    # ========================================================
+
+    if accion != "ver":
+
+        return False
+
+    regiones = get_regiones_usuario(
+        user
+    )
+
+    # Acceso provincial.
+    if regiones is None:
+
+        return True
+
+    if not regiones:
+
+        return False
+
+    try:
+
+        region_id = int(
+            region_id
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+
+        return False
+
+    return region_id in regiones
 
 
-def puede_crear_supervisor(user):
-    return es_admin(user) or _permiso_accion(user, "crear")
+# ============================================================
+# VERIFICAR SUPERVISOR
+# ============================================================
+
+def puede_operar_supervisor(
+    user,
+    supervisor,
+    accion="ver",
+):
+    """
+    CRUD
+    ========================================================
+
+    Administrador    SI
+    Gestor           SI
+    Funcionario      NO
+    Regional         NO
+    Otros            NO
 
 
-def puede_modificar_supervisor(user):
-    return es_admin(user) or _permiso_accion(user, "modificar")
+    CONSULTA
+    ========================================================
 
+    Administrador    todos
+    Gestor           todos
+    Funcionario      todos
 
-def puede_eliminar_supervisor(user):
-    return es_admin(user) or _permiso_accion(user, "eliminar")
+    Regional
+        únicamente supervisores con una asignación activa
+        perteneciente a alguna de sus regiones.
+    """
+
+    if not user:
+
+        return False
+
+    if not getattr(
+        user,
+        "is_authenticated",
+        False,
+    ):
+
+        return False
+
+    # ========================================================
+    # CRUD
+    # ========================================================
+
+    if accion in {
+        "crear",
+        "modificar",
+        "eliminar",
+    }:
+
+        return puede_administrar_supervisores(
+            user
+        )
+
+    # ========================================================
+    # CONSULTA
+    # ========================================================
+
+    if accion != "ver":
+
+        return False
+
+    if not puede_ver_supervisores(
+        user
+    ):
+
+        return False
+
+    regiones = get_regiones_usuario(
+        user
+    )
+
+    # Acceso global.
+    if regiones is None:
+
+        return True
+
+    # Regional sin regiones.
+    if not regiones:
+
+        return False
+
+    # Tiene que existir una asignación activa del supervisor
+    # dentro de una de las regiones permitidas.
+    return (
+        supervisor
+        .asignaciones_regionales
+        .filter(
+            activo=True,
+            region_id__in=regiones,
+        )
+        .exists()
+    )

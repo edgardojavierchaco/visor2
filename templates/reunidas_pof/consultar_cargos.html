@@ -17,7 +17,6 @@
     <form method="get" class="pof-filter-panel"
           data-pof-filter-form
           data-pof-filter-fields="anio,nivel,cueanexo,cuof,ceic,estado_pof,unidad_cantidad">
-        <input type="hidden" name="page_size" value="{{ page_size }}">
         <input type="hidden" name="cabecera_tipo" value="{{ cabecera_tipo_activa }}">
         <input type="hidden" name="proyecto_especial_id" value="{{ proyecto_especial_id_activo }}">
 
@@ -193,29 +192,8 @@
         </table>
     </div>
 
-    <div class="pof-table-footer">
-        <form method="get" class="pof-page-size">
-            <input type="hidden" name="anio" value="{{ filtros.anio }}">
-            <input type="hidden" name="nivel" value="{{ filtros.nivel }}">
-            <input type="hidden" name="cueanexo" value="{{ filtros.cueanexo }}">
-            <input type="hidden" name="cuof" value="{{ filtros.cuof }}">
-            <input type="hidden" name="ceic" value="{{ filtros.ceic }}">
-            <input type="hidden" name="estado_pof" value="{{ filtros.estado_pof }}">
-            <input type="hidden" name="unidad_cantidad" value="{{ filtros.unidad_cantidad }}">
-            <input type="hidden" name="cabecera_tipo" value="{{ cabecera_tipo_activa }}">
-            <input type="hidden" name="proyecto_especial_id" value="{{ proyecto_especial_id_activo }}">
-            <label for="pageSizeCargos">Registros por p&aacute;gina</label>
-            <span class="pof-native-select-wrap">
-                <select id="pageSizeCargos" name="page_size">
-                    {% for opcion in page_size_options %}
-                        <option value="{{ opcion }}" {% if page_size == opcion %}selected{% endif %}>{{ opcion }}</option>
-                    {% endfor %}
-                </select>
-            </span>
-            <button type="submit" class="pof-btn pof-btn-light">Aplicar</button>
-        </form>
-
-        {% if paginator.num_pages > 1 %}
+    {% if paginator.num_pages > 1 %}
+        <div class="pof-table-footer pof-table-footer-pagination-only">
             <nav class="pof-pagination" aria-label="Paginaci&oacute;n de cargos">
                 {% if page_obj.has_previous %}
                     <a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.previous_page_number }}#administracionCargosResultados">Anterior</a>
@@ -239,8 +217,8 @@
                     <span class="pof-page-btn pof-page-btn-disabled">Siguiente</span>
                 {% endif %}
             </nav>
-        {% endif %}
-    </div>
+        </div>
+    {% endif %}
 
     {% include "reunidas_pof/gestion_cargo_modal.html" with gestion_cargo_success_mode="reload" %}
 </div>

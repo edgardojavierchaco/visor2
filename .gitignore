@@ -15,13 +15,5 @@ staticfiles/
 
 .env
 
-# Entornos virtuales locales
-venv/
-venv_backup*/
+*.md
 
-#Con esta linea se ignoran los archivos de producción que no deben subirse al repositorio
-#productionfiles/*
-
-contexto.txt
-
-AGENTS.md

@@ -50,8 +50,8 @@ class MinisterialTests(TestCase):
         m.CondicionActividad.objects.create(cod_condicion=1, descrip_condicion='En actividad')
         m.TipoDesigFunc.objects.create(c_desigfunc=1, desigfunc_descripcion='Cargo')
         m.TipoFunciones.objects.create(c_funciones=1, funciones_descripcion='Servicio')
-        m.Grado_anio.objects.create(c_grado_anio=1, nombre_grado_anio='Primero', c_niv_grado=1, t_niv_grado='Nivel')
-        m.Secciones.objects.create(c_seccion=1, nombre_seccion='A', c_niv_seccion=1, t_niv_seccion='Nivel')
+        m.Grado_anio.objects.create(c_grado_anio=1, nombre_grado_anio='Primero', c_niv_grado=1, t_niv_grado='Nivel', c_modalidad=1)
+        m.Secciones.objects.create(c_seccion=1, nombre_seccion='A', c_niv_seccion=1, t_niv_seccion='Nivel', c_modalidad=1)
         m.TitulosEspacios.objects.create(cod_titulo=1, descrip_titulo='Matemática')
         cls.person = m.Personas.objects.create(cuil=valid_cuil(12345678), dni='12345678', apellido='PEREZ', nombre='ANA', f_nacimiento=date(1980,1,1), sexo_id=1, provincia_id=22, localidad_id=1)
         cls.foreign = m.Personas.objects.create(cuil=valid_cuil(23456789), dni='23456789', apellido='LOPEZ', nombre='JUAN', f_nacimiento=date(1980,1,1), sexo_id=1, provincia_id=22, localidad_id=1)
@@ -254,3 +254,91 @@ class MinisterialTests(TestCase):
         self.assertIn(self.person.pk, issues['personas_cuil_no_canonico_ids'])
         self.person.refresh_from_db()
         self.assertEqual(self.person.cuil,'123')
+
+
+    def csv_directory(self):
+        from pathlib import Path
+        return Path(__file__).resolve().parents[3] / 'catalogos'
+
+    def load_real_csv(self):
+        from .services.catalog_import import import_catalogs
+        result = import_catalogs(self.csv_directory(), apply=True, actor=self.admin)
+        self.assertTrue(result['aplicado'],result)
+        return result
+
+    def test_catalog_csv_dryrun_is_read_only(self):
+        from .services.catalog_import import import_catalogs
+        count=m.Grado_anio.objects.count()
+        events=m.EventoAuditoria.objects.count()
+        result=import_catalogs(self.csv_directory())
+        self.assertFalse(result['aplicado'])
+        self.assertEqual(m.Grado_anio.objects.count(),count)
+        self.assertEqual(m.EventoAuditoria.objects.count(),events)
+
+    def test_catalog_csv_import_twice_idempotent(self):
+        self.load_real_csv()
+        count=m.EventoAuditoria.objects.count()
+        second=self.load_real_csv()
+        self.assertTrue(all(v['crear']==0 and v['actualizar']==0 for v in second['tablas'].values()))
+        self.assertEqual(m.EventoAuditoria.objects.count(),count)
+        self.assertEqual(m.Grado_anio.objects.count(),44)
+        self.assertEqual(m.Secciones.objects.count(),160)
+        self.assertFalse(m.Grado_anio.objects.filter(pk__in=[39,40,41]).exists())
+
+    def test_catalog_import_conflict_rolls_back(self):
+        self.activity.grado_anio_id=1
+        self.activity.save()
+        from .services.catalog_import import import_catalogs
+        result=import_catalogs(self.csv_directory(),apply=True,actor=self.admin)
+        self.assertFalse(result['aplicado'])
+        self.assertTrue(result['conflictos'])
+        self.assertEqual(m.Modalidades.objects.get(pk=1).descrip_modalidad,'Común')
+        self.assertFalse(m.NivelServicio.objects.filter(pk=300).exists())
+
+    def test_levels_only_selected_modality(self):
+        self.load_real_csv()
+        response=self.client.get(self.url('filtrar_datos_actividad'),{'modalidad':3})
+        self.assertEqual([r['c_nivel'] for r in response.json()['niveles']],[3000,3100])
+        self.assertEqual(response.json()['grado'],[])
+        self.assertEqual(response.json()['secciones'],[])
+
+    def test_same_level_does_not_mix_modalities(self):
+        self.load_real_csv()
+        response=self.client.get(self.url('filtrar_datos_actividad'),{'modalidad':3,'nivel':3000,'grado':28})
+        self.assertEqual([r['c_grado_anio'] for r in response.json()['grado']],[28,29,30,31])
+        self.assertEqual([r['c_seccion'] for r in response.json()['secciones']],list(range(99,126)))
+
+    def test_sections_need_matching_grade(self):
+        self.load_real_csv()
+        for grade in ['',7,9999]:
+            response=self.client.get(self.url('filtrar_datos_actividad'),{'modalidad':3,'nivel':3000,'grado':grade})
+            self.assertEqual(response.json()['secciones'],[])
+
+    def test_inactive_grade_does_not_enable_sections(self):
+        self.load_real_csv()
+        m.Grado_anio.objects.filter(pk=28).update(estado=False)
+        response=self.client.get(self.url('filtrar_datos_actividad'),{'modalidad':3,'nivel':3000,'grado':28})
+        self.assertEqual(response.json()['secciones'],[])
+
+    def test_post_rejects_section_from_another_modality(self):
+        self.load_real_csv()
+        m.ModalidadNivelCeic.objects.create(modalidad_id=3,nivel_id=3000,rango_ceic='1')
+        data=self.activity_data(modalidad='3',niveles='3000',categoria='DOCENTE',grado_anio='28',secciones='28')
+        response=self.client.post(self.url('nueva_actividad',self.person.pk),data)
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(self.person.actividades.count(),1)
+        data['secciones']='99'
+        self.assertEqual(self.client.post(self.url('nueva_actividad',self.person.pk),data).status_code,302)
+
+    def test_missing_grades_are_not_invented(self):
+        self.load_real_csv()
+        response=self.client.get(self.url('filtrar_datos_actividad'),{'modalidad':2,'nivel':4500})
+        self.assertEqual(response.json()['grado'],[])
+        self.assertEqual(response.json()['secciones'],[])
+        self.assertTrue(m.Secciones.objects.filter(c_modalidad=2,c_niv_seccion=4500).exists())
+
+    def test_catalog_import_requires_admin(self):
+        from .services.catalog_import import import_catalogs
+        from django.core.exceptions import PermissionDenied
+        with self.assertRaises(PermissionDenied):
+            import_catalogs(self.csv_directory(),apply=True,actor=self.director)
