@@ -1,7 +1,7 @@
 {% extends 'biblioteca/layout.html' %}
 {% load static %}
 {% block head %}
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260908-5">
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260908-6">
     <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
     <link rel="stylesheet"
           href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
@@ -21,11 +21,9 @@
 
 {% block content %}
 <main class="biblioteca-crud biblioteca-crud--listado">
-    {% with cue_icon='location_on' %}
-        {% block section_header %}
-            {% include 'biblioteca/includes/crud_section_header.html' with material_icon='table_rows' cue_icon=cue_icon %}
-        {% endblock %}
-    {% endwith %}
+    {% block section_header %}
+        {% include 'biblioteca/includes/crud_section_header.html' with material_icon='table_rows' %}
+    {% endblock %}
 
     <div class="card biblioteca-crud__panel">
         <div class="card-header">
