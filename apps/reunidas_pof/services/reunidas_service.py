@@ -46,7 +46,6 @@ from .padron_materializadas_service import obtener_opciones_filtros_visualizacio
 from .visualizacion_cargos_localizacion_service import OFERTAS_FILTRO_VISUALIZACION
 
 
-PAGE_SIZE_OPTIONS = (10, 30, 50, 100)
 CUES_POR_PAGINA_DETALLE = 5
 
 FILTROS_DETALLE_REUNIDA = (
@@ -274,15 +273,6 @@ def construir_contexto_reunidas(request):
     filtros, errores_filtros = _obtener_filtros_reunidas_con_errores(request)
     filtro_anio = filtros["anio"]
     filtro_nivel = filtros["nivel"]
-    page_size_parametro = request.GET.get("page_size", "")
-
-    try:
-        page_size = int(page_size_parametro)
-    except (TypeError, ValueError):
-        page_size = 10
-
-    if page_size not in PAGE_SIZE_OPTIONS:
-        page_size = 10
 
     reunidas = ReunidaPof.objects.annotate(
         ultima_modificacion_historial=Max(
@@ -302,7 +292,7 @@ def construir_contexto_reunidas(request):
     reunidas = reunidas.order_by("-anio", "nivel")
 
     try:
-        paginator = Paginator(reunidas, page_size)
+        paginator = Paginator(reunidas, 10)
         page_obj = paginator.get_page(request.GET.get("page"))
         total_registros = paginator.count
         showing_start = page_obj.start_index() if total_registros else 0
@@ -310,7 +300,7 @@ def construir_contexto_reunidas(request):
         reunidas_pagina = [serializar_reunida(reunida) for reunida in page_obj.object_list]
         tabla_reunidas_no_migrada = False
     except (ProgrammingError, OperationalError):
-        paginator = Paginator([], page_size)
+        paginator = Paginator([], 10)
         page_obj = paginator.get_page(1)
         reunidas_pagina = []
         total_registros = 0
@@ -320,7 +310,7 @@ def construir_contexto_reunidas(request):
 
     query_params = request.GET.copy()
     query_params.pop("page", None)
-    query_params["page_size"] = str(page_size)
+    query_params.pop("page_size", None)
 
     if filtro_anio:
         query_params["anio"] = filtro_anio
@@ -340,8 +330,6 @@ def construir_contexto_reunidas(request):
         "total_registros": total_registros,
         "showing_start": showing_start,
         "showing_end": showing_end,
-        "page_size": page_size,
-        "page_size_options": PAGE_SIZE_OPTIONS,
         "filtro_anio": filtro_anio,
         "filtro_nivel": filtro_nivel,
         "niveles": ReunidaPof.Nivel.choices,

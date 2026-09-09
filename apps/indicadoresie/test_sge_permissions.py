@@ -35,15 +35,146 @@ class SgeRoleScopeTests(TestCase):
         connection.cursor.return_value = cursor
         return connection, cursor
 
-    def test_global_roles_include_director_de_nivel_and_supervisor(self):
+    def test_director_de_nivel_is_global_and_supervisor_is_not(self):
         self.assertIn("Director de Nivel", views_dash.ROLES_GLOBALES_SGE)
-        self.assertIn("Supervisor", views_dash.ROLES_GLOBALES_SGE)
+        self.assertNotIn("Supervisor", views_dash.ROLES_GLOBALES_SGE)
 
-        for cargo in ("Director de Nivel", "Supervisor"):
-            request = self._request()
-            with patch.object(views_dash, "obtener_cargo_usuario", return_value=cargo):
-                context = views_dash.resolver_contexto_sge(request)
-            self.assertEqual(context["alcance"], "global")
+        request = self._request()
+        with patch.object(
+            views_dash, "obtener_cargo_usuario", return_value="Director de Nivel"
+        ):
+            context = views_dash.resolver_contexto_sge(request)
+        self.assertEqual(context["alcance"], "global")
+
+    def test_supervisor_uses_all_assigned_cues_without_selector_or_region_scope(self):
+        for rows, expected in (
+            ([("220084600", "Sede"), ("220084601", "Anexo")],
+             ["220084600", "220084601"]),
+            ([], []),
+        ):
+            with self.subTest(cueanexos=expected):
+                request = self._request()
+                request.user.is_authenticated = True
+                request.GET[views_dash.PARAM_SGE_CUEANEXO] = "999999999"
+                request.POST[views_dash.PARAM_SGE_CUEANEXO] = "220084600"
+                request.session[views_dash.SESSION_SGE_CUEANEXO_KEY] = "220084600"
+                connection, cursor = self._connection(rows)
+                with (
+                    patch.object(views_dash, "obtener_cargo_usuario", return_value="Supervisor"),
+                    patch.object(views_dash.psycopg2, "connect", return_value=connection),
+                    patch.object(views_dash, "obtener_regiones_permitidas") as regiones,
+                    patch.object(views_dash, "_opciones_cueanexo_sge") as director,
+                    patch.object(views_dash, "_resolver_cueanexo_sge") as selector,
+                ):
+                    context = views_dash.resolver_contexto_sge(request)
+
+                self.assertEqual(context["alcance"], "cue")
+                self.assertFalse(context["es_global"])
+                self.assertEqual(context["cueanexos_permitidos"], expected)
+                self.assertEqual(context["regiones_permitidas"], [])
+                self.assertEqual(context["cueanexo_actual"], "")
+                self.assertFalse(context["mostrar_selector_cueanexo"])
+                regiones.assert_not_called()
+                director.assert_not_called()
+                selector.assert_not_called()
+                connection.close.assert_called_once_with()
+                queryset = FakeQuerySet()
+                result = views_dash.filtrar_queryset_sge(
+                    queryset, context, "region", "cueanexo"
+                )
+                self.assertIs(result, queryset)
+                self.assertEqual(queryset.none_called, not expected)
+                self.assertEqual(
+                    queryset.filters,
+                    [{"cueanexo__in": expected}] if expected else [],
+                )
+
+    def test_supervisor_options_deduplicate_and_use_active_parameterized_sql(self):
+        connection, cursor = self._connection([
+            ("2200846-00", " Sede "),
+            ("220084600", "Otra oferta"),
+            ("220084601", "   "),
+            ("220084602", None),
+            (None, "Sin CUE"),
+            (" ", "Sin CUE"),
+            ("abc", "Sin CUE"),
+        ])
+        user = SimpleNamespace(username="20-12345678-3", is_authenticated=True)
+        with patch.object(views_dash.psycopg2, "connect", return_value=connection):
+            opciones = views_dash._opciones_cueanexo_supervisor_sge(user)
+
+        self.assertEqual(opciones, [
+            {"cueanexo": "220084600", "nombre": "Sede", "region": ""},
+            {"cueanexo": "220084601", "nombre": "Establecimiento sin nombre", "region": ""},
+            {"cueanexo": "220084602", "nombre": "Establecimiento sin nombre", "region": ""},
+        ])
+        cursor.execute.assert_called_once()
+        sql, params = cursor.execute.call_args.args
+        sql = " ".join(sql.split())
+        self.assertEqual(params, ["20123456783"])
+        self.assertNotIn("20123456783", sql)
+        self.assertEqual(sql.count("%s"), 1)
+        self.assertIn("FROM supervisores.supervisor_registro_supervisor AS s", sql)
+        self.assertIn("JOIN supervisores.supervisor_registro_supervisor_regional AS sr", sql)
+        self.assertIn("JOIN supervisores.supervisor_registro_supervisor_regional_oferta AS o", sql)
+        self.assertIn("ON sr.supervisor_id = s.id AND sr.activo = TRUE", sql)
+        self.assertIn("ON o.supervisor_regional_id = sr.id AND o.activo = TRUE", sql)
+        self.assertIn(
+            r"WHERE REGEXP_REPLACE(CAST(s.cuil AS TEXT), '\D', '', 'g') = %s AND s.activo = TRUE",
+            sql,
+        )
+        self.assertEqual(sql.count("activo = TRUE"), 3)
+        self.assertIn("o.cueanexo IS NOT NULL", sql)
+        self.assertIn("TRIM(CAST(o.cueanexo AS TEXT)) <> ''", sql)
+        self.assertNotIn("responsable_alta_id", sql)
+        self.assertNotIn("region_id", sql)
+        connection.close.assert_called_once_with()
+
+    def test_supervisor_invalid_cuil_never_connects_and_denies_access(self):
+        for user in (
+            None,
+            SimpleNamespace(username="", is_authenticated=True),
+            SimpleNamespace(username="123", is_authenticated=True),
+            SimpleNamespace(username="20123456783", is_authenticated=False),
+        ):
+            with self.subTest(user=user):
+                request = self._request()
+                request.user = user
+                with (
+                    patch.object(views_dash, "obtener_cargo_usuario", return_value="Supervisor"),
+                    patch.object(views_dash.psycopg2, "connect") as connect,
+                ):
+                    context = views_dash.resolver_contexto_sge(request)
+                connect.assert_not_called()
+                self.assertEqual(context["alcance"], "cue")
+                self.assertEqual(context["cueanexos_permitidos"], [])
+                queryset = FakeQuerySet()
+                views_dash.filtrar_queryset_sge(queryset, context, "region", "cueanexo")
+                self.assertTrue(queryset.none_called)
+                self.assertEqual(queryset.filters, [])
+
+    def test_supervisor_errors_return_no_options_and_close_connection(self):
+        user = SimpleNamespace(username="20123456783", is_authenticated=True)
+        for stage in ("connect", "cursor", "execute", "fetchall"):
+            with self.subTest(stage=stage):
+                connection, cursor = self._connection([])
+                with patch.object(
+                    views_dash.psycopg2, "connect", return_value=connection
+                ) as connect:
+                    target = {
+                        "connect": connect,
+                        "cursor": connection.cursor,
+                        "execute": cursor.execute,
+                        "fetchall": cursor.fetchall,
+                    }[stage]
+                    target.side_effect = RuntimeError("Error simulado")
+                    self.assertEqual(
+                        views_dash._opciones_cueanexo_supervisor_sge(user), []
+                    )
+                if stage == "connect":
+                    connection.close.assert_not_called()
+                else:
+                    connection.close.assert_called_once_with()
 
     def test_gestor_roles_and_active_fallback(self):
         self.assertEqual(views_dash.ROLES_REGIONALES_SGE, {"Regional"})
