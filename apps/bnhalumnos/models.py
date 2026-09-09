@@ -38,7 +38,6 @@ from apps.bnhpersonas.models import (
     RelacionParentesco,
     TipoPlanesSociales,
     NivelFormacion,
-    TipoOS,
     TipoComunidadOriginaria,
     TipoLenguaOriginaria,
     validar_cuil,
@@ -274,6 +273,12 @@ class Alumno(models.Model):
     # Catálogos de nacimiento y residencia. PROTECT evita que una baja de
     # catálogo deje alumnos apuntando a referencias inexistentes.
     sexo = models.ForeignKey(Sexo, on_delete=models.PROTECT)
+    nacionalidad = models.ForeignKey(
+        Nacionalidad,
+        on_delete=models.PROTECT,
+        db_column="c_nacionalidad",
+        default=-2,
+    )
     pais_nacimiento = models.ForeignKey(
         Pais,
         on_delete=models.PROTECT,
@@ -602,6 +607,20 @@ class Alumno(models.Model):
 # vigente o sin fecha de finalización cargada.
 # ============================================================
    
+class TipoObraSocial(models.Model):
+    c_os = models.IntegerField(primary_key=True)
+    descrip_os = models.CharField(max_length=50)
+
+    class Meta:
+        db_table = '"bnh_alumno"."tipo_obra_social"'
+        verbose_name = "Tipo de obra social"
+        verbose_name_plural = "Tipos de obra social"
+        ordering = ["c_os"]
+
+    def __str__(self):
+        return self.descrip_os
+
+
 class CatalogoObraSocial(models.Model):
     """Catalogo propio de obras sociales seleccionables en el modal."""
 
@@ -624,7 +643,7 @@ class CatalogoObraSocial(models.Model):
 
 
 class ObraSocial(models.Model):
-    """Obra social asociada a un alumno, usando TipoOS como catálogo externo."""
+    """Obra social asociada a un alumno, usando el catálogo propio del módulo."""
     
     id = models.BigAutoField(primary_key=True)
 
@@ -637,10 +656,10 @@ class ObraSocial(models.Model):
         related_name="obras_sociales",
     )
 
-    # TipoOS es catálogo externo; acá se guarda solo la referencia y los datos
-    # propios de la obra social cargada para el alumno.
+    # El tipo usa el catálogo propio; acá se guarda solo la referencia y los
+    # datos propios de la obra social cargada para el alumno.
     tipo_obra = models.ForeignKey(
-        TipoOS,
+        TipoObraSocial,
         on_delete=models.PROTECT,
         db_column="tipo_obra",
         related_name="obras_sociales",
