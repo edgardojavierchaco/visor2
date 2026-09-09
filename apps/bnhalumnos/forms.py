@@ -286,6 +286,7 @@ class AlumnoForm(forms.ModelForm):
             "cuil",
             "fecha_nacimiento",
             "sexo",
+            "nacionalidad",
             "pais_nacimiento",
             "prov_nacimiento",
             "lugar_nacimiento",

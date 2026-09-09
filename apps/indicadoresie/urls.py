@@ -7,6 +7,7 @@ from .views_dash import (
 from .views_analisis_sge_ra import (
     ComparativaSgeRaView,
     comparativa_sge_ra_json,
+    detalle_listado_sge_ra_json,
     actualizar_fecha_comparativa_sge_ra,
     progreso_actualizar_fecha_comparativa_sge_ra,
     estado_fecha_comparativa_sge_ra,
@@ -64,6 +65,7 @@ urlpatterns = [
     path('api/seguimiento-sie/', seguimiento_sie_json, name='seguimiento_sie_json'),
     path('api/seguimiento-sie-niveles/', seguimiento_sie_niveles_json, name='seguimiento_sie_niveles_json'),
     path('api/comparativa-sge-ra/', comparativa_sge_ra_json, name='comparativa_sge_ra_json'),
+    path('api/listado-sge-ra/', detalle_listado_sge_ra_json, name='detalle_listado_sge_ra_json'),
     
     # --- PRUEBAS Y OTROS DASHBOARDS ---
     path('prueba/', dashboard_prueba, name='prueba'),

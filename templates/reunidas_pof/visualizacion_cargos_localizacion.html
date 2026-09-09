@@ -297,6 +297,12 @@
                     Resultados: {{ total_registros }} Registros
                 </span>
             </div>
+            {% if not es_proyecto_especial %}
+                <div class="pof-group-legend" aria-label="Separadores de grupo">
+                    <span class="pof-group-legend-item"><span class="pof-group-legend-line pof-group-legend-line-cue" aria-hidden="true"></span>CUE</span>
+                    <span class="pof-group-legend-item"><span class="pof-group-legend-line pof-group-legend-line-anexo" aria-hidden="true"></span>CUEANEXO</span>
+                </div>
+            {% endif %}
             <span class="pof-export-count"
                 id="visualizacionColumnasContadorTop"
                 data-visual-row-count="{{ total_registros }}">

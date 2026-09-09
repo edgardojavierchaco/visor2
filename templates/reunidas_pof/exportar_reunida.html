@@ -2,16 +2,6 @@
 {% load static %}
 {% block content %}
 
-<style>
-    .pof-export-table tr.pof-export-grupo-cue > td {
-        border-top: 3px solid #2444D8;
-    }
-
-    .pof-export-table tr.pof-export-grupo-anexo > td {
-        border-top: 3px solid var(--pof-border);
-    }
-</style>
-
 <div class="pof-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa="exportar" %}
     <div class="pof-view-header">
@@ -135,6 +125,13 @@
                 class="pof-export-btn-mini pof-export-btn-light pof-export-detail-btn">
                     <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">arrow_circle_right</span> Ir a Detalles
                 </a>
+            {% endif %}
+
+            {% if not es_proyecto_especial %}
+                <div class="pof-group-legend" aria-label="Separadores de grupo">
+                    <span class="pof-group-legend-item"><span class="pof-group-legend-line pof-group-legend-line-cue" aria-hidden="true"></span>CUE</span>
+                    <span class="pof-group-legend-item"><span class="pof-group-legend-line pof-group-legend-line-anexo" aria-hidden="true"></span>CUEANEXO</span>
+                </div>
             {% endif %}
 
             <div class="pof-export-actions-mini">
@@ -273,7 +270,7 @@
         {% endif %}
 
         <div class="pof-export-wrap" data-pof-export-table-wrap>
-            <table class="pof-export-table{% if columnas_disponibles and not columnas_visibles_keys %} pof-export-no-visible-columns{% endif %}"
+            <table class="pof-export-table{% if not es_proyecto_especial %} pof-export-table-reunida{% endif %}{% if columnas_disponibles and not columnas_visibles_keys %} pof-export-no-visible-columns{% endif %}"
                    data-pof-export-table>
                 <thead>
                     <tr>
@@ -1319,6 +1316,7 @@
                 const open = panel.hidden;
                 panel.hidden = !open;
                 toggle.setAttribute("aria-expanded", open ? "true" : "false");
+                toggle.classList.toggle("pof-visual-toggle-active", open);
             });
         }
 

@@ -489,7 +489,7 @@
         });
     }
 
-    function obtenerLineaPrincipalOferta(item, icono = "📌") {
+    function obtenerLineaPrincipalOferta(item, icono = "") {
         const oferta = obtenerOfertaReal(item);
         const establecimiento = obtenerCampoOferta(item, ["nom_est", "establecimiento", "nombre_establecimiento"]);
         const partes = [];
@@ -589,7 +589,7 @@
             return detalle;
         }
 
-        const mensajeBaja = "Esta oferta figura como baja en el padrón actual. Verifique si corresponde usarla para la Reunida seleccionada.";
+        const mensajeBaja = "Esta oferta figura como baja en el padrón actual. Verifique si corresponde usarla para la POF seleccionada.";
 
         return `
             ${detalle}
@@ -707,7 +707,7 @@
             const linkDetalle = document.createElement("a");
             linkDetalle.className = "pof-btn pof-btn-light";
             linkDetalle.href = urlDetalle;
-            linkDetalle.textContent = "Ver en detalle de la reunida";
+            linkDetalle.textContent = "Ver en detalle de la POF";
 
             acciones.appendChild(linkDetalle);
             estadoGuardado.appendChild(acciones);
@@ -797,7 +797,7 @@
         limpiarDatosDependientes();
 
         if (!anio) {
-            mostrarEstadoCabecera("error", "Ingresá el año de la Reunida.");
+            mostrarEstadoCabecera("error", "Ingresá el año de la POF.");
             anioInput.focus();
             return;
         }
@@ -815,7 +815,7 @@
         }
 
         btnValidarReunida.disabled = true;
-        mostrarEstadoCabecera("warn", "Validando Cabecera de Reunida...");
+        mostrarEstadoCabecera("warn", "Validando Cabecera POF...");
 
         const parametros = new URLSearchParams({ anio: anio, nivel: nivel });
 
@@ -827,16 +827,16 @@
                 limpiarCabeceraValidada();
                 mostrarEstadoCabecera(
                     "error",
-                    data.mensaje || "No existe una Reunida POF para ese año y nivel."
+                    data.mensaje || "No existe una POF para ese año y nivel."
                 );
                 return;
             }
 
             bloquearCabeceraValidada(data.reunida);
-            mostrarEstadoCabecera("ok", data.mensaje || "Cabecera de Reunida validada.");
+            mostrarEstadoCabecera("ok", data.mensaje || "Cabecera POF validada.");
         } catch (error) {
             limpiarCabeceraValidada();
-            mostrarEstadoCabecera("error", "No se pudo validar la Cabecera de Reunida.");
+            mostrarEstadoCabecera("error", "No se pudo validar la Cabecera POF.");
         }
     }
 
@@ -978,7 +978,7 @@
         const nivelValidado = nivelValidadoInput.value || (cabeceraReunida ? cabeceraReunida.nivel : "") || nivelSelect.value;
 
         if (!anioValidado || !nivelValidado) {
-            mostrarEstado("error", "Primero validá una Cabecera de Reunida con año y nivel.");
+            mostrarEstado("error", "Primero validá una Cabecera POF con año y nivel.");
             return;
         }
 
@@ -1133,12 +1133,12 @@
                                         onclick="alternarOfertaPadron(${index})">
                                     <span class="pof-offer-card-heading">
                                         <span class="pof-offer-card-main">
-                                            <span class="pof-offer-card-title">${escaparHtml(obtenerLineaPrincipalOferta(item))}</span>
+                                            <span class="pof-offer-card-title"><span class="pof-offer-card-title-icon-box"><span class="pof-offer-card-title-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">explore_nearby</span></span><span>${escaparHtml(obtenerLineaPrincipalOferta(item))}</span></span>
                                             ${renderizarBadgeEstadoOferta(item)}
                                         </span>
                                         <span class="pof-offer-card-meta">${escaparHtml(obtenerLineaSecundariaOferta(item))}</span>
                                     </span>
-                                    <span class="pof-offer-card-toggle" aria-hidden="true">${abierta ? "🔽" : "▶️"}</span>
+                                    <span class="pof-offer-card-toggle pof-material-symbol material-symbols-outlined" aria-hidden="true">${abierta ? "expand_circle_down" : "expand_circle_right"}</span>
                                 </button>
                             </div>
 
@@ -1200,7 +1200,7 @@
             ? resultadosPadronActuales.length - totalSugeridas
             : 0;
         const mensajeSinSugeridas = separarOfertas && totalSugeridas === 0
-            ? "No hay ofertas sugeridas para el nivel de la Reunida. Podés revisar Otras ofertas del mismo CUEANEXO."
+            ? "No hay ofertas sugeridas para el nivel de la POF. Podés revisar Otras ofertas del mismo CUEANEXO."
             : "No hay ofertas sugeridas que coincidan con el filtro aplicado.";
 
         resultadosPadron.innerHTML = `
@@ -1225,12 +1225,14 @@
                            placeholder="Filtrar por oferta real, CUOF, categoría, jornada o localidad"
                            value="${escaparHtml(filtroOfertaTexto)}"
                            autocomplete="off">
-                    <select id="filtroOfertaEstado" class="pof-form-select pof-offer-filter-status">
-                        <option value="TODOS"${filtroOfertaEstado === "TODOS" ? " selected" : ""}>Todos</option>
-                        <option value="ACTIVA"${filtroOfertaEstado === "ACTIVA" ? " selected" : ""}>Activa</option>
-                        <option value="BAJA"${filtroOfertaEstado === "BAJA" ? " selected" : ""}>Baja</option>
-                        <option value="SIN_DATO"${filtroOfertaEstado === "SIN_DATO" ? " selected" : ""}>Sin dato</option>
-                    </select>
+                    <span class="pof-native-select-wrap">
+                        <select id="filtroOfertaEstado" class="pof-form-select pof-offer-filter-status">
+                            <option value="TODOS"${filtroOfertaEstado === "TODOS" ? " selected" : ""}>Todos</option>
+                            <option value="ACTIVA"${filtroOfertaEstado === "ACTIVA" ? " selected" : ""}>Activa</option>
+                            <option value="BAJA"${filtroOfertaEstado === "BAJA" ? " selected" : ""}>Baja</option>
+                            <option value="SIN_DATO"${filtroOfertaEstado === "SIN_DATO" ? " selected" : ""}>Sin dato</option>
+                        </select>
+                    </span>
                 </div>
 
                 <div class="pof-offer-list-scroll">
@@ -1292,7 +1294,7 @@
 
     function alternarOfertaPadron(index) {
         ofertaAbiertaIndex = ofertaAbiertaIndex === index ? null : index;
-        renderizarResultadosPadron(resultadosPadronActuales, true);
+        actualizarAperturaVisualOfertas(resultadosPadron, ofertaAbiertaIndex);
 
         if (ofertaAbiertaIndex !== null) {
             requestAnimationFrame(() => {
@@ -1333,7 +1335,7 @@
         detalleSeleccion.innerHTML = `
             <div class="pof-offer-selected-card">
                 <div class="pof-offer-selected-head">
-                    <span class="pof-offer-selected-title">✅ ${cantidadOfertas} oferta(s) seleccionada(s)</span>
+                    <span class="pof-offer-selected-title"><span class="pof-offer-selected-title-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">check_box</span> ${cantidadOfertas} oferta(s) seleccionada(s)</span>
                 </div>
                 <div class="pof-offer-card-main">
                     <span class="pof-offer-selected-main${claseCampoHistoricoModificado(padronSeleccionado, "establecimiento")}">${escaparHtml(obtenerLineaPrincipalOferta(padronSeleccionado, ""))}</span>
@@ -1610,7 +1612,7 @@
         if (!nivelCeicActivo) {
             sugerenciasCeic.classList.add("pof-hidden");
             sugerenciasCeic.innerHTML = "";
-            mostrarMensajeCeic("Debe indicar un nivel de Reunida válido para buscar CEIC.");
+            mostrarMensajeCeic("Debe indicar un nivel de POF válido para buscar CEIC.");
             return;
         }
 
@@ -1819,7 +1821,7 @@
 
         cargoInfoGeneral.innerHTML = `
             <div class="pof-cargos-info-item">
-                <span>Reunida</span>
+                <span>POF</span>
                 <strong>${escaparHtml(cabeceraValor)}</strong>
             </div>
             <div class="pof-cargos-info-item">
@@ -1896,7 +1898,7 @@
                 </td>
                 <td class="pof-cargo-action-cell">
                     <button type="button" class="pof-cargo-remove-btn" title="Quitar cargo" aria-label="Quitar cargo" data-cargo-remove-index="${index}">
-                        ❌
+                        <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">tab_close_right</span>
                     </button>
                 </td>
             </tr>
