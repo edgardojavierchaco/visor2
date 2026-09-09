@@ -109,11 +109,30 @@ def _completar_contexto_desde_seccion(request, seccion_id, especial_context):
 
 
 def _inscripciones_seccion(seccion):
-    """QuerySet de inscripciones de una sección."""
-    return (
+    """Devuelve una única inscripción visible por alumno.
+
+    Las bajas anteriores se conservan para el historial, pero no deben
+    aparecer junto con una reinscripción activa en la pantalla operativa.
+    """
+    candidatas = (
         AlumnoSeccion.objects.filter(seccion=seccion)
         .select_related("alumno", "alumno__sexo")
-        .order_by("alumno__apellidos", "alumno__nombres")
+        .order_by("alumno_id", "-pk")
+    )
+    visibles = {}
+    for inscripcion in candidatas:
+        anterior = visibles.get(inscripcion.alumno_id)
+        if anterior is None or (
+            inscripcion.estado == AlumnoSeccion.Estado.ACTIVO
+            and anterior.estado != AlumnoSeccion.Estado.ACTIVO
+        ):
+            visibles[inscripcion.alumno_id] = inscripcion
+    return sorted(
+        visibles.values(),
+        key=lambda inscripcion: (
+            inscripcion.alumno.apellidos or "",
+            inscripcion.alumno.nombres or "",
+        ),
     )
 
 
@@ -187,6 +206,10 @@ def crear_inscripcion_activa(
                 alumno=alumno,
                 alumno_banco=banco_activo,
                 estado=AlumnoSeccion.Estado.ACTIVO,
+                tipo_inclusion=(
+                    AlumnoSeccion.TipoInclusion.INCLUSION_PLENA
+                    if seccion_bloqueada.es_oferta_integracion else None
+                ),
                 creado_por=user,
                 actualizado_por=user,
             ),
@@ -227,6 +250,10 @@ def _reactivar_inscripcion_bloqueada(
         alumno_id=inscripcion_bloqueada.alumno_id,
         alumno_banco=banco_activo,
         estado=AlumnoSeccion.Estado.ACTIVO,
+        tipo_inclusion=(
+            AlumnoSeccion.TipoInclusion.INCLUSION_PLENA
+            if seccion.es_oferta_integracion else None
+        ),
         fecha_inscripcion=fecha_inscripcion or timezone.localdate(),
         observaciones=(
             inscripcion_bloqueada.observaciones

@@ -414,6 +414,10 @@ def inscribir_alumno_en_seccion(
             alumno=alumno_bloqueado,
             alumno_banco=banco_destino,
             estado=AlumnoSeccion.Estado.ACTIVO,
+            tipo_inclusion=(
+                AlumnoSeccion.TipoInclusion.INCLUSION_PLENA
+                if seccion_bloqueada.es_oferta_integracion else None
+            ),
             creado_por=user,
             actualizado_por=user,
         )
@@ -436,6 +440,10 @@ def _crear_nueva_inscripcion_desde_baja(
         alumno_id=inscripcion_baja.alumno_id,
         alumno_banco=banco_destino,
         estado=AlumnoSeccion.Estado.ACTIVO,
+        tipo_inclusion=(
+            AlumnoSeccion.TipoInclusion.INCLUSION_PLENA
+            if seccion.es_oferta_integracion else None
+        ),
         fecha_inscripcion=timezone.localdate(),
         observaciones=inscripcion_baja.observaciones,
         creado_por=user,

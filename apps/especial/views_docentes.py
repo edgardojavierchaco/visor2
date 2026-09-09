@@ -213,6 +213,10 @@ def _asignaciones_para_periodo_docente(banco, asignaciones):
     for asignacion in asignaciones:
         if asignacion.seccion.ciclo_id != banco.ciclo_id:
             continue
+        if asignacion.docente_banco_id:
+            if asignacion.docente_banco_id == banco.pk:
+                asignaciones_periodo.append(asignacion)
+            continue
         if banco.fecha_baja and asignacion.fecha_desde and asignacion.fecha_desde > banco.fecha_baja:
             continue
         if asignacion.fecha_hasta and asignacion.fecha_hasta < banco.fecha_alta:
@@ -256,6 +260,7 @@ def _historial_docentes_paginado(especial_context, queryset, pagina):
             "seccion",
             "seccion__ciclo",
             "seccion__cd_tipo_seccion",
+            "docente_banco",
         )
         .order_by(
             "docente_cuil",
@@ -1043,6 +1048,14 @@ def docentes(request):
                         asignacion = form.save(commit=False)
                         asignacion.seccion = seccion
                         asignacion.docente_cuil = cuil
+                        asignacion.docente_banco = (
+                            EspecialDocenteBanco.objects.filter(
+                                cueanexo=seccion.cueanexo,
+                                ciclo=seccion.ciclo,
+                                docente_cuil=cuil,
+                                estado=EspecialDocenteBanco.Estado.ACTIVO,
+                            ).order_by("-pk").first()
+                        )
                         asignacion.creado_por = request.user
                         asignacion.actualizado_por = request.user
                         asignacion.save()

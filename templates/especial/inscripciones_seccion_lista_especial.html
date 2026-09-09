@@ -35,7 +35,7 @@
                     <th class="gestionar-col-centered">Documento</th>
                     <th class="gestionar-col-centered">CUIL</th>
                     <th class="gestionar-col-centered">Sexo</th>
-                    {% if mostrar_cueanexo_matricula %}<th class="gestionar-col-centered">CUE-Anexo educación común</th>{% endif %}
+                    {% if mostrar_cueanexo_matricula %}<th class="gestionar-col-centered">CUE-Anexo educación común</th><th class="gestionar-col-centered">Tipo de inclusión</th>{% endif %}
                     <th class="gestionar-col-centered">Fecha inscripción</th>
                     <th class="gestionar-col-centered">Estado</th>
                     <th class="gestionar-col-centered gestionar-col-actions">Acciones</th>
@@ -48,7 +48,7 @@
                         <td class="gestionar-col-centered">{{ inscripcion.alumno.nro_doc }}</td>
                         <td class="gestionar-col-centered">{{ inscripcion.alumno.cuil|default:"—" }}</td>
                         <td class="gestionar-col-centered">{{ inscripcion.alumno.sexo|default:"—" }}</td>
-                        {% if mostrar_cueanexo_matricula %}<td class="gestionar-col-centered">{{ inscripcion.cueanexo_matricula_compartida|default:"—" }}</td>{% endif %}
+                        {% if mostrar_cueanexo_matricula %}<td class="gestionar-col-centered">{{ inscripcion.cueanexo_matricula_compartida|default:"—" }}</td><td class="gestionar-col-centered">{{ inscripcion.get_tipo_inclusion_display|default:"—" }}</td>{% endif %}
                         <td class="gestionar-col-centered">{{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}</td>
                         <td class="gestionar-col-centered">
                             <span class="badge text-bg-{% if inscripcion.get_estado_display == 'Activo' %}success{% elif inscripcion.get_estado_display == 'Baja' %}danger{% else %}secondary{% endif %}">

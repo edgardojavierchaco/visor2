@@ -314,6 +314,10 @@
                                                                         </span>
                                                                         <span class="cef-alumno-seccion-text cef-historial-inscripcion-name">
                                                                             {{ asignacion.seccion.nombre_seccion }}{% if asignacion.seccion.cd_tipo_seccion %}<span class="cef-alumno-seccion-type"> · {{ asignacion.seccion.cd_tipo_seccion }}</span>{% endif %} · {{ asignacion.get_rol_display }}
+                                                                            <small class="d-block text-muted mt-1">
+                                                                                Desde: {{ asignacion.fecha_desde|date:"d/m/Y"|default:"—" }}
+                                                                                · Hasta: {{ asignacion.fecha_hasta|date:"d/m/Y"|default:"—" }}
+                                                                            </small>
                                                                         </span>
                                                                     </div>
                                                                 </li>

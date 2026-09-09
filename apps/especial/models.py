@@ -1064,6 +1064,10 @@ class AlumnoSeccion(EspecialAuditoriaMixin):
         ACTIVO = "activo", "Activo"
         BAJA = "baja", "Baja"
 
+    class TipoInclusion(models.TextChoices):
+        INCLUSION_PLENA = "inclusion_plena", "Inclusión plena"
+        TRAYECTORIA_COMPARTIDA = "trayectoria_compartida", "Trayectoria compartida"
+
     id = models.BigAutoField(unique=True, primary_key=True)
     
     alumno = models.ForeignKey(
@@ -1074,7 +1078,7 @@ class AlumnoSeccion(EspecialAuditoriaMixin):
     alumno_banco = models.ForeignKey(
         EspecialAlumnoBanco,
         on_delete=models.PROTECT,
-        related_name="inscripciones_seccion",
+        related_name="inscripciones_banco",
         blank=True,
         null=True,
         help_text="Período del banco de alumnos al que pertenece esta inscripción.",
@@ -1091,6 +1095,13 @@ class AlumnoSeccion(EspecialAuditoriaMixin):
         choices=Estado.choices,
         default=Estado.ACTIVO,
         db_index=True,
+    )
+    tipo_inclusion = models.CharField(
+        max_length=30,
+        choices=TipoInclusion.choices,
+        blank=True,
+        null=True,
+        help_text="Tipo de inclusión para inscripciones de ofertas de Integración.",
     )
     fecha_inscripcion = models.DateField(default=timezone.localdate)
     fecha_baja = models.DateField(blank=True, null=True)
@@ -1182,6 +1193,14 @@ class DocenteSeccion(EspecialAuditoriaMixin):
         on_delete=models.PROTECT,
         related_name="docentes",
     )
+    docente_banco = models.ForeignKey(
+        EspecialDocenteBanco,
+        on_delete=models.PROTECT,
+        related_name="asignaciones_banco",
+        blank=True,
+        null=True,
+        help_text="Período del banco al que pertenece esta asignación.",
+    )
     docente_cuil = models.CharField(max_length=11, db_index=True)
     rol = models.CharField(
         max_length=20,
@@ -1248,6 +1267,18 @@ class DocenteSeccion(EspecialAuditoriaMixin):
             ).exists()
             if not en_banco:
                 errors["docente_cuil"] = "El docente no se encuentra activo en el banco de este establecimiento y ciclo."
+
+        if self.docente_banco_id and self.seccion_id:
+            banco = self.docente_banco
+            if (
+                banco.docente_cuil != self.docente_cuil
+                or banco.ciclo_id != self.seccion.ciclo_id
+                or banco.cueanexo != self.seccion.cueanexo
+            ):
+                errors["docente_banco"] = (
+                    "El período de banco debe pertenecer al mismo docente, "
+                    "CUE-Anexo y ciclo de la sección."
+                )
 
         if errors:
             raise ValidationError(errors)

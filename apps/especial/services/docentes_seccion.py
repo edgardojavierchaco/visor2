@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from ..models import DocenteSeccion, SeccionEspecial
+from ..models import DocenteSeccion, EspecialDocenteBanco, SeccionEspecial
 
 
 def dar_alta_docente_seccion(asignacion, user, rol=None, observaciones=None):
@@ -47,6 +47,14 @@ def dar_alta_docente_seccion(asignacion, user, rol=None, observaciones=None):
         try:
             return DocenteSeccion.objects.create(
                 seccion=seccion,
+                docente_banco=(
+                    EspecialDocenteBanco.objects.filter(
+                        cueanexo=seccion.cueanexo,
+                        ciclo=seccion.ciclo,
+                        docente_cuil=asignacion_bloqueada.docente_cuil,
+                        estado=EspecialDocenteBanco.Estado.ACTIVO,
+                    ).order_by("-pk").first()
+                ),
                 docente_cuil=asignacion_bloqueada.docente_cuil,
                 rol=rol_nuevo,
                 estado=DocenteSeccion.Estado.ACTIVO,

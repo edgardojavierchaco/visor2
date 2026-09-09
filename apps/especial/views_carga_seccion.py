@@ -663,10 +663,26 @@ def carga_seccion_form(request, seccion_id=None):
 
 
 def _inscripciones_seccion(seccion):
-    return (
+    """Inscripciones operativas, sin duplicar alumnos con historial previo."""
+    candidatas = (
         AlumnoSeccion.objects.filter(seccion=seccion)
         .select_related("alumno", "alumno__sexo")
-        .order_by("estado", "alumno__apellidos", "alumno__nombres")
+        .order_by("alumno_id", "-pk")
+    )
+    visibles = {}
+    for inscripcion in candidatas:
+        anterior = visibles.get(inscripcion.alumno_id)
+        if anterior is None or (
+            inscripcion.estado == AlumnoSeccion.Estado.ACTIVO
+            and anterior.estado != AlumnoSeccion.Estado.ACTIVO
+        ):
+            visibles[inscripcion.alumno_id] = inscripcion
+    return sorted(
+        visibles.values(),
+        key=lambda inscripcion: (
+            inscripcion.alumno.apellidos or "",
+            inscripcion.alumno.nombres or "",
+        ),
     )
 
 
@@ -677,6 +693,31 @@ def _docentes_seccion(seccion):
     )
 
 
+def _docentes_seccion_visibles(docentes):
+    """Deja una sola fila operativa por docente en Gestionar sección."""
+    por_cuil = defaultdict(list)
+    for docente in docentes:
+        por_cuil[docente.docente_cuil].append(docente)
+
+    visibles = []
+    for registros in por_cuil.values():
+        activos = [
+            registro
+            for registro in registros
+            if registro.estado == DocenteSeccion.Estado.ACTIVO
+        ]
+        visibles.append(max(activos or registros, key=lambda registro: registro.pk))
+    return sorted(
+        visibles,
+        key=lambda registro: (
+            registro.estado,
+            registro.rol,
+            registro.docente_nombre_snapshot,
+            registro.docente_cuil,
+        ),
+    )
+
+
 def _gestionar_fragment_context(seccion, especial_context):
     inscripciones = list(_inscripciones_seccion(seccion))
     inscripciones_activas = [
@@ -684,7 +725,7 @@ def _gestionar_fragment_context(seccion, especial_context):
         for inscripcion in inscripciones
         if inscripcion.estado == AlumnoSeccion.Estado.ACTIVO
     ]
-    docentes = list(_docentes_seccion(seccion))
+    docentes = _docentes_seccion_visibles(_docentes_seccion(seccion))
     alumnos_ids = [inscripcion.alumno_id for inscripcion in inscripciones]
     try:
         bancos_por_alumno = {
@@ -887,9 +928,9 @@ def _alta_docente_nuevo_gestionar(request, seccion):
     if asignacion_existente and asignacion_existente.estado == DocenteSeccion.Estado.ACTIVO:
         return False, "El docente ya está asignado activamente a esta sección."
 
-    # Reutilizar la relación existente evita crear otra fila para el mismo
-    # docente y sección cuando se reactiva o cambia su estado.
-    asignacion = asignacion_existente or DocenteSeccion(
+    # Una baja es un período histórico cerrado. La nueva alta debe crear
+    # otra fila para conservar las fechas del período anterior.
+    asignacion = DocenteSeccion(
         seccion=seccion,
         docente_cuil=cuil,
     )
@@ -897,6 +938,14 @@ def _alta_docente_nuevo_gestionar(request, seccion):
     if form.is_valid():
         asignacion = form.save(commit=False)
         asignacion.seccion = seccion
+        asignacion.docente_banco = (
+            EspecialDocenteBanco.objects.filter(
+                cueanexo=seccion.cueanexo,
+                ciclo=seccion.ciclo,
+                docente_cuil=cuil,
+                estado=EspecialDocenteBanco.Estado.ACTIVO,
+            ).order_by("-pk").first()
+        )
         if not asignacion.pk:
             asignacion.creado_por = request.user
         asignacion.actualizado_por = request.user
