@@ -208,27 +208,15 @@ def _docentes_historial_queryset(especial_context, termino=""):
 
 
 def _asignaciones_para_periodo_docente(banco, asignaciones):
-    """Devuelve las asignaciones del ciclo sin repetir secciones."""
+    """Devuelve todos los períodos de asignación que intersectan el banco."""
     asignaciones_periodo = []
-    secciones_vistas = set()
     for asignacion in asignaciones:
         if asignacion.seccion.ciclo_id != banco.ciclo_id:
-            continue
-        # Al reactivar una asignación se reutiliza el mismo registro y se
-        # limpia fecha_hasta; no debe reaparecer como activa en un banco que
-        # ya quedó de baja.
-        if (
-            banco.estado == EspecialDocenteBanco.Estado.BAJA
-            and asignacion.estado == DocenteSeccion.Estado.ACTIVO
-        ):
             continue
         if banco.fecha_baja and asignacion.fecha_desde and asignacion.fecha_desde > banco.fecha_baja:
             continue
         if asignacion.fecha_hasta and asignacion.fecha_hasta < banco.fecha_alta:
             continue
-        if asignacion.seccion_id in secciones_vistas:
-            continue
-        secciones_vistas.add(asignacion.seccion_id)
         asignaciones_periodo.append(asignacion)
     return asignaciones_periodo
 

@@ -774,7 +774,7 @@ def _inscripciones_por_alumno(especial_context, alumnos_banco):
             estado=AlumnoSeccion.Estado.ACTIVO,
             seccion__estado=SeccionEspecial.Estado.ACTIVO,
         )
-        .select_related("seccion", "seccion__cd_tipo_seccion")
+        .select_related("seccion", "seccion__cd_tipo_seccion", "alumno_banco")
         .order_by(
             Lower("seccion__nombre_seccion"),
             "seccion__nombre_seccion",
@@ -813,6 +813,13 @@ def _inscripciones_historial_por_banco(especial_context, bancos):
     for banco in bancos:
         inscripciones_banco = []
         for inscripcion in por_alumno.get(banco.alumno_id, []):
+            # Las inscripciones nuevas se vinculan explícitamente al período
+            # de banco. La comparación de fechas queda sólo como respaldo
+            # para filas anteriores a esta relación.
+            if inscripcion.alumno_banco_id:
+                if inscripcion.alumno_banco_id == banco.pk:
+                    inscripciones_banco.append(inscripcion)
+                continue
             if banco.fecha_baja and inscripcion.fecha_inscripcion > banco.fecha_baja:
                 continue
             if inscripcion.fecha_baja and inscripcion.fecha_baja < banco.fecha_alta:

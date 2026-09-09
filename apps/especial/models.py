@@ -1071,6 +1071,14 @@ class AlumnoSeccion(EspecialAuditoriaMixin):
         on_delete=models.PROTECT,
         related_name="secciones_especial",
     )
+    alumno_banco = models.ForeignKey(
+        EspecialAlumnoBanco,
+        on_delete=models.PROTECT,
+        related_name="inscripciones_seccion",
+        blank=True,
+        null=True,
+        help_text="Período del banco de alumnos al que pertenece esta inscripción.",
+    )
     
     seccion = models.ForeignKey(
         SeccionEspecial,
@@ -1127,6 +1135,18 @@ class AlumnoSeccion(EspecialAuditoriaMixin):
             ).exists()
             if not en_banco:
                 errors["alumno"] = "El alumno no se encuentra activo en el banco de este establecimiento y ciclo."
+
+        if self.alumno_banco_id and self.seccion_id:
+            banco = self.alumno_banco
+            if (
+                banco.alumno_id != self.alumno_id
+                or banco.ciclo_id != self.seccion.ciclo_id
+                or banco.cueanexo != self.seccion.cueanexo
+            ):
+                errors["alumno_banco"] = (
+                    "El período de banco debe pertenecer al mismo alumno, "
+                    "CUE-Anexo y ciclo de la sección."
+                )
 
         if errors:
             raise ValidationError(errors)
@@ -1190,6 +1210,7 @@ class DocenteSeccion(EspecialAuditoriaMixin):
         constraints = [
             models.UniqueConstraint(
                 fields=["seccion", "docente_cuil"],
+                condition=Q(estado="activo"),
                 name="uq_esp_doc_sec_cuil",
             ),
             models.UniqueConstraint(

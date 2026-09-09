@@ -277,6 +277,7 @@ class Command(BaseCommand):
             AlumnoSeccion.objects.create(
                 alumno=alumno,
                 seccion=seccion,
+                alumno_banco=banco,
                 estado=AlumnoSeccion.Estado.ACTIVO,
                 fecha_inscripcion=date.today(),
             )
