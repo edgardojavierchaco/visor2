@@ -75,7 +75,7 @@ SECCIONES_CARGA = (
         ServicioReferenciaVirtual,
         'servrefvirtual_list',
         'fa-globe',
-        'language',
+        'settings_system_daydream',
         (
             ('servicio__nom_servicio', 'Servicio'),
             ('turnos__nom_turno', 'Turno'),
@@ -89,7 +89,7 @@ SECCIONES_CARGA = (
         ServicioPrestamo,
         'servprestamo_list',
         'fa-exchange-alt',
-        'swap_horiz',
+        'box',
         (
             ('servicio__nom_servicio', 'Servicio'),
             ('turnos__nom_turno', 'Turno'),
@@ -130,7 +130,7 @@ SECCIONES_CARGA = (
         InstitucionesPrestaServicios,
         'instituciones_list',
         'fa-school',
-        'apartment',
+        'add_home_work',
         (
             ('escuela', 'Institución'),
             ('matricula', 'Matrícula'),

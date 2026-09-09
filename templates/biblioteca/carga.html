@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block head %}
-<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260908">
+<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260909-2">
 {% endblock %}
 
 {% block content_header %}{% endblock %}
@@ -96,16 +96,18 @@
                             {% include 'biblioteca/includes/section_material_icon.html' with seccion=seccion only %}
                             <span class="biblioteca-seccion__contenido">
                                 <strong>{{ seccion.nombre }}</strong>
-                                <span>
-                                    {{ seccion.cantidad }}
-                                    {% if seccion.cantidad == 1 %}registro{% else %}registros{% endif %}
+                                <span class="biblioteca-seccion__meta">
+                                    <span class="biblioteca-seccion__cantidad">
+                                        {{ seccion.cantidad }}
+                                        {% if seccion.cantidad == 1 %}registro{% else %}registros{% endif %}
+                                    </span>
+                                    {% if seccion.tiene_registros %}
+                                        <span class="biblioteca-seccion__estado biblioteca-seccion__estado--con">Con registros</span>
+                                    {% else %}
+                                        <span class="biblioteca-seccion__estado">Sin registros</span>
+                                    {% endif %}
                                 </span>
                             </span>
-                            {% if seccion.tiene_registros %}
-                                <span class="biblioteca-seccion__estado biblioteca-seccion__estado--con">Con registros</span>
-                            {% else %}
-                                <span class="biblioteca-seccion__estado">Sin registros</span>
-                            {% endif %}
                             <span class="biblioteca-symbol biblioteca-seccion__flecha" aria-hidden="true">chevron_right</span>
                         </a>
                     </li>

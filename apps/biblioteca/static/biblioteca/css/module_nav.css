@@ -81,7 +81,7 @@
 }
 
 .biblioteca-module-nav__icon--carga {
-    transform: translateY(-1px);
+    transform: translateY(1px);
 }
 
 .biblioteca-module-nav__link:not(.biblioteca-module-nav__link--disabled):hover {
