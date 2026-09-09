@@ -31,7 +31,6 @@ def obtener_filtros_historial(request):
     return obtener_filtros_historial_pof(request)
 
 
-PAGE_SIZE_OPTIONS = (10, 30, 50, 100)
 MAX_CARGOS_HISTORIAL = 100
 TIPOS_MOVIMIENTO_ESTADO = (
     MovimientoCargoPof.TipoMovimiento.AFECTADO,
@@ -515,15 +514,6 @@ def _construir_diff_movimiento(movimiento):
             })
 
     return diff
-
-
-def _obtener_page_size(request):
-    try:
-        page_size = int(request.GET.get("page_size", PAGE_SIZE_OPTIONS[0]))
-    except (TypeError, ValueError):
-        return PAGE_SIZE_OPTIONS[0]
-
-    return page_size if page_size in PAGE_SIZE_OPTIONS else PAGE_SIZE_OPTIONS[0]
 
 
 def _obtener_movimientos_queryset():
@@ -1465,14 +1455,13 @@ def obtener_detalle_movimiento_pof(movimiento_id):
 
 def construir_contexto_historial(request):
     filtros, errores_filtros = obtener_filtros_historial_pof_con_errores(request)
-    page_size = _obtener_page_size(request)
     filtros_suficientes = not errores_filtros and filtros_historial_suficientes(filtros)
     queryset = _obtener_movimientos_queryset()
     if filtros_suficientes:
         queryset = _aplicar_filtros_historial(queryset, filtros)
     else:
         queryset = queryset.none()
-    paginator = Paginator(queryset, page_size)
+    paginator = Paginator(queryset, 10)
     page_obj = paginator.get_page(request.GET.get("page", 1))
 
     for movimiento in page_obj.object_list:
@@ -1481,7 +1470,7 @@ def construir_contexto_historial(request):
     query_params = request.GET.copy()
     query_params.pop("page", None)
     query_params.pop("texto", None)
-    query_params["page_size"] = page_size
+    query_params.pop("page_size", None)
     total_registros = paginator.count
     tiene_contexto = bool(filtros["anio"] and filtros["nivel"] and filtros["nivel"] != NIVEL_TODOS)
 
@@ -1500,15 +1489,13 @@ def construir_contexto_historial(request):
             if errores_filtros
             else ("" if filtros_suficientes else obtener_mensaje_filtros_insuficientes_historial(filtros))
         ),
-        "limpiar_filtros_querystring": querystring_limpio_historial(request, page_size),
+        "limpiar_filtros_querystring": querystring_limpio_historial(),
         "page_obj": page_obj,
         "paginator": paginator,
         "movimientos": page_obj.object_list,
         "total_registros": total_registros,
         "showing_start": page_obj.start_index() if total_registros else 0,
         "showing_end": page_obj.end_index() if total_registros else 0,
-        "page_size": page_size,
-        "page_size_options": PAGE_SIZE_OPTIONS,
         "query_params_base": query_params.urlencode(),
         "page_range": _obtener_page_range(paginator, page_obj),
         "titulo": obtener_titulo_historial(filtros),

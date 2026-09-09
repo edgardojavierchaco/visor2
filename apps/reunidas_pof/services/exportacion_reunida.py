@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 from django.core.paginator import Paginator
 from django.db import OperationalError, ProgrammingError
 from django.db.models import Case, CharField, F, Min, Prefetch, Q, Sum, Value, When
-from django.db.models.functions import Cast, Concat, Substr
+from django.db.models.functions import Cast, Concat, Substr, Trim
 
 from ..models import CargoPof, ProyectosEspecialesPof, ReunidaPof, SnapshotPadronLocalizacionPof
 from .exportacion_politicas import (
@@ -597,13 +597,35 @@ def obtener_clave_grupo_visual_reunida(fila_dict, indice=None):
     return f"_sin_cueanexo_{identificador}"
 
 
+def obtener_clave_total_general_cueanexo_reunida(fila_dict, indice=None):
+    """Resuelve el grupo de Total General estándar de Exportar POF.
+
+    Replica la jerarquía del Visualizador: CUEANEXO, CUOF y localización. El
+    cargo o índice se usa únicamente como aislamiento defensivo final.
+    """
+    cueanexo = str(fila_dict.get("cueanexo", "") or "").strip()
+    if cueanexo:
+        return f"CUEANEXO:{cueanexo}"
+
+    cuof = str(fila_dict.get("cuof", "") or "").strip()
+    if cuof:
+        return f"CUOF:{cuof}"
+
+    localizacion_id = fila_dict.get("localizacion_id")
+    if localizacion_id not in (None, ""):
+        return f"LOCALIZACION:{localizacion_id}"
+
+    identificador = fila_dict.get("cargo_id") or indice
+    return f"FILA:{identificador}"
+
+
 def obtener_clave_total_general_visual_reunida(fila_dict, indice=None):
     """
-    Resuelve la clave visual de Total General para mostrarlo una sola vez por CUE.
+    Resuelve la clave por CUE usada por políticas `REPETIR_POR_CUE` legacy.
 
     - Usa el CUE normalizado o derivado desde `cueanexo`.
     - Si no existe CUE confiable, aísla la fila por localizacion/cargo para no mezclarla.
-    - No usa CUOF ni CUE-Anexo como agrupador final del total.
+    - No define la semántica del Total General estándar de Exportar POF.
     """
     cue = _obtener_cue_grupo_visual_reunida(fila_dict)
     if cue:
@@ -629,22 +651,33 @@ def _proyectar_filas_exportacion(nivel_codigo, filas_normalizadas, columnas):
 
     filas = []
     clave_anterior = None
-    clave_total_anterior = None
+    clave_cue_anterior = None
+    clave_total_general_anterior = None
     filas_con_metadata = _agregar_metadata_grupo_visual_reunida(filas_normalizadas)
 
     for indice, fila in enumerate(filas_con_metadata):
         clave_actual = obtener_clave_grupo_visual_reunida(fila, indice=indice)
-        clave_total_actual = obtener_clave_total_general_visual_reunida(
+        clave_cue_actual = obtener_clave_total_general_visual_reunida(
             fila,
             indice=indice,
         )
+        clave_total_general_actual = (
+            obtener_clave_total_general_cueanexo_reunida(fila, indice=indice)
+        )
         misma_localizacion = clave_actual == clave_anterior
-        mismo_cue = clave_total_actual == clave_total_anterior
+        mismo_cue = clave_cue_actual == clave_cue_anterior
+        mismo_grupo_total_general = (
+            clave_total_general_actual == clave_total_general_anterior
+        )
         fila_render = []
 
         for columna in columnas:
-            valor = fila.get(columna["source"], "")
-            if (
+            source = columna["source"]
+            valor = fila.get(source, "")
+            if source in {"total_general", "total_general_exportacion"}:
+                if mismo_grupo_total_general:
+                    valor = ""
+            elif (
                 misma_localizacion
                 and columna.get("repetir") == REPETIR_POR_CUEANEXO
             ):
@@ -658,7 +691,8 @@ def _proyectar_filas_exportacion(nivel_codigo, filas_normalizadas, columnas):
 
         filas.append(fila_render)
         clave_anterior = clave_actual
-        clave_total_anterior = clave_total_actual
+        clave_cue_anterior = clave_cue_actual
+        clave_total_general_anterior = clave_total_general_actual
 
     return filas
 
@@ -871,6 +905,39 @@ def _restringir_queryset_preview_reunida(cargos_queryset, unidades_pagina):
     )
 
 
+def _anotar_clave_total_general_cueanexo_reunida(queryset):
+    """Anota en SQL la clave canónica del Total General estándar."""
+    queryset = queryset.annotate(
+        _cueanexo_total_general_exportacion=Trim("localizacion__cueanexo"),
+        _cuof_total_general_exportacion=Trim("localizacion__cuof"),
+    )
+    return queryset.annotate(
+        _clave_total_general_exportacion=Case(
+            When(
+                Q(_cueanexo_total_general_exportacion__isnull=False)
+                & ~Q(_cueanexo_total_general_exportacion=""),
+                then=Concat(
+                    Value("CUEANEXO:"),
+                    "_cueanexo_total_general_exportacion",
+                ),
+            ),
+            When(
+                Q(_cuof_total_general_exportacion__isnull=False)
+                & ~Q(_cuof_total_general_exportacion=""),
+                then=Concat(
+                    Value("CUOF:"),
+                    "_cuof_total_general_exportacion",
+                ),
+            ),
+            default=Concat(
+                Value("LOCALIZACION:"),
+                Cast("localizacion_id", CharField()),
+            ),
+            output_field=CharField(),
+        )
+    )
+
+
 def _obtener_totales_generales_preview_reunida(
     cargos_queryset,
     nivel_codigo,
@@ -880,18 +947,14 @@ def _obtener_totales_generales_preview_reunida(
     Obtiene los totales generales completos de los grupos de la pagina.
 
     - Suma exclusivamente cargos AFECTADOS de las unidades CUE seleccionadas.
-    - Reutiliza la clave de `exportacion_rows` para conservar la semantica de
-      cada nivel y evitar recalcular el total sobre un subconjunto de filas.
+    - Agrupa cada CUEANEXO de manera independiente, con fallback a CUOF y
+      localización, igual que el Visualizador.
     - Con `unidades_pagina` limita la lectura al preview; sin ese argumento
       calcula el conjunto completo requerido por Excel.
     - Devuelve un mapping vacio cuando el filtro no produjo unidades para la
       pagina, sin intentar anotar un queryset `.none()`.
     - No modifica cargos ni consulta grupos fuera del alcance solicitado.
     """
-    schema = obtener_schema_exportacion(nivel_codigo)
-    grupo_total_general = list(schema.get("grupo_total_general") or [])
-    if grupo_total_general not in (["cue"], ["cue", "cuof"]):
-        return None
     if unidades_pagina is not None and not unidades_pagina:
         return {}
 
@@ -902,56 +965,22 @@ def _obtener_totales_generales_preview_reunida(
         )
         if unidades_pagina is not None
         else _anotar_claves_preview_reunida(cargos_queryset)
-    ).filter(estado_pof=CargoPof.EstadoPof.AFECTADO)
-    if grupo_total_general == ["cue"]:
-        cue_disponible = Q(localizacion__cueanexo__regex=r"^.{7,}$")
-        cargos_pagina = cargos_pagina.annotate(
-            _clave_total_general_exportacion=Case(
-                When(
-                    cue_disponible,
-                    then=F("_cue_paginacion_exportacion"),
-                ),
-                default=Cast("localizacion_id", CharField()),
-                output_field=CharField(),
-            ),
-        )
-        agrupadores = ["_clave_total_general_exportacion"]
-    else:
-        cargos_pagina = cargos_pagina.annotate(
-            _clave_total_general_exportacion=Case(
-                When(
-                    Q(localizacion__cueanexo__regex=r"^.{7,}$"),
-                    then=F("_cue_paginacion_exportacion"),
-                ),
-                default=F("localizacion__cueanexo"),
-                output_field=CharField(),
-            ),
-        )
-        agrupadores = [
-            "_clave_total_general_exportacion",
-            "localizacion__cuof",
-        ]
+    )
+    cargos_pagina = _anotar_clave_total_general_cueanexo_reunida(
+        cargos_pagina.filter(estado_pof=CargoPof.EstadoPof.AFECTADO)
+    )
 
-    totales = {}
-    for agregado in (
-        cargos_pagina
-        .order_by()
-        .values(*agrupadores)
-        .annotate(_total_general=Sum("total"))
-    ):
-        clave_agregado = agregado.get("_clave_total_general_exportacion")
-        datos_agregado = {
-            "cue": clave_agregado,
-            "cueanexo": clave_agregado,
-            "cuof": agregado.get("localizacion__cuof", ""),
-            "localizacion_id": clave_agregado,
-        }
-        clave_total = obtener_clave_total_general(
-            datos_agregado,
-            schema,
+    return {
+        agregado["_clave_total_general_exportacion"]: (
+            agregado.get("_total_general") or Decimal("0")
         )
-        totales[clave_total] = agregado.get("_total_general") or Decimal("0")
-    return totales
+        for agregado in (
+            cargos_pagina
+            .order_by()
+            .values("_clave_total_general_exportacion")
+            .annotate(_total_general=Sum("total"))
+        )
+    }
 
 
 def _aplicar_totales_generales_preview_reunida(
@@ -962,17 +991,18 @@ def _aplicar_totales_generales_preview_reunida(
     """
     Sustituye en memoria el total parcial por el agregado completo de la pagina.
 
-    - Usa exactamente la misma clave de agrupacion que la normalizacion y el
-      Excel para cada nivel.
+    - Usa la clave canónica por CUEANEXO del preview y del Excel común.
     - Mantiene cero cuando un grupo no tiene cargos AFECTADOS.
     - Solo ajusta el diccionario renderizado; nunca escribe en persistencia.
     """
     if totales_generales is None:
         return
 
-    schema = obtener_schema_exportacion(nivel_codigo)
-    for fila in filas_normalizadas:
-        clave_total = obtener_clave_total_general(fila, schema)
+    for indice, fila in enumerate(filas_normalizadas):
+        clave_total = obtener_clave_total_general_cueanexo_reunida(
+            fila,
+            indice=indice,
+        )
         total_general = totales_generales.get(clave_total, Decimal("0"))
         fila["total_general"] = total_general
         fila["total_general_exportacion"] = total_general
@@ -1870,6 +1900,8 @@ def construir_contexto_exportacion(request):
             "existe": bool(reunida_obj),
         },
         "columnas": columnas,
+        "columnas_exportacion_config": columnas_visibles,
+        "schema_exportacion": obtener_schema_exportacion(nivel_exportacion),
         "columnas_disponibles": columnas_disponibles,
         "columnas_visibles_keys": columnas_visibles_keys,
         "columnas_default_keys": columnas_default_keys,

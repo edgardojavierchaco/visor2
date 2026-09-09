@@ -11,6 +11,7 @@ from django.db.models.functions import Trim
 from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 from django.views.generic import TemplateView
 
 from .models import (
@@ -18,6 +19,7 @@ from .models import (
     AuditoriaSgeRa,
     AuditoriaSgeRaEstado,
     FechaActualizacionComparativaSgeRa,
+    InformeSGE,
     ResumenSgeRa,
 )
 from .views_dash import filtrar_queryset_sge, obtener_cargo_usuario, resolver_contexto_sge
@@ -152,6 +154,16 @@ ANALISIS_FIELDS = (
     'turno',
     'tipo_secc',
     'total',
+)
+
+DETALLE_ANALISIS_FIELDS = ANALISIS_FIELDS + (
+    'origen_estructura_id',
+    'origen_grados',
+    'origen_es_agrupada',
+    'origen_total',
+    'origen_componentes',
+    'calidad_registros_repetidos',
+    'calidad_inscripciones_multiseccion',
 )
 
 RESUMEN_FIELDS = (
@@ -510,6 +522,56 @@ def _obtener_filas_analisis(cueanexo):
         cueanexo,
         {'RA': [], 'SGE': []},
     )
+
+
+def _serializar_fila_detalle_listado_sge(row):
+    return {
+        campo: row.get(campo)
+        for campo in DETALLE_ANALISIS_FIELDS
+    }
+
+
+@login_required
+@never_cache
+def detalle_listado_sge_ra_json(request):
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido.'}, status=405)
+
+    cueanexo = _cueanexo(request.GET.get('cueanexo', ''))
+    if not cueanexo:
+        return JsonResponse({'error': 'CUE-Anexo requerido.'}, status=400)
+
+    contexto_sge = resolver_contexto_sge(request)
+    listado_autorizado = filtrar_queryset_sge(
+        InformeSGE.objects.all(),
+        contexto_sge,
+        campo_region='regional',
+        campo_cueanexo='cueanexo',
+    )
+    if not listado_autorizado.filter(cueanexo=cueanexo).exists():
+        return JsonResponse(
+            {'error': 'CUE-Anexo no disponible en el alcance autorizado.'},
+            status=404,
+        )
+
+    filas = {'RA': [], 'SGE': []}
+    queryset = (
+        AnalisisSgeRa.objects.using('sge_nacion')
+        .annotate(cueanexo_limpio=Trim('cueanexo'))
+        .filter(cueanexo_limpio=cueanexo, sistema__in=('RA', 'SGE'))
+        .values(*DETALLE_ANALISIS_FIELDS)
+        .order_by('sistema', 'nivel', 'grado', 'seccion', 'turno', 'tipo_secc', 'id')
+    )
+    for row in queryset:
+        sistema = _texto(row.get('sistema')).strip()
+        if sistema in filas:
+            filas[sistema].append(_serializar_fila_detalle_listado_sge(row))
+
+    return JsonResponse({
+        'cueanexo': cueanexo,
+        'RA': filas['RA'],
+        'SGE': filas['SGE'],
+    })
 
 
 def _orden_valor_estructura(value):
@@ -1402,6 +1464,7 @@ class ComparativaSgeRaView(TemplateView):
 
 
 @login_required
+@never_cache
 def comparativa_sge_ra_json(request):
     if request.method not in ('GET', 'POST'):
         return JsonResponse({'error': 'Método no permitido.'}, status=405)

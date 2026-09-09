@@ -26,6 +26,7 @@ from .forms import (
     validar_payload_guardar_carga_proyecto_especial,
 )
 from .models import (
+    CargoPof,
     LocalizacionPof,
     ProyectosEspecialesPof,
     ReunidaPof,
@@ -42,7 +43,14 @@ from .services.consulta_service import construir_contexto_consulta
 from .services.exportacion_reunida import (
     COLUMNAS_BUSQUEDA_EXPORTACION,
     construir_contexto_exportacion,
+    _obtener_cue_grupo_visual_reunida,
+    normalizar_cueanexo_exportacion,
+    obtener_clave_grupo_visual_reunida,
+    obtener_clave_total_general_cueanexo_reunida,
 )
+from .services.exportacion_rows import obtener_clave_total_general
+from .services.exportacion_columnas_config import REPETIR_POR_CUE, REPETIR_POR_CUEANEXO
+from .services.excel_estilos import COLOR_SEPARADOR_CUE, COLOR_SEPARADOR_CUEANEXO
 from .services.grilla_pof import construir_grilla_pof_desde_cargos, obtener_cargos_grilla_reunida
 from .services.grilla_pof.detalle_rows import (
     obtener_grupo_operativo_detalle,
@@ -80,7 +88,6 @@ from .services.proyecto_especial_manual_service import (
 from .services.niveles import obtener_niveles_ceic_para_reunida
 from .services.niveles_service import normalizar_nivel
 from .services.reunidas_service import (
-    PAGE_SIZE_OPTIONS,
     construir_contexto_detalle_reunida,
     construir_contexto_reunidas,
     construir_payload_cargos_detalle_proyecto_localizacion,
@@ -356,6 +363,492 @@ def _escribir_filas_excel_optimizado(
         ws.column_dimensions[get_column_letter(indice_columna)].width = ancho
 
 
+def _escribir_excel_reunida_filtrable(
+    ws,
+    filas_normalizadas,
+    columnas_config,
+    schema,
+    mensaje="",
+    fila_encabezado=4,
+):
+    """Escribe la Reunida común con datos físicos y presentación filtrable.
+
+    Las columnas visibles conservan cada valor de cargo. Las siete auxiliares
+    ocultas propagan el último grupo visible mediante referencias O(1), para
+    que la compactación y los separadores sigan las filas filtradas por Excel.
+    Los auxiliares adicionales se crean solo para los resúmenes derivados
+    visibles y encadenan sus aportes por grupo sin rangos crecientes.
+    """
+    from openpyxl.formatting.rule import FormulaRule, Rule
+    from openpyxl.styles import Alignment, Border, Side
+    from openpyxl.styles.differential import DifferentialStyle
+    from openpyxl.styles.numbers import NumberFormat
+    from openpyxl.utils import get_column_letter
+
+    columnas_config = columnas_config or []
+    columnas = [columna["titulo"] for columna in columnas_config]
+    keys_schema = {
+        columna.get("key")
+        for columna in (schema.get("columnas") or [])
+    }
+    metricas_tecnicas = {
+        "total_horas_catedra",
+        "puntos_horas_catedra",
+        "total_puntos",
+    }
+    schema_totales_tecnicos = metricas_tecnicas.issubset(keys_schema)
+    acumulador_por_source = {
+        "total_general": "total",
+        "total_general_exportacion": "total",
+    }
+    if schema_totales_tecnicos:
+        acumulador_por_source.update({
+            "total_horas_catedra": "horas",
+            "puntos_horas_catedra": "puntos_horas",
+            "total_puntos": "total",
+        })
+    indices_resumen_dinamico = [
+        indice
+        for indice, columna in enumerate(columnas_config, start=1)
+        if columna.get("source") in acumulador_por_source
+    ]
+    fuentes_resumen_dinamico = {
+        columnas_config[indice - 1]["source"]
+        for indice in indices_resumen_dinamico
+    }
+    fuentes_total_general_estandar = fuentes_resumen_dinamico & {
+        "total_general",
+        "total_general_exportacion",
+    }
+    fuentes_totales_tecnicos = fuentes_resumen_dinamico & metricas_tecnicas
+    requiere_resumen_dinamico = bool(indices_resumen_dinamico)
+    requiere_total_cargo = bool(
+        fuentes_resumen_dinamico
+        & {
+            "total_general",
+            "total_general_exportacion",
+            "puntos_horas_catedra",
+            "total_puntos",
+        }
+    )
+    requiere_cantidad_horas = bool(
+        fuentes_resumen_dinamico
+        & {"total_horas_catedra", "puntos_horas_catedra"}
+    )
+    requiere_total_visible = any(
+        acumulador_por_source[source] == "total"
+        for source in fuentes_resumen_dinamico
+    )
+    requiere_horas_visibles = "total_horas_catedra" in fuentes_resumen_dinamico
+    requiere_puntos_horas_visibles = (
+        "puntos_horas_catedra" in fuentes_resumen_dinamico
+    )
+    total_columnas = len(columnas)
+    fila_inicio = fila_encabezado + 1
+    cuerpo_alignment = Alignment(vertical="top", wrap_text=True)
+    borde_superior_cue = Side(style="medium", color=COLOR_SEPARADOR_CUE)
+    borde_superior_anexo = Side(style="medium", color=COLOR_SEPARADOR_CUEANEXO)
+
+    fila_visible_columna = total_columnas + 1
+    clave_grupo_columna = fila_visible_columna + 1
+    clave_cue_columna = clave_grupo_columna + 1
+    tiene_anexo_columna = clave_cue_columna + 1
+    cue_con_separador_columna = tiene_anexo_columna + 1
+    ultimo_grupo_visible_columna = cue_con_separador_columna + 1
+    ultimo_cue_visible_columna = ultimo_grupo_visible_columna + 1
+    siguiente_columna_auxiliar = ultimo_cue_visible_columna + 1
+
+    def reservar_columna_auxiliar(requerida):
+        nonlocal siguiente_columna_auxiliar
+        if not requerida:
+            return None
+        columna = siguiente_columna_auxiliar
+        siguiente_columna_auxiliar += 1
+        return columna
+
+    es_afectado_columna = reservar_columna_auxiliar(requiere_resumen_dinamico)
+    total_cargo_columna = reservar_columna_auxiliar(requiere_total_cargo)
+    cantidad_horas_columna = reservar_columna_auxiliar(requiere_cantidad_horas)
+    total_visible_grupo_columna = reservar_columna_auxiliar(requiere_total_visible)
+    horas_visible_grupo_columna = reservar_columna_auxiliar(
+        requiere_horas_visibles
+    )
+    puntos_horas_visible_grupo_columna = reservar_columna_auxiliar(
+        requiere_puntos_horas_visibles
+    )
+    grupo_visto_visible_columna = reservar_columna_auxiliar(
+        requiere_resumen_dinamico
+    )
+
+    letra_fila_visible = get_column_letter(fila_visible_columna)
+    letra_clave_grupo = get_column_letter(clave_grupo_columna)
+    letra_clave_cue = get_column_letter(clave_cue_columna)
+    letra_tiene_anexo = get_column_letter(tiene_anexo_columna)
+    letra_cue_con_separador = get_column_letter(cue_con_separador_columna)
+    letra_ultimo_grupo_visible = get_column_letter(ultimo_grupo_visible_columna)
+    letra_ultimo_cue_visible = get_column_letter(ultimo_cue_visible_columna)
+    letra_es_afectado = (
+        get_column_letter(es_afectado_columna) if es_afectado_columna else None
+    )
+    letra_total_cargo = (
+        get_column_letter(total_cargo_columna) if total_cargo_columna else None
+    )
+    letra_cantidad_horas = (
+        get_column_letter(cantidad_horas_columna) if cantidad_horas_columna else None
+    )
+    letra_total_visible_grupo = (
+        get_column_letter(total_visible_grupo_columna)
+        if total_visible_grupo_columna
+        else None
+    )
+    letra_horas_visible_grupo = (
+        get_column_letter(horas_visible_grupo_columna)
+        if horas_visible_grupo_columna
+        else None
+    )
+    letra_puntos_horas_visible_grupo = (
+        get_column_letter(puntos_horas_visible_grupo_columna)
+        if puntos_horas_visible_grupo_columna
+        else None
+    )
+    letra_grupo_visto_visible = (
+        get_column_letter(grupo_visto_visible_columna)
+        if grupo_visto_visible_columna
+        else None
+    )
+
+    encabezados_auxiliares = (
+        (fila_visible_columna, "_fila_visible"),
+        (clave_grupo_columna, "_clave_grupo"),
+        (clave_cue_columna, "_clave_cue"),
+        (tiene_anexo_columna, "_tiene_anexo"),
+        (cue_con_separador_columna, "_cue_con_separador"),
+        (ultimo_grupo_visible_columna, "_ultimo_grupo_visible"),
+        (ultimo_cue_visible_columna, "_ultimo_cue_visible"),
+        (es_afectado_columna, "_es_afectado"),
+        (total_cargo_columna, "_total_cargo"),
+        (cantidad_horas_columna, "_cantidad_horas"),
+        (total_visible_grupo_columna, "_total_visible_grupo"),
+        (horas_visible_grupo_columna, "_horas_visible_grupo"),
+        (
+            puntos_horas_visible_grupo_columna,
+            "_puntos_horas_visible_grupo",
+        ),
+        (grupo_visto_visible_columna, "_grupo_visto_visible"),
+    )
+    for indice, encabezado in encabezados_auxiliares:
+        if indice is None:
+            continue
+        ws.cell(row=fila_encabezado, column=indice, value=encabezado)
+        ws.column_dimensions[get_column_letter(indice)].hidden = True
+
+    def expresion_total_afectado_visible(numero_fila):
+        return (
+            f"IF(${letra_es_afectado}{numero_fila}=1,"
+            f"SUBTOTAL(109,${letra_total_cargo}{numero_fila}),0)"
+        )
+
+    def expresion_horas_afectadas_visibles(numero_fila):
+        return (
+            f"IF(${letra_es_afectado}{numero_fila}=1,"
+            f"SUBTOTAL(109,${letra_cantidad_horas}{numero_fila}),0)"
+        )
+
+    def expresion_puntos_horas_afectados_visibles(numero_fila):
+        return (
+            f"IF(AND(${letra_es_afectado}{numero_fila}=1,"
+            f"${letra_cantidad_horas}{numero_fila}<>\"\"),"
+            f"SUBTOTAL(109,${letra_total_cargo}{numero_fila}),0)"
+        )
+
+    expresion_por_acumulador = {
+        "total": expresion_total_afectado_visible,
+        "horas": expresion_horas_afectadas_visibles,
+        "puntos_horas": expresion_puntos_horas_afectados_visibles,
+    }
+    columna_por_acumulador = {
+        "total": total_visible_grupo_columna,
+        "horas": horas_visible_grupo_columna,
+        "puntos_horas": puntos_horas_visible_grupo_columna,
+    }
+    letra_por_acumulador = {
+        "total": letra_total_visible_grupo,
+        "horas": letra_horas_visible_grupo,
+        "puntos_horas": letra_puntos_horas_visible_grupo,
+    }
+
+    anchos_columnas = [10] * total_columnas
+    ultima_fila_por_grupo_total = {}
+    cue_anterior = None
+    indice_cue = 0
+    fila_actual = fila_inicio
+
+    for indice, fila_normalizada in enumerate(filas_normalizadas or []):
+        fila_con_metadata = fila_normalizada.copy()
+        fila_con_metadata["_grupo_visual_cueanexo"] = fila_normalizada.get(
+            "cueanexo", ""
+        )
+        clave_grupo = obtener_clave_grupo_visual_reunida(
+            fila_con_metadata,
+            indice=indice,
+        )
+        cueanexo = normalizar_cueanexo_exportacion(
+            fila_con_metadata.get("_grupo_visual_cueanexo", "")
+        )
+        clave_cue = _obtener_cue_grupo_visual_reunida(fila_con_metadata)
+        tiene_anexo = int(bool(cueanexo))
+        if clave_cue and clave_cue != cue_anterior:
+            indice_cue += 1
+        if fuentes_total_general_estandar:
+            clave_total_general = obtener_clave_total_general_cueanexo_reunida(
+                fila_normalizada,
+                indice=indice,
+            )
+        elif fuentes_totales_tecnicos:
+            clave_total_general = obtener_clave_total_general(
+                fila_normalizada,
+                schema,
+            )
+        else:
+            clave_total_general = None
+        fila_anterior_grupo_total = (
+            ultima_fila_por_grupo_total.get(clave_total_general)
+            if requiere_resumen_dinamico
+            else None
+        )
+
+        for columna_indice, columna in enumerate(columnas_config, start=1):
+            valor_excel = _valor_excel_exportacion(
+                fila_normalizada.get(columna["source"], "")
+            )
+            celda = ws.cell(
+                row=fila_actual,
+                column=columna_indice,
+                value=valor_excel,
+            )
+            celda.alignment = cuerpo_alignment
+            valor_texto = "" if valor_excel is None else str(valor_excel)
+            anchos_columnas[columna_indice - 1] = max(
+                anchos_columnas[columna_indice - 1],
+                min(len(valor_texto) + 4, 42),
+            )
+            if _es_columna_texto_excel(columna["titulo"]):
+                if celda.value not in (None, ""):
+                    celda.value = str(celda.value)
+                celda.number_format = "@"
+            elif _es_columna_numerica_excel(columna["titulo"]) and isinstance(
+                celda.value, (int, float)
+            ):
+                celda.number_format = (
+                    "#,##0"
+                    if _es_columna_cantidad_entera_excel(columna["titulo"])
+                    else "#,##0.00"
+                )
+
+            source = columna.get("source")
+            if source in fuentes_resumen_dinamico:
+                tipo_acumulador = acumulador_por_source[source]
+                grupo_visto_anterior = (
+                    "0"
+                    if fila_anterior_grupo_total is None
+                    else f"${letra_grupo_visto_visible}{fila_anterior_grupo_total}"
+                )
+                celda.value = (
+                    f"=IF(AND(SUBTOTAL(103,${letra_fila_visible}{fila_actual})=1,"
+                    f"{grupo_visto_anterior}=0),"
+                    f"${letra_por_acumulador[tipo_acumulador]}{fila_actual},\"\")"
+                )
+                celda.number_format = (
+                    "#,##0" if source == "total_horas_catedra" else "#,##0.00"
+                )
+
+        ws.cell(row=fila_actual, column=fila_visible_columna, value=1)
+        ws.cell(row=fila_actual, column=clave_grupo_columna, value=clave_grupo)
+        ws.cell(row=fila_actual, column=clave_cue_columna, value=clave_cue)
+        ws.cell(row=fila_actual, column=tiene_anexo_columna, value=tiene_anexo)
+        ws.cell(
+            row=fila_actual,
+            column=cue_con_separador_columna,
+            value=int(bool(clave_cue and indice_cue > 1)),
+        )
+        ultimo_grupo_anterior = (
+            '""'
+            if fila_actual == fila_inicio
+            else f"${letra_ultimo_grupo_visible}{fila_actual - 1}"
+        )
+        ultimo_cue_anterior = (
+            '""'
+            if fila_actual == fila_inicio
+            else f"${letra_ultimo_cue_visible}{fila_actual - 1}"
+        )
+        ws.cell(
+            row=fila_actual,
+            column=ultimo_grupo_visible_columna,
+            value=(
+                f"=IF(SUBTOTAL(103,${letra_fila_visible}{fila_actual}),"
+                f"${letra_clave_grupo}{fila_actual},{ultimo_grupo_anterior})"
+            ),
+        )
+        ws.cell(
+            row=fila_actual,
+            column=ultimo_cue_visible_columna,
+            value=(
+                f"=IF(SUBTOTAL(103,${letra_fila_visible}{fila_actual}),"
+                f"${letra_clave_cue}{fila_actual},{ultimo_cue_anterior})"
+            ),
+        )
+
+        if requiere_resumen_dinamico:
+            ws.cell(
+                row=fila_actual,
+                column=es_afectado_columna,
+                value=int(
+                    fila_normalizada.get("estado_pof_codigo")
+                    == CargoPof.EstadoPof.AFECTADO
+                ),
+            )
+            if requiere_total_cargo:
+                ws.cell(
+                    row=fila_actual,
+                    column=total_cargo_columna,
+                    value=(
+                        _valor_excel_exportacion(fila_normalizada.get("total", 0))
+                        or 0
+                    ),
+                )
+            if requiere_cantidad_horas:
+                ws.cell(
+                    row=fila_actual,
+                    column=cantidad_horas_columna,
+                    value=_valor_excel_exportacion(
+                        fila_normalizada.get("cantidad_horas", "")
+                    ),
+                )
+            for tipo_acumulador, columna_acumulador in columna_por_acumulador.items():
+                if columna_acumulador is None:
+                    continue
+                ws.cell(
+                    row=fila_actual,
+                    column=columna_acumulador,
+                    value=(
+                        f"={expresion_por_acumulador[tipo_acumulador](fila_actual)}"
+                    ),
+                )
+            grupo_visto_anterior = (
+                "0"
+                if fila_anterior_grupo_total is None
+                else f"${letra_grupo_visto_visible}{fila_anterior_grupo_total}"
+            )
+            ws.cell(
+                row=fila_actual,
+                column=grupo_visto_visible_columna,
+                value=(
+                    f"=IF(SUBTOTAL(103,${letra_fila_visible}{fila_actual})=1,1,"
+                    f"{grupo_visto_anterior})"
+                ),
+            )
+            if fila_anterior_grupo_total is not None:
+                for (
+                    tipo_acumulador,
+                    columna_acumulador,
+                ) in columna_por_acumulador.items():
+                    if columna_acumulador is None:
+                        continue
+                    ws.cell(
+                        row=fila_anterior_grupo_total,
+                        column=columna_acumulador,
+                        value=(
+                            f"={expresion_por_acumulador[tipo_acumulador](fila_anterior_grupo_total)}+"
+                            f"${letra_por_acumulador[tipo_acumulador]}{fila_actual}"
+                        ),
+                    )
+            ultima_fila_por_grupo_total[clave_total_general] = fila_actual
+
+        cue_anterior = clave_cue or None
+        fila_actual += 1
+
+    if mensaje and not filas_normalizadas:
+        ws.append([mensaje])
+
+    ultima_fila_datos = fila_actual - 1
+    hay_filas_datos = ultima_fila_datos >= fila_inicio
+    if hay_filas_datos:
+        ocultar_repetido_dxf = DifferentialStyle(
+            numFmt=NumberFormat(numFmtId=164, formatCode=";;;"),
+        )
+        for repeticion, clave_estado, indices in (
+            (REPETIR_POR_CUEANEXO, letra_ultimo_grupo_visible, []),
+            (REPETIR_POR_CUE, letra_ultimo_cue_visible, []),
+        ):
+            indices.extend(
+                indice
+                for indice, columna in enumerate(columnas_config, start=1)
+                if (
+                    columna.get("repetir") == repeticion
+                    and columna.get("source") not in fuentes_resumen_dinamico
+                )
+            )
+            if not indices:
+                continue
+            rangos = " ".join(
+                f"{get_column_letter(indice)}{fila_inicio}:"
+                f"{get_column_letter(indice)}{ultima_fila_datos}"
+                for indice in indices
+            )
+            clave_actual = (
+                letra_clave_grupo
+                if repeticion == REPETIR_POR_CUEANEXO
+                else letra_clave_cue
+            )
+            ws.conditional_formatting.add(
+                rangos,
+                Rule(
+                    type="expression",
+                    formula=[
+                        f"AND(SUBTOTAL(103,${letra_fila_visible}{fila_inicio})=1,"
+                        f"${clave_actual}{fila_inicio}=${clave_estado}{fila_encabezado})"
+                    ],
+                    dxf=ocultar_repetido_dxf,
+                ),
+            )
+
+        rango_datos = (
+            f"A{fila_inicio}:{get_column_letter(total_columnas)}{ultima_fila_datos}"
+        )
+        ws.conditional_formatting.add(
+            rango_datos,
+            FormulaRule(
+                formula=[
+                    f"AND(SUBTOTAL(103,${letra_fila_visible}{fila_inicio})=1,"
+                    f"${letra_cue_con_separador}{fila_inicio}=1,"
+                    f"${letra_clave_cue}{fila_inicio}<>"
+                    f"${letra_ultimo_cue_visible}{fila_encabezado})"
+                ],
+                border=Border(top=borde_superior_cue),
+                stopIfTrue=True,
+            ),
+        )
+        ws.conditional_formatting.add(
+            rango_datos,
+            FormulaRule(
+                formula=[
+                    f"AND(SUBTOTAL(103,${letra_fila_visible}{fila_inicio})=1,"
+                    f"${letra_tiene_anexo}{fila_inicio}=1,"
+                    f"${letra_clave_grupo}{fila_inicio}<>"
+                    f"${letra_ultimo_grupo_visible}{fila_encabezado},"
+                    f"${letra_clave_cue}{fila_inicio}="
+                    f"${letra_ultimo_cue_visible}{fila_encabezado})"
+                ],
+                border=Border(top=borde_superior_anexo),
+            ),
+        )
+
+    for indice, ancho in enumerate(anchos_columnas, start=1):
+        ws.column_dimensions[get_column_letter(indice)].width = ancho
+
+    return indices_resumen_dinamico
+
+
 def _normalizar_columna_excel(valor):
     return str(valor or "").strip().lower()
 
@@ -569,6 +1062,8 @@ def _crear_respuesta_excel_exportacion(contexto):
     es_proyecto_especial = contexto.get("es_proyecto_especial", False)
     columnas = contexto.get("columnas", [])
     filas = contexto.get("filas_exportacion", [])
+    filas_normalizadas = contexto.get("filas_normalizadas_exportacion", [])
+    columnas_config = contexto.get("columnas_exportacion_config", [])
     separadores_filas = contexto.get("separadores_filas_exportacion", [])
     secciones = contexto.get("secciones_exportacion", [])
     mensaje = contexto.get("mensaje_exportacion", "")
@@ -600,16 +1095,18 @@ def _crear_respuesta_excel_exportacion(contexto):
             wrap_text=True,
         )
 
+    indices_resumen_dinamico = []
     if es_proyecto_especial:
         for fila in filas:
             ws.append([_valor_excel_exportacion(valor) for valor in fila])
         if mensaje and not filas:
             ws.append([mensaje])
     else:
-        _escribir_filas_excel_optimizado(
+        indices_resumen_dinamico = _escribir_excel_reunida_filtrable(
             ws,
-            filas,
-            columnas,
+            filas_normalizadas,
+            columnas_config,
+            contexto.get("schema_exportacion") or {},
             mensaje=mensaje,
             fila_encabezado=4,
         )
@@ -625,6 +1122,20 @@ def _crear_respuesta_excel_exportacion(contexto):
     ws.freeze_panes = "A5"
 
     _aplicar_autofiltro_excel(ws, fila_encabezado=4, max_columna=max_columna)
+    if indices_resumen_dinamico:
+        from openpyxl.worksheet.filters import FilterColumn
+
+        for indice in indices_resumen_dinamico:
+            ws.auto_filter.filterColumn.append(
+                FilterColumn(
+                    colId=indice - 1,
+                    hiddenButton=True,
+                    showButton=False,
+                )
+            )
+        wb.calculation.calcMode = "auto"
+        wb.calculation.fullCalcOnLoad = True
+        wb.calculation.forceFullCalc = True
     if es_proyecto_especial:
         _aplicar_formato_columnas_excel(ws, columnas, fila_inicio=5)
     if es_proyecto_especial:
@@ -634,13 +1145,14 @@ def _crear_respuesta_excel_exportacion(contexto):
             fila_inicio=5,
             max_columna=max_columna,
         )
-    _aplicar_bordes_grupos_visual_excel(
-        ws,
-        separadores_filas,
-        fila_inicio=5,
-        max_columna=max_columna,
-        color_anexo="CBD5E1" if es_proyecto_especial else "111827",
-    )
+    if es_proyecto_especial:
+        _aplicar_bordes_grupos_visual_excel(
+            ws,
+            separadores_filas,
+            fila_inicio=5,
+            max_columna=max_columna,
+            color_anexo="CBD5E1",
+        )
 
     if es_proyecto_especial:
         _ajustar_ancho_columnas_excel(ws, fila_inicio=4)
@@ -816,15 +1328,6 @@ def proyectos_especiales_pof(request):
     filtros, errores_filtros = _obtener_filtros_proyectos_con_errores(request)
     filtro_anio = filtros["anio"]
     filtro_proyecto_especial_id = filtros["proyecto_especial_id"]
-    page_size_parametro = request.GET.get("page_size", "")
-
-    try:
-        page_size = int(page_size_parametro)
-    except (TypeError, ValueError):
-        page_size = PAGE_SIZE_OPTIONS[0]
-
-    if page_size not in PAGE_SIZE_OPTIONS:
-        page_size = PAGE_SIZE_OPTIONS[0]
 
     proyectos = (
         ProyectosEspecialesPof.objects.select_related("proyecto_base_anterior")
@@ -852,7 +1355,7 @@ def proyectos_especiales_pof(request):
 
     try:
         proyectos_select_lista = list(proyectos_select)
-        paginator = Paginator(proyectos, page_size)
+        paginator = Paginator(proyectos, 10)
         page_obj = paginator.get_page(request.GET.get("page"))
         total_registros = paginator.count
         proyectos_pagina = page_obj.object_list
@@ -866,7 +1369,7 @@ def proyectos_especiales_pof(request):
                 proyecto.ultima_modificacion = ultima_modificacion_historial
         tabla_proyectos_no_migrada = False
     except (ProgrammingError, OperationalError):
-        paginator = Paginator([], page_size)
+        paginator = Paginator([], 10)
         page_obj = paginator.get_page(1)
         total_registros = 0
         proyectos_pagina = []
@@ -877,7 +1380,7 @@ def proyectos_especiales_pof(request):
     query_params.pop("page", None)
     query_params.pop("nombre", None)
     query_params.pop("resolucion", None)
-    query_params["page_size"] = str(page_size)
+    query_params.pop("page_size", None)
 
     for nombre, valor in (
         ("anio", filtro_anio),
@@ -900,8 +1403,6 @@ def proyectos_especiales_pof(request):
             "page_obj": page_obj,
             "paginator": paginator,
             "page_range": list(paginator.get_elided_page_range(number=page_obj.number)),
-            "page_size": page_size,
-            "page_size_options": PAGE_SIZE_OPTIONS,
             "query_params_base": query_params.urlencode(),
             "filtro_anio": filtro_anio,
             "filtro_proyecto_especial_id": filtro_proyecto_especial_id,
