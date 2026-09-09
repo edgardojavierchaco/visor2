@@ -2,10 +2,14 @@
     "use strict";
 
     var SECTION_LINK_SELECTOR = "[data-especial-section-link]";
+    var PAGE_LOADING_LINK_SELECTOR = "[data-especial-page-loading-link]";
     var REGION_SELECTOR = "[data-especial-content-region]";
     var SEARCH_SELECTOR = "[data-especial-search]";
     var SUBVIEW_LINK_SELECTOR = "[data-especial-subview-link]";
     var SUPPORTED_SECTIONS = ["alumnos", "docentes", "cueanexo", "secciones", "ciclos"];
+    var PARTIAL_CACHE_TTL = 30000;
+    var PARTIAL_CACHE_MAX_ENTRIES = 6;
+    var partialResponseCache = new Map();
     var requestSequence = 0;
     var activeRequest = null;
     var lastConfirmedUrl = window.location.href;
@@ -58,6 +62,32 @@
         return event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
     }
 
+    function isNormalPageLoadingClick(event, link) {
+        if (!link || event.defaultPrevented || isModifiedClick(event)) return false;
+        if (link.target === "_blank" || link.hasAttribute("download")) return false;
+
+        var href = (link.getAttribute("href") || "").trim();
+        if (!href || href.charAt(0) === "#" || href.toLowerCase().indexOf("javascript:") === 0) return false;
+
+        var url = new URL(link.href, window.location.href);
+        return url.origin === window.location.origin && url.href !== window.location.href;
+    }
+
+    function navigateFullPage(url, region) {
+        if (region) setLoading(region);
+        var continueNavigation = function () {
+            window.location.href = url.toString();
+        };
+
+        if (!window.requestAnimationFrame) {
+            window.setTimeout(continueNavigation, 0);
+            return;
+        }
+        window.requestAnimationFrame(function () {
+            window.requestAnimationFrame(continueNavigation);
+        });
+    }
+
     function setLoading(region) {
         region.setAttribute("aria-busy", "true");
         region.replaceChildren();
@@ -75,6 +105,49 @@
 
     function setReady(region) {
         region.setAttribute("aria-busy", "false");
+    }
+
+    function getCachedPartial(url) {
+        var entry = partialResponseCache.get(url);
+        if (!entry) return null;
+        if (Date.now() - entry.createdAt > PARTIAL_CACHE_TTL) {
+            partialResponseCache.delete(url);
+            return null;
+        }
+        return entry.html;
+    }
+
+    function cachePartial(url, html) {
+        partialResponseCache.delete(url);
+        partialResponseCache.set(url, {
+            createdAt: Date.now(),
+            html: html
+        });
+        while (partialResponseCache.size > PARTIAL_CACHE_MAX_ENTRIES) {
+            partialResponseCache.delete(partialResponseCache.keys().next().value);
+        }
+    }
+
+    function renderCachedSection(region, html, section, mode, url) {
+        var responseDocument = new DOMParser().parseFromString(html, "text/html");
+        var incomingRegion = findRegion(responseDocument);
+        if (!incomingRegion || incomingRegion.dataset.especialSection !== section) return false;
+
+        if (window.EspecialUI && typeof window.EspecialUI.destroy === "function") {
+            window.EspecialUI.destroy(region);
+        }
+        replaceRegion(region, incomingRegion);
+        setReady(region);
+        if (window.EspecialUI && typeof window.EspecialUI.init === "function") {
+            window.EspecialUI.init(region);
+        }
+        initializeSubviewTabs(region);
+        updateHeader(region);
+        updateNavbar(section);
+        if (mode === "push") window.history.pushState({ especialSection: section }, "", url.toString());
+        if (mode === "replace") window.history.replaceState({ especialSection: section }, "", url.toString());
+        lastConfirmedUrl = url.toString();
+        return true;
     }
 
     function updateNavbar(section) {
@@ -445,6 +518,15 @@
             url: url
         };
         activeRequest = operation;
+
+        var cachedHtml = !target && !operation.subview
+            ? getCachedPartial(url.toString())
+            : null;
+        if (cachedHtml && renderCachedSection(region, cachedHtml, section, mode, url)) {
+            activeRequest = null;
+            return;
+        }
+
         if (target) {
             if (operation.subview) {
                 if (!beginSubviewTransition(operation)) {
@@ -480,6 +562,7 @@
             })
             .then(function (html) {
                 if (!activeRequest || activeRequest.id !== requestId) return;
+                if (!target && !operation.subview) cachePartial(url.toString(), html);
                 var responseDocument = new DOMParser().parseFromString(html, "text/html");
                 var incomingRegion = findRegion(responseDocument);
                 if (!incomingRegion || incomingRegion.dataset.especialSection !== section) {
@@ -532,6 +615,17 @@
 
     document.addEventListener("click", function (event) {
         if (isModifiedClick(event) || event.defaultPrevented) return;
+
+        var pageLoadingLink = event.target.closest(PAGE_LOADING_LINK_SELECTOR);
+        if (isNormalPageLoadingClick(event, pageLoadingLink)) {
+            event.preventDefault();
+            navigateFullPage(
+                new URL(pageLoadingLink.href, window.location.href),
+                findRegion(document)
+            );
+            return;
+        }
+
         var subviewLink = event.target.closest(SUBVIEW_LINK_SELECTOR);
         if (subviewLink) {
             if (subviewLink.target === "_blank" || subviewLink.hasAttribute("download")) return;
@@ -557,6 +651,16 @@
         if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
         var url = new URL(link.href, window.location.href);
         var region = findRegion(document);
+        if (
+            url.origin === window.location.origin
+            && isSupportedSection(link.dataset.especialSection)
+            && region
+            && !compatibleShell()
+        ) {
+            event.preventDefault();
+            navigateFullPage(url, region);
+            return;
+        }
         if (
             url.origin !== window.location.origin
             || !isSupportedSection(link.dataset.especialSection)
