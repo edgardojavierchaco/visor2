@@ -157,7 +157,7 @@ class TablaTemporalAplicadores(models.Model):
 	seccion = models.CharField(max_length=250, null=True, blank=True)
 	estado_inscripcion = models.CharField(max_length=100, null=True, blank=True)
 	ciclo_lectivo = models.CharField(max_length=50, null=True, blank=True)
-
+	ambito = models.CharField(max_length=150, null=True, blank=True)
 	class Meta:
 		managed = False  # <--- Evita que Django cree o modifique la tabla
 		db_table = '"fluidez_2026"."tabla_temporal_aplicadores"'  # <--- Esquema y tabla
