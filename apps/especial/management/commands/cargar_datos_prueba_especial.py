@@ -279,6 +279,11 @@ class Command(BaseCommand):
                 seccion=seccion,
                 alumno_banco=banco,
                 estado=AlumnoSeccion.Estado.ACTIVO,
+                tipo_inclusion=(
+                    AlumnoSeccion.TipoInclusion.INCLUSION_PLENA
+                    if indice % 2 == 0
+                    else AlumnoSeccion.TipoInclusion.TRAYECTORIA_COMPARTIDA
+                ) if seccion.es_oferta_integracion else None,
                 fecha_inscripcion=date.today(),
             )
 
@@ -312,7 +317,8 @@ class Command(BaseCommand):
     def _crear_asignaciones_docentes(self, docentes, secciones, escenario):
         for indice, banco in enumerate(docentes):
             DocenteSeccion.objects.create(
-                seccion=secciones[indice], docente_cuil=banco.docente_cuil,
+                seccion=secciones[indice], docente_banco=banco,
+                docente_cuil=banco.docente_cuil,
                 rol=DocenteSeccion.Rol.TITULAR, estado=DocenteSeccion.Estado.ACTIVO,
                 fecha_desde=date.today(),
             )
