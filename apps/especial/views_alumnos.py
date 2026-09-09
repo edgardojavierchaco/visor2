@@ -697,17 +697,15 @@ def _alumnos_banco(
         )
     )
     if vista == "historial":
-        alumnos_con_movimientos = AlumnoSeccion.objects.filter(
-            seccion__cueanexo=especial_context["cueanexo"],
-            seccion__ciclo=especial_context["ciclo"],
-            estado=AlumnoSeccion.Estado.BAJA,
-        ).values("alumno_id")
+        # El historial debe incluir también el período actualmente activo:
+        # sus inscripciones pueden contener altas y bajas dentro de las
+        # secciones, aunque el alumno siga activo en el banco.
         queryset = queryset.filter(
-            Q(estado__in=[
+            estado__in=[
+                EspecialAlumnoBanco.Estado.ACTIVO,
                 EspecialAlumnoBanco.Estado.INACTIVO,
                 EspecialAlumnoBanco.Estado.BAJA,
-            ])
-            | Q(alumno_id__in=alumnos_con_movimientos)
+            ]
         )
     else:
         queryset = queryset.filter(estado=EspecialAlumnoBanco.Estado.ACTIVO)

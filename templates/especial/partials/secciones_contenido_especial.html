@@ -249,7 +249,13 @@
                                                                         <li>
                                                                             <div class="cef-alumno-seccion-item cef-historial-inscripcion-cabecera">
                                                                                 <span class="cef-alumno-seccion-icon" aria-hidden="true"><i class="fa-solid fa-user-graduate"></i></span>
-                                                                                <span class="cef-alumno-seccion-text cef-historial-inscripcion-name">{{ inscripcion.alumno|default:"Alumno" }} · <span class="cef-historial-assignment-status{% if inscripcion.estado == 'activo' %} is-active{% else %} is-closed{% endif %}">{{ inscripcion.get_estado_display }}</span></span>
+                                                                                <span class="cef-alumno-seccion-text cef-historial-inscripcion-name">
+                                                                                    {{ inscripcion.alumno|default:"Alumno" }} · <span class="cef-historial-assignment-status{% if inscripcion.estado == 'activo' %} is-active{% else %} is-closed{% endif %}">{{ inscripcion.get_estado_display }}</span>
+                                                                                    <small class="d-block text-muted mt-1">
+                                                                                        Alta: {{ inscripcion.fecha_inscripcion|date:"d/m/Y"|default:"—" }}
+                                                                                        · Baja: {{ inscripcion.fecha_baja|date:"d/m/Y"|default:"—" }}
+                                                                                    </small>
+                                                                                </span>
                                                                             </div>
                                                                         </li>
                                                                     {% endfor %}

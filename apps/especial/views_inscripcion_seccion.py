@@ -12,6 +12,7 @@ from django.db import DatabaseError, IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
 
 from .forms import EspecialBusquedaAlumnoForm, EspecialInscripcionForm
 from .models import (
@@ -166,8 +167,10 @@ def crear_inscripcion_activa(
             .first()
         )
         if inscripcion_baja:
-            _reactivar_inscripcion_bloqueada(inscripcion_baja, user, seccion_bloqueada)
-            return inscripcion_baja, False
+            inscripcion_nueva = _reactivar_inscripcion_bloqueada(
+                inscripcion_baja, user, seccion_bloqueada
+            )
+            return inscripcion_nueva, False
 
         total_activos = AlumnoSeccion.objects.filter(
             seccion=seccion_bloqueada,
@@ -210,18 +213,14 @@ def _reactivar_inscripcion_bloqueada(inscripcion_bloqueada, user, seccion):
             "No se puede reinscribir: la sección alcanzó su capacidad máxima."
         )
 
-    inscripcion_bloqueada.estado = AlumnoSeccion.Estado.ACTIVO
-    inscripcion_bloqueada.fecha_baja = None
-    inscripcion_bloqueada.motivo_baja = ""
-    inscripcion_bloqueada.actualizado_por = user
-    inscripcion_bloqueada.save(
-        update_fields=[
-            "estado",
-            "fecha_baja",
-            "motivo_baja",
-            "actualizado_por",
-            "actualizado_en",
-        ]
+    return AlumnoSeccion.objects.create(
+        seccion=seccion,
+        alumno_id=inscripcion_bloqueada.alumno_id,
+        estado=AlumnoSeccion.Estado.ACTIVO,
+        fecha_inscripcion=timezone.localdate(),
+        observaciones=inscripcion_bloqueada.observaciones,
+        creado_por=user,
+        actualizado_por=user,
     )
 
 
