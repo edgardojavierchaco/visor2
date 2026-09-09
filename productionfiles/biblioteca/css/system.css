@@ -1,5 +1,4 @@
 .biblioteca-shell {
-    --biblioteca-shell-max: 90rem;
     --biblioteca-primary: #5966e8;
     --biblioteca-primary-2: #4853cf;
     --biblioteca-primary-3: #3d46bb;
@@ -44,7 +43,7 @@
 .biblioteca-inicio,
 .biblioteca-operativa,
 .biblioteca-crud {
-    max-width: var(--biblioteca-shell-max);
+    max-width: none;
     width: 100%;
 }
 
@@ -62,7 +61,6 @@
     line-height: 1;
     overflow: hidden;
     text-transform: none;
-    transition: font-variation-settings 160ms cubic-bezier(.23, 1, .32, 1), color 160ms cubic-bezier(.23, 1, .32, 1);
     white-space: nowrap;
     width: 1em;
     word-wrap: normal;
@@ -236,8 +234,8 @@ button:active .biblioteca-symbol,
     }
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (prefers-reduced-motion: no-preference) {
     .biblioteca-symbol {
-        transition: none;
+        transition: color 140ms ease, font-variation-settings 140ms ease;
     }
 }

@@ -43,6 +43,10 @@
     width: 2.25rem;
 }
 
+.biblioteca-module-nav__brand-icon .biblioteca-symbol {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
 .biblioteca-module-nav__brand-copy {
     display: flex;
     flex-direction: column;
@@ -70,6 +74,14 @@
     padding: .625rem .75rem;
     text-decoration: none;
     transition: background-color 160ms cubic-bezier(.23, 1, .32, 1), color 160ms cubic-bezier(.23, 1, .32, 1), box-shadow 160ms cubic-bezier(.23, 1, .32, 1);
+}
+
+.biblioteca-module-nav__link--guide {
+    margin-left: auto;
+}
+
+.biblioteca-module-nav__icon--carga {
+    transform: translateY(-1px);
 }
 
 .biblioteca-module-nav__link:not(.biblioteca-module-nav__link--disabled):hover {

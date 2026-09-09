@@ -301,6 +301,9 @@ class MaterialBibliograficoDeleteView(LoginRequiredMixin, InformeBloqueoMixin, D
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        context['cueanexo'] = self.object.cueanexo
+        context['mes'] = self.object.mes
+        context['anno'] = self.object.anio
         context['title'] = 'Eliminación Servicio Material Bibliográfico'
         context['entity'] = 'Material'
         context['list_url'] = self.success_url
