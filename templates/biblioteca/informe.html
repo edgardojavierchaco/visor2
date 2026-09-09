@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block head %}
-<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260908">
+<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260909-2">
 {% endblock %}
 
 {% block content_header %}{% endblock %}
@@ -90,7 +90,7 @@
                                     {% include 'biblioteca/includes/section_material_icon.html' with seccion=seccion only %}
                                     <span class="biblioteca-seccion__contenido">
                                         <strong>{{ seccion.nombre }}</strong>
-                                        <span>
+                                        <span class="biblioteca-seccion__cantidad">
                                             {{ seccion.cantidad }}
                                             {% if seccion.cantidad == 1 %}registro{% else %}registros{% endif %}
                                         </span>
