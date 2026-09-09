@@ -10,6 +10,7 @@ from . import (
     views_inscripcion_seccion,
     views_localizaciones,
     views_visualizador,
+    views_export,
 )
 
 app_name = "especial"
@@ -38,6 +39,7 @@ urlpatterns = [
     path("visualizador/detalle/alumno/", views_visualizador.visualizador_detalle_alumno, name="visualizador_detalle_alumno"),
     path("visualizador/detalle/docente/", views_visualizador.visualizador_detalle_docente, name="visualizador_detalle_docente"),
     path("visualizador/detalle/director/", views_visualizador.visualizador_detalle_director, name="visualizador_detalle_director"),
+    path("exportar-bnh/", views_export.exportar_bnh, name="exportar_bnh"),
     # Alumnos
     path(
         "alumnos/",

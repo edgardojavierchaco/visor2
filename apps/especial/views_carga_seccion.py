@@ -321,10 +321,9 @@ def _secciones_historial_paginado(especial_context, queryset, pagina):
     for key in page_keys:
         periodos = []
         for seccion in secciones_por_clave[key]:
-            inscripciones = _ultimo_por_clave(
-                alumnos_por_seccion.get(seccion.pk, []),
-                lambda item: item.alumno_id,
-            )
+            # No reducir a una sola fila por alumno: una misma inscripción
+            # puede tener varios períodos (alta, baja y nueva alta).
+            inscripciones = alumnos_por_seccion.get(seccion.pk, [])
             asignaciones = _ultimo_por_clave(
                 docentes_por_seccion.get(seccion.pk, []),
                 lambda item: item.docente_cuil,

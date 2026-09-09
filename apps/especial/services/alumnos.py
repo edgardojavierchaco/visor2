@@ -393,14 +393,13 @@ def inscribir_alumno_en_seccion(
             .first()
         )
         if inscripcion_baja:
-            inscripcion_baja.estado = AlumnoSeccion.Estado.ACTIVO
-            inscripcion_baja.fecha_baja = None
-            inscripcion_baja.motivo_baja = ""
-            inscripcion_baja.actualizado_por = user
-            inscripcion_baja.save(update_fields=[
-                "estado", "fecha_baja", "motivo_baja", "actualizado_por", "actualizado_en"
-            ])
-            return inscripcion_baja, False, banco_destino
+            inscripcion_nueva = _crear_nueva_inscripcion_desde_baja(
+                inscripcion_baja,
+                user,
+                seccion_bloqueada,
+                using=using,
+            )
+            return inscripcion_nueva, False, banco_destino
 
         total_activos = AlumnoSeccion.objects.using(using).filter(
             seccion_id=seccion_bloqueada.pk,
@@ -417,6 +416,26 @@ def inscribir_alumno_en_seccion(
             actualizado_por=user,
         )
         return inscripcion, True, banco_destino
+
+
+def _crear_nueva_inscripcion_desde_baja(inscripcion_baja, user, seccion, *, using):
+    """Conserva la baja y registra una nueva alta como otro período."""
+    total_activos = AlumnoSeccion.objects.using(using).filter(
+        seccion_id=seccion.pk,
+        estado=AlumnoSeccion.Estado.ACTIVO,
+    ).count()
+    if total_activos >= seccion.capacidad_total:
+        raise ValidationError("No se puede reinscribir: la sección alcanzó su capacidad máxima.")
+
+    return AlumnoSeccion.objects.using(using).create(
+        seccion=seccion,
+        alumno_id=inscripcion_baja.alumno_id,
+        estado=AlumnoSeccion.Estado.ACTIVO,
+        fecha_inscripcion=timezone.localdate(),
+        observaciones=inscripcion_baja.observaciones,
+        creado_por=user,
+        actualizado_por=user,
+    )
 
 
 def dar_baja_inscripcion_y_matricula_compartida(inscripcion, user, *, motivo_baja="Baja desde gestión"):

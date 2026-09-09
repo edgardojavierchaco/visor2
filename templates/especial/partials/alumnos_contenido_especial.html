@@ -110,12 +110,12 @@
                                                         {% if item.inscripciones_seccion|length == 1 %}
                                                             {% with inscripcion=item.inscripciones_seccion.0 %}
                                                                 <a class="btn btn-sm cef-secciones-action is-outline" href="{% url 'especial:editar_inscripcion_seccion' inscripcion.seccion.pk inscripcion.pk %}{% if alumnos_querystring %}?{{ alumnos_querystring }}{% endif %}" role="menuitem">
-                                                                    <i class="fa-solid fa-pen" aria-hidden="true"></i> Editar secci&oacute;n
+                                                                    <i class="fa-solid fa-pen" aria-hidden="true"></i> Editar inscripci&oacute;n
                                                                 </a>
                                                             {% endwith %}
                                                         {% else %}
                                                             <button class="btn btn-sm cef-secciones-action is-outline" type="button" data-especial-alumno-action-options-toggle aria-expanded="false" aria-controls="alumno-editar-seccion-opciones-{{ item.pk }}">
-                                                                <i class="fa-solid fa-pen" aria-hidden="true"></i> Editar secci&oacute;n
+                                                                <i class="fa-solid fa-pen" aria-hidden="true"></i> Editar inscripci&oacute;n
                                                             </button>
                                                             <div id="alumno-editar-seccion-opciones-{{ item.pk }}" class="cef-alumno-action-options" data-especial-alumno-action-options hidden>
                                                                 {% for inscripcion in item.inscripciones_seccion %}
@@ -128,7 +128,7 @@
                                                         {% endif %}
                                                     {% else %}
                                                         <button class="btn btn-sm cef-secciones-action is-outline" type="button" disabled aria-disabled="true">
-                                                            <i class="fa-solid fa-pen" aria-hidden="true"></i> Editar secci&oacute;n
+                                                            <i class="fa-solid fa-pen" aria-hidden="true"></i> Editar inscripci&oacute;n
                                                         </button>
                                                     {% endif %}
 
@@ -266,6 +266,10 @@
                                                                                 </span>
                                                                                 <span class="cef-alumno-seccion-text cef-historial-inscripcion-name">
                                                                                     {{ inscripcion.seccion.nombre_seccion }}{% if inscripcion.seccion.cd_tipo_seccion %}<span class="cef-alumno-seccion-type"> · {{ inscripcion.seccion.cd_tipo_seccion }}</span>{% endif %}
+                                                                                    <small class="d-block text-muted mt-1">
+                                                                                        Alta: {{ inscripcion.fecha_inscripcion|date:"d/m/Y"|default:"—" }}
+                                                                                        · Baja: {{ inscripcion.fecha_baja|date:"d/m/Y"|default:"—" }}
+                                                                                    </small>
                                                                                 </span>
                                                                             </div>
                                                                         </li>
