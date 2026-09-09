@@ -45,6 +45,9 @@ const API = {
 // ===============================
 let CURRENT_SUPERVISOR = null;
 
+const CAN_CRUD =
+    window.PUEDE_CRUD_SUPERVISORES === true;
+
 // ===============================
 // HELPERS
 // ===============================
@@ -100,6 +103,14 @@ async function confirmar(texto) {
 
 
 async function post(url, data) {
+
+    if (!CAN_CRUD) {
+        msgWarning(
+            "Su usuario posee acceso de sólo lectura."
+        );
+        throw new Error("Operación no permitida en modo sólo lectura");
+    }
+
     const form = new FormData();
 
     Object.entries(data).forEach(([k, v]) => {
@@ -244,19 +255,27 @@ async function buscarSupervisor() {
             .getElementById("telefono")
             .value = "";
 
-        resultado.innerHTML = `
-            <div class="alert alert-danger">
-                <b>No existe como usuario.</b>
+        if (res.solo_lectura) {
+            resultado.innerHTML = `
+                <div class="alert alert-info">
+                    <b>No se encontró un supervisor dentro de su alcance de consulta.</b>
+                </div>
+            `;
+        } else {
+            resultado.innerHTML = `
+                <div class="alert alert-danger">
+                    <b>No existe como usuario.</b>
 
-                <hr>
+                    <hr>
 
-                Debe comunicarse con un administrador a:
+                    Debe comunicarse con un administrador a:
 
-                <br><br>
+                    <br><br>
 
-                <b>estadisticaseducativaschaco@gmail.com</b>
-            </div>
-        `;
+                    <b>estadisticaseducativaschaco@gmail.com</b>
+                </div>
+            `;
+        }
 
         // NO permite crear supervisor
         document.getElementById("createBox").classList.add("d-none");
@@ -473,16 +492,16 @@ function renderSituaciones(list) {
             <div class="border p-2 mb-2">
                 <b>${s.situacion_revista__nombre}</b>
                 (${s.fecha_desde} - ${s.fecha_hasta || "Actual"})
-                <button class="btn btn-sm btn-danger"
-                    onclick="eliminarSituacion(${s.id})">X</button>
-                
-                <button
-                    class="btn btn-warning btn-sm"
-                    onclick="abrirEditarSituacion(${s.id})">
+                ${CAN_CRUD ? `
+                    <button class="btn btn-sm btn-danger"
+                        onclick="eliminarSituacion(${s.id})">X</button>
 
-                    Editar
-
-                </button>
+                    <button
+                        class="btn btn-warning btn-sm"
+                        onclick="abrirEditarSituacion(${s.id})">
+                        Editar
+                    </button>
+                ` : ""}
             </div>
         `;
     });
@@ -655,13 +674,13 @@ function renderRegionales(list) {
 
                 <br>
 
-                <button
-                    class="btn btn-sm btn-danger"
-                    onclick="eliminarRegional(${r.id})">
-
-                    Eliminar
-
-                </button>
+                ${CAN_CRUD ? `
+                    <button
+                        class="btn btn-sm btn-danger"
+                        onclick="eliminarRegional(${r.id})">
+                        Eliminar
+                    </button>
+                ` : ""}
 
             </div>
         `;
@@ -818,20 +837,18 @@ function renderNiveles(list) {
                 Regional:
                 ${n.regional}
 
-                <button
-                    class="btn btn-danger btn-sm mt-2"
-                    onclick="eliminarNivel(${n.id})">
-
-                    Eliminar
-
-                </button>
-                <button
-                    class="btn btn-warning btn-sm"
-                    onclick="editarNivel(${n.id})">
-
-                    Editar
-
-                </button>
+                ${CAN_CRUD ? `
+                    <button
+                        class="btn btn-danger btn-sm mt-2"
+                        onclick="eliminarNivel(${n.id})">
+                        Eliminar
+                    </button>
+                    <button
+                        class="btn btn-warning btn-sm"
+                        onclick="editarNivel(${n.id})">
+                        Editar
+                    </button>
+                ` : ""}
 
             </div>
         `;
@@ -991,18 +1008,18 @@ function renderOfertas(list) {
                 Regional:
                 ${o.regional}
 
-                <button
-                    class="btn btn-danger btn-sm"
-                    onclick="eliminarOferta(${o.id})">
-                    X
-                </button>
-                <button
-                    class="btn btn-warning btn-sm"
-                    onclick="editarOferta(${o.id})">
-
-                    Editar
-
-                </button>
+                ${CAN_CRUD ? `
+                    <button
+                        class="btn btn-danger btn-sm"
+                        onclick="eliminarOferta(${o.id})">
+                        X
+                    </button>
+                    <button
+                        class="btn btn-warning btn-sm"
+                        onclick="editarOferta(${o.id})">
+                        Editar
+                    </button>
+                ` : ""}
 
             </div>
         `;
@@ -1126,9 +1143,64 @@ async function editarOferta(id) {
     );
 }
 
+function aplicarModoSoloLectura() {
+
+    if (CAN_CRUD) {
+        return;
+    }
+
+    const createBox = document.getElementById("createBox");
+    if (createBox) {
+        createBox.classList.add("d-none");
+    }
+
+    const idsFilasCrud = [
+        "situacionSelect",
+        "regionSelect",
+        "nivelRegionalSelect",
+        "ofertaRegionalSelect"
+    ];
+
+    idsFilasCrud.forEach(id => {
+        const nodo = document.getElementById(id);
+        const fila = nodo?.closest(".row");
+        if (fila) {
+            fila.classList.add("d-none");
+        }
+    });
+
+    document
+        .querySelectorAll("[onclick]")
+        .forEach(elemento => {
+            const accion = elemento.getAttribute("onclick") || "";
+
+            const accionesCrud = [
+                "crearSupervisor(",
+                "agregarSituacion(",
+                "guardarEdicionSituacion(",
+                "agregarRegional(",
+                "agregarNivel(",
+                "agregarOferta(",
+                "eliminarSituacion(",
+                "eliminarRegional(",
+                "eliminarNivel(",
+                "eliminarOferta(",
+                "editarNivel(",
+                "editarOferta("
+            ];
+
+            if (accionesCrud.some(a => accion.includes(a))) {
+                elemento.classList.add("d-none");
+            }
+        });
+}
+
+
 document.addEventListener(
     "DOMContentLoaded",
     () => {
+
+        aplicarModoSoloLectura();
 
         // Tabs
         document

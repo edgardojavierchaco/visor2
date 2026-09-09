@@ -27,7 +27,6 @@ ROLES_GLOBALES_SGE = {
     "Director General",
     "Ministro",
     "Subsecretario",
-    "Supervisor",
 }
 ROLES_REGIONALES_SGE = {"Regional"}
 ROLES_GESTORES_SGE = {"Gestor", "Gestor / Agente"}
@@ -224,6 +223,61 @@ def _opciones_cueanexo_sge(user):
     return opciones
 
 
+def _opciones_cueanexo_supervisor_sge(user):
+    cuil = _normalizar_cuil_usuario_sge(user)
+    if not cuil:
+        return []
+
+    opciones = []
+    cueanexos_vistos = set()
+    connection = None
+    try:
+        connection = psycopg2.connect(
+            host=os.getenv('POSTGRES_HOST'),
+            user=os.getenv('POSTGRES_USER'),
+            password=os.getenv('POSTGRES_PASSWORD'),
+            database=os.getenv('POSTGRES_DB')
+        )
+        cursor = connection.cursor()
+        cursor.execute(
+            r"""
+            SELECT DISTINCT
+                o.cueanexo,
+                o.nom_est
+            FROM supervisores.supervisor_registro_supervisor AS s
+            JOIN supervisores.supervisor_registro_supervisor_regional AS sr
+                ON sr.supervisor_id = s.id
+               AND sr.activo = TRUE
+            JOIN supervisores.supervisor_registro_supervisor_regional_oferta AS o
+                ON o.supervisor_regional_id = sr.id
+               AND o.activo = TRUE
+            WHERE REGEXP_REPLACE(CAST(s.cuil AS TEXT), '\D', '', 'g') = %s
+              AND s.activo = TRUE
+              AND o.cueanexo IS NOT NULL
+              AND TRIM(CAST(o.cueanexo AS TEXT)) <> ''
+            ORDER BY o.cueanexo, o.nom_est
+            """,
+            [cuil],
+        )
+        for fila in cursor.fetchall():
+            cueanexo = _normalizar_cueanexo_sge(fila[0])
+            if not cueanexo or cueanexo in cueanexos_vistos:
+                continue
+            cueanexos_vistos.add(cueanexo)
+            nombre = str(fila[1] or "").strip() or "Establecimiento sin nombre"
+            opciones.append({
+                "cueanexo": cueanexo,
+                "nombre": nombre,
+                "region": "",
+            })
+    except Exception:
+        return []
+    finally:
+        if connection:
+            connection.close()
+    return opciones
+
+
 def _resolver_cueanexo_sge(request, opciones):
     session = getattr(request, "session", None)
     raw = (
@@ -278,6 +332,11 @@ def resolver_contexto_sge(request):
             if opcion["region"]
         })
 
+    elif cargo == "Supervisor":
+        alcance = "cue"
+        opciones_cueanexo = _opciones_cueanexo_supervisor_sge(request.user)
+        regiones_permitidas = []
+
     elif cargo in ROLES_REGIONALES_SGE:
         alcance = "regional"
         regiones = obtener_regiones_permitidas(request.user)
@@ -307,7 +366,7 @@ def resolver_contexto_sge(request):
         ),
         "cueanexo_opciones": opciones_cueanexo,
         "cueanexo_actual": cueanexo_actual,
-        "mostrar_selector_cueanexo": alcance == "cue" and cargo != "Director",
+        "mostrar_selector_cueanexo": alcance == "cue" and cargo not in {"Director", "Supervisor"},
     }
     request._sge_contexto_operativo = contexto
     return contexto

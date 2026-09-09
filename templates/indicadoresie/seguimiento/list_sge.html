@@ -336,6 +336,92 @@
     #sgeTable th, #sgeTable td { border: 1px solid #cbd5e1 !important; }
     #sgeTable thead th { background: #111827; color: #f8fafc; font-size: .82rem; font-weight: 800; text-transform: uppercase; padding: .8rem .9rem !important; white-space: nowrap; text-align: center; } 
     #sgeTable tbody td { padding: .65rem .9rem !important; vertical-align: middle; white-space: nowrap; text-align: center; color: #111827;}
+    #sgeTable .sge-detail-action { width: 54px; min-width: 54px; padding: .4rem !important; }
+    /* Detalle RA/SGE: paneles y tablas adaptados del ojito de padroninterno. */
+    #detalleRaSgeModal {
+        --detalle-ink: #18212f;
+        --detalle-muted: #5f6b7a;
+        --detalle-border: #c5ccd5;
+        --detalle-border-strong: #9ea9b7;
+        --detalle-surface: #ffffff;
+        --detalle-layer: #f3f5f7;
+        --detalle-layer-strong: #e6eaef;
+        --detalle-heading: #24364b;
+        --detalle-accent: #1d4ed8;
+        --detalle-accent-soft: #eaf1ff;
+        color: var(--detalle-ink);
+        font-size: .9rem;
+    }
+    #detalleRaSgeModal .modal-content { border: 1px solid var(--detalle-border-strong); border-radius: .75rem; overflow: hidden; background: var(--detalle-layer); box-shadow: 0 24px 56px rgba(15,23,42,.26); }
+    #detalleRaSgeModal .modal-header { align-items: flex-start; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--detalle-border); background: var(--detalle-surface); }
+    #detalleRaSgeModal .modal-title { display: inline-flex; align-items: center; gap: .5rem; margin: 0 0 .6rem; color: #152033; font-size: 1.06rem; font-weight: 800; }
+    #detalleRaSgeModal .modal-title > i { flex: 0 0 auto; margin: 0 !important; }
+    #detalleRaSgeModal .detalle-ra-sge-heading { min-width: 0; flex: 1 1 auto; }
+    #detalleRaSgeModal .detalle-ra-sge-close { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 2.15rem; width: 2.15rem; height: 2.15rem; margin: 0; padding: 0; border: 1px solid #b8c2ce; border-radius: .45rem; background: #f7f9fb; color: #334155; box-shadow: 0 1px 2px rgba(15,23,42,.08); cursor: pointer; transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease; }
+    #detalleRaSgeModal .detalle-ra-sge-close:hover { border-color: #8fb0db; background: #eaf2ff; color: var(--detalle-accent); box-shadow: 0 2px 5px rgba(15,23,42,.12); }
+    #detalleRaSgeModal .detalle-ra-sge-close:focus-visible { outline: 2px solid var(--detalle-accent); outline-offset: 2px; }
+    #detalleRaSgeModal #detalleRaSgeEstablecimiento { margin: 0 0 .4rem; color: #202938; font-size: .95rem; font-weight: 750; overflow-wrap: anywhere; }
+    #detalleRaSgeModal #detalleRaSgeCueanexo { display: inline-block; padding: .2rem .55rem; border: 1px solid #b7c0cc; border-radius: .35rem; background: #eef1f4; color: #344256; font-size: .78rem; font-weight: 700; }
+    #detalleRaSgeModal .modal-body { padding: 1rem 1.25rem; background: #edf0f3; }
+    #detalleRaSgeModal .modal-footer { justify-content: flex-start; padding: .8rem 1.25rem; border-top: 1px solid var(--detalle-border); background: var(--detalle-surface); }
+    #detalleRaSgeModal .modal-footer .btn { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.15rem; padding: .42rem .8rem; border: 1px solid #9eabb9; border-radius: .4rem; background: #fff; color: #27364a; font-weight: 700; box-shadow: 0 1px 2px rgba(15,23,42,.06); transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease; }
+    #detalleRaSgeModal .modal-footer .btn:hover { border-color: #8fb0db; background: #edf4ff; color: #173f72; box-shadow: 0 2px 5px rgba(15,23,42,.1); }
+    #detalleRaSgeModal .modal-footer .detalle-ra-sge-pdf { margin-left: auto; border-color: #1d4ed8; background: #1d4ed8; color: #fff; }
+    #detalleRaSgeModal .modal-footer .detalle-ra-sge-pdf:hover { border-color: #1e40af; background: #1e40af; color: #fff; }
+    #detalleRaSgeModal .modal-footer .detalle-ra-sge-pdf:disabled { border-color: #9ca3af; background: #9ca3af; color: #fff; cursor: not-allowed; opacity: .75; box-shadow: none; }
+    #detalleRaSgeModal .detalle-ra-sge-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .6rem; margin-bottom: 1rem; padding-inline: .35rem; }
+    #detalleRaSgeModal .detalle-ra-sge-toolbar > span { color: #4e5968; font-size: .8rem; font-weight: 700; }
+    #detalleRaSgeModal .detalle-ra-sge-layout { display: flex; flex-wrap: wrap; gap: .35rem; }
+    #detalleRaSgeModal [data-detalle-layout] { display: inline-flex; align-items: center; justify-content: center; gap: .3rem; min-height: 2rem; padding: .38rem .72rem; border: 1px solid #a8b2c0; border-radius: .35rem; background: #fff; color: #27364a; font-size: .78rem; font-weight: 650; line-height: 1.2; }
+    #detalleRaSgeModal [data-detalle-layout]:hover { background: #e9edf2; }
+    #detalleRaSgeModal [data-detalle-layout][aria-pressed="true"] { background: var(--detalle-accent); border-color: var(--detalle-accent); color: #fff; }
+    #detalleRaSgeModal .detalle-ra-sge-fuentes { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: start; gap: 1rem; }
+    #detalleRaSgeModal[data-layout="vertical"] .detalle-ra-sge-fuentes { grid-template-columns: minmax(0,1fr); }
+    #detalleRaSgeModal .detalle-ra-sge-panel { min-width: 0; background: var(--detalle-surface); border: 1px solid #aeb8c4; border-radius: .55rem; box-shadow: 0 2px 8px rgba(15,23,42,.08); overflow: hidden; }
+    #detalleRaSgeModal .detalle-ra-sge-source-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .4rem; padding: .72rem .9rem; background: var(--detalle-heading); border-bottom: 1px solid #17283a; color: #fff; }
+    #detalleRaSgeModal .detalle-ra-sge-source-header h3 { margin: 0; font-size: .95rem; font-weight: 800; letter-spacing: .01em; }
+    #detalleRaSgeModal .detalle-ra-sge-count { padding: .15rem .5rem; border: 1px solid rgba(255,255,255,.28); border-radius: 999px; background: rgba(255,255,255,.14); color: #fff; font-size: .75rem; font-weight: 700; }
+    #detalleRaSgeModal .detalle-ra-sge-nivel { padding: .85rem; background: #f7f8fa; }
+    #detalleRaSgeModal .detalle-ra-sge-nivel + .detalle-ra-sge-nivel { border-top: 1px solid var(--detalle-border); }
+    #detalleRaSgeModal .detalle-ra-sge-nivel h4 { margin: 0 0 .65rem; color: #27364a; font-size: .84rem; font-weight: 800; line-height: 1.4; overflow-wrap: anywhere; }
+    #detalleRaSgeModal .detalle-ra-sge-registro { border: 1px solid #b8c1cc; border-radius: .45rem; overflow: hidden; background: #fff; }
+    #detalleRaSgeModal .detalle-ra-sge-registro + .detalle-ra-sge-registro { margin-top: .75rem; }
+    #detalleRaSgeModal .detalle-ra-sge-record-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: .5rem; padding: .68rem .78rem; background: #eef1f4; border-bottom: 1px solid #c8d0da; }
+    #detalleRaSgeModal .detalle-ra-sge-record-header h5 { min-width: 0; flex: 1 1 140px; margin: 0; color: #18212f; font-size: .92rem; font-weight: 800; line-height: 1.4; overflow-wrap: anywhere; }
+    #detalleRaSgeModal .detalle-ra-sge-label { display: block; margin-bottom: .12rem; color: #67717f; font-size: .64rem; font-weight: 700; letter-spacing: .035em; text-transform: uppercase; }
+    #detalleRaSgeModal .detalle-ra-sge-total { padding: .28rem .55rem; border: 1px solid #96b3dc; border-radius: .35rem; background: #eaf2ff; color: #173f72; font-size: .84rem; font-weight: 800; white-space: nowrap; }
+    #detalleRaSgeModal .detalle-ra-sge-table { width: 100%; table-layout: fixed; border-collapse: collapse; margin: 0; color: #111827; }
+    #detalleRaSgeModal .detalle-ra-sge-table > tbody > tr > * { padding: .44rem .72rem; border-bottom: 1px solid #d4dae2; font-size: .83rem; line-height: 1.45; vertical-align: top; white-space: normal; overflow-wrap: anywhere; }
+    #detalleRaSgeModal .detalle-ra-sge-table > tbody > tr:last-child > * { border-bottom: 0; }
+    #detalleRaSgeModal .detalle-ra-sge-table > tbody > tr > th { width: 36%; border-right: 1px solid #c7ced8; background: #e8ecf1; color: #2b3440; font-weight: 750; text-align: left; }
+    #detalleRaSgeModal .detalle-ra-sge-table > tbody > tr > td { background: #fff; color: #1f2937; }
+    #detalleRaSgeModal .detalle-ra-sge-toggle { display: flex; align-items: center; justify-content: space-between; gap: .7rem; width: 100%; padding: .62rem .8rem; border: 0; border-top: 1px solid #cbd2db; background: #f8f9fb; color: #27384d; font-size: .79rem; font-weight: 700; text-align: left; cursor: pointer; }
+    #detalleRaSgeModal .detalle-ra-sge-toggle:hover { background: #e9eef4; }
+    #detalleRaSgeModal .detalle-ra-sge-toggle[aria-expanded="true"] { background: var(--detalle-accent-soft); color: #173f72; }
+    #detalleRaSgeModal .detalle-ra-sge-chevron { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 1.6rem; height: 1.6rem; border-radius: 50%; background: #dce8f8; color: var(--detalle-accent); transition: transform .18s ease; }
+    #detalleRaSgeModal .detalle-ra-sge-toggle[aria-expanded="true"] .detalle-ra-sge-chevron { transform: rotate(90deg); }
+    #detalleRaSgeModal .detalle-ra-sge-toggle:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--detalle-accent); }
+    #detalleRaSgeModal [data-detalle-layout]:focus-visible { outline: 2px solid var(--detalle-accent); outline-offset: 2px; }
+    #detalleRaSgeModal .detalle-ra-sge-origen { background: #f8fafc; white-space: normal; overflow-wrap: anywhere; }
+    #detalleRaSgeModal .detalle-ra-sge-origin-section { border-top: 1px solid #cbd2db; }
+    #detalleRaSgeModal .detalle-ra-sge-origin-title { margin: 0; padding: .55rem .72rem; background: #dde3ea; color: #243244; font-size: .8rem; font-weight: 800; }
+    #detalleRaSgeModal .detalle-ra-sge-json-list { display: grid; gap: .6rem; margin: 0; padding: .65rem .75rem .65rem 1.8rem; list-style: decimal; }
+    #detalleRaSgeModal .detalle-ra-sge-json-list > li { min-width: 0; border: 1px solid #cfd6df; border-radius: .35rem; background: #fff; }
+    #detalleRaSgeModal .detalle-ra-sge-json-list > li::marker { color: #596575; font-size: .75rem; }
+    #detalleRaSgeModal .detalle-ra-sge-json-value { padding: .4rem .65rem; font-size: .83rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+    #detalleRaSgeModal .detalle-ra-sge-table .detalle-ra-sge-json-value { padding: 0; }
+    #detalleRaSgeModal .detalle-ra-sge-table .detalle-ra-sge-table > tbody > tr > * { padding: .3rem .4rem; }
+    #detalleRaSgeModal .detalle-ra-sge-empty { margin: .9rem; padding: 1rem; border: 1px dashed #aeb8c4; border-radius: .5rem; background: #fff; color: #596575; font-size: .84rem; }
+    #detalleRaSgeModal #detalleRaSgeContenido > .detalle-ra-sge-empty { margin: 0; }
+    #detalleRaSgeModal .detalle-ra-sge-loading { min-height: 220px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: .75rem; color: #344256; font-size: .85rem; }
+    @media (max-width: 991.98px) {
+        #detalleRaSgeModal .detalle-ra-sge-fuentes { grid-template-columns: minmax(0,1fr); }
+        #detalleRaSgeModal .detalle-ra-sge-layout { display: none; }
+    }
+    @media (max-width: 575.98px) {
+        #detalleRaSgeModal .modal-header, #detalleRaSgeModal .modal-body, #detalleRaSgeModal .modal-footer { padding: .8rem; }
+        #detalleRaSgeModal .detalle-ra-sge-nivel { padding: .65rem; }
+    }
     #sgeTable thead th.th-nombre, #sgeTable tbody td.td-nombre { text-align: left !important; min-width: 200px; }
     #sgeTable thead th.th-agente, #sgeTable tbody td.td-agente { text-align: left !important; min-width: 140px; }
     #sgeTable tbody tr:hover td { background-color: #f1f5f9 !important; }
@@ -527,35 +613,35 @@
                 <div class="col-groups">
                     <div class="col-group">
                         <span class="col-group-label">Identific.</span>
-                        <span class="col-badge active" data-cols="0">CUE-Anexo</span>
-                        <span class="col-badge"        data-cols="1">Agente</span>
-                        <span class="col-badge active" data-cols="2">Nombre Escuela</span>
-                        <span class="col-badge active" data-cols="3">Oferta</span>
-                        <span class="col-badge"        data-cols="7">CUE</span>
-                        <span class="col-badge"        data-cols="8">Anexo</span>
+                        <span class="col-badge active" data-cols="1">CUE-Anexo</span>
+                        <span class="col-badge"        data-cols="2">Agente</span>
+                        <span class="col-badge active" data-cols="3">Nombre Escuela</span>
+                        <span class="col-badge active" data-cols="4">Oferta</span>
+                        <span class="col-badge"        data-cols="8">CUE</span>
+                        <span class="col-badge"        data-cols="9">Anexo</span>
                     </div>
                     <div class="col-group">
                         <span class="col-group-label">Ubicación</span>
-                        <span class="col-badge"        data-cols="4">Sector</span>
-                        <span class="col-badge"        data-cols="5">Ámbito</span>
-                        <span class="col-badge active" data-cols="6">Regional</span>
+                        <span class="col-badge"        data-cols="5">Sector</span>
+                        <span class="col-badge"        data-cols="6">Ámbito</span>
+                        <span class="col-badge active" data-cols="7">Regional</span>
                     </div>
                     <div class="col-group">
                         <span class="col-group-label">Contacto</span>
-                        <span class="col-badge"        data-cols="9,10">Teléfono</span>
-                        <span class="col-badge"        data-cols="11">Email</span>
+                        <span class="col-badge"        data-cols="10,11">Teléfono</span>
+                        <span class="col-badge"        data-cols="12">Email</span>
                     </div>
                     <div class="col-group">
                         <span class="col-group-label">Responsable</span>
-                        <span class="col-badge"        data-cols="12,13">Responsable</span>
-                        <span class="col-badge"        data-cols="14">Tel. Resp.</span>
+                        <span class="col-badge"        data-cols="13,14">Responsable</span>
+                        <span class="col-badge"        data-cols="15">Tel. Resp.</span>
                     </div>
                     <div class="col-group">
                         <span class="col-group-label">Carga SGE / Inscriptos</span>
-                        <span class="col-badge"        data-cols="15">SGE 2025</span>
-                        <span class="col-badge"        data-cols="16">Insc. 2025</span>
-                        <span class="col-badge active" data-cols="17">SGE 2026</span>
-                        <span class="col-badge active" data-cols="18">Insc. 2026</span>
+                        <span class="col-badge"        data-cols="16">SGE 2025</span>
+                        <span class="col-badge"        data-cols="17">Insc. 2025</span>
+                        <span class="col-badge active" data-cols="18">SGE 2026</span>
+                        <span class="col-badge active" data-cols="19">Insc. 2026</span>
                     </div>
                 </div>
             </div> 
@@ -704,7 +790,7 @@
             <table id="sgeTable" class="table table-bordered table-hover">
                 <thead>
                     <tr>
-                        <th>CUE-Anexo</th><th class="th-agente">Agente</th><th class="th-nombre">Nombre Escuela</th>             
+                        <th>Acción</th><th>CUE-Anexo</th><th class="th-agente">Agente</th><th class="th-nombre">Nombre Escuela</th>             
                         <th>Oferta</th><th>Sector</th><th>Ámbito</th><th>Regional</th><th>CUE</th><th>Anexo</th>              
                         <th>Cód.Tel</th><th>Teléfono</th><th>Email</th><th>R. Apellido</th><th>R. Nombre</th>          
                         <th>Tel. Resp.</th><th>SGE 25</th><th>Insc 25</th><th>SGE 26</th><th>Insc 26</th>            
@@ -713,6 +799,13 @@
                 <tbody>
                     {% for item in object_list %}
                     <tr>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-primary btn-detalle-ra-sge"
+                                title="Ver detalle RA 2026 y SGE 2026" aria-label="Ver detalle RA 2026 y SGE 2026 del CUE-Anexo {{ item.cueanexo|default:'-' }}"
+                                data-cueanexo="{{ item.cueanexo|default:'' }}" data-establecimiento="{{ item.nombre|default:'' }}">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
+                            </button>
+                        </td>
                         <td>{{ item.cueanexo|default:"-" }}</td>
                         <td class="td-agente">{{ item.agente|default:"-" }}</td>
                         <td class="td-nombre">{{ item.nombre|default:"-" }}</td>
@@ -745,6 +838,37 @@
         <div class="table-foot">
             <div id="dtInfo"></div>
             <nav><ul class="pagination pagination-sm mb-0" id="dtPaginate"></ul></nav>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="detalleRaSgeModal" tabindex="-1" aria-labelledby="detalleRaSgeModalLabel" aria-hidden="true" data-layout="horizontal">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="detalle-ra-sge-heading">
+                    <h5 class="modal-title" id="detalleRaSgeModalLabel"><i class="fas fa-eye me-2 text-primary" aria-hidden="true"></i>Detalle RA 2026 / SGE 2026</h5>
+                    <p id="detalleRaSgeEstablecimiento"></p>
+                    <span id="detalleRaSgeCueanexo"></span>
+                </div>
+                <button type="button" class="detalle-ra-sge-close" data-detalle-modal-close aria-label="Cerrar detalle RA 2026 / SGE 2026">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="detalle-ra-sge-toolbar">
+                    <span>Registros 2026 informados por cada fuente</span>
+                    <div class="detalle-ra-sge-layout" role="group" aria-label="Disposición de RA 2026 y SGE 2026">
+                        <button type="button" class="btn btn-sm" data-detalle-layout="horizontal" aria-pressed="true" aria-controls="detalleRaSgeContenido"><i class="fas fa-columns me-1" aria-hidden="true"></i>En paralelo</button>
+                        <button type="button" class="btn btn-sm" data-detalle-layout="vertical" aria-pressed="false" aria-controls="detalleRaSgeContenido"><i class="fas fa-bars me-1" aria-hidden="true"></i>Apilada</button>
+                    </div>
+                </div>
+                <div id="detalleRaSgeContenido" aria-live="polite"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm" data-detalle-modal-close><i class="fas fa-arrow-left" aria-hidden="true"></i>Volver al listado</button>
+                <button type="button" class="btn btn-sm detalle-ra-sge-pdf" data-detalle-pdf disabled><i class="fas fa-file-pdf" aria-hidden="true"></i>Descargar PDF</button>
+            </div>
         </div>
     </div>
 </div>
@@ -807,8 +931,8 @@ document.getElementById('btnAyudaFiltros').addEventListener('click', function ()
 });
 
 $(document).ready(function () {
-    const DEFAULT_VISIBLE = [0, 2, 3, 6, 17, 18];
-    const ALL_COLS = Array.from({length: 19}, (_, i) => i);
+    const DEFAULT_VISIBLE = [0, 1, 3, 4, 7, 18, 19];
+    const ALL_COLS = Array.from({length: 19}, (_, i) => i + 1);
 
     const filterLabels = {
         'fAudit2025': '(SGE 2025 - Insc 2025)', 'fAudit2026': '(SGE 2026 - Insc 2026)',
@@ -824,7 +948,7 @@ $(document).ready(function () {
     function cargarSelectorBusquedaCompleto() {
         const selector = $('#searchScope');
         selector.empty().append('<option value="all" selected>🔍 Todas</option>');
-        const cruciales = [1, 2, 9, 10, 11, 12, 13, 14];
+        const cruciales = [2, 3, 10, 11, 12, 13, 14, 15];
 
         table.columns().every(function () {
             const column = this;
@@ -937,7 +1061,7 @@ $(document).ready(function () {
                     title: 'Informe SGE 2026',
                     filename: function() { return getNombreArchivoConFiltros(); },
                     messageTop: function() { return buildExportSubtitle(); },
-                    exportOptions: { columns: ':visible', modifier: { page: 'all' } },
+                    exportOptions: { columns: function(idx) { return idx !== 0 && table.column(idx).visible(); }, modifier: { page: 'all' } },
                     customize: function(xlsx) {
                         var sheet = xlsx.xl.worksheets['sheet1.xml'];
                         var ahora = new Date();
@@ -957,7 +1081,7 @@ $(document).ready(function () {
                     className: 'btn-sm bg-white',
                     title: 'Informe SGE 2026',
                     filename: function() { return getNombreArchivoConFiltros(); },
-                    exportOptions: { columns: ':visible', modifier: { page: 'all' } }
+                    exportOptions: { columns: function(idx) { return idx !== 0 && table.column(idx).visible(); }, modifier: { page: 'all' } }
                 },
                 {
                     extend: 'pdfHtml5',
@@ -967,7 +1091,7 @@ $(document).ready(function () {
                     filename: function() { return getNombreArchivoConFiltros(); },
                     orientation: 'landscape',
                     pageSize: 'LEGAL', // <--- OFICIO
-                    exportOptions: { columns: ':visible', modifier: { page: 'all' } },
+                    exportOptions: { columns: function(idx) { return idx !== 0 && table.column(idx).visible(); }, modifier: { page: 'all' } },
                     customize: function(doc) {
                         // Aumentamos el margen TOP de 15 a 40 para que entre la fecha sin chocar
                         doc.pageMargins = [10, 40, 10, 35];
@@ -1046,7 +1170,7 @@ $(document).ready(function () {
                     orientation: 'landscape',
                     pageSize: 'LEGAL', // <--- OFICIO
                     download: 'open',
-                    exportOptions: { columns: ':visible', modifier: { page: 'all' } },
+                    exportOptions: { columns: function(idx) { return idx !== 0 && table.column(idx).visible(); }, modifier: { page: 'all' } },
                     customize: function(doc) {
                         // Aumentamos el margen TOP de 15 a 40 para que entre la fecha sin chocar
                         doc.pageMargins = [10, 40, 10, 35];
@@ -1116,7 +1240,10 @@ $(document).ready(function () {
                     }
                 }
             ],
-            columnDefs: [ { targets: ALL_COLS.filter(i => !DEFAULT_VISIBLE.includes(i)), visible: false } ],
+            columnDefs: [
+                { targets: 0, orderable: false, searchable: false, className: 'sge-detail-action', width: '54px' },
+                { targets: ALL_COLS.filter(i => !DEFAULT_VISIBLE.includes(i)), visible: false }
+            ],
             scrollX: false,
             autoWidth: false,
             initComplete: function() {
@@ -1134,6 +1261,626 @@ $(document).ready(function () {
         $('#loadingWrapper').hide(); $('#mainTableContainer').show(); $('#mini-totals').show();
     }
 
+    const detalleRaSgeUrl = "{% url 'indicsie:detalle_listado_sge_ra_json' %}";
+    const detalleRaSgeCache = {};
+    const detalleRaSgeModalElement = document.getElementById('detalleRaSgeModal');
+    const detalleRaSgeModal = new bootstrap.Modal(detalleRaSgeModalElement);
+    const detalleRaSgeContenido = document.getElementById('detalleRaSgeContenido');
+    const detalleRaSgePdfBtn = detalleRaSgeModalElement.querySelector('[data-detalle-pdf]');
+    let detalleRaSgeSolicitudActiva = 0;
+
+    detalleRaSgeModalElement.addEventListener('click', function(event) {
+        const botonCerrar = event.target.closest('[data-detalle-modal-close]');
+        if (botonCerrar && detalleRaSgeModalElement.contains(botonCerrar)) {
+            event.preventDefault();
+            detalleRaSgeModal.hide();
+            return;
+        }
+
+        const botonPdf = event.target.closest('[data-detalle-pdf]');
+        if (botonPdf && detalleRaSgeModalElement.contains(botonPdf)) {
+            event.preventDefault();
+            descargarDetalleRaSgePdf();
+            return;
+        }
+
+        const botonLayout = event.target.closest('[data-detalle-layout]');
+        if (botonLayout && detalleRaSgeModalElement.contains(botonLayout)) {
+            const disposicion = botonLayout.getAttribute('data-detalle-layout');
+            detalleRaSgeModalElement.setAttribute('data-layout', disposicion);
+            detalleRaSgeModalElement.querySelectorAll('[data-detalle-layout]').forEach(function(boton) {
+                boton.setAttribute('aria-pressed', String(boton.getAttribute('data-detalle-layout') === disposicion));
+            });
+            detalleRaSgeModal.handleUpdate();
+            return;
+        }
+
+        const botonOrigen = event.target.closest('.detalle-ra-sge-toggle');
+        if (!botonOrigen || !detalleRaSgeModalElement.contains(botonOrigen)) return;
+
+        event.preventDefault();
+        const destinoId = botonOrigen.getAttribute('aria-controls');
+        const detalleOrigen = destinoId ? document.getElementById(destinoId) : null;
+        if (!detalleOrigen) return;
+
+        const estabaAbierto = botonOrigen.getAttribute('aria-expanded') === 'true';
+        botonOrigen.setAttribute('aria-expanded', String(!estabaAbierto));
+        detalleOrigen.hidden = estabaAbierto;
+        detalleRaSgeModal.handleUpdate();
+    });
+
+    function filasTablaDetalleRaSgePdf(tabla) {
+        if (!tabla || !tabla.tBodies || !tabla.tBodies.length) return [];
+        return Array.from(tabla.tBodies[0].rows).map(function(fila) {
+            const celdas = fila.cells;
+            return [
+                celdas[0] ? celdas[0].textContent.trim() : '—',
+                celdas[1] ? celdas[1].textContent.trim() : '—'
+            ];
+        });
+    }
+
+    function gradoRegistroDetalleRaSgePdf(registro) {
+        const titulo = registro.querySelector('.detalle-ra-sge-record-header h5');
+        if (!titulo) return '—';
+        const copia = titulo.cloneNode(true);
+        const etiqueta = copia.querySelector('.detalle-ra-sge-label');
+        if (etiqueta) etiqueta.remove();
+        return copia.textContent.trim() || '—';
+    }
+
+    function tablaRegistroDetalleRaSgePdf(registro) {
+        const total = registro.querySelector('.detalle-ra-sge-total');
+        const tablaPrincipal = Array.from(registro.children).find(function(hijo) {
+            return hijo.tagName === 'TABLE' && hijo.classList.contains('detalle-ra-sge-table');
+        });
+        const cuerpo = [[
+            { text: gradoRegistroDetalleRaSgePdf(registro), bold: true, color: '#18212f', fillColor: '#eef1f4' },
+            { text: total ? total.textContent.trim() : '—', bold: true, color: '#173f72', alignment: 'right', fillColor: '#eef1f4' }
+        ]];
+        filasTablaDetalleRaSgePdf(tablaPrincipal).forEach(function(fila) {
+            cuerpo.push([
+                { text: fila[0], bold: true, color: '#2b3440', fillColor: '#e8ecf1' },
+                { text: fila[1], color: '#1f2937', fillColor: '#ffffff' }
+            ]);
+        });
+        return {
+            table: { widths: ['38%', '62%'], body: cuerpo, dontBreakRows: true },
+            layout: {
+                hLineWidth: function() { return .6; },
+                vLineWidth: function() { return .6; },
+                hLineColor: function() { return '#c5ccd5'; },
+                vLineColor: function() { return '#c5ccd5'; },
+                paddingLeft: function() { return 6; },
+                paddingRight: function() { return 6; },
+                paddingTop: function() { return 5; },
+                paddingBottom: function() { return 5; }
+            },
+            margin: [0, 0, 0, 8]
+        };
+    }
+
+    function bloquesOrigenAbiertosDetalleRaSgePdf(registro) {
+        const origen = Array.from(registro.children).find(function(hijo) {
+            return hijo.classList && hijo.classList.contains('detalle-ra-sge-origen');
+        });
+        if (!origen || origen.hidden) return [];
+        const filas = [];
+        origen.querySelectorAll('.detalle-ra-sge-table').forEach(function(tabla) {
+            filas.push.apply(filas, filasTablaDetalleRaSgePdf(tabla));
+        });
+        if (!filas.length) return [];
+        return [
+            { text: 'Detalle de origen visible', bold: true, color: '#173f72', fontSize: 8.5, margin: [0, 0, 0, 4] },
+            {
+                table: {
+                    widths: ['38%', '62%'],
+                    body: filas.map(function(fila) {
+                        return [
+                            { text: fila[0], bold: true, fillColor: '#f1f4f7' },
+                            { text: fila[1], fillColor: '#ffffff' }
+                        ];
+                    }),
+                    dontBreakRows: true
+                },
+                layout: {
+                    hLineWidth: function() { return .5; },
+                    vLineWidth: function() { return .5; },
+                    hLineColor: function() { return '#d4dae2'; },
+                    vLineColor: function() { return '#d4dae2'; },
+                    paddingLeft: function() { return 6; },
+                    paddingRight: function() { return 6; },
+                    paddingTop: function() { return 4; },
+                    paddingBottom: function() { return 4; }
+                },
+                margin: [0, 0, 0, 8]
+            }
+        ];
+    }
+
+    function bloquesFuenteDetalleRaSgePdf(panel) {
+        const bloques = [];
+        const titulo = panel.querySelector('.detalle-ra-sge-source-header h3');
+        const cantidad = panel.querySelector('.detalle-ra-sge-count');
+        bloques.push({
+            table: {
+                widths: ['*', 'auto'],
+                body: [[
+                    { text: titulo ? titulo.textContent.trim() : 'Fuente', bold: true, color: '#ffffff', fillColor: '#24364b' },
+                    { text: cantidad ? cantidad.textContent.trim() : '', bold: true, color: '#ffffff', alignment: 'right', fillColor: '#24364b' }
+                ]]
+            },
+            layout: 'noBorders',
+            margin: [0, 8, 0, 8]
+        });
+
+        Array.from(panel.children).filter(function(hijo) {
+            return hijo.classList && hijo.classList.contains('detalle-ra-sge-nivel');
+        }).forEach(function(nivel) {
+            const tituloNivel = nivel.querySelector('h4');
+            if (tituloNivel) bloques.push({ text: tituloNivel.textContent.trim(), bold: true, color: '#27364a', margin: [0, 2, 0, 6] });
+            Array.from(nivel.children).filter(function(hijo) {
+                return hijo.classList && hijo.classList.contains('detalle-ra-sge-registro');
+            }).forEach(function(registro) {
+                bloques.push(tablaRegistroDetalleRaSgePdf(registro));
+                bloques.push.apply(bloques, bloquesOrigenAbiertosDetalleRaSgePdf(registro));
+            });
+        });
+        return bloques;
+    }
+
+    function descargarDetalleRaSgePdf() {
+        if (typeof pdfMake === 'undefined') {
+            window.alert('No se pudo cargar el generador de PDF. Recargá la página e intentá nuevamente.');
+            return;
+        }
+        const paneles = Array.from(detalleRaSgeContenido.querySelectorAll('.detalle-ra-sge-panel'));
+        if (!paneles.length) return;
+
+        const establecimiento = document.getElementById('detalleRaSgeEstablecimiento').textContent.trim();
+        const cueTexto = document.getElementById('detalleRaSgeCueanexo').textContent.trim();
+        const cue = cueTexto.replace(/^CUE-Anexo:\s*/i, '').trim();
+        const contenido = [
+            { text: 'Detalle RA 2026 / SGE 2026', style: 'titulo' },
+            { text: establecimiento || 'Establecimiento sin nombre informado', style: 'establecimiento' },
+            { text: cueTexto || 'CUE-Anexo: —', style: 'cue' },
+            { text: 'Registros 2026 informados por cada fuente', style: 'subtitulo' }
+        ];
+        if (paneles.length >= 2) {
+            contenido.push({
+                columns: paneles.slice(0, 2).map(function(panel) {
+                    return {
+                        width: '*',
+                        stack: bloquesFuenteDetalleRaSgePdf(panel)
+                    };
+                }),
+                columnGap: 12
+            });
+            paneles.slice(2).forEach(function(panel) {
+                contenido.push.apply(contenido, bloquesFuenteDetalleRaSgePdf(panel));
+            });
+        } else {
+            contenido.push.apply(contenido, bloquesFuenteDetalleRaSgePdf(paneles[0]));
+        }
+
+        const doc = {
+            pageSize: 'A4',
+            pageOrientation: 'landscape',
+            pageMargins: [34, 34, 34, 40],
+            content: contenido,
+            defaultStyle: { fontSize: 9, color: '#18212f' },
+            styles: {
+                titulo: { fontSize: 16, bold: true, color: '#152033', margin: [0, 0, 0, 7] },
+                establecimiento: { fontSize: 11, bold: true, color: '#202938', margin: [0, 0, 0, 4] },
+                cue: { fontSize: 9, bold: true, color: '#344256', margin: [0, 0, 0, 14] },
+                subtitulo: { fontSize: 9, bold: true, color: '#4e5968', margin: [0, 0, 0, 4] }
+            },
+            footer: function(pagina, totalPaginas) {
+                return {
+                    columns: [
+                        { text: 'Detalle RA 2026 / SGE 2026', alignment: 'left', color: '#6b7280', fontSize: 8, margin: [34, 0, 0, 0] },
+                        { text: 'Página ' + pagina + ' de ' + totalPaginas, alignment: 'right', color: '#6b7280', fontSize: 8, margin: [0, 0, 34, 0] }
+                    ]
+                };
+            }
+        };
+        const nombreCue = (cue || 'sin_cue').replace(/[^0-9A-Za-z_-]+/g, '_');
+        pdfMake.createPdf(doc).download('Detalle_RA_2026_SGE_2026_' + nombreCue + '.pdf');
+    }
+
+    function textoDetalleRaSge(valor) {
+        if (valor === null || valor === undefined || (typeof valor === 'string' && valor.trim() === '')) return '—';
+        if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
+        return String(valor);
+    }
+
+    function etiquetaDetalleRaSge(campo) {
+        const etiquetas = {
+            origen_estructura_id: 'ID de estructura de origen',
+            origen_grados: 'Grados de origen',
+            origen_es_agrupada: 'Es agrupada',
+            origen_total: 'Total de origen',
+            origen_componentes: 'Componentes de origen',
+            calidad_registros_repetidos: 'Registros repetidos',
+            calidad_inscripciones_multiseccion: 'Inscripciones en múltiples secciones',
+            id: 'ID',
+            cueanexo: 'CUE-Anexo',
+            id_fila: 'ID de fila',
+            nom_secc: 'Nombre de sección',
+            tipo_secc: 'Tipo de sección'
+        };
+        if (Object.prototype.hasOwnProperty.call(etiquetas, campo)) return etiquetas[campo];
+        const etiqueta = campo.replace(/_/g, ' ');
+        return etiqueta.charAt(0).toUpperCase() + etiqueta.slice(1);
+    }
+
+    function nodoValorDetalleRaSge(valor) {
+        if (Array.isArray(valor) && valor.length) {
+            const lista = document.createElement('ol');
+            lista.className = 'detalle-ra-sge-json-list';
+            valor.forEach(function(item) {
+                const elemento = document.createElement('li');
+                elemento.appendChild(nodoValorDetalleRaSge(item));
+                lista.appendChild(elemento);
+            });
+            return lista;
+        }
+        if (valor && typeof valor === 'object' && !Array.isArray(valor) && Object.keys(valor).length) {
+            const tabla = crearTablaDetalleRaSge();
+            Object.keys(valor).forEach(function(clave) {
+                agregarCampoDetalleRaSge(tabla.tBodies[0], etiquetaDetalleRaSge(clave), valor[clave]);
+            });
+            return tabla;
+        }
+        const contenido = document.createElement('div');
+        contenido.className = 'detalle-ra-sge-json-value';
+        contenido.textContent = valor !== null && typeof valor === 'object' ? '—' : textoDetalleRaSge(valor);
+        return contenido;
+    }
+
+    function crearTablaDetalleRaSge() {
+        const tabla = document.createElement('table');
+        tabla.className = 'detalle-ra-sge-table';
+        tabla.appendChild(document.createElement('tbody'));
+        return tabla;
+    }
+
+    function agregarCampoDetalleRaSge(contenedor, etiqueta, valor) {
+        const fila = document.createElement('tr');
+        const titulo = document.createElement('th');
+        titulo.scope = 'row';
+        titulo.textContent = etiqueta;
+        const contenido = document.createElement('td');
+        contenido.appendChild(nodoValorDetalleRaSge(valor));
+        fila.appendChild(titulo);
+        fila.appendChild(contenido);
+        contenedor.appendChild(fila);
+    }
+
+    function matriculaDetalleRaSge(total) {
+        if (total === null || total === undefined || total === '') return '—';
+        return String(total) + (Number(total) === 1 ? ' alumno' : ' alumnos');
+    }
+
+    function tieneOrigenDetalleRaSge(valor) {
+        if (valor === null || valor === undefined || valor === '') return false;
+        if (typeof valor === 'object') return Object.keys(valor).length > 0;
+        return true;
+    }
+
+    function valorOrigenDetalleRaSge(objeto, claves) {
+        if (!objeto || typeof objeto !== 'object') return null;
+        for (const clave of claves) {
+            const valor = objeto[clave];
+            if (valor === null || valor === undefined || typeof valor === 'object') continue;
+            if (String(valor).trim() !== '') return valor;
+        }
+        return null;
+    }
+
+    function componentesOrigenDetalleRaSge(registro) {
+        const origen = registro && registro.origen_componentes;
+        if (!origen) return [];
+        const items = Array.isArray(origen) ? origen : [origen];
+        return items
+            .filter(function(item) { return item && typeof item === 'object'; })
+            .map(function(item) {
+                return item.fila && typeof item.fila === 'object' ? item.fila : item;
+            });
+    }
+
+    function gradosOrigenDetalleRaSge(valor) {
+        const items = Array.isArray(valor) ? valor : (valor ? [valor] : []);
+        return items.map(function(item) {
+            if (item === null || item === undefined) return null;
+            if (typeof item !== 'object') return String(item).trim() || null;
+            return valorOrigenDetalleRaSge(item, ['grado', 'sala', 'anio', 'año', 'etiqueta', 'texto', 'valor', 'descripcion']);
+        }).filter(Boolean);
+    }
+
+    function agregarCampoOrigenDetalleRaSge(tbody, etiqueta, valor) {
+        if (valor === null || valor === undefined || String(valor).trim() === '') return;
+        agregarCampoDetalleRaSge(tbody, etiqueta, valor);
+    }
+
+    function bloqueOrigenDetalleRaSge(titulo, campos) {
+        const bloque = document.createElement('section');
+        bloque.className = 'detalle-ra-sge-origin-section';
+        if (titulo) {
+            const subtitulo = document.createElement('h6');
+            subtitulo.className = 'detalle-ra-sge-origin-title';
+            subtitulo.textContent = titulo;
+            bloque.appendChild(subtitulo);
+        }
+        const tabla = crearTablaDetalleRaSge();
+        campos.forEach(function(campo) {
+            agregarCampoOrigenDetalleRaSge(tabla.tBodies[0], campo[0], campo[1]);
+        });
+        if (!tabla.tBodies[0].children.length) return null;
+        bloque.appendChild(tabla);
+        return bloque;
+    }
+
+    function normalizarComparacionDetalleRaSge(valor) {
+        if (valor === null || valor === undefined) return null;
+        const texto = String(valor).trim().replace(/\s+/g, ' ');
+        return texto ? texto.toLocaleLowerCase('es') : null;
+    }
+
+    function valorDifiereDetalleRaSge(valor, visible) {
+        const origen = normalizarComparacionDetalleRaSge(valor);
+        const mostrado = normalizarComparacionDetalleRaSge(visible);
+        return origen !== null && origen !== mostrado;
+    }
+
+    function valoresUnicosOrigenDetalleRaSge(componentes, claves) {
+        const vistos = new Set();
+        const valores = [];
+        componentes.forEach(function(componente) {
+            const valor = valorOrigenDetalleRaSge(componente, claves);
+            const clave = normalizarComparacionDetalleRaSge(valor);
+            if (clave === null || vistos.has(clave)) return;
+            vistos.add(clave);
+            valores.push(valor);
+        });
+        return valores;
+    }
+
+    function esVerdaderoDetalleRaSge(valor) {
+        if (valor === true || valor === 1) return true;
+        const texto = normalizarComparacionDetalleRaSge(valor);
+        return texto === 'true' || texto === 'sí' || texto === 'si' || texto === '1';
+    }
+
+    function detalleOrigenHumanoRaSge(registro, sistema) {
+        const fragmento = document.createDocumentFragment();
+        const componentes = componentesOrigenDetalleRaSge(registro);
+        const campos = [];
+
+        if (sistema === 'RA') {
+            const gradosOriginales = valoresUnicosOrigenDetalleRaSge(componentes, ['sala', 'grado', 'anio', 'año'])
+                .filter(function(valor) { return valorDifiereDetalleRaSge(valor, registro.grado); });
+            const seccionesOriginales = valoresUnicosOrigenDetalleRaSge(componentes, ['nom_secc', 'seccion'])
+                .filter(function(valor) { return valorDifiereDetalleRaSge(valor, registro.seccion); });
+            const turnosOriginales = valoresUnicosOrigenDetalleRaSge(componentes, ['turno'])
+                .filter(function(valor) { return valorDifiereDetalleRaSge(valor, registro.turno); });
+            const tiposOriginales = valoresUnicosOrigenDetalleRaSge(componentes, ['tipo_secc', 'tipo_seccion'])
+                .filter(function(valor) { return valorDifiereDetalleRaSge(valor, registro.tipo_secc); });
+            const totalesOriginales = valoresUnicosOrigenDetalleRaSge(componentes, ['total'])
+                .filter(function(valor) { return valorDifiereDetalleRaSge(valor, registro.total); });
+
+            if (gradosOriginales.length) campos.push(['Sala / Año / Grado original', gradosOriginales.join(', ')]);
+            if (seccionesOriginales.length) campos.push(['Sección original', seccionesOriginales.join(', ')]);
+            if (turnosOriginales.length) campos.push(['Turno original', turnosOriginales.join(', ')]);
+            if (tiposOriginales.length) campos.push(['Tipo de sección original', tiposOriginales.join(', ')]);
+            if (totalesOriginales.length) campos.push(['Matrícula original informada', totalesOriginales.join(', ')]);
+        } else {
+            const gradosOriginales = valoresUnicosOrigenDetalleRaSge(componentes, ['grado_hoja', 'sala', 'grado'])
+                .filter(function(valor) { return valorDifiereDetalleRaSge(valor, registro.grado); });
+            const seccionesOriginales = valoresUnicosOrigenDetalleRaSge(componentes, ['seccion_original', 'seccion_hoja', 'seccion'])
+                .filter(function(valor) { return valorDifiereDetalleRaSge(valor, registro.seccion); });
+            const turnosOriginales = valoresUnicosOrigenDetalleRaSge(componentes, ['turno_hoja', 'turno'])
+                .filter(function(valor) { return valorDifiereDetalleRaSge(valor, registro.turno); });
+            const tiposOriginales = valoresUnicosOrigenDetalleRaSge(componentes, ['tipo_seccion_hoja', 'tipo_secc', 'tipo_seccion'])
+                .filter(function(valor) { return valorDifiereDetalleRaSge(valor, registro.tipo_secc); });
+            const totalesFisicos = valoresUnicosOrigenDetalleRaSge(componentes, ['total_fisico', 'total'])
+                .filter(function(valor) { return valorDifiereDetalleRaSge(valor, registro.total); });
+            const totalesHoja = valoresUnicosOrigenDetalleRaSge(componentes, ['total_en_hoja'])
+                .filter(function(valor) { return valorDifiereDetalleRaSge(valor, registro.total); });
+            const agrupada = registro.origen_es_agrupada === true || componentes.some(function(componente) {
+                return esVerdaderoDetalleRaSge(valorOrigenDetalleRaSge(componente, ['es_agrupada']));
+            });
+
+            if (gradosOriginales.length) campos.push(['Sala / Año / Grado original', gradosOriginales.join(', ')]);
+            if (seccionesOriginales.length) campos.push(['Sección original', seccionesOriginales.join(', ')]);
+            if (turnosOriginales.length) campos.push(['Turno original', turnosOriginales.join(', ')]);
+            if (tiposOriginales.length) campos.push(['Tipo de sección original', tiposOriginales.join(', ')]);
+            if (totalesFisicos.length) campos.push(['Matrícula física de origen', totalesFisicos.join(', ')]);
+            if (totalesHoja.length) campos.push(['Matrícula informada en hoja', totalesHoja.join(', ')]);
+            if (agrupada) campos.push(['Sección agrupada', 'Sí']);
+        }
+
+        const bloqueDatos = bloqueOrigenDetalleRaSge('', campos);
+        if (bloqueDatos) fragmento.appendChild(bloqueDatos);
+
+        const grados = Array.from(new Set(gradosOrigenDetalleRaSge(registro.origen_grados).map(function(valor) {
+            return String(valor).trim();
+        }).filter(Boolean)));
+        if (grados.length > 1) {
+            const bloqueComposicion = bloqueOrigenDetalleRaSge('Composición de la sección', [
+                ['Grados / salas incluidos', grados.join(', ')]
+            ]);
+            if (bloqueComposicion) fragmento.appendChild(bloqueComposicion);
+        }
+
+        return fragmento;
+    }
+
+    function tarjetaDetalleRaSge(registro, sistema, indice) {
+        const tarjeta = document.createElement('article');
+        tarjeta.className = 'detalle-ra-sge-registro';
+        const encabezado = document.createElement('div');
+        encabezado.className = 'detalle-ra-sge-record-header';
+        const titulo = document.createElement('h5');
+        const etiqueta = document.createElement('span');
+        etiqueta.className = 'detalle-ra-sge-label';
+        etiqueta.textContent = 'Grado / Año / Sala';
+        titulo.appendChild(etiqueta);
+        titulo.appendChild(document.createTextNode(textoDetalleRaSge(registro.grado)));
+        const total = document.createElement('span');
+        total.className = 'detalle-ra-sge-total';
+        total.textContent = matriculaDetalleRaSge(registro.total);
+        total.setAttribute('aria-label', 'Matrícula: ' + total.textContent);
+        encabezado.appendChild(titulo);
+        encabezado.appendChild(total);
+        tarjeta.appendChild(encabezado);
+
+        const campos = crearTablaDetalleRaSge();
+        agregarCampoDetalleRaSge(campos.tBodies[0], 'Sección', registro.seccion);
+        agregarCampoDetalleRaSge(campos.tBodies[0], 'Turno', registro.turno);
+        agregarCampoDetalleRaSge(campos.tBodies[0], 'Tipo de sección', registro.tipo_secc);
+        tarjeta.appendChild(campos);
+
+        const contenidoOrigen = detalleOrigenHumanoRaSge(registro, sistema);
+        if (contenidoOrigen.childNodes.length) {
+            const destino = 'detalleRaSgeOrigen' + sistema + '_' + registro.id + '_' + indice;
+            const boton = document.createElement('button');
+            boton.type = 'button';
+            boton.className = 'detalle-ra-sge-toggle';
+            boton.setAttribute('aria-expanded', 'false');
+            boton.setAttribute('aria-controls', destino);
+            boton.appendChild(document.createTextNode('Ver detalle de origen'));
+            const flecha = document.createElement('span');
+            flecha.className = 'detalle-ra-sge-chevron';
+            flecha.setAttribute('aria-hidden', 'true');
+            const icono = document.createElement('i');
+            icono.className = 'fas fa-chevron-right';
+            flecha.appendChild(icono);
+            boton.appendChild(flecha);
+            tarjeta.appendChild(boton);
+
+            const detalle = document.createElement('div');
+            detalle.id = destino;
+            detalle.className = 'detalle-ra-sge-origen';
+            detalle.hidden = true;
+            detalle.appendChild(contenidoOrigen);
+            tarjeta.appendChild(detalle);
+        }
+        return tarjeta;
+    }
+
+    function panelDetalleRaSge(sistema, registros) {
+        const panel = document.createElement('section');
+        panel.className = 'detalle-ra-sge-panel';
+        const encabezado = document.createElement('div');
+        encabezado.className = 'detalle-ra-sge-source-header';
+        const titulo = document.createElement('h3');
+        titulo.textContent = sistema + ' 2026 informa';
+        const cantidad = document.createElement('span');
+        cantidad.className = 'detalle-ra-sge-count';
+        cantidad.textContent = registros.length + (registros.length === 1 ? ' registro' : ' registros');
+        encabezado.appendChild(titulo);
+        encabezado.appendChild(cantidad);
+        panel.appendChild(encabezado);
+        if (!registros.length) {
+            const vacio = document.createElement('p');
+            vacio.className = 'detalle-ra-sge-empty';
+            vacio.textContent = 'Sin registros ' + sistema + ' 2026 para este CUE-Anexo.';
+            panel.appendChild(vacio);
+        } else {
+            // Cada fuente se organiza por sus propios niveles, sin emparejar filas.
+            const niveles = new Map();
+            registros.forEach(function(registro, indice) {
+                const nivel = textoDetalleRaSge(registro.nivel);
+                if (!niveles.has(nivel)) niveles.set(nivel, []);
+                niveles.get(nivel).push({registro: registro, indice: indice});
+            });
+            niveles.forEach(function(filas, nivel) {
+                const grupo = document.createElement('section');
+                grupo.className = 'detalle-ra-sge-nivel';
+                const tituloNivel = document.createElement('h4');
+                tituloNivel.textContent = 'Nivel: ' + nivel;
+                grupo.appendChild(tituloNivel);
+                filas.forEach(function(fila) {
+                    grupo.appendChild(tarjetaDetalleRaSge(fila.registro, sistema, fila.indice));
+                });
+                panel.appendChild(grupo);
+            });
+        }
+        return panel;
+    }
+
+    function mostrarDetalleRaSge(datos) {
+        detalleRaSgeContenido.replaceChildren();
+        const registrosRa = Array.isArray(datos.RA) ? datos.RA : [];
+        const registrosSge = Array.isArray(datos.SGE) ? datos.SGE : [];
+        if (!registrosRa.length && !registrosSge.length) {
+            mostrarEstadoDetalleRaSge('No existen registros RA 2026 / SGE 2026 para este CUE-Anexo.', 'detalle-ra-sge-empty');
+            return;
+        }
+        const fuentes = document.createElement('div');
+        fuentes.className = 'detalle-ra-sge-fuentes';
+        fuentes.appendChild(panelDetalleRaSge('RA', registrosRa));
+        fuentes.appendChild(panelDetalleRaSge('SGE', registrosSge));
+        detalleRaSgeContenido.appendChild(fuentes);
+        if (detalleRaSgePdfBtn) detalleRaSgePdfBtn.disabled = false;
+    }
+
+    function mostrarEstadoDetalleRaSge(mensaje, clase) {
+        if (detalleRaSgePdfBtn) detalleRaSgePdfBtn.disabled = true;
+        detalleRaSgeContenido.replaceChildren();
+        const estado = document.createElement('div');
+        estado.className = clase;
+        if (clase === 'detalle-ra-sge-loading') {
+            estado.setAttribute('role', 'status');
+            const spinner = document.createElement('span');
+            spinner.className = 'spinner-border text-primary';
+            spinner.setAttribute('aria-hidden', 'true');
+            estado.appendChild(spinner);
+        } else if (clase.includes('alert-danger')) {
+            estado.setAttribute('role', 'alert');
+        }
+        const texto = document.createElement('span');
+        texto.textContent = mensaje;
+        estado.appendChild(texto);
+        detalleRaSgeContenido.appendChild(estado);
+    }
+
+    $('#sgeTable tbody').on('click', '.btn-detalle-ra-sge', function() {
+        const cueanexo = String($(this).attr('data-cueanexo') || '').trim();
+        const establecimiento = String($(this).attr('data-establecimiento') || '').trim();
+        const solicitud = ++detalleRaSgeSolicitudActiva;
+        document.getElementById('detalleRaSgeCueanexo').textContent = 'CUE-Anexo: ' + (cueanexo || '—');
+        document.getElementById('detalleRaSgeEstablecimiento').textContent = establecimiento || 'Establecimiento sin nombre informado';
+        detalleRaSgeContenido.closest('.modal-body').scrollTop = 0;
+        mostrarEstadoDetalleRaSge('Cargando detalle RA 2026 / SGE 2026...', 'detalle-ra-sge-loading');
+        detalleRaSgeModal.show();
+
+        if (detalleRaSgeCache[cueanexo]) {
+            mostrarDetalleRaSge(detalleRaSgeCache[cueanexo]);
+            return;
+        }
+        fetch(detalleRaSgeUrl + '?cueanexo=' + encodeURIComponent(cueanexo), {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function(respuesta) {
+                return respuesta.json().catch(function() { return {}; }).then(function(datos) {
+                    if (!respuesta.ok) throw new Error(datos.error || 'No fue posible obtener el detalle RA 2026 / SGE 2026.');
+                    return datos;
+                });
+            })
+            .then(function(datos) {
+                if (solicitud !== detalleRaSgeSolicitudActiva) return;
+                detalleRaSgeCache[cueanexo] = datos;
+                mostrarDetalleRaSge(datos);
+            })
+            .catch(function(error) {
+                if (solicitud !== detalleRaSgeSolicitudActiva) return;
+                mostrarEstadoDetalleRaSge(error.message || 'No fue posible obtener el detalle RA 2026 / SGE 2026.', 'alert alert-danger mb-0');
+            });
+    });
+
     // ─── ACTUALIZACIÓN DE TARJETAS DE TOTALES ───
     function updateTotals() {
         var getNum = function(val) {
@@ -1146,8 +1893,8 @@ $(document).ready(function () {
         var tSge25 = 0, tInsc25 = 0, tSge26 = 0, tInsc26 = 0;
         table.rows({ search: 'applied' }).every(function() {
             var data = this.data();
-            tSge25 += getNum(data[15]); tInsc25 += getNum(data[16]);
-            tSge26 += getNum(data[17]); tInsc26 += getNum(data[18]);
+            tSge25 += getNum(data[16]); tInsc25 += getNum(data[17]);
+            tSge26 += getNum(data[18]); tInsc26 += getNum(data[19]);
         });
 
         $('#tot-sge25').text(tSge25.toLocaleString('es-AR'));
@@ -1206,7 +1953,7 @@ $(document).ready(function () {
     });
 
     $('#btnShowAll').on('click', function () { table.columns().visible(true); syncBadges(); updateFooter(); });
-    $('#btnHideAll').on('click', function () { ALL_COLS.forEach(i => table.column(i).visible(i === 0 || i === 2)); syncBadges(); updateFooter(); });
+    $('#btnHideAll').on('click', function () { ALL_COLS.forEach(i => table.column(i).visible(i === 1 || i === 3)); syncBadges(); updateFooter(); });
     $('#btnDefault').on('click', function () { ALL_COLS.forEach(i => table.column(i).visible(DEFAULT_VISIBLE.includes(i))); syncBadges(); updateFooter(); });
 
     // ─── RENDER DE LOS CHIPS ───
@@ -1258,8 +2005,8 @@ $(document).ready(function () {
                     return parseInt(v.replace(/[\.,\s]/g, ''), 10) || 0;
                 };
 
-                var sge25 = getNum(data[15]), insc25 = getNum(data[16]);
-                var sge26 = getNum(data[17]), insc26 = getNum(data[18]);
+                var sge25 = getNum(data[16]), insc25 = getNum(data[17]);
+                var sge26 = getNum(data[18]), insc26 = getNum(data[19]);
                 
                 if (audit2025 === 'ok' && !(sge25 > 0 && sge25 === insc25)) return false;
                 if (audit2025 === 'diff' && !((sge25 > 0 || insc25 > 0) && sge25 !== insc25)) return false;
@@ -1270,22 +2017,22 @@ $(document).ready(function () {
                 if (audit2026 === 'vacio' && !(sge26 === 0 && insc26 === 0)) return false;
                 return true;
             });
-            if (audit2025) { table.column(15).visible(true); table.column(16).visible(true); }
-            if (audit2026) { table.column(17).visible(true); table.column(18).visible(true); }
+            if (audit2025) { table.column(16).visible(true); table.column(17).visible(true); }
+            if (audit2026) { table.column(18).visible(true); table.column(19).visible(true); }
         }
 
-        if (fOferta)   table.column(3).search($.fn.dataTable.util.escapeRegex(fOferta), true, false).visible(true);
-        if (fSector)   table.column(4).search('^\\s*' + $.fn.dataTable.util.escapeRegex(fSector) + '\\s*$', true, false).visible(true);
-        if (fAmbito)   table.column(5).search('^\\s*' + $.fn.dataTable.util.escapeRegex(fAmbito) + '\\s*$', true, false).visible(true);
-        if (regionVal) table.column(6).search('^\\s*' + $.fn.dataTable.util.escapeRegex(regionVal) + '\\s*$', true, false).visible(true);
-        if (fCUE)      table.column(7).search('^' + $.fn.dataTable.util.escapeRegex(fCUE), true, false).visible(true);
-        if (fCueanexo) table.column(0).search(fCueanexo).visible(true);
+        if (fOferta)   table.column(4).search($.fn.dataTable.util.escapeRegex(fOferta), true, false).visible(true);
+        if (fSector)   table.column(5).search('^\\s*' + $.fn.dataTable.util.escapeRegex(fSector) + '\\s*$', true, false).visible(true);
+        if (fAmbito)   table.column(6).search('^\\s*' + $.fn.dataTable.util.escapeRegex(fAmbito) + '\\s*$', true, false).visible(true);
+        if (regionVal) table.column(7).search('^\\s*' + $.fn.dataTable.util.escapeRegex(regionVal) + '\\s*$', true, false).visible(true);
+        if (fCUE)      table.column(8).search('^' + $.fn.dataTable.util.escapeRegex(fCUE), true, false).visible(true);
+        if (fCueanexo) table.column(1).search(fCueanexo).visible(true);
 
         if (smartQuery !== '') {
             var scope = $('#searchScope').val();
             if (scope === 'all') {
                 table.search(smartQuery, false, false, true);
-                table.column(0).visible(true); table.column(2).visible(true);
+                table.column(1).visible(true); table.column(3).visible(true);
             } else {
                 var smartColIdx = parseInt(scope);
                 table.column(smartColIdx).search(smartQuery, false, false, true).visible(true);

@@ -1,9 +1,7 @@
 {% extends "archivos/base/dashboard.html" %}
 {% load static %}
 
-
 {% block content %}
-
 
 <!-- =========================================================
      LEAFLET CSS
@@ -15,7 +13,6 @@
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
 >
-
 
 <style>
 
@@ -35,9 +32,7 @@
     #editSituacionSelect {
 
         display: block;
-
         width: 100%;
-
         min-height: 38px;
 
         padding:
@@ -47,13 +42,10 @@
             0.75rem;
 
         font-size: 1rem;
-
         font-weight: 400;
-
         line-height: 1.5;
 
         color: #212529;
-
         background-color: #ffffff;
 
         background-image:
@@ -75,20 +67,16 @@
             0.375rem;
 
         appearance: none;
-
         -webkit-appearance: none;
-
         -moz-appearance: none;
 
         transition:
             border-color .15s ease-in-out,
             box-shadow .15s ease-in-out;
-
     }
 
-
     /* ========================================================
-    FOCUS
+    FOCUS SELECTS
     ======================================================== */
 
     #filtroRegion:focus,
@@ -103,15 +91,12 @@
     #editSituacionSelect:focus {
 
         border-color: #86b7fe;
-
         outline: 0;
 
         box-shadow:
             0 0 0 .25rem
             rgba(13, 110, 253, .25);
-
     }
-
 
     /* ========================================================
     INPUTS
@@ -132,9 +117,7 @@
     #filtroSupervisores {
 
         display: block;
-
         width: 100%;
-
         min-height: 38px;
 
         padding:
@@ -142,17 +125,13 @@
             0.75rem;
 
         font-size: 1rem;
-
         font-weight: 400;
-
         line-height: 1.5;
 
         color: #212529;
 
         background-color: #ffffff;
-
-        background-clip:
-            padding-box;
+        background-clip: padding-box;
 
         border:
             1px solid #ced4da;
@@ -163,9 +142,7 @@
         transition:
             border-color .15s ease-in-out,
             box-shadow .15s ease-in-out;
-
     }
-
 
     /* ========================================================
     FOCUS INPUTS
@@ -186,45 +163,34 @@
     #filtroSupervisores:focus {
 
         border-color: #86b7fe;
-
         outline: 0;
 
         box-shadow:
             0 0 0 .25rem
             rgba(13, 110, 253, .25);
-
     }
-
 
     /* ========================================================
     SELECT DESHABILITADO
     ======================================================== */
 
     select:disabled {
-
         background-color: #e9ecef;
-
         opacity: 1;
-
     }
-
 
     /* ========================================================
     LABELS
     ======================================================== */
 
     .form-label {
-
         margin-bottom: .5rem;
-
         font-weight: 500;
-
         color: #495057;
-
     }
 
     /* ========================================================
-       MAPA
+    MAPA
     ======================================================== */
 
     #mapaSupervisores {
@@ -232,143 +198,105 @@
         position: relative;
 
         width: 100%;
-
         height: 620px;
-
         min-height: 620px;
 
         border-radius: 0.5rem;
-
         overflow: hidden;
 
         background: #e9ecef;
 
-        border: 1px solid #dee2e6;
+        border:
+            1px solid #dee2e6;
 
         z-index: 1;
-
     }
-
 
     #mapaSupervisores .leaflet-container {
-
         width: 100%;
-
         height: 100%;
-
     }
 
-
     /* ========================================================
-       Z-INDEX LEAFLET
+    Z-INDEX LEAFLET
     ======================================================== */
 
     #mapaSupervisores .leaflet-pane {
-
         z-index: 400;
-
     }
-
 
     #mapaSupervisores .leaflet-tile-pane {
-
         z-index: 200;
-
     }
-
 
     #mapaSupervisores .leaflet-overlay-pane {
-
         z-index: 400;
-
     }
-
 
     #mapaSupervisores .leaflet-marker-pane {
-
         z-index: 600;
-
     }
-
 
     #mapaSupervisores .leaflet-tooltip-pane {
-
         z-index: 650;
-
     }
-
 
     #mapaSupervisores .leaflet-popup-pane {
-
         z-index: 700;
-
     }
-
 
     #mapaSupervisores .leaflet-control {
-
         z-index: 800;
-
     }
 
-
     /* ========================================================
-       MARCADOR ESCUELA
+    MARCADOR ESCUELA
     ======================================================== */
 
     .marcador-escuela {
-
         background: transparent !important;
-
         border: none !important;
-
     }
-
 
     .marcador-escuela-pin {
 
         width: 30px;
-
         height: 30px;
 
         display: flex;
-
         align-items: center;
-
         justify-content: center;
 
         background: #0d6efd;
 
-        border: 3px solid #ffffff;
+        border:
+            3px solid #ffffff;
 
-        border-radius: 50% 50% 50% 0;
+        border-radius:
+            50% 50% 50% 0;
 
-        transform: rotate(-45deg);
+        transform:
+            rotate(-45deg);
 
         box-shadow:
             0 2px 7px
             rgba(0, 0, 0, 0.45);
-
     }
-
 
     .marcador-escuela-pin span {
 
         display: block;
 
         width: 8px;
-
         height: 8px;
 
         background: #ffffff;
 
         border-radius: 50%;
-
     }
 
-
     /* ========================================================
-       KPIs
+    KPIs
     ======================================================== */
 
     .kpi-card {
@@ -380,85 +308,63 @@
             rgba(0,0,0,.08);
 
         height: 100%;
-
     }
-
 
     .kpi-value {
 
         font-size: 1.8rem;
-
         font-weight: 700;
-
     }
 
-
     /* ========================================================
-       POPUPS
+    POPUPS
     ======================================================== */
 
     .popup-supervisor {
 
         font-size: .88rem;
-
         line-height: 1.4;
-
     }
-
 
     .popup-supervisor-titulo {
 
         font-size: 1rem;
-
         font-weight: 700;
 
         margin-bottom: .5rem;
 
         color: #212529;
-
     }
-
 
     .popup-supervisor-dato {
-
         margin-bottom: .2rem;
-
     }
-
 
     .popup-supervisor-seccion {
 
         margin-top: .65rem;
-
         padding-top: .55rem;
 
-        border-top: 1px solid #dee2e6;
-
+        border-top:
+            1px solid #dee2e6;
     }
-
 
     .popup-supervisor-persona {
 
         padding: .45rem;
-
         margin-top: .35rem;
 
         border-radius: .35rem;
 
         background-color: #f8f9fa;
-
     }
-
 
     .leaflet-popup-content {
-
         margin: 14px 16px;
-
     }
 
-
     /* ========================================================
-       RESPONSIVE
+    RESPONSIVE
     ======================================================== */
 
     @media (max-width: 768px) {
@@ -466,514 +372,485 @@
         #mapaSupervisores {
 
             height: 500px;
-
             min-height: 500px;
-
         }
-
     }
 
 </style>
 
-
-
 <div class="container-fluid mt-4">
 
+```
+<!-- =====================================================
+     TÍTULO
+====================================================== -->
 
-    <!-- =====================================================
-         TÍTULO
-    ====================================================== -->
+<div class="mb-3">
 
-    <div class="mb-3">
+    <h3>
+        📊 Gestión y Monitoreo de Supervisores
+    </h3>
 
-        <h3>
+    {% if puede_crud_supervisores %}
 
-            📊 Sistema ABM de Supervisores
+        <div class="small text-success">
 
-        </h3>
+            <i class="fas fa-user-shield"></i>
 
-    </div>
+            Modo administración:
+            puede crear y modificar supervisores.
 
+        </div>
 
+    {% else %}
 
-    <!-- =====================================================
-         MAPA MINISTERIAL
-    ====================================================== -->
+        <div class="small text-muted">
 
-    <div class="card shadow-sm mb-4">
+            <i class="fas fa-eye"></i>
 
+            Modo consulta:
+            acceso de sólo lectura.
 
-        <div class="card-header bg-dark text-white">
+        </div>
 
+    {% endif %}
 
-            <div
-                class="
-                    d-flex
-                    flex-wrap
-                    justify-content-between
-                    align-items-center
-                    gap-2
-                "
-            >
-
-
-                <div>
-
-                    <strong id="tituloMapa">
-
-                        Cobertura territorial de supervisores
-
-                    </strong>
+</div>
 
 
-                    <div class="small text-white-50">
+<!-- =====================================================
+     MAPA MINISTERIAL
+====================================================== -->
 
-                        Escuelas asignadas y geolocalización
+<div class="card shadow-sm mb-4">
 
-                    </div>
+    <div class="card-header bg-dark text-white">
 
+        <div
+            class="
+                d-flex
+                flex-wrap
+                justify-content-between
+                align-items-center
+                gap-2
+            "
+        >
+
+            <div>
+
+                <strong id="tituloMapa">
+                    Cobertura territorial de supervisores
+                </strong>
+
+                <div class="small text-white-50">
+                    Escuelas asignadas y geolocalización
                 </div>
-
-
-                <button
-                    type="button"
-                    class="btn btn-light btn-sm"
-                    onclick="mostrarCoberturaGeneral()"
-                >
-
-                    Ver cobertura general
-
-                </button>
-
 
             </div>
 
+            <button
+                type="button"
+                class="btn btn-light btn-sm"
+                onclick="mostrarCoberturaGeneral()"
+            >
+                Ver cobertura general
+            </button>
+
+        </div>
+
+    </div>
+
+    <div class="card-body">
+
+        <!-- =================================================
+             FILTROS
+        ================================================== -->
+
+        <div class="row g-2 mb-3">
+
+            <div class="col-12 col-md-3">
+
+                <label
+                    for="filtroRegion"
+                    class="form-label"
+                >
+                    Región
+                </label>
+
+                <select
+                    id="filtroRegion"
+                    class="form-select"
+                >
+
+                    <option value="">
+                        Todas las regiones
+                    </option>
+
+                    {% for region in regiones %}
+
+                        <option value="{{ region.id }}">
+                            {{ region.nombre }}
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <div class="col-12 col-md-3">
+
+                <label
+                    for="filtroNivel"
+                    class="form-label"
+                >
+                    Nivel / modalidad
+                </label>
+
+                <select
+                    id="filtroNivel"
+                    class="form-select"
+                >
+
+                    <option value="">
+                        Todos los niveles
+                    </option>
+
+                    {% for nivel in niveles %}
+
+                        <option value="{{ nivel.id }}">
+                            {{ nivel.nombre }}
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <div class="col-12 col-md-3">
+
+                <label
+                    for="filtroSituacion"
+                    class="form-label"
+                >
+                    Situación
+                </label>
+
+                <select
+                    id="filtroSituacion"
+                    class="form-select"
+                >
+
+                    <option value="">
+                        Todas
+                    </option>
+
+                    {% for situacion in situaciones %}
+
+                        <option value="{{ situacion.id }}">
+                            {{ situacion.nombre }}
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+
+            <div class="col-12 col-md-3">
+
+                <label
+                    for="filtroBusqueda"
+                    class="form-label"
+                >
+                    Supervisor / CUIL / apellido
+                </label>
+
+                <input
+                    id="filtroBusqueda"
+                    type="text"
+                    class="form-control"
+                    placeholder="Buscar..."
+                    autocomplete="off"
+                >
+
+            </div>
 
         </div>
 
 
-
-        <div class="card-body">
-
-
-            <!-- =================================================
-                 FILTROS
-            ================================================== -->
-
-            <div class="row g-2 mb-3">
-
-
-                <div class="col-12 col-md-3">
-
-                    <label
-                        for="filtroRegion"
-                        class="form-label"
-                    >
-
-                        Región
-
-                    </label>
-
-
-                    <select
-                        id="filtroRegion"
-                        class="form-select"
-                    >
-
-                        <option value="">
-
-                            Todas las regiones
-
-                        </option>
-
-
-                        {% for region in regiones %}
-
-                            <option value="{{ region.id }}">
-
-                                {{ region.nombre }}
-
-                            </option>
-
-                        {% endfor %}
-
-
-                    </select>
-
-                </div>
-
-
-
-                <div class="col-12 col-md-3">
-
-                    <label
-                        for="filtroNivel"
-                        class="form-label"
-                    >
-
-                        Nivel / modalidad
-
-                    </label>
-
-
-                    <select
-                        id="filtroNivel"
-                        class="form-select"
-                    >
-
-                        <option value="">
-
-                            Todos los niveles
-
-                        </option>
-
-
-                        {% for nivel in niveles %}
-
-                            <option value="{{ nivel.id }}">
-
-                                {{ nivel.nombre }}
-
-                            </option>
-
-                        {% endfor %}
-
-
-                    </select>
-
-                </div>
-
-
-
-                <div class="col-12 col-md-3">
-
-                    <label
-                        for="filtroSituacion"
-                        class="form-label"
-                    >
-
-                        Situación
-
-                    </label>
-
-
-                    <select
-                        id="filtroSituacion"
-                        class="form-select"
-                    >
-
-                        <option value="">
-
-                            Todas
-
-                        </option>
-
-
-                        {% for situacion in situaciones %}
-
-                            <option value="{{ situacion.id }}">
-
-                                {{ situacion.nombre }}
-
-                            </option>
-
-                        {% endfor %}
-
-
-                    </select>
-
-                </div>
-
-
-
-                <div class="col-12 col-md-3">
-
-                    <label
-                        for="filtroBusqueda"
-                        class="form-label"
-                    >
-
-                        Supervisor / CUIL / apellido
-
-                    </label>
-
-
-                    <input
-                        id="filtroBusqueda"
-                        type="text"
-                        class="form-control"
-                        placeholder="Buscar..."
-                        autocomplete="off"
-                    >
-
-                </div>
-
-
-            </div>
-
-
-
-            <!-- =================================================
-                 BOTONES
-            ================================================== -->
-
-            <div
+        <!-- =================================================
+             BOTONES MAPA
+        ================================================== -->
+
+        <div
+            class="
+                d-flex
+                flex-wrap
+                align-items-center
+                gap-2
+                mb-3
+            "
+        >
+
+            <button
+                type="button"
+                class="btn btn-primary"
+                onclick="mostrarCoberturaGeneral()"
+            >
+                Actualizar mapa
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-outline-primary"
+                onclick="mostrarMapaSupervisorPorCuil()"
+            >
+                Ver supervisor por CUIL
+            </button>
+
+            <span
+                id="estadoMapa"
                 class="
-                    d-flex
-                    flex-wrap
-                    align-items-center
-                    gap-2
-                    mb-3
+                    align-self-center
+                    text-muted
+                    small
                 "
             >
-
-
-                <button
-                    type="button"
-                    class="btn btn-primary"
-                    onclick="mostrarCoberturaGeneral()"
-                >
-
-                    Actualizar mapa
-
-                </button>
-
-
-                <button
-                    type="button"
-                    class="btn btn-outline-primary"
-                    onclick="mostrarMapaSupervisorPorCuil()"
-                >
-
-                    Ver supervisor por CUIL
-
-                </button>
-
-
-                <span
-                    id="estadoMapa"
-                    class="
-                        align-self-center
-                        text-muted
-                        small
-                    "
-                >
-
-                    Inicializando mapa...
-
-                </span>
-
-
-            </div>
-
-
-
-            <!-- =================================================
-                 KPIs
-            ================================================== -->
-
-            <div class="row g-3 mb-3">
-
-
-                <div class="col-6 col-md">
-
-                    <div class="card kpi-card">
-
-                        <div class="card-body">
-
-                            <div class="text-muted small">
-
-                                Supervisores
-
-                            </div>
-
-                            <div
-                                id="kpiSupervisores"
-                                class="kpi-value"
-                            >
-
-                                0
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-
-                <div class="col-6 col-md">
-
-                    <div class="card kpi-card">
-
-                        <div class="card-body">
-
-                            <div class="text-muted small">
-
-                                Regionales
-
-                            </div>
-
-                            <div
-                                id="kpiRegionales"
-                                class="kpi-value"
-                            >
-
-                                0
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-
-                <div class="col-6 col-md">
-
-                    <div class="card kpi-card">
-
-                        <div class="card-body">
-
-                            <div class="text-muted small">
-
-                                Escuelas
-
-                            </div>
-
-                            <div
-                                id="kpiEscuelas"
-                                class="kpi-value"
-                            >
-
-                                0
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-
-                <div class="col-6 col-md">
-
-                    <div class="card kpi-card">
-
-                        <div class="card-body">
-
-                            <div class="text-muted small">
-
-                                Geolocalizadas
-
-                            </div>
-
-                            <div
-                                id="kpiGeo"
-                                class="kpi-value"
-                            >
-
-                                0
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-
-                <div class="col-6 col-md">
-
-                    <div class="card kpi-card">
-
-                        <div class="card-body">
-
-                            <div class="text-muted small">
-
-                                Sin geolocalizar
-
-                            </div>
-
-                            <div
-                                id="kpiSinGeo"
-                                class="kpi-value"
-                            >
-
-                                0
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-            </div>
-
-
-
-            <!-- =================================================
-                 MAPA
-            ================================================== -->
-
-            <div id="mapaSupervisores"></div>
-
+                Inicializando mapa...
+            </span>
 
         </div>
 
 
+        <!-- =================================================
+             KPIs
+        ================================================== -->
+
+        <div class="row g-3 mb-3">
+
+            <div class="col-6 col-md">
+
+                <div class="card kpi-card">
+
+                    <div class="card-body">
+
+                        <div class="text-muted small">
+                            Supervisores
+                        </div>
+
+                        <div
+                            id="kpiSupervisores"
+                            class="kpi-value"
+                        >
+                            0
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-6 col-md">
+
+                <div class="card kpi-card">
+
+                    <div class="card-body">
+
+                        <div class="text-muted small">
+                            Regionales
+                        </div>
+
+                        <div
+                            id="kpiRegionales"
+                            class="kpi-value"
+                        >
+                            0
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-6 col-md">
+
+                <div class="card kpi-card">
+
+                    <div class="card-body">
+
+                        <div class="text-muted small">
+                            Escuelas
+                        </div>
+
+                        <div
+                            id="kpiEscuelas"
+                            class="kpi-value"
+                        >
+                            0
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-6 col-md">
+
+                <div class="card kpi-card">
+
+                    <div class="card-body">
+
+                        <div class="text-muted small">
+                            Geolocalizadas
+                        </div>
+
+                        <div
+                            id="kpiGeo"
+                            class="kpi-value"
+                        >
+                            0
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-6 col-md">
+
+                <div class="card kpi-card">
+
+                    <div class="card-body">
+
+                        <div class="text-muted small">
+                            Sin geolocalizar
+                        </div>
+
+                        <div
+                            id="kpiSinGeo"
+                            class="kpi-value"
+                        >
+                            0
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             MAPA
+        ================================================== -->
+
+        <div id="mapaSupervisores"></div>
+
     </div>
 
+</div>
 
 
-    <!-- =====================================================
-         BUSCADOR CUIL
-    ====================================================== -->
+<!-- =====================================================
+     BUSCADOR / LISTADO DE SUPERVISORES
+====================================================== -->
 
-    <div class="card p-3 mb-4">
+<div class="card p-3 mb-4">
 
+    {% if puede_crud_supervisores %}
+
+        <!-- =================================================
+             CUIL SUPERVISOR
+             SOLO ADMINISTRADOR Y GESTOR
+        ================================================== -->
 
         <label
             for="cuilInput"
             class="form-label"
         >
-
             CUIL Supervisor
-
         </label>
 
-
         <div class="input-group">
-
 
             <input
                 id="cuilInput"
                 class="form-control"
                 placeholder="Ingrese CUIL"
+                maxlength="11"
+                inputmode="numeric"
+                autocomplete="off"
             >
-
 
             <button
                 type="button"
                 class="btn btn-primary"
                 onclick="buscarSupervisor()"
             >
-
+                <i class="fas fa-search me-1"></i>
                 Buscar
-
             </button>
 
+            <button
+                type="button"
+                class="btn btn-success"
+                onclick="listarMisSupervisores()"
+            >
+                <i class="fas fa-list me-1"></i>
+                Mis Supervisores
+            </button>
+
+        </div>
+
+    {% else %}
+
+        <!-- =================================================
+             SOLO CONSULTA
+        ================================================== -->
+
+        <div
+            class="
+                d-flex
+                flex-wrap
+                justify-content-between
+                align-items-center
+                gap-2
+            "
+        >
+
+            <div>
+
+                <h6 class="mb-1">
+
+                    <i class="fas fa-users me-1"></i>
+
+                    Supervisores
+
+                </h6>
+
+                <div class="small text-muted">
+
+                    Consulte los supervisores disponibles
+                    según su ámbito de acceso.
+
+                </div>
+
+            </div>
 
             <button
                 type="button"
@@ -981,54 +858,59 @@
                 onclick="listarMisSupervisores()"
             >
 
+                <i class="fas fa-list me-1"></i>
+
                 Mis Supervisores
 
             </button>
 
-
         </div>
 
-
-        <div
-            id="resultadoSupervisor"
-            class="mt-3"
-        ></div>
+    {% endif %}
 
 
-    </div>
+    <!--
+        Se mantiene siempre porque dashboard.js puede
+        utilizar este contenedor.
+    -->
+
+    <div
+        id="resultadoSupervisor"
+        class="mt-3"
+    ></div>
+
+</div>
 
 
+<!-- =====================================================
+     CREAR SUPERVISOR
+     SOLO ADMINISTRADOR / GESTOR
+====================================================== -->
 
-    <!-- =====================================================
-         CREAR SUPERVISOR
-    ====================================================== -->
+{% if puede_crud_supervisores %}
 
     <div
         class="card p-3 mb-4 d-none"
         id="createBox"
     >
 
-
         <h5>
-
             Crear Supervisor
-
         </h5>
-
 
         <input
             id="apellido"
             class="form-control mb-2"
             placeholder="Apellido"
+            readonly
         >
-
 
         <input
             id="nombres"
             class="form-control mb-2"
             placeholder="Nombres"
+            readonly
         >
-
 
         <input
             id="email"
@@ -1036,125 +918,105 @@
             placeholder="Email"
         >
 
-
         <input
             id="telefono"
             class="form-control mb-2"
             placeholder="Teléfono"
         >
 
-
         <button
             type="button"
             class="btn btn-success"
             onclick="crearSupervisor()"
         >
-
             Crear
-
         </button>
-
 
     </div>
 
+{% endif %}
 
 
-    <!-- =====================================================
-         EXPEDIENTE
-    ====================================================== -->
+<!-- =====================================================
+     EXPEDIENTE
+====================================================== -->
 
-    <div
-        id="expediente"
-        class="d-none mt-4 mb-4"
-    >
+<div
+    id="expediente"
+    class="d-none mt-4 mb-4"
+>
 
+    <ul class="nav nav-tabs">
 
-        <ul class="nav nav-tabs">
+        <li class="nav-item">
 
-
-            <li class="nav-item">
-
-                <button
-                    class="nav-link active"
-                    data-bs-toggle="tab"
-                    data-bs-target="#sit"
-                    type="button"
-                >
-
-                    Situación
-
-                </button>
-
-            </li>
-
-
-            <li class="nav-item">
-
-                <button
-                    class="nav-link"
-                    data-bs-toggle="tab"
-                    data-bs-target="#reg"
-                    type="button"
-                >
-
-                    Regionales
-
-                </button>
-
-            </li>
-
-
-            <li class="nav-item">
-
-                <button
-                    class="nav-link"
-                    data-bs-toggle="tab"
-                    data-bs-target="#niv"
-                    type="button"
-                >
-
-                    Niveles
-
-                </button>
-
-            </li>
-
-
-            <li class="nav-item">
-
-                <button
-                    class="nav-link"
-                    data-bs-toggle="tab"
-                    data-bs-target="#ofe"
-                    type="button"
-                >
-
-                    Ofertas
-
-                </button>
-
-            </li>
-
-
-        </ul>
-
-
-
-        <div class="tab-content border p-3">
-
-
-            <!-- =============================================
-                 SITUACIONES
-            ============================================== -->
-
-            <div
-                class="tab-pane fade show active"
-                id="sit"
+            <button
+                class="nav-link active"
+                data-bs-toggle="tab"
+                data-bs-target="#sit"
+                type="button"
             >
+                Situación
+            </button>
 
+        </li>
+
+        <li class="nav-item">
+
+            <button
+                class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#reg"
+                type="button"
+            >
+                Regionales
+            </button>
+
+        </li>
+
+        <li class="nav-item">
+
+            <button
+                class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#niv"
+                type="button"
+            >
+                Niveles
+            </button>
+
+        </li>
+
+        <li class="nav-item">
+
+            <button
+                class="nav-link"
+                data-bs-toggle="tab"
+                data-bs-target="#ofe"
+                type="button"
+            >
+                Ofertas
+            </button>
+
+        </li>
+
+    </ul>
+
+
+    <div class="tab-content border p-3">
+
+        <!-- =============================================
+             SITUACIONES
+        ============================================== -->
+
+        <div
+            class="tab-pane fade show active"
+            id="sit"
+        >
+
+            {% if puede_crud_supervisores %}
 
                 <div class="row mb-3 g-2">
-
 
                     <div class="col-md-4">
 
@@ -1164,7 +1026,6 @@
                         ></select>
 
                     </div>
-
 
                     <div class="col-md-3">
 
@@ -1176,7 +1037,6 @@
 
                     </div>
 
-
                     <div class="col-md-3">
 
                         <input
@@ -1187,7 +1047,6 @@
 
                     </div>
 
-
                     <div class="col-md-2">
 
                         <button
@@ -1195,36 +1054,32 @@
                             class="btn btn-success w-100"
                             onclick="agregarSituacion()"
                         >
-
                             Agregar
-
                         </button>
 
                     </div>
 
-
                 </div>
 
+            {% endif %}
 
-                <div id="sitListado"></div>
+            <div id="sitListado"></div>
+
+        </div>
 
 
-            </div>
+        <!-- =============================================
+             REGIONALES
+        ============================================== -->
 
+        <div
+            class="tab-pane fade"
+            id="reg"
+        >
 
-
-            <!-- =============================================
-                 REGIONALES
-            ============================================== -->
-
-            <div
-                class="tab-pane fade"
-                id="reg"
-            >
-
+            {% if puede_crud_supervisores %}
 
                 <div class="row mb-3 g-2">
-
 
                     <div class="col-md-8">
 
@@ -1235,7 +1090,6 @@
 
                     </div>
 
-
                     <div class="col-md-4">
 
                         <button
@@ -1243,36 +1097,32 @@
                             class="btn btn-success w-100"
                             onclick="agregarRegional()"
                         >
-
                             Agregar Regional
-
                         </button>
 
                     </div>
 
-
                 </div>
 
+            {% endif %}
 
-                <div id="regListado"></div>
+            <div id="regListado"></div>
+
+        </div>
 
 
-            </div>
+        <!-- =============================================
+             NIVELES
+        ============================================== -->
 
+        <div
+            class="tab-pane fade"
+            id="niv"
+        >
 
-
-            <!-- =============================================
-                 NIVELES
-            ============================================== -->
-
-            <div
-                class="tab-pane fade"
-                id="niv"
-            >
-
+            {% if puede_crud_supervisores %}
 
                 <div class="row mb-3 g-2">
-
 
                     <div class="col-md-5">
 
@@ -1283,7 +1133,6 @@
 
                     </div>
 
-
                     <div class="col-md-5">
 
                         <select
@@ -1293,7 +1142,6 @@
 
                     </div>
 
-
                     <div class="col-md-2">
 
                         <button
@@ -1301,36 +1149,32 @@
                             class="btn btn-success w-100"
                             onclick="agregarNivel()"
                         >
-
                             Agregar Nivel
-
                         </button>
 
                     </div>
 
-
                 </div>
 
+            {% endif %}
 
-                <div id="nivListado"></div>
+            <div id="nivListado"></div>
+
+        </div>
 
 
-            </div>
+        <!-- =============================================
+             OFERTAS
+        ============================================== -->
 
+        <div
+            class="tab-pane fade"
+            id="ofe"
+        >
 
-
-            <!-- =============================================
-                 OFERTAS
-            ============================================== -->
-
-            <div
-                class="tab-pane fade"
-                id="ofe"
-            >
-
+            {% if puede_crud_supervisores %}
 
                 <div class="row mb-3 g-2">
-
 
                     <div class="col-md-3">
 
@@ -1340,7 +1184,6 @@
                         ></select>
 
                     </div>
-
 
                     <div class="col-md-2">
 
@@ -1353,7 +1196,6 @@
 
                     </div>
 
-
                     <div class="col-md-4">
 
                         <input
@@ -1365,7 +1207,6 @@
 
                     </div>
 
-
                     <div class="col-md-3">
 
                         <select
@@ -1375,13 +1216,10 @@
 
                     </div>
 
-
                 </div>
 
 
-
                 <div class="row mb-3">
-
 
                     <div class="col-md-12">
 
@@ -1390,36 +1228,32 @@
                             class="btn btn-success w-100"
                             onclick="agregarOferta()"
                         >
-
                             Agregar Oferta
-
                         </button>
 
                     </div>
 
-
                 </div>
 
+            {% endif %}
 
-                <div id="ofeListado"></div>
-
-
-            </div>
-
+            <div id="ofeListado"></div>
 
         </div>
 
-
     </div>
 
+</div>
+```
 
 </div>
 
-
-
 <!-- =========================================================
      MODAL EDITAR SITUACIÓN
+     SOLO ADMINISTRADOR / GESTOR
 ========================================================= -->
+
+{% if puede_crud_supervisores %}
 
 <div
     class="modal fade"
@@ -1428,135 +1262,103 @@
     aria-hidden="true"
 >
 
+```
+<div class="modal-dialog">
 
-    <div class="modal-dialog">
+    <div class="modal-content">
 
+        <div class="modal-header">
 
-        <div class="modal-content">
+            <h5 class="modal-title">
+                Editar Situación
+            </h5>
 
-
-            <div class="modal-header">
-
-
-                <h5 class="modal-title">
-
-                    Editar Situación
-
-                </h5>
-
-
-                <button
-                    type="button"
-                    class="btn-close"
-                    data-bs-dismiss="modal"
-                    aria-label="Cerrar"
-                ></button>
-
-
-            </div>
-
-
-
-            <div class="modal-body">
-
-
-                <input
-                    type="hidden"
-                    id="editSituacionId"
-                >
-
-
-                <label
-                    for="editSituacionSelect"
-                    class="form-label"
-                >
-
-                    Situación
-
-                </label>
-
-
-                <select
-                    id="editSituacionSelect"
-                    class="form-select mb-2"
-                ></select>
-
-
-                <label
-                    for="editFechaDesde"
-                    class="form-label"
-                >
-
-                    Fecha desde
-
-                </label>
-
-
-                <input
-                    type="date"
-                    id="editFechaDesde"
-                    class="form-control mb-2"
-                >
-
-
-                <label
-                    for="editFechaHasta"
-                    class="form-label"
-                >
-
-                    Fecha hasta
-
-                </label>
-
-
-                <input
-                    type="date"
-                    id="editFechaHasta"
-                    class="form-control mb-2"
-                >
-
-
-            </div>
-
-
-
-            <div class="modal-footer">
-
-
-                <button
-                    type="button"
-                    class="btn btn-secondary"
-                    data-bs-dismiss="modal"
-                >
-
-                    Cancelar
-
-                </button>
-
-
-                <button
-                    type="button"
-                    class="btn btn-success"
-                    onclick="guardarEdicionSituacion()"
-                >
-
-                    Guardar
-
-                </button>
-
-
-            </div>
-
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Cerrar"
+            ></button>
 
         </div>
 
 
+        <div class="modal-body">
+
+            <input
+                type="hidden"
+                id="editSituacionId"
+            >
+
+            <label
+                for="editSituacionSelect"
+                class="form-label"
+            >
+                Situación
+            </label>
+
+            <select
+                id="editSituacionSelect"
+                class="form-select mb-2"
+            ></select>
+
+            <label
+                for="editFechaDesde"
+                class="form-label"
+            >
+                Fecha desde
+            </label>
+
+            <input
+                type="date"
+                id="editFechaDesde"
+                class="form-control mb-2"
+            >
+
+            <label
+                for="editFechaHasta"
+                class="form-label"
+            >
+                Fecha hasta
+            </label>
+
+            <input
+                type="date"
+                id="editFechaHasta"
+                class="form-control mb-2"
+            >
+
+        </div>
+
+
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal"
+            >
+                Cancelar
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-success"
+                onclick="guardarEdicionSituacion()"
+            >
+                Guardar
+            </button>
+
+        </div>
+
     </div>
 
+</div>
+```
 
 </div>
 
-
+{% endif %}
 
 <!-- =========================================================
      MODAL LISTADO SUPERVISORES
@@ -1569,136 +1371,99 @@
     aria-hidden="true"
 >
 
+```
+<div class="modal-dialog modal-xl">
 
-    <div class="modal-dialog modal-xl">
+    <div class="modal-content">
 
+        <div class="modal-header">
 
-        <div class="modal-content">
+            <h5 class="modal-title">
+                Mis Supervisores
+            </h5>
 
-
-            <div class="modal-header">
-
-
-                <h5 class="modal-title">
-
-                    Mis Supervisores
-
-                </h5>
-
-
-                <button
-                    type="button"
-                    class="btn-close"
-                    data-bs-dismiss="modal"
-                    aria-label="Cerrar"
-                ></button>
-
-
-            </div>
-
-
-
-            <div class="modal-body">
-
-
-                <div class="mb-3">
-
-
-                    <input
-                        type="text"
-                        id="filtroSupervisores"
-                        class="form-control"
-                        placeholder="Filtrar supervisor..."
-                    >
-
-
-                </div>
-
-
-
-                <div class="table-responsive">
-
-
-                    <table
-                        class="
-                            table
-                            table-bordered
-                            table-hover
-                            align-middle
-                        "
-                    >
-
-
-                        <thead>
-
-
-                            <tr>
-
-                                <th>CUIL</th>
-
-                                <th>Apellido</th>
-
-                                <th>Nombres</th>
-
-                                <th>Email</th>
-
-                                <th>Teléfono</th>
-
-                                <th>Regionales</th>
-
-                            </tr>
-
-
-                        </thead>
-
-
-
-                        <tbody id="tablaSupervisores">
-
-
-                            <tr>
-
-
-                                <td
-                                    colspan="6"
-                                    class="text-center"
-                                >
-
-                                    Sin datos
-
-                                </td>
-
-
-                            </tr>
-
-
-                        </tbody>
-
-
-                    </table>
-
-
-                </div>
-
-
-            </div>
-
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Cerrar"
+            ></button>
 
         </div>
 
 
+        <div class="modal-body">
+
+            <div class="mb-3">
+
+                <input
+                    type="text"
+                    id="filtroSupervisores"
+                    class="form-control"
+                    placeholder="Filtrar supervisor..."
+                >
+
+            </div>
+
+
+            <div class="table-responsive">
+
+                <table
+                    class="
+                        table
+                        table-bordered
+                        table-hover
+                        align-middle
+                    "
+                >
+
+                    <thead>
+
+                        <tr>
+
+                            <th>CUIL</th>
+                            <th>Apellido</th>
+                            <th>Nombres</th>
+                            <th>Email</th>
+                            <th>Teléfono</th>
+                            <th>Regionales</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="tablaSupervisores">
+
+                        <tr>
+
+                            <td
+                                colspan="6"
+                                class="text-center"
+                            >
+                                Sin datos
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
     </div>
 
+</div>
+```
 
 </div>
 
-
 {% endblock %}
 
-
-
 {% block scripts %}
-
 
 <script>
 
@@ -1707,8 +1472,10 @@
     window.CSRF_TOKEN =
         "{{ csrf_token }}";
 
-</script>
+    window.PUEDE_CRUD_SUPERVISORES =
+        {{ puede_crud_supervisores|yesno:"true,false" }};
 
+</script>
 
 <!-- =========================================================
      SWEETALERT
@@ -1718,7 +1485,6 @@
     src="https://cdn.jsdelivr.net/npm/sweetalert2@11">
 </script>
 
-
 <!-- =========================================================
      BOOTSTRAP JS
 ========================================================= -->
@@ -1726,7 +1492,6 @@
 <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">
 </script>
-
 
 <!-- =========================================================
      LEAFLET
@@ -1738,7 +1503,6 @@
     crossorigin="">
 </script>
 
-
 <!-- =========================================================
      JS DEL ABM
 ========================================================= -->
@@ -1747,7 +1511,6 @@
     src="{% static 'supervisores/js/dashboard.js' %}">
 </script>
 
-
 <!-- =========================================================
      JS MAPA
 ========================================================= -->
@@ -1755,6 +1518,5 @@
 <script
     src="{% static 'superv/supervisor/js/mapa_supervisores.js' %}">
 </script>
-
 
 {% endblock %}

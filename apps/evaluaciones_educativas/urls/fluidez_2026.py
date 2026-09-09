@@ -17,6 +17,8 @@ urlpatterns = [
     path('borrar_registro_alumno/<uuid:alumno_public_id>/<str:fid_actual>/',fluidez_2026.borrar_registro_alumno, name='borrar_registro_alumno'),
 	path('descargar_excel/<uuid:grado_public_id>/',fluidez_2026.descargar_excel, name='excel'),
     path('completar_carga/<uuid:grado_public_id>/',fluidez_2026.completar_carga, name='completar_carga'),
+    path('crear_seccion/<uuid:grado_public_id>/', fluidez_2026.crear_seccion, name='crear_seccion'),
+
     path('analisis_evaluacion/',fluidez_2026.analisis_evaluaciones_junio_2026, name='analisis_evaluacion'),
     path('analisis_evaluacion_junio_2026/',fluidez_2026.analisis_evaluaciones_regional_junio_2026, name='analisis_evaluacion_junio_2026'),
     path('analisis_completo_evaluacion_junio_2026/',fluidez_2026.analisis_evaluaciones_ministros_junio_2026, name='analisis_completo_evaluacion_junio_2026'),
