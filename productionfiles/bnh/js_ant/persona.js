@@ -25,6 +25,10 @@ function initPersona() {
             onCuilInput
         );
 
+        if (cuil.value.trim()) {
+            onCuilInput({target: cuil});
+        }
+
     }
 
     const dni =
@@ -750,7 +754,9 @@ if(!json.ok){
 
     Swal.fire(
         "Error",
-        "No se pudo guardar",
+        Object.values(json.errors || {})
+            .flatMap(error => Array.isArray(error) ? error : [error])
+            .join("\n") || "No se pudo guardar",
         "error"
     );
 
@@ -764,7 +770,31 @@ if(!json.ok){
 
 
 
-personaActualId =
+ const callbackUrl = form.querySelector("[name='especial_callback_url']")?.value;
+ const nextUrl = form.querySelector("[name='especial_next_url']")?.value;
+ if (json.created && callbackUrl) {
+     const callbackData = new FormData();
+     callbackData.set("cuil", form.querySelector("[name='cuil']")?.value || "");
+     callbackData.set("csrfmiddlewaretoken", form.querySelector("[name='csrfmiddlewaretoken']")?.value || "");
+     const callbackResponse = await fetch(callbackUrl, {
+         method: "POST",
+         body: callbackData,
+         headers: {"X-Requested-With": "XMLHttpRequest"}
+     });
+     const callbackJson = await callbackResponse.json();
+     if (!callbackResponse.ok || !callbackJson.ok) {
+         Swal.fire("Error", callbackJson.error || "No se pudo agregar al banco de docentes.", "error");
+         return;
+     }
+     Swal.fire({
+         icon: "success",
+         title: "Docente agregado",
+         text: "Se creó en BNH y se agregó al banco de Especial."
+     }).then(() => { if (nextUrl) window.location.assign(nextUrl); });
+     return;
+ }
+
+ personaActualId =
 json.id;
 
 

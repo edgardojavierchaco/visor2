@@ -6,6 +6,7 @@ from . import views_localizaciones
 from . import views_ofertaslocales
 from . import views_responsables
 from . import views_fecha
+from . import views_totales
 
 app_name = 'padroninterno'
 
@@ -23,6 +24,10 @@ urlpatterns = [
     path('establecimiento/filtros/', views_establecimientos.establecimientos_filtros_json, name='establecimientos_filtros'),
     path('establecimiento/<int:id_establecimiento>/', views_establecimientos.detalle_establecimiento_json, name='detalle_establecimiento_json'),
 
+    # Totales de escuelas activas
+    path('totales-escuelas/', views_totales.totales_escuelas_view, name='totales_escuelas'),
+    path('totales-escuelas/detalle/', views_totales.detalle_totales_json, name='detalle_totales_json'),
+    
     # Localizaciones: listado, endpoints JSON para la grilla y detalle individual.
     path('localizacion/', views_localizaciones.listar_localizaciones, name='localizaciones'),
     path('localizacion/datos/', views_localizaciones.localizaciones_datos_json, name='localizaciones_datos'),

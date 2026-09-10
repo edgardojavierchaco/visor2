@@ -1,0 +1,348 @@
+{% extends 'especial/base_operativo_especial.html' %}
+{% load mis_filtros %}
+{% load static %}
+
+{% block especial_context_card %}{% endblock %}
+
+{% block especial_content %}
+
+{# Mantiene el estado del menu lateral antes de pintar la pantalla para evitar saltos visuales. #}
+<script>
+(function() {
+    var sidebarState = sessionStorage.getItem('padron_sidebar_state');
+    if (sidebarState === 'closed') {
+        document.documentElement.classList.add('padron-sidebar-initial-collapsed');
+    } else if (sidebarState === 'open') {
+        document.documentElement.classList.remove('padron-sidebar-initial-collapsed');
+    }
+})();
+</script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+
+{# Estilos propios de la pantalla de Localizaciones Especial. #}
+<link rel="stylesheet" href="{% static 'especial/css/localizaciones.css' %}">
+
+{# Sincroniza el menu lateral de AdminLTE con el estado guardado en sessionStorage. #}
+<script>
+(function() {
+    function syncPadronSidebar() {
+        if (!document.body) {
+            return;
+        }
+
+        var sidebarState = sessionStorage.getItem('padron_sidebar_state');
+        if (sidebarState === 'closed') {
+            document.documentElement.classList.add('padron-sidebar-initial-collapsed');
+            document.body.classList.add('sidebar-collapse');
+            document.body.classList.remove('sidebar-open', 'sidebar-expanded');
+            return;
+        }
+
+        if (sidebarState === 'open') {
+            document.documentElement.classList.remove('padron-sidebar-initial-collapsed');
+            document.body.classList.remove('sidebar-collapse', 'sidebar-closed');
+            document.body.classList.add('sidebar-open', 'sidebar-expanded');
+        }
+    }
+
+    syncPadronSidebar();
+    window.setTimeout(syncPadronSidebar, 120);
+    window.setTimeout(syncPadronSidebar, 420);
+    document.addEventListener('DOMContentLoaded', syncPadronSidebar);
+    window.addEventListener('pageshow', syncPadronSidebar);
+    window.addEventListener('load', syncPadronSidebar);
+    document.addEventListener('click', function(event) {
+        if (event.target.closest('[data-widget="pushmenu"], [data-toggle="push-menu"], .sidebar-toggle')) {
+            window.setTimeout(function() {
+                var isClosed = document.body && document.body.classList.contains('sidebar-collapse');
+                sessionStorage.setItem('padron_sidebar_state', isClosed ? 'closed' : 'open');
+                syncPadronSidebar();
+            }, 80);
+        }
+    }, true);
+})();
+</script>
+
+{# Contenedor principal: navegacion, buscador, acciones, filtros, tabla y paginacion. #}
+<div class="padron-page-wrapper">
+
+
+    <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+
+                <div id="headerActions" class="d-flex flex-wrap align-items-center justify-content-end gap-2 ms-auto">
+                    <div class="search-slot">
+                        <div id="liveSearchContainer" class="input-group input-group-sm">
+                            <span class="input-group-text">🔍</span>
+                            <span class="live-search-select-wrap">
+                                <select id="liveSearchSelect" class="form-select form-select-sm" aria-label="Campo de búsqueda">
+                                    {% for column in columnas_config %}
+                                        <option value="{{ column.key }}" {% if smart_search_col == column.key %}selected{% endif %}>{{ column.label }}</option>
+                                    {% endfor %}
+                                    <option value="all" {% if smart_search_col == 'all' %}selected{% endif %}>Todas</option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down live-search-select-caret"></i>
+                            </span>
+                            <input type="text" id="liveSearchInput" class="form-control form-control-sm" placeholder="Buscar en esta columna..." value="{{ smart_search_value|default:'' }}">
+                            <button class="btn btn-white border border-start-0 text-danger" type="button" id="liveSearchClear" title="Limpiar búsqueda">
+                                <i class="fa-solid fa-circle-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="excelButtons" class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+                        <button type="button" id="btnGuiaUso" class="btn btn-outline-primary btn-sm shadow-sm btn-excel" data-bs-toggle="modal" data-bs-target="#guiaUsoModal">
+                            <i class="fa-solid fa-circle-question me-1"></i>Guía de Uso
+                        </button>
+                        <a id="btnExcelFiltros" href='?{% query_transform request formato="excel_pagina" %}' class="btn btn-outline-success btn-sm shadow-sm btn-excel">
+                            <i class="fa-solid fa-file-excel me-1"></i>Filtros Excel
+                        </a>
+                        <a id="btnExcelTodo" href='?{% query_transform request formato="excel_todo" %}' class="btn btn-success btn-sm shadow-sm btn-excel">
+                            <i class="fa-solid fa-file-excel me-1"></i>Todo Excel
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <form id="filterForm" method="get">
+                {% for cueanexo in establecimientos_seleccionados %}
+                    <input type="hidden" name="establecimientos" value="{{ cueanexo }}">
+                {% endfor %}
+                <input type="hidden" name="page" value="1">
+                <input type="hidden" name="page_size" value="{{ page_size|default:10 }}">
+                <div id="appliedFiltersHidden"></div>
+            </form>
+
+            <div class="filter-card p-3 mb-3">
+                    <div class="d-flex flex-wrap align-items-center gap-2 filter-toolbar">
+                        <div class="filter-toolbar-main">
+                            <button type="button" id="btnToggleFiltros" class="btn btn-outline-primary filter-toggle-btn d-flex justify-content-between align-items-center gap-2">
+                                <span><i class="fa-solid fa-filter me-1"></i>Filtros</span>
+                                <i class="fa-solid fa-chevron-down toggle-chevron" style="font-size:0.75rem;"></i>
+                            </button>
+                            <button type="button" id="btnToggleColumnas" class="btn btn-outline-secondary filter-toggle-btn d-flex justify-content-between align-items-center gap-2">
+                                <span><i class="fa-solid fa-table-columns me-1"></i>Columnas</span>
+                                <i class="fa-solid fa-chevron-down toggle-chevron" style="font-size:0.75rem;"></i>
+                            </button>
+                        </div>
+                        <div class="filter-toolbar-actions">
+                            <button type="button" id="btnClearFilters" class="btn btn-outline-danger btn-sm shadow-sm filter-clear-btn" title="Limpiar Filtros o Búsqueda">
+                                <i class="fa-solid fa-broom me-1"></i>Limpiar Filtros
+                            </button>
+                            <button type="button" class="btn btn-outline-dark btn-sm shadow-sm filter-collapse-btn" id="btnContraerTabla" title="Ajustar la tabla al ancho visible" aria-pressed="false">
+                                <i class="fa-solid fa-compress me-1"></i> Contraer Columnas
+                            </button>
+                        </div>
+                    </div>
+
+                    {# Ajustes visuales especificos del selector multiple de CEF. #}
+
+
+                    {# Selector multiple de establecimientos; conserva el resto de parametros GET al aplicar seleccion. #}
+                    <section id="cefSelectorShell" class="cef-selector-shell mb-3">
+                        <form method="get" id="cefSelectorForm" class="cef-selector-form">
+                            {% for key, values in request.GET.lists %}
+                                {% if key != "establecimientos" and key != "page" and key != "formato" %}
+                                    {% for value in values %}
+                                        <input type="hidden" name="{{ key }}" value="{{ value }}">
+                                    {% endfor %}
+                                {% endif %}
+                            {% endfor %}
+
+                            <div class="cef-selector-layout">
+                                <div class="cef-selector-copy">
+                                    <span class="cef-selector-kicker">Establecimiento Especial</span>
+                                    <strong>
+                                        {% if total_establecimientos_seleccionados > 0 %}
+                                            {{ total_establecimientos_seleccionados }} seleccionados
+                                        {% else %}
+                                            Todos los establecimientos
+                                        {% endif %}
+                                    </strong>
+                                    <small>Sin selección manual se muestran todos los establecimientos disponibles.</small>
+                                </div>
+
+                                <div class="cef-selector-control" data-cef-initial-display="{% if total_establecimientos_seleccionados > 0 %}{{ total_establecimientos_seleccionados }} establecimientos seleccionados{% else %}Todos los establecimientos{% endif %}">
+                                    <label for="cefSelectorSelect">
+                                        <i class="fa-solid fa-school me-1"></i> Establecimiento Especial
+                                    </label>
+                                    <select id="cefSelectorSelect" name="establecimientos" multiple="multiple" class="form-select cef-selector-select" data-placeholder="Todos los establecimientos">
+                                        {% for est in establecimientos_options %}
+                                            <option value="{{ est.cueanexo }}" {% if est.cueanexo|stringformat:"s" in establecimientos_seleccionados %}selected{% endif %}>
+                                                {{ est.cueanexo }} - {{ est.nom_est|default:"Establecimiento sin nombre" }}
+                                            </option>
+                                        {% empty %}
+                                            <option value="" disabled>No hay establecimientos disponibles</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                            </div>
+                        </form>
+                    </section>
+
+                    <div id="pnlFiltros" class="mt-3">
+                        <div class="row g-2">
+                            {% for column in columnas_config %}
+                                <div class="col-6 col-md-3 col-xl-2">
+                                    <button type="button" class="filter-btn-field" data-field="{{ column.key }}" data-label="{{ column.label }}">{{ column.label }}</button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div id="pnlColumnas" class="mt-3">
+                        <div class="padron-columns-grid">
+                            {% for column in columnas_config %}
+                                <div class="padron-columns-item">
+                                    <div class="form-check">
+                                        <input class="form-check-input toggle-col" type="checkbox" id="chk-{{ column.slug }}" data-column="col-{{ column.slug }}" {% if column.default %}checked{% endif %}>
+                                        <label class="form-check-label" for="chk-{{ column.slug }}">{{ column.label }}</label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="padron-columns-footer">
+                            <div class="padron-columns-actions">
+                                <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" id="btnRestaurarCols">
+                                    <i class="fa-solid fa-check-double me-1"></i>Todas
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" id="btnOcultarCols">
+                                    <i class="fa-solid fa-eye-slash me-1"></i>Ocultar Todas
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm fw-bold" id="btnPorDefectoCols">
+                                    <i class="fa-solid fa-clock-rotate-left me-1"></i>Por Defecto
+                                </button>
+                            </div>
+                            <span id="colCounterLabel" class="small text-muted fw-bold"></span>
+                        </div>
+                    </div>
+                </div>
+
+            {{ establecimientos_options|json_script:"cefOptionsData" }}
+            {{ filter_options|json_script:"cefFilterOptionsData" }}
+            {{ columnas_config|json_script:"cefColumnsConfigData" }}
+
+            {% include "especial/componentes/localizaciones_resultados_especial.html" %}
+        </div>
+    </div>
+</div>
+
+<div class="filter-dialog" id="dialog_filtro" aria-hidden="true">
+    <div class="filter-dialog-card">
+        <div class="filter-dialog-header">
+            <h5 class="filter-dialog-title" id="dialogFiltroLabel"><i class="fa-solid fa-filter me-2"></i>Agregar Filtro</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="filter-dialog-body">
+            <input type="hidden" id="filterField">
+            <div class="filter-dialog-field">
+                <label class="filter-dialog-label" for="filterOperator">Operador</label>
+                <select id="filterOperator" class="form-select form-select-sm filter-dialog-select">
+                    <option value="0">parecido a</option>
+                    <option value="2">igual a</option>
+                    <option value="7">distinto de</option>
+                    <option value="1">no parecido a</option>
+                </select>
+            </div>
+            <div class="filter-dialog-field" id="filterManualGroup">
+                <label class="filter-dialog-label" for="filterValue">Valor manual</label>
+                <input type="text" id="filterValue" class="form-control form-control-sm filter-dialog-text" autocomplete="off">
+                <div class="form-text">Puedes escribir un valor o marcar opciones de la lista.</div>
+            </div>
+            <div class="filter-dialog-field mb-0">
+                <div class="filter-dialog-label">Opciones</div>
+                <div id="filterOptionsList" class="filter-dialog-checklist">
+                    <div class="text-muted small">Sin opciones precargadas para este campo. Usa el valor manual.</div>
+                </div>
+            </div>
+            <div class="filter-dialog-footer">
+                <button type="button" id="btnApplyFilterDialog" class="btn btn-primary btn-sm filter-dialog-apply">
+                    <i class="fa-solid fa-plus me-1"></i>Agregar filtro
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-xmark me-1"></i>Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade padron-modal" id="guiaUsoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="w-100">
+                    <h5 class="modal-title mb-2"><i class="fa-solid fa-circle-question me-2 text-primary"></i>Guía de Uso</h5>
+                    <div class="padron-modal-breadcrumbs">
+                        <span class="fw-semibold text-muted">Especial</span>
+                        <span class="crumb-sep">&raquo;</span>
+                        <a href="{% url 'especial:visualizacion_localizaciones' %}" class="crumb-link">Localizaciones</a>
+                        <span class="crumb-sep">&raquo;</span>
+                        <span class="text-muted">Guía de uso</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="padron-guide-hero">
+                    <h6 class="fw-bold mb-2 text-primary"><i class="fa-solid fa-compass me-2"></i>Cómo aprovechar la pantalla</h6>
+                    <p class="mb-2 text-secondary">Esta vista combina selector múltiple de establecimientos, búsqueda rápida, filtros, control de columnas, paginación y exportación a Excel. Si no elegís un establecimiento manualmente, se muestran todos los establecimientos disponibles.</p>
+                    <div class="padron-guide-chip-row">
+                        <span class="padron-guide-chip"><i class="fa-solid fa-school text-primary"></i>Selector Establecimiento</span>
+                        <span class="padron-guide-chip"><i class="fa-solid fa-magnifying-glass text-primary"></i>Buscador</span>
+                        <span class="padron-guide-chip"><i class="fa-solid fa-filter text-success"></i>Filtros</span>
+                        <span class="padron-guide-chip"><i class="fa-solid fa-table-columns text-info"></i>Columnas</span>
+                        <span class="padron-guide-chip"><i class="fa-solid fa-file-excel text-success"></i>Excel</span>
+                    </div>
+                </div>
+                <div class="padron-guide-grid">
+                    <div class="padron-guide-card">
+                        <h6><i class="fa-solid fa-school text-primary me-2"></i>1. Selector Establecimiento</h6>
+                        <div class="padron-guide-step mb-3"><span class="padron-guide-step-bullet">1</span><div>El campo muestra <strong>Todos los establecimientos</strong> cuando no hay selección explícita.</div></div>
+                        <div class="padron-guide-step mb-3"><span class="padron-guide-step-bullet">2</span><div>Al abrir el desplegable podés buscar por CUE-Anexo o nombre y seleccionar uno, varios o todos.</div></div>
+                        <div class="padron-guide-note"><i class="fa-solid fa-check me-2 text-primary"></i>Las opciones elegidas quedan marcadas con tilde y se aplican por AJAX al cerrar el desplegable.</div>
+                    </div>
+                    <div class="padron-guide-card">
+                        <h6><i class="fa-solid fa-magnifying-glass text-primary me-2"></i>2. Buscador rápido</h6>
+                        <div class="padron-guide-step mb-3"><span class="padron-guide-step-bullet">1</span><div>Elegí <strong>Todas</strong> o una columna específica, como Establecimiento.</div></div>
+                        <div class="padron-guide-step mb-3"><span class="padron-guide-step-bullet">2</span><div>Escribí el valor y la tabla se actualiza sobre el servidor, no solo sobre la página visible.</div></div>
+                        <div class="padron-guide-note"><i class="fa-solid fa-tag me-2 text-primary"></i>La búsqueda aplicada aparece como etiqueta arriba de la tabla.</div>
+                    </div>
+                    <div class="padron-guide-card">
+                        <h6><i class="fa-solid fa-filter text-success me-2"></i>3. Filtros</h6>
+                        <ol><li>Abrí el panel <strong>Filtros</strong>.</li><li>Elegí Localidad, Departamento, Estado localización u otro campo disponible.</li><li>Seleccioná operador y valor.</li><li>Aplicá el criterio y la tabla se refresca sin recargar la pantalla.</li></ol>
+                        <div class="padron-guide-note mt-3"><i class="fa-solid fa-tags me-2 text-success"></i>Las etiquetas activas muestran cada filtro y permiten quitarlo con su <strong>x</strong>.</div>
+                    </div>
+                    <div class="padron-guide-card">
+                        <h6><i class="fa-solid fa-table-columns text-info me-2"></i>4. Columnas visibles</h6>
+                        <ul><li><strong>Columnas</strong> abre el panel de campos visibles.</li><li><strong>Todas</strong> muestra todas las columnas.</li><li><strong>Ocultar Todas</strong> muestra un aviso dentro de la tabla.</li><li><strong>Por Defecto</strong> vuelve a la configuración inicial.</li><li><strong>Contraer Columnas</strong> ajusta la tabla para leer más datos en pantalla.</li></ul>
+                    </div>
+                    <div class="padron-guide-card">
+                        <h6><i class="fa-solid fa-file-excel text-success me-2"></i>5. Exportación</h6>
+                        <ul><li><strong>Filtros Excel</strong> exporta todos los registros que coinciden con filtros, búsqueda y selección de establecimientos actuales.</li><li>Respeta las columnas visibles configuradas en pantalla.</li><li><strong>Todo Excel</strong> exporta todo lo autorizado, sin filtros y con todas las columnas.</li></ul>
+                    </div>
+                    <div class="padron-guide-card">
+                        <h6><i class="fa-solid fa-broom text-danger me-2"></i>6. Limpiar y volver a empezar</h6>
+                        <ul><li><strong>Limpiar Filtros</strong> borra búsqueda, filtros y selección de establecimientos.</li><li>No borra columnas visibles ni modo contraído.</li><li>Si no hay resultados, la tabla muestra un mensaje claro para ajustar la búsqueda.</li></ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light border btn-sm" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-arrow-left-long me-2 text-primary"></i>Volver
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Logica principal de la pantalla: filtros, columnas, selector de establecimientos, AJAX parcial y exportacion. #}
+<script src="{% static 'especial/js/localizaciones.js' %}"></script>
+{# Fallback para acciones basicas si alguna dependencia JS externa no queda disponible. #}
+
+
+{% endblock %}

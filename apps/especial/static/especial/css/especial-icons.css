@@ -1,0 +1,19 @@
+.especial-material-symbol {
+    -webkit-font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+    align-items: center;
+    direction: ltr;
+    display: inline-flex;
+    font-family: "Material Symbols Outlined";
+    font-feature-settings: "liga";
+    font-size: 20px;
+    font-style: normal;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 20;
+    font-weight: 400;
+    justify-content: center;
+    letter-spacing: normal;
+    line-height: 1;
+    text-transform: none;
+    white-space: nowrap;
+    transition: color 150ms ease, font-variation-settings 150ms ease;
+}

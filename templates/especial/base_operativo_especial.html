@@ -1,0 +1,143 @@
+﻿{% extends 'archivos/base/layout.html' %}
+{% block content %}
+{% load static %}
+{% if not especial_partial %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400..500,0..1,0&display=swap" rel="stylesheet">
+<script>
+(function () {
+    var STORAGE_KEY = "padron_sidebar_state";
+    function restoreSidebar() {
+        if (!document.body) return;
+        if (sessionStorage.getItem(STORAGE_KEY) === "closed") {
+            document.body.classList.add("sidebar-collapse");
+            document.body.classList.remove("sidebar-open", "sidebar-expanded");
+        }
+    }
+    restoreSidebar();
+    document.addEventListener("DOMContentLoaded", restoreSidebar);
+    window.addEventListener("pageshow", restoreSidebar);
+    document.addEventListener("click", function (event) {
+        if (!event.target.closest('[data-widget="pushmenu"], [data-toggle="push-menu"], .sidebar-toggle')) {
+            return;
+        }
+        window.setTimeout(function () {
+            var isClosed = document.body && document.body.classList.contains("sidebar-collapse");
+            sessionStorage.setItem(STORAGE_KEY, isClosed ? "closed" : "open");
+        }, 120);
+    }, true);
+})();
+</script>
+<link rel="stylesheet" href="{% static 'especial/css/operativo.css' %}">
+<link rel="stylesheet" href="{% static 'especial/css/especial-icons.css' %}?v=20260831-3">
+<link rel="stylesheet" href="{% static 'especial/css/busqueda_personas.css' %}">
+<link rel="stylesheet" href="{% static 'especial/css/busqueda_especial.css' %}?v=20260831-8">
+{% endif %}
+{% if not especial_partial %}
+<div class="cef-wrap" data-especial-shell>
+    {% block especial_header %}
+    <section class="especial-module-shell" data-especial-shell-header>
+        <header class="especial-module-hero">
+            <div class="especial-module-hero-inner">
+                <div class="especial-module-hero-copy">
+                    <h1>{% block especial_header_title %}{{ especial_header.title|default:"Educación Especial" }}{% endblock %}</h1>
+                    <p>{% block especial_subtitle %}{{ especial_header.subtitle|default:"Gestión institucional, alumnos, docentes, datos CUE-Anexo y secciones." }}{% endblock %}</p>
+                </div>
+                <div class="especial-module-hero-art" aria-hidden="true">
+                    <span class="especial-module-hero-orbit"></span>
+                    <div class="especial-module-hero-nodes">
+                        <span class="especial-module-hero-node is-lg"></span>
+                        <span class="especial-module-hero-node is-md"></span>
+                        <span class="especial-module-hero-node is-sm"></span>
+                    </div>
+                </div>
+            </div>
+        </header>
+        {% include "especial/componentes/nav_operativo_especial.html" %}
+    </section>
+    {% endblock %}
+
+    <main class="cef-main">
+        {% if messages %}
+            <div class="cef-alert-stack">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }}" role="alert">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% block especial_context_card %}
+        <!-- CONTEXT CARD (selector CUE-Anexo / Ciclo) -->
+        <section class="cef-context-card">
+            <form method="get" class="cef-context-grid" data-especial-context-selector
+                  data-applied-cueanexo="{{ especial_context.cueanexo|default:'' }}"
+                  data-applied-ciclo="{% if especial_context.ciclo %}{{ especial_context.ciclo.pk }}{% endif %}">
+                <div class="cef-context-cueanexo">
+                    <label class="cef-context-label" for="id_contexto_cueanexo">Escuela Especial</label>
+                    <select id="id_contexto_cueanexo" name="cueanexo" class="form-select form-select-sm">
+                        {% for option in especial_context.cueanexo_options %}
+                            <option value="{{ option.cueanexo }}" title="{{ option.cueanexo }} - {{ option.nombre }}" {% if option.cueanexo == especial_context.cueanexo %}selected{% endif %}>{{ option.cueanexo }} - {{ option.nombre }}</option>
+                        {% empty %}
+                            <option value="">Sin establecimientos disponibles</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="cef-context-label" for="id_contexto_ciclo">Año / ciclo</label>
+                    <select id="id_contexto_ciclo" name="ciclo" class="form-select form-select-sm">
+                        {% for ciclo in especial_context.ciclos %}
+                            <option value="{{ ciclo.pk }}" {% if especial_context.ciclo and ciclo.pk == especial_context.ciclo.pk %}selected{% endif %}>{{ ciclo.anio }}{% if ciclo.actual %} · actual{% endif %}</option>
+                        {% empty %}
+                            <option value="">Sin ciclo activo</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="cef-context-actions">
+                    {% if especial_context.es_admin_especial %}
+                        <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:administrar_ciclos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" data-especial-section-link data-especial-section="ciclos">
+                            <i class="fa-solid fa-calendar-plus"></i> Ciclos
+                        </a>
+                    {% endif %}
+                </div>
+            </form>
+        </section>
+        {% endblock %}
+        {% if especial_context.sin_cueanexo %}
+            <div class="alert alert-warning">No hay establecimientos de Educación Especial disponibles para tu usuario.</div>
+        {% endif %}
+        {% if especial_context.sin_ciclo %}
+            <div class="alert alert-warning">No hay ciclo lectivo actual para realizar esta carga.</div>
+            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin ciclos lectivos',
+                        text: 'Actualmente no hay ningún ciclo lectivo configurado o activo en el sistema. Para operar en este módulo se requiere un ciclo activo.',
+                        confirmButtonColor: '#2e7bd4',
+                        confirmButtonText: 'Entendido'
+                    });
+                });
+            </script>
+        {% endif %}
+    {% endif %}
+        <div id="especial-content-region" data-especial-content-region aria-busy="false" data-especial-section="{{ active_menu }}" data-especial-title="{{ especial_header.title }}" data-especial-subtitle="{{ especial_header.subtitle }}">
+            {% block especial_content %}{% endblock %}
+        </div>
+        {% if not especial_partial %}
+    </main>
+</div>
+<script src="{% static 'especial/js/dropdowns.js' %}" defer></script>
+<script src="{% static 'especial/js/table_controls.js' %}" defer></script>
+<script src="{% static 'especial/js/context_selector.js' %}?v=20260903-2" defer></script>
+<script src="{% static 'especial/js/busqueda_personas.js' %}" defer></script>
+<script src="{% static 'especial/js/busqueda_especial.js' %}?v=20260901-1" defer></script>
+<script src="{% static 'especial/js/alumnos.js' %}?v=20260901-1" defer></script>
+<script src="{% static 'especial/js/docentes.js' %}" defer></script>
+<script src="{% static 'especial/js/ui_lifecycle.js' %}?v=20260831-4" defer></script>
+<script src="{% static 'especial/js/partial_navigation.js' %}?v=20260907-3" defer></script>
+        {% endif %}
+{% endblock %}

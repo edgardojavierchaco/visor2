@@ -1,288 +1,1379 @@
-import os
-import json
-from django.db import models
+# -*- coding: utf-8 -*-
+import re
+import unicodedata
+import logging
 from django.conf import settings
-from django.forms import model_to_dict
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.db.models import CharField, Func, Q, Value
+from django.db.models.functions import Cast
+from django.utils import timezone
+from apps.bnhalumnos.models import Alumno
+from apps.cef.models import (
+    CefBeneficioSinoTipo,
+    CefEspacioComedorTipo,
+    CefFuenteFinanciamientoTipo,
+    CefPrestacionTipo,
+)
 
+logger = logging.getLogger(__name__)
 
-ACTIVIDAD_CHOICES=[
-    ('APOYO','APOYO'),
-    ('SEGUIMIENTO','SEGUIMIENTO'),
-]
+# ============================================================
+# CONSTANTES DEL MODULO ESPECIAL
+# ============================================================
+ACRONIMO_ESPECIAL = "EEE"
+LONGITUD_CUEANEXO = 9
+PADRON_DB_ALIAS = "default"
+USUARIOS_DB_ALIAS = "default"
+PREFIJO_OFERTA_COMUN = "Común -"
+PREFIJO_OFERTA_ESPECIAL = "Especial -"
+TERMINO_MATRICULA_COMPARTIDA = "integracion"
+ROLES_AUTORIZADOS_ESPECIAL = {
+    "Administrador",
+    "Director",
+    "Director de Modalidad Especial",
+}
 
-MESES_CHOICES = [    
-    ('ABRIL', 'ABRIL'),    
-    ('JULIO', 'JULIO'),    
-    ('NOVIEMBRE', 'NOVIEMBRE'),    
-    ('DICIEMBRE', 'DICIEMBRE'),
-]
+# ============================================================
+# MODELOS EXTERNOS / INTEGRACION
+# ============================================================
 
-# Modelo para Funciones de Apoyo a la Inclusión
-class FuncionApoyoInclusion(models.Model):
-    cod_func=models.IntegerField(verbose_name='Cod_Funcion')
-    funcion=models.CharField(max_length=255, verbose_name='Funcion')
-    
-    class Meta:
-        verbose_name='Funcion_Apoyo'
-        verbose_name_plural='Funciones_Apoyos'
-        db_table='funcion_apoyo'
-    
-    def __str__(self):
-        return f'{self.cod_func} - {self.funcion}'
-
-    def toJSON(self):
-        item=model_to_dict(self)
-        item=self.cod_func
-        item=self.funcion
-        return item
-
-
-# Modelo para Servicios Discpacidad
-class ServiciosDiscapacidad(models.Model):
-    cod_serv=models.IntegerField(verbose_name='Cod_Servicio')
-    servicio=models.CharField(max_length=255, verbose_name='Servicio')
-    
-    class Meta:
-        verbose_name='Servicio_Discapacidad'
-        verbose_name_plural='Servicios_Discapacidades'
-        db_table='servicio_discapacidad'
-    
-    def __str__(self):
-        return f'{self.cod_serv} - {self.servicio}'
-
-    def toJSON(self):
-        item=model_to_dict(self)
-        item=self.cod_serv
-        item=self.servicio
-        return item
-
-
-# Listado Discapacidad
-class DiscapacidadListado(models.Model):
-    cod_disc=models.IntegerField(verbose_name='Cod_Discapacidad')
-    discapacidad=models.CharField(max_length=255, verbose_name='Discapacidad')
-    
-    class Meta:
-        verbose_name='Listado_Discapacidad'
-        verbose_name_plural='Listados_Discapacidades'
-        db_table='listado_discapacidad'
-    
-    def __str__(self):
-        return f'{self.cod_disc} - {self.discapacidad}'
-
-    def toJSON(self):
-        item=model_to_dict(self)
-        item=self.cod_disc
-        item=self.discapacidad
-        return item
-
-
-# Profesionales
-class Profesionales(models.Model):
-    cod_prof=models.IntegerField(verbose_name='Cod_Profesional')
-    profesion=models.CharField(max_length=255, verbose_name='Profesion')
-    
-    class Meta:
-        verbose_name='Listado_Profesion'
-        verbose_name_plural='Listados_Profesiones'
-        db_table='listado_profesion'
-    
-    def __str__(self):
-        return f'{self.cod_prof} - {self.profesion}'
-
-    def toJSON(self):
-        item=model_to_dict(self)
-        item=self.cod_prof
-        item=self.profesion
-        return item
-
-
-# Modelo carga Escuela Especial
-class MaestrosGrado(models.Model):
-    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
-    mes=models.CharField(max_length=25, choices=MESES_CHOICES, verbose_name='Mes')
-    anio=models.IntegerField(validators=[MinValueValidator(2025)], verbose_name='Año')
-    dni_doc=models.CharField(max_length=8, verbose_name='DNI')
-    apellido=models.CharField(max_length=255, verbose_name='Apellidos')
-    nombres=models.CharField(max_length=255, verbose_name='Nombres')
-    pof=models.ForeignKey(FuncionApoyoInclusion, on_delete=models.CASCADE, verbose_name='POF')
-    matric_compartida=models.IntegerField(verbose_name='Matric_Compartida')
-    espacio_compartido=models.IntegerField(verbose_name='Espacio_Compartido')
-    servicio_maestro=models.ForeignKey(ServiciosDiscapacidad, on_delete=models.CASCADE, verbose_name='Servicio')
-    sede=models.IntegerField(verbose_name='Sede')
-    cud=models.IntegerField(verbose_name='CUD')
-    discapadidad=models.ForeignKey(DiscapacidadListado, on_delete=models.CASCADE, verbose_name='Discapacidad')
-    edad=models.IntegerField(verbose_name='Edad')
-    
-    class Meta:
-        verbose_name='Maestro_Grado_Especial'
-        verbose_name_plural='Maestros_Grados_Especiales'
-        db_table='especial_maestrogrado'
-    
-    def __str__(self):
-        return f'{self.cueanexo} - {self.dni_doc}: {self.apellido}, {self.nombres}'
-
-    def toJSON(self):
-        item=model_to_dict(self)
-        item=self.cueanexo
-        item=self.dni_doc
-        item=self.apellido
-        item=self.nombres
-        item=self.pof.funcion
-        item=self.matric_compartida
-        item=self.espacio_compartido
-        item=self.servicio_maestro.servicio
-        item=self.sede
-        item=self.cud
-        item=self.discapadidad.discapacidad
-        item=self.edad
-        return item
-
-
-# Modelo Carga MAI
-class MAI(models.Model):
-    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
-    mes=models.CharField(max_length=25, choices=MESES_CHOICES, verbose_name='Mes')
-    anio=models.IntegerField(validators=[MinValueValidator(2025)], verbose_name='Año')
-    actividad=models.CharField(max_length=25, choices=ACTIVIDAD_CHOICES, verbose_name='Actividad')
-    total=models.IntegerField(verbose_name='Total')
-    mes=models.CharField(max_length=25, choices=MESES_CHOICES, verbose_name='Mes')
-    anio = models.IntegerField(validators=[MinValueValidator(2025)], verbose_name='Año')
-    admision=models.IntegerField(verbose_name='Admision')
-    contexto=models.IntegerField(verbose_name='Contexto')
-    barreras=models.TextField(verbose_name='Barreras')
-    domicilio=models.IntegerField(verbose_name='Domicilio')
-    redes=models.IntegerField(verbose_name='Redes')
-    instit=models.IntegerField(verbose_name='Instituciones')
+class EspecialDocenteBnh(models.Model):
+    """Modelo proxy para consultar personas en el esquema BNH."""
+    cuil = models.CharField(max_length=11, primary_key=True)
+    dni = models.CharField(max_length=20, blank=True, null=True)
+    apellido = models.CharField(max_length=150, blank=True, null=True)
+    nombre = models.CharField(max_length=150, blank=True, null=True)
+    estado = models.CharField(max_length=30, blank=True, null=True)
 
     class Meta:
-        verbose_name='MAI'
-        verbose_name_plural='MAIS'
-        db_table='registro_mai'
-    
+        managed = False
+        db_table = '"bnh"."personas"'
+        ordering = ["apellido", "nombre", "cuil"]
+
+    @property
+    def nombre_completo(self):
+        apellidos = (self.apellido or "").strip()
+        nombres = (self.nombre or "").strip()
+        if apellidos and nombres:
+            return f"{apellidos}, {nombres}"
+        return apellidos or nombres
+        
     def __str__(self):
-        return f'{self.cueanexo} - {self.actividad}'
-
-    def toJSON(self):
-        item=model_to_dict(self)
-        item=self.cueanexo
-        item=self.mes
-        item=self.anio
-        item=self.actividad
-        item=self.total
-        item=self.mes
-        item=self.anio
-        item=self.admision
-        item=self.contexto
-        item=self.barreras
-        item=self.domicilio
-        item=self.redes
-        item=self.instit
-        return item
+        nombre = self.nombre_completo
+        if nombre:
+            return f"{nombre} - {self.cuil}"
+        return self.cuil or ""
 
 
-# Modelo de Escuelas Nivel con Especial
-class EscuelacDiscapacidad(models.Model):
-    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
-    mes=models.CharField(max_length=25, choices=MESES_CHOICES, verbose_name='Mes')
-    anio=models.IntegerField(validators=[MinValueValidator(2025)], verbose_name='Año')
-    inclusion=models.IntegerField(verbose_name='Inclusion')
-    acompanamiento=models.BooleanField(default=False, verbose_name='Acompañamiento')
-    cuecuit_instit=models.CharField(max_length=11, verbose_name='CUE_CUIT')
-    sector=models.CharField(max_length=50, verbose_name='Sector')
-    cud=models.IntegerField(verbose_name='CUD')
-    porcen_eval=models.IntegerField(verbose_name='Procentaje')
-    graduados=models.IntegerField(verbose_name='Graduados')
-    doc_capac=models.IntegerField(verbose_name='Docentes')
-    mat_eq=models.IntegerField(verbose_name='Materiales')
-    
+class EspecialPadronOferta(models.Model):
+    """Modelo de integración Especial contra la vista de Padrón."""
+    id = models.BigIntegerField(primary_key=True)
+    cueanexo = models.CharField(max_length=9, blank=True, null=True)
+    nom_est = models.TextField(blank=True, null=True)
+    padron_cueanexo = models.CharField(max_length=9, blank=True, null=True)
+    acronimo = models.CharField(max_length=50, blank=True, null=True)
+    oferta = models.TextField(blank=True, null=True)
+    etiqueta = models.TextField(blank=True, null=True)
+    nro_est = models.TextField(blank=True, null=True)
+    ambito = models.TextField(blank=True, null=True)
+    sector = models.TextField(blank=True, null=True)
+    region_loc = models.TextField(blank=True, null=True)
+    ref_loc = models.TextField(blank=True, null=True)
+    calle = models.TextField(blank=True, null=True)
+    numero = models.TextField(blank=True, null=True)
+    localidad = models.TextField(blank=True, null=True)
+    departamento = models.TextField(blank=True, null=True)
+    estado_loc = models.TextField(blank=True, null=True)
+    est_oferta = models.TextField(blank=True, null=True)
+    estado_est = models.TextField(blank=True, null=True)
+    resploc_cuitcuil = models.TextField(blank=True, null=True)
+    resploc_doc = models.TextField(blank=True, null=True)
+    apellido_resp = models.TextField(blank=True, null=True)
+    nombre_resp = models.TextField(blank=True, null=True)
+    resploc_email = models.TextField(blank=True, null=True)
+    resploc_telefono = models.TextField(blank=True, null=True)
+    sup_tecnico = models.TextField(blank=True, null=True)
+    email_suptecnico = models.TextField(blank=True, null=True)
+    tel_suptecnico = models.TextField(blank=True, null=True)
+    categoria = models.TextField(blank=True, null=True)
+    cui_loc = models.TextField(blank=True, null=True)
+    cua_loc = models.TextField(blank=True, null=True)
+    cuof_loc = models.TextField(blank=True, null=True)
+    jornada = models.TextField(blank=True, null=True)
+
     class Meta:
-        verbose_name='Escuela_Discapacidad'
-        verbose_name_plural='Escuelas_Discpacidades'
-        db_table='escuela_discapacidad'
-    
+        managed = False
+        db_table = "v_capa_unica_ofertas_ant"
+        verbose_name = "Oferta Especial desde Padrón"
+        verbose_name_plural = "Ofertas Especial desde Padrón"
+
     def __str__(self):
-        return f'{self.cueanexo} - {self.mes} {self.anio}'
-
-    def toJSON(self):
-        item=model_to_dict(self)
-        item=self.cueanexo
-        item=self.mes
-        item=self.anio
-        item=self.inclusion
-        item=self.acompanamiento
-        item=self.cuecuit_instit
-        item=self.sector
-        item=self.cud
-        item=self.porcen_eval
-        item=self.graduados
-        item=self.doc_capac
-        item=self.mat_eq
-        return item
+        cueanexo = self.cueanexo or ""
+        nombre = self.nom_est or ""
+        return f"{cueanexo} - {nombre}".strip(" -")
 
 
-# Model Equipo Interdisciplinario
-class EquipoInterProf(models.Model):
-    cueanexo=models.CharField(max_length=9, verbose_name='Cueanexo')
-    mes=models.CharField(max_length=25, choices=MESES_CHOICES, verbose_name='Mes')
-    anio=models.IntegerField(validators=[MinValueValidator(2025)], verbose_name='Año')
-    dni=models.CharField(max_length=8, verbose_name='DNI')
-    apellido=models.CharField(max_length=255, verbose_name='Apellidos')
-    nombres=models.CharField(max_length=255, verbose_name='Nombres')
-    prof=models.ForeignKey(Profesionales, on_delete=models.CASCADE, verbose_name='Profesion')
-    atendidos=models.IntegerField(verbose_name='Atendidos')
-    cue=models.CharField(max_length=9, verbose_name='Cue')
-    oferta=models.CharField(max_length=255, verbose_name='Oferta')
-    situcion=models.CharField(max_length=255, verbose_name='situacion')
-    apoyo=models.IntegerField(verbose_name='Apoyo')
-    seguimiento=models.IntegerField(verbose_name='Seguimiento')
-    riesgo=models.IntegerField(verbose_name='Riesgo')
-    causal=models.CharField(max_length=255, verbose_name='Causal')
-    ppi=models.IntegerField(verbose_name='PPI')
-    plan_acompa=models.CharField(max_length=255, verbose_name='Plan')
-    egresados=models.IntegerField(verbose_name='Egresados')
-    deportes=models.IntegerField(verbose_name='Deportes')
-    accesibilidad=models.BooleanField(default=False, verbose_name='Accesibilidad')
-    articulacion=models.CharField(max_length=11, verbose_name='Articulacion')
-    nombre_artic=models.CharField(max_length=255, verbose_name='Nombre_Institucion')
-    alfabetizacion=models.BooleanField(default=False, verbose_name='Alfabetizacion')
-    
-    
+class EspecialRolUsuario(models.Model):
+    id = models.BigIntegerField(primary_key=True)
+    nombre = models.CharField(max_length=100, blank=True, null=True)
     class Meta:
-        verbose_name='Equipo Interdisciplinario'
-        verbose_name_plural='Equipos Interdisciplinarios'
-        db_table='equipo_interdisciplinario'
-    
+        managed = False
+        db_table = "usuarios_rol"
+        verbose_name = "Rol de usuario Especial"
+        verbose_name_plural = "Roles de usuario Especial"
+
+
+class EspecialUsuarioPerfil(models.Model):
+    id = models.BigIntegerField(primary_key=True)
+    usuario = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.DO_NOTHING,
+        db_column="usuario_id",
+        related_name="perfil_especial_integracion",
+    )
+    rol = models.ForeignKey(
+        EspecialRolUsuario,
+        on_delete=models.DO_NOTHING,
+        db_column="rol_id",
+        related_name="perfiles_especial_integracion",
+    )
+    class Meta:
+        managed = False
+        db_table = "usuarios_perfilusuario"
+        verbose_name = "Perfil de usuario Especial"
+        verbose_name_plural = "Perfiles de usuario Especial"
+
+
+# ============================================================
+# FUNCIONES DE NORMALIZACION Y ACCESO A PADRON
+# ============================================================
+def solo_digitos(valor):
+    return re.sub(r"\D", "", str(valor or ""))
+
+
+def normalizar_cueanexo(valor):
+    cueanexo = solo_digitos(valor)
+    if len(cueanexo) != LONGITUD_CUEANEXO:
+        return ""
+    return cueanexo
+
+
+def get_ofertas_comunes_queryset(padron_queryset=None):
+    """Obtiene solo filas del Padrón cuya oferta comienza con Común -."""
+    queryset = (
+        padron_queryset
+        if padron_queryset is not None
+        else EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+    )
+    return queryset.filter(oferta__istartswith=PREFIJO_OFERTA_COMUN)
+
+
+def get_establecimientos_comunes_matricula_queryset(padron_queryset=None):
+    """Obtiene establecimientos comunes vigentes para matrícula compartida."""
+    return (
+        get_ofertas_comunes_queryset(padron_queryset)
+        .exclude(acronimo__iexact=ACRONIMO_ESPECIAL)
+        .filter(
+            est_oferta__iexact="Activo",
+            estado_est__iexact="Activo",
+        )
+    )
+
+
+def get_establecimientos_no_especiales_matricula_queryset(padron_queryset=None):
+    """Obtiene ofertas vigentes que no pertenecen a Educación Especial.
+
+    La elegibilidad se determina por el acrónimo real del padrón. Se filtran
+    filas, no CUE-Anexos completos, para conservar un CUE que tenga alguna
+    oferta vigente no Especial aunque también posea otra oferta Especial.
+    """
+    queryset = (
+        padron_queryset
+        if padron_queryset is not None
+        else EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+    )
+    return (
+        queryset
+        .exclude(acronimo__iexact=ACRONIMO_ESPECIAL)
+        .filter(
+            est_oferta__iexact="Activo",
+            estado_est__iexact="Activo",
+        )
+        .exclude(oferta__isnull=True)
+        .exclude(oferta__exact="")
+    )
+
+
+def cueanexo_tiene_oferta_no_especial(cueanexo, padron_queryset=None):
+    """Indica si el CUE tiene una oferta vigente que no sea de Especial."""
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        return False
+    queryset = get_establecimientos_no_especiales_matricula_queryset(
+        padron_queryset
+    )
+    return (
+        queryset.filter(cueanexo=cueanexo).exists()
+        or queryset.filter(padron_cueanexo=cueanexo).exists()
+    )
+
+
+def cueanexo_tiene_oferta_comun(cueanexo, padron_queryset=None):
+    """Indica si el CUE-Anexo normalizado tiene alguna oferta Común."""
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        return False
+    queryset = get_establecimientos_comunes_matricula_queryset(padron_queryset)
+    return (
+        queryset.filter(cueanexo=cueanexo).exists()
+        or queryset.filter(padron_cueanexo=cueanexo).exists()
+    )
+
+
+def _normalizar_oferta_matricula_compartida(valor):
+    """Genera una clave canónica para comparar ofertas de Padrón."""
+    oferta = unicodedata.normalize("NFKC", str(valor or ""))
+    caracteres = []
+    for caracter in oferta:
+        categoria = unicodedata.category(caracter)
+        if categoria == "Cf":
+            continue
+        if caracter.isspace():
+            caracteres.append(" ")
+        elif categoria == "Pd" or caracter == "\N{MINUS SIGN}":
+            caracteres.append("-")
+        else:
+            caracteres.append(caracter)
+
+    oferta = unicodedata.normalize(
+        "NFKD",
+        "".join(caracteres).casefold(),
+    )
+    oferta = "".join(
+        caracter
+        for caracter in oferta
+        if unicodedata.category(caracter) != "Mn"
+    )
+    oferta = re.sub(r"\s+", " ", oferta).strip()
+    return re.sub(r"(?:\s*-\s*)+", " ", oferta).strip()
+
+
+def normalizar_cuil_usuario(user):
+    if not user or not getattr(user, "is_authenticated", False):
+        return ""
+    cuil = solo_digitos(getattr(user, "username", ""))
+    if len(cuil) != 11:
+        return ""
+    return cuil
+
+
+def get_escuelas_especiales_base_queryset():
+    return (
+        EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+        .filter(acronimo__iexact=ACRONIMO_ESPECIAL)
+    )
+
+
+def get_todas_las_escuelas_especiales():
+    return get_escuelas_especiales_base_queryset().order_by("cueanexo")
+
+
+def get_escuelas_especiales_por_cuil_responsable(user):
+    cuil = normalizar_cuil_usuario(user)
+    queryset = get_escuelas_especiales_base_queryset()
+    if not cuil:
+        return queryset.none()
+    return (
+        queryset
+        .annotate(
+            responsable_cuil_limpio=Func(
+                Cast("resploc_cuitcuil", CharField()),
+                Value(r"\D"),
+                Value(""),
+                Value("g"),
+                function="REGEXP_REPLACE",
+                output_field=CharField(),
+            )
+        )
+        .filter(responsable_cuil_limpio=cuil)
+        .order_by("cueanexo")
+    )
+
+
+def get_datos_establecimiento_especial(cueanexo):
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        return None
+    return (
+        get_escuelas_especiales_base_queryset()
+        .filter(cueanexo=cueanexo)
+        .order_by("cueanexo", "nom_est")
+        .first()
+    )
+
+
+def get_ofertas_educativas_especiales(cueanexo, padron_queryset=None):
+    """Obtiene los nombres de ofertas activas de Especial para un CUE-Anexo."""
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        return []
+
+    queryset = (
+        padron_queryset
+        if padron_queryset is not None
+        else EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+    )
+    valores = (
+        queryset
+        .filter(
+            cueanexo=cueanexo,
+            oferta__istartswith=PREFIJO_OFERTA_ESPECIAL,
+            est_oferta__iexact="Activo",
+            estado_est__iexact="Activo",
+        )
+        .exclude(oferta__isnull=True)
+        .exclude(oferta__exact="")
+        .values_list("oferta", flat=True)
+        .distinct()
+        .order_by("oferta")
+    )
+
+    ofertas_por_clave = {}
+    for valor in valores:
+        oferta = str(valor or "").strip()
+        if oferta:
+            ofertas_por_clave.setdefault(oferta.casefold(), oferta)
+    return sorted(
+        ofertas_por_clave.values(),
+        key=lambda oferta: (oferta.casefold(), oferta),
+    )
+
+
+def cueanexo_tiene_oferta_matricula_compartida(cueanexo):
+    """Indica si el CUE tiene exactamente la oferta activa de Integración."""
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        return False
+    ofertas_activas = list(
+        get_escuelas_especiales_base_queryset()
+        .filter(cueanexo=cueanexo)
+        .filter(
+            est_oferta__iexact="Activo",
+            estado_est__iexact="Activo",
+        )
+        .exclude(oferta__isnull=True)
+        .exclude(oferta__exact="")
+        .values_list("oferta", flat=True)
+    )
+    oferta_objetivo = _normalizar_oferta_matricula_compartida(
+        "Especial - Integración"
+    )
+    return any(
+        _normalizar_oferta_matricula_compartida(oferta) == oferta_objetivo
+        for oferta in ofertas_activas
+    )
+
+
+# ============================================================
+# PERMISOS FUNCIONALES
+# ============================================================
+def obtener_rol_usuario_especial(user):
+    if not user or not getattr(user, "is_authenticated", False):
+        return None
+    username = (getattr(user, "username", "") or "").strip()
+    if not username:
+        return None
+    try:
+        perfil = (
+            EspecialUsuarioPerfil.objects.using(USUARIOS_DB_ALIAS)
+            .select_related("rol")
+            .get(usuario__username=username)
+        )
+    except EspecialUsuarioPerfil.DoesNotExist:
+        return None
+    rol_nombre = getattr(perfil.rol, "nombre", "") or ""
+    return rol_nombre.strip() or None
+
+
+def usuario_puede_ver_especial(user):
+    rol = obtener_rol_usuario_especial(user)
+    if not rol:
+        return False
+    return rol in ROLES_AUTORIZADOS_ESPECIAL
+
+
+def usuario_es_admin_especial(user):
+    return obtener_rol_usuario_especial(user) == "Administrador"
+
+
+def get_escuelas_especiales_visualizacion_usuario(user, permisos=None):
+    """Devuelve los establecimientos que el usuario puede consultar."""
+    queryset = get_todas_las_escuelas_especiales()
+    rol = (
+        (permisos or {}).get("rol")
+        if permisos is not None
+        else obtener_rol_usuario_especial(user)
+    )
+    if rol not in ROLES_AUTORIZADOS_ESPECIAL:
+        return queryset.none()
+    if rol == "Administrador":
+        return queryset
+    return get_escuelas_especiales_por_cuil_responsable(user)
+
+
+def get_escuelas_especiales_cargables_usuario(user, permisos=None):
+    """Devuelve los establecimientos sobre los que el usuario puede operar."""
+    return get_escuelas_especiales_visualizacion_usuario(user, permisos=permisos)
+
+
+def get_cueanexos_cargables_usuario(user, permisos=None):
+    cueanexos = []
+    for cueanexo in (
+        get_escuelas_especiales_cargables_usuario(user, permisos=permisos)
+        .values_list("cueanexo", flat=True)
+        .distinct()
+    ):
+        cueanexo_norm = normalizar_cueanexo(cueanexo)
+        if cueanexo_norm and cueanexo_norm not in cueanexos:
+            cueanexos.append(cueanexo_norm)
+    return cueanexos
+
+
+def usuario_puede_cargar_cueanexo(user, cueanexo):
+    cueanexo = normalizar_cueanexo(cueanexo)
+    if not cueanexo:
+        return False
+    return cueanexo in get_cueanexos_cargables_usuario(user)
+
+
+# ============================================================
+# MIXIN DE AUDITORIA
+# ============================================================
+class EspecialAuditoriaMixin(models.Model):
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        blank=True, null=True,
+        related_name="%(app_label)s_%(class)s_creados",
+    )
+    actualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        blank=True, null=True,
+        related_name="%(app_label)s_%(class)s_actualizados",
+    )
+    class Meta:
+        abstract = True
+
+
+# ============================================================
+# CICLO LECTIVO
+# ============================================================
+class EspecialCiclo(EspecialAuditoriaMixin):
+    anio = models.PositiveSmallIntegerField(
+        unique=True,
+        validators=[MinValueValidator(1900), MaxValueValidator(2100)],
+    )
+    descripcion = models.CharField(max_length=120, blank=True)
+    fecha_inicio = models.DateField(blank=True, null=True)
+    fecha_fin = models.DateField(blank=True, null=True)
+    activo = models.BooleanField(default=True)
+    actual = models.BooleanField(default=False)
+    cerrado = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = '"especial"."ciclos"'
+        ordering = ["-anio"]
+        verbose_name = "Ciclo Especial"
+        verbose_name_plural = "Ciclos Especial"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["actual"],
+                condition=Q(actual=True),
+                name="uq_especial_ciclo_actual",
+                violation_error_message=(
+                    "Ya existe un ciclo marcado como actual. "
+                    "Desmarcá «Ciclo actual» o elegí otro ciclo."
+                ),
+            ),
+        ]
+
+    def clean(self):
+        if self.cerrado and self.actual:
+            raise ValidationError(
+                {"cerrado": "Un ciclo cerrado no puede estar marcado como actual."}
+            )
+
+        if (
+            self.fecha_inicio
+            and self.fecha_fin
+            and self.fecha_fin < self.fecha_inicio
+        ):
+            raise ValidationError(
+                {
+                    "fecha_fin": (
+                        "La fecha de fin no puede ser anterior a la de inicio."
+                    )
+                }
+            )
+
     def __str__(self):
-        return f'{self.cueanexo} - {self.mes} {self.anio}'
-
-    def toJSON(self):
-        item=model_to_dict(self)
-        item=self.cueanexo
-        item=self.mes
-        item=self.anio
-        item=self.dni
-        item=self.apellido
-        item=self.nombres
-        item=self.prof
-        item=self.atendidos
-        item=self.cue
-        item=self.oferta
-        item=self.situcion
-        item=self.apoyo
-        item=self.seguimiento
-        item=self.riesgo
-        item=self.causal
-        item=self.ppi
-        item=self.plan_acompa
-        item=self.egresados
-        item=self.deportes
-        item=self.accesibilidad
-        item=self.articulacion
-        item=self.nombre_artic
-        item=self.alfabetizacion
-        return item
+        return str(self.anio)
 
 
+class EspecialDatosCUEAnexo(EspecialAuditoriaMixin):
+    """Datos institucionales complementarios de un CUE-Anexo y ciclo.
+
+    Los catálogos se comparten con CEF porque representan el mismo dominio
+    institucional. La tabla y los datos cargados pertenecen exclusivamente a
+    Especial.
+    """
+
+    ciclo = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="datos_cueanexo",
+    )
+    cueanexo = models.CharField(max_length=9, db_index=True)
+    beneficio_alimentario_gratuito = models.ForeignKey(
+        CefBeneficioSinoTipo,
+        on_delete=models.PROTECT,
+        related_name="datos_especial_beneficio",
+    )
+    fuente_financiamiento = models.ForeignKey(
+        CefFuenteFinanciamientoTipo,
+        on_delete=models.PROTECT,
+        related_name="datos_especial_fuente",
+    )
+    prestacion_tipo = models.ForeignKey(
+        CefPrestacionTipo,
+        on_delete=models.PROTECT,
+        related_name="datos_especial_prestacion",
+    )
+    espacio_comedor = models.ForeignKey(
+        CefEspacioComedorTipo,
+        on_delete=models.PROTECT,
+        related_name="datos_especial_espacio",
+    )
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        db_table = '"especial"."datos_cueanexo"'
+        ordering = ["cueanexo", "-ciclo__anio"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cueanexo", "ciclo"],
+                name="uq_esp_datos_cue_cic",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["cueanexo", "ciclo"], name="idx_esp_datos_cue_cic"),
+        ]
+
+    def _beneficio_requiere_no_corresponde(self):
+        if not self.beneficio_alimentario_gratuito_id:
+            return False
+        nombre = (self.beneficio_alimentario_gratuito.nombre or "").strip().lower()
+        nombre = nombre.translate(str.maketrans("áéíóúüñ", "aeiouun"))
+        return (
+            self.beneficio_alimentario_gratuito.es_no_corresponde
+            or nombre in {"no", "sin informacion"}
+        )
+
+    def clean(self):
+        errors = {}
+        cueanexo_normalizado = normalizar_cueanexo(self.cueanexo)
+        if not cueanexo_normalizado:
+            errors["cueanexo"] = "CUE-Anexo inválido."
+        else:
+            self.cueanexo = cueanexo_normalizado
+
+        if self._beneficio_requiere_no_corresponde():
+            if self.fuente_financiamiento_id and self.fuente_financiamiento.codigo != -1:
+                errors["fuente_financiamiento"] = (
+                    "Debe seleccionar No corresponde cuando no hay beneficio alimentario."
+                )
+            if self.prestacion_tipo_id and self.prestacion_tipo.codigo != -1:
+                errors["prestacion_tipo"] = (
+                    "Debe seleccionar No corresponde cuando no hay beneficio alimentario."
+                )
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+# ============================================================
+# CATALOGOS OPERATIVOS ESPECIAL
+# ============================================================
+class CatalogoTipoEstructuraEspecial(models.Model):
+    """Catálogo de tipos de estructura especial (CEAT, SEAT, SAI, CEFOL, etc.)."""
+    cd_tipoestructuraespecial = models.IntegerField(primary_key=True)
+    descripcion = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = '"especial"."catalogo_tipo_estructura"'
+        verbose_name = "Tipo de estructura especial"
+        verbose_name_plural = "Tipos de estructuras especiales"
+    def __str__(self):
+        return self.descripcion
+
+
+class CatalogoTipoRangoEtario(models.Model):
+    """Catálogo de rangos etarios (0 a 99 años)."""
+    cd_tiporangoetario = models.IntegerField(primary_key=True)
+    descripcion = models.CharField(max_length=100)
+    class Meta:
+        db_table = '"especial"."catalogo_rango_etario"'
+        verbose_name = "Tipo de rango etario"
+        verbose_name_plural = "Tipos de rangos etarios"
+    def __str__(self):
+        return self.descripcion
+
+
+class SinoTipo(models.Model):
+    """Modelo genérico para representar respuestas Si/No/Sin información."""
+    cd_sino = models.IntegerField(primary_key=True)
+    descripcion = models.CharField(max_length=100)
+    class Meta:
+        db_table = '"especial"."sino_tipo"'
+        verbose_name = "Si/No/Sin info"
+        verbose_name_plural = "Si/No/Sin info"
+    def __str__(self):
+        return self.descripcion
+
+
+class SeccionTipo(models.Model):
+    """Tipo de sección en la que cursa el alumno (Independiente, Múltiple, etc.)."""
+    cd_tipo_seccion = models.IntegerField(primary_key=True)
+    descripcion = models.CharField(max_length=100)
+    class Meta:
+        db_table = '"especial"."seccion_tipo"'
+        verbose_name = "Tipo de sección"
+        verbose_name_plural = "Tipos de sección"
+    def __str__(self):
+        return self.descripcion
+
+
+class TurnoTipo(models.Model):
+    """Turno en el que cursa el alumno (Mañana, Tarde, etc.)."""
+    cd_turno = models.IntegerField(primary_key=True)
+    descripcion = models.CharField(max_length=100)
+    class Meta:
+        db_table = '"especial"."turno_tipo"'
+        verbose_name = "Turno"
+        verbose_name_plural = "Turnos"
+    def __str__(self):
+        return self.descripcion
+
+
+class ModalidadDictadoTipo(models.Model):
+    """Modalidad de dictado del plan de estudios (Presencial, A distancia, etc.)."""
+    cd_modalidad_dictado = models.IntegerField(primary_key=True)
+    descripcion = models.CharField(max_length=100)
+    class Meta:
+        db_table = '"especial"."modalidad_dictado_tipo"'
+        verbose_name = "Tipo de modalidad de cursado"
+        verbose_name_plural = "Tipos de modalidad de cursado"
+    def __str__(self):
+        return self.descripcion
+
+
+# ============================================================
+# MODELOS PRINCIPALES
+# ============================================================
+
+class SeccionEspecial(EspecialAuditoriaMixin):
+    """
+    Sección/cursada en la que cursan los alumnos de educación especial.
+    Equivalente a CefGrupo pero manteniendo la terminología de Sección.
+    """
+    class Estado(models.TextChoices):
+        BORRADOR = "borrador", "Borrador"
+        ACTIVO = "activo", "Activo"
+        INACTIVO = "inactivo", "Inactivo"
+        CERRADO = "cerrado", "Cerrado"
+
+    id = models.BigAutoField(primary_key=True)
+    cueanexo = models.CharField(max_length=9, db_index=True)
+    
+    cd_tipo_seccion = models.ForeignKey(
+        SeccionTipo,
+        on_delete=models.PROTECT,
+        db_column="cd_tipo_seccion",
+        related_name="secciones",
+    )
+    tipo_estructura_especial = models.ForeignKey(
+        CatalogoTipoEstructuraEspecial,
+        on_delete=models.PROTECT,
+        db_column="cd_tipoestructuraespecial",
+        related_name="secciones",
+    )
+    
+    nombre_seccion = models.CharField(max_length=50)
+    oferta = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Oferta educativa seleccionada para esta sección.",
+    )
+    descripcion = models.TextField(max_length=255, blank=True, null=True)
+    capacidad_total = models.PositiveIntegerField()
+    
+    ciclo = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="secciones",
+    )
+    
+    turno = models.ForeignKey(
+        TurnoTipo,
+        on_delete=models.PROTECT,
+        db_column="cd_turno",
+        related_name="secciones",
+    )
+    
+    rango_etario = models.ForeignKey(
+        CatalogoTipoRangoEtario,
+        on_delete=models.PROTECT,
+        db_column="cd_tiporangoetario",
+        related_name="secciones",
+    )
+    
+    modalidad = models.ForeignKey(
+        ModalidadDictadoTipo,
+        on_delete=models.PROTECT,
+        db_column="cd_modalidad_dictado",
+        related_name="secciones",
+    )
+    
+    lugar_dictado = models.CharField(max_length=100, blank=True, null=True)
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.ACTIVO,
+        db_index=True,
+    )
+
+    # Snapshots para histórico (estilo CEF)
+    turno_nombre_snapshot = models.CharField(max_length=80, blank=True, editable=False)
+    tipo_seccion_snapshot = models.CharField(max_length=100, blank=True, editable=False)
+    estructura_snapshot = models.CharField(max_length=100, blank=True, editable=False)
+
+    class Meta:
+        db_table = '"especial"."seccion"'
+        verbose_name = "Sección de Educación Especial"
+        verbose_name_plural = "Secciones de Educación Especial"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cueanexo", "ciclo", "nombre_seccion", "cd_tipo_seccion", "oferta"],
+                name="uq_esp_sec_cue_cic_nom_tipo",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["cueanexo", "ciclo"], name="idx_esp_sec_cue_cic"),
+            models.Index(fields=["cueanexo", "estado"], name="idx_esp_sec_cue_est"),
+        ]
+
+    def clean(self):
+        errors = {}
+        cueanexo_norm = normalizar_cueanexo(self.cueanexo)
+        if not cueanexo_norm:
+            errors["cueanexo"] = "CUE-Anexo inválido."
+        else:
+            self.cueanexo = cueanexo_norm
+        
+        if self.capacidad_total < 1:
+            errors["capacidad_total"] = "La capacidad debe ser mayor a cero."
+        
+        if errors:
+            raise ValidationError(errors)
+
+    def actualizar_snapshots(self):
+        """Actualiza los campos snapshot para conservar histórico si cambian los catálogos."""
+        if self.turno_id:
+            self.turno_nombre_snapshot = str(self.turno)
+        if self.cd_tipo_seccion_id:
+            self.tipo_seccion_snapshot = str(self.cd_tipo_seccion)
+        if self.tipo_estructura_especial_id:
+            self.estructura_snapshot = str(self.tipo_estructura_especial)
+
+    @property
+    def es_oferta_integracion(self):
+        oferta = _normalizar_oferta_matricula_compartida(self.oferta)
+        termino = _normalizar_oferta_matricula_compartida(
+            TERMINO_MATRICULA_COMPARTIDA
+        )
+        es_integracion = bool(re.search(r"\b" + re.escape(termino) + r"\b", oferta))
+        if (
+            not es_integracion
+            and not str(self.oferta or "").strip()
+            and re.search(
+                r"\bintegracion\b",
+                _normalizar_oferta_matricula_compartida(self.nombre_seccion),
+            )
+        ):
+            logger.warning(
+                "Sección con nombre compatible con Integración pero sin Oferta educativa: "
+                "seccion_id=%s cueanexo=%s ciclo_id=%s",
+                self.pk,
+                self.cueanexo,
+                self.ciclo_id,
+            )
+        return es_integracion
+
+    def save(self, *args, **kwargs):
+        self.actualizar_snapshots()
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.cueanexo} - {self.nombre_seccion} ({self.ciclo})"
+
+
+class EspecialAlumnoBanco(EspecialAuditoriaMixin):
+    """
+    Banco de alumnos activos en el establecimiento para un ciclo determinado.
+    Similar a CefAlumnoCef.
+    """
+    class Estado(models.TextChoices):
+        ACTIVO = "activo", "Activo"
+        INACTIVO = "inactivo", "Inactivo"
+        BAJA = "baja", "Baja"
+
+    cueanexo = models.CharField(max_length=9, db_index=True)
+    ciclo = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="alumnos_banco_especial",
+    )
+    alumno = models.ForeignKey(
+        Alumno,
+        on_delete=models.PROTECT,
+        related_name="bancos_especial",
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.ACTIVO,
+        db_index=True,
+    )
+    fecha_alta = models.DateField(default=timezone.localdate)
+    fecha_baja = models.DateField(blank=True, null=True)
+    motivo_baja = models.CharField(max_length=255, blank=True)
+    matricula_compartida = models.CharField(
+        max_length=9,
+        blank=True,
+        null=True,
+    )
+    
+    # Snapshots
+    alumno_nombre_snapshot = models.CharField(max_length=255, blank=True, editable=False)
+    alumno_documento_snapshot = models.CharField(max_length=30, blank=True, editable=False)
+    alumno_cuil_snapshot = models.CharField(max_length=11, blank=True, editable=False)
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        db_table = '"especial"."alumno_banco"'
+        verbose_name = "Alumno en Banco Especial"
+        verbose_name_plural = "Alumnos en Banco Especial"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cueanexo", "ciclo", "alumno"],
+                condition=Q(estado="activo"),
+                name="uq_esp_alumno_banco_act",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["cueanexo", "ciclo"], name="idx_esp_alum_banco_cic"),
+            models.Index(fields=["alumno", "estado"], name="idx_esp_alum_banco_est"),
+        ]
+
+    def clean(self):
+        errors = {}
+
+        cueanexo_norm = normalizar_cueanexo(self.cueanexo)
+        if not cueanexo_norm:
+            errors["cueanexo"] = "CUE-Anexo inválido."
+        else:
+            self.cueanexo = cueanexo_norm
+
+        if self.fecha_baja and self.fecha_baja < self.fecha_alta:
+            errors["fecha_baja"] = (
+                "La fecha de baja no puede ser anterior a la de alta."
+            )
+
+        if self.estado == self.Estado.BAJA and not self.fecha_baja:
+            errors["fecha_baja"] = (
+                "Debe indicar fecha de baja cuando el estado es Baja."
+            )
+
+        if self.estado != self.Estado.BAJA and self.motivo_baja:
+            errors["motivo_baja"] = (
+                "Solo debe indicar motivo de baja cuando el estado es Baja."
+            )
+
+        matricula_compartida_norm = normalizar_cueanexo(self.matricula_compartida)
+        if self.matricula_compartida not in (None, "") and not matricula_compartida_norm:
+            errors["matricula_compartida"] = "El CUE-Anexo de matrícula compartida debe tener 9 dígitos."
+        else:
+            self.matricula_compartida = matricula_compartida_norm or None
+
+        if errors:
+            raise ValidationError(errors)
+
+    def actualizar_snapshots_alumno(self):
+        if not self.alumno_id:
+            return
+        apellidos = str(getattr(self.alumno, "apellidos", "") or "").strip()
+        nombres = str(getattr(self.alumno, "nombres", "") or "").strip()
+        if apellidos and nombres:
+            self.alumno_nombre_snapshot = f"{apellidos}, {nombres}"
+        else:
+            self.alumno_nombre_snapshot = apellidos or nombres
+        
+        self.alumno_documento_snapshot = str(getattr(self.alumno, "nro_doc", "") or "")
+        self.alumno_cuil_snapshot = solo_digitos(getattr(self.alumno, "cuil", "") or "")
+
+    def save(self, *args, **kwargs):
+        self.actualizar_snapshots_alumno()
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        alumno = self.alumno_nombre_snapshot or str(self.alumno_id)
+        return f"{self.cueanexo} - {self.ciclo} - {alumno}"
+
+
+class EspecialDocenteBanco(EspecialAuditoriaMixin):
+    """
+    Banco de docentes activos en el establecimiento para un ciclo determinado.
+    Similar a CefDocenteCef.
+    """
+    class Estado(models.TextChoices):
+        ACTIVO = "activo", "Activo"
+        INACTIVO = "inactivo", "Inactivo"
+        BAJA = "baja", "Baja"
+
+    cueanexo = models.CharField(max_length=9, db_index=True)
+    ciclo = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="docentes_banco_especial",
+    )
+    docente_cuil = models.CharField(max_length=11, db_index=True)
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.ACTIVO,
+        db_index=True,
+    )
+    fecha_alta = models.DateField(default=timezone.localdate)
+    fecha_baja = models.DateField(blank=True, null=True)
+    motivo_baja = models.CharField(max_length=255, blank=True)
+    
+    # Snapshots
+    docente_nombre_snapshot = models.CharField(max_length=255, blank=True, editable=False)
+    docente_dni_snapshot = models.CharField(max_length=20, blank=True, editable=False)
+    docente_estado_bnh_snapshot = models.CharField(max_length=30, blank=True, editable=False)
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        db_table = '"especial"."docente_banco"'
+        verbose_name = "Docente en Banco Especial"
+        verbose_name_plural = "Docentes en Banco Especial"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cueanexo", "ciclo", "docente_cuil"],
+                condition=Q(estado="activo"),
+                name="uq_esp_docente_banco_act",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["cueanexo", "ciclo"], name="idx_esp_doc_banco_cic"),
+            models.Index(fields=["docente_cuil", "estado"], name="idx_esp_doc_banco_est"),
+        ]
+
+    def clean(self):
+        errors = {}
+        cueanexo_norm = normalizar_cueanexo(self.cueanexo)
+        if not cueanexo_norm:
+            errors["cueanexo"] = "CUE-Anexo inválido."
+        else:
+            self.cueanexo = cueanexo_norm
+        
+        docente_cuil_norm = solo_digitos(self.docente_cuil)
+        if len(docente_cuil_norm) != 11:
+            errors["docente_cuil"] = "El CUIL del docente debe tener 11 dígitos."
+        else:
+            self.docente_cuil = docente_cuil_norm
+
+        if self.fecha_baja and self.fecha_baja < self.fecha_alta:
+            errors["fecha_baja"] = "La fecha de baja no puede ser anterior a la de alta."
+            
+        if self.estado == self.Estado.BAJA and not self.fecha_baja:
+            errors["fecha_baja"] = "Debe indicar fecha de baja cuando el estado es Baja."
+            
+        if self.estado != self.Estado.BAJA and self.motivo_baja:
+            errors["motivo_baja"] = "Solo debe indicar motivo de baja cuando el estado es Baja."
+
+        if errors:
+            raise ValidationError(errors)
+
+    def actualizar_snapshots_docente(self):
+        """
+        Copia datos basicos del docente BNH si se encuentra por CUIL.
+        Similar a CefDocenteCef.actualizar_snapshots_docente().
+        """
+        docente = (
+            EspecialDocenteBnh.objects.using(PADRON_DB_ALIAS)
+            .filter(cuil=self.docente_cuil)
+            .first()
+        )
+
+        if not docente:
+            return
+
+        self.docente_nombre_snapshot = docente.nombre_completo
+        self.docente_dni_snapshot = docente.dni or ""
+        self.docente_estado_bnh_snapshot = docente.estado or ""
+
+    def save(self, *args, **kwargs):
+        self.docente_cuil = solo_digitos(self.docente_cuil)
+        self.actualizar_snapshots_docente()
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        docente = self.docente_nombre_snapshot or self.docente_cuil
+        return f"{self.cueanexo} - {self.ciclo} - {docente}"
+
+
+class AlumnoSeccion(EspecialAuditoriaMixin):
+    """
+    Relación entre un alumno del banco y una sección de Educación Especial.
+    Equivalente a CefInscripcion.
+    """
+    class Estado(models.TextChoices):
+        ACTIVO = "activo", "Activo"
+        BAJA = "baja", "Baja"
+
+    class TipoInclusion(models.TextChoices):
+        INCLUSION_PLENA = "inclusion_plena", "Inclusión plena"
+        TRAYECTORIA_COMPARTIDA = "trayectoria_compartida", "Trayectoria compartida"
+
+    id = models.BigAutoField(unique=True, primary_key=True)
+    
+    alumno = models.ForeignKey(
+        Alumno,
+        on_delete=models.PROTECT,
+        related_name="secciones_especial",
+    )
+    alumno_banco = models.ForeignKey(
+        EspecialAlumnoBanco,
+        on_delete=models.PROTECT,
+        related_name="inscripciones_banco",
+        blank=True,
+        null=True,
+        help_text="Período del banco de alumnos al que pertenece esta inscripción.",
+    )
+    
+    seccion = models.ForeignKey(
+        SeccionEspecial,
+        on_delete=models.PROTECT,
+        related_name="alumnos",
+    )
+    
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.ACTIVO,
+        db_index=True,
+    )
+    tipo_inclusion = models.CharField(
+        max_length=30,
+        choices=TipoInclusion.choices,
+        blank=True,
+        null=True,
+        help_text="Tipo de inclusión para inscripciones de ofertas de Integración.",
+    )
+    fecha_inscripcion = models.DateField(default=timezone.localdate)
+    fecha_baja = models.DateField(blank=True, null=True)
+    motivo_baja = models.CharField(max_length=255, blank=True)
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        db_table = '"especial"."alumno_seccion"'
+        verbose_name = "Alumno de Educación Especial"
+        verbose_name_plural = "Alumnos de Educación Especial"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["alumno", "seccion"],
+                condition=Q(estado="activo"),
+                name="uq_esp_alumno_seccion_abierta",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["estado"], name="idx_esp_alsec_est"),
+            models.Index(fields=["alumno", "estado"], name="idx_esp_alsec_alum_est"),
+            models.Index(fields=["seccion", "estado"], name="idx_esp_alsec_sec_est"),
+        ]
+
+    def clean(self):
+        errors = {}
+        if self.fecha_baja and self.fecha_baja < self.fecha_inscripcion:
+            errors["fecha_baja"] = "La fecha de baja no puede ser anterior a la de inscripción."
+        
+        if self.estado == self.Estado.BAJA and not self.fecha_baja:
+            errors["fecha_baja"] = "Debe indicar fecha de baja cuando el estado es Baja."
+            
+        if self.estado != self.Estado.BAJA and self.motivo_baja:
+            errors["motivo_baja"] = "Solo debe indicar motivo de baja cuando el estado es Baja."
+
+        # Validar que el alumno esté en el banco activo de esa escuela/ciclo
+        if self.seccion_id and self.alumno_id:
+            en_banco = EspecialAlumnoBanco.objects.filter(
+                cueanexo=self.seccion.cueanexo,
+                ciclo=self.seccion.ciclo,
+                alumno=self.alumno,
+                estado=EspecialAlumnoBanco.Estado.ACTIVO
+            ).exists()
+            if not en_banco:
+                errors["alumno"] = "El alumno no se encuentra activo en el banco de este establecimiento y ciclo."
+
+        if self.alumno_banco_id and self.seccion_id:
+            banco = self.alumno_banco
+            if (
+                banco.alumno_id != self.alumno_id
+                or banco.ciclo_id != self.seccion.ciclo_id
+                or banco.cueanexo != self.seccion.cueanexo
+            ):
+                errors["alumno_banco"] = (
+                    "El período de banco debe pertenecer al mismo alumno, "
+                    "CUE-Anexo y ciclo de la sección."
+                )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return (
+            f"{self.alumno.apellidos}, {self.alumno.nombres} "
+            f"- {self.alumno.nro_doc} | {self.seccion.nombre_seccion}"
+        )
+
+
+class DocenteSeccion(EspecialAuditoriaMixin):
+    """
+    Relación entre un docente del banco y una sección de Educación Especial.
+    Equivalente a CefDocenteGrupo.
+    """
+    class Rol(models.TextChoices):
+        TITULAR = "titular", "Titular"
+        SUPLENTE = "suplente", "Suplente"
+        INTERINO = "interino", "Interino"
+
+    class Estado(models.TextChoices):
+        ACTIVO = "activo", "Activo"
+        INACTIVO = "inactivo", "Inactivo"
+        BAJA = "baja", "Baja"
+
+    seccion = models.ForeignKey(
+        SeccionEspecial,
+        on_delete=models.PROTECT,
+        related_name="docentes",
+    )
+    docente_banco = models.ForeignKey(
+        EspecialDocenteBanco,
+        on_delete=models.PROTECT,
+        related_name="asignaciones_banco",
+        blank=True,
+        null=True,
+        help_text="Período del banco al que pertenece esta asignación.",
+    )
+    docente_cuil = models.CharField(max_length=11, db_index=True)
+    rol = models.CharField(
+        max_length=20,
+        choices=Rol.choices,
+        db_index=True,
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.ACTIVO,
+        db_index=True,
+    )
+    fecha_desde = models.DateField(blank=True, null=True)
+    fecha_hasta = models.DateField(blank=True, null=True)
+    
+    # Snapshots
+    docente_nombre_snapshot = models.CharField(max_length=255, blank=True, editable=False)
+    docente_dni_snapshot = models.CharField(max_length=20, blank=True, editable=False)
+    docente_estado_bnh_snapshot = models.CharField(max_length=30, blank=True, editable=False)
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        db_table = '"especial"."docente_seccion"'
+        verbose_name = "Docente de Sección Especial"
+        verbose_name_plural = "Docentes de Secciones Especiales"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["seccion", "docente_cuil"],
+                condition=Q(estado="activo"),
+                name="uq_esp_doc_sec_cuil",
+            ),
+            models.UniqueConstraint(
+                fields=["seccion", "rol"],
+                condition=Q(estado="activo"),
+                name="uq_esp_doc_sec_rol_act",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["docente_cuil", "estado"], name="idx_esp_doc_sec_cuil_est"),
+            models.Index(fields=["seccion", "estado"], name="idx_esp_doc_sec_grp_est"),
+        ]
+
+    def clean(self):
+        errors = {}
+        docente_cuil_norm = solo_digitos(self.docente_cuil)
+        if len(docente_cuil_norm) != 11:
+            errors["docente_cuil"] = "El CUIL del docente debe tener 11 dígitos."
+        else:
+            self.docente_cuil = docente_cuil_norm
+
+        if self.fecha_desde and self.fecha_hasta and self.fecha_hasta < self.fecha_desde:
+            errors["fecha_hasta"] = "La fecha hasta no puede ser anterior a la fecha desde."
+            
+        if self.estado == self.Estado.BAJA and not self.fecha_hasta:
+            errors["fecha_hasta"] = "Debe indicar fecha hasta cuando la asignación está en baja."
+
+        # Validar que el docente esté en el banco activo
+        if self.seccion_id and self.docente_cuil:
+            en_banco = EspecialDocenteBanco.objects.filter(
+                cueanexo=self.seccion.cueanexo,
+                ciclo=self.seccion.ciclo,
+                docente_cuil=self.docente_cuil,
+                estado=EspecialDocenteBanco.Estado.ACTIVO
+            ).exists()
+            if not en_banco:
+                errors["docente_cuil"] = "El docente no se encuentra activo en el banco de este establecimiento y ciclo."
+
+        if self.docente_banco_id and self.seccion_id:
+            banco = self.docente_banco
+            if (
+                banco.docente_cuil != self.docente_cuil
+                or banco.ciclo_id != self.seccion.ciclo_id
+                or banco.cueanexo != self.seccion.cueanexo
+            ):
+                errors["docente_banco"] = (
+                    "El período de banco debe pertenecer al mismo docente, "
+                    "CUE-Anexo y ciclo de la sección."
+                )
+
+        if errors:
+            raise ValidationError(errors)
+
+    def actualizar_snapshots_docente(self):
+        """
+        Copia datos basicos del docente BNH si se encuentra por CUIL.
+        Similar a CefDocenteGrupo.actualizar_snapshots_docente().
+        """
+        docente = (
+            EspecialDocenteBnh.objects.using(PADRON_DB_ALIAS)
+            .filter(cuil=self.docente_cuil)
+            .first()
+        )
+
+        if not docente:
+            return
+
+        self.docente_nombre_snapshot = docente.nombre_completo
+        self.docente_dni_snapshot = docente.dni or ""
+        self.docente_estado_bnh_snapshot = docente.estado or ""
+
+    def save(self, *args, **kwargs):
+        self.docente_cuil = solo_digitos(self.docente_cuil)
+        self.actualizar_snapshots_docente()
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        docente = self.docente_nombre_snapshot or self.docente_cuil
+        return f"{self.seccion} - {self.get_rol_display()} - {docente}"
+
+
+class EspecialTrasladoDocente(EspecialAuditoriaMixin):
+    """Traslado de un docente entre CUE-Anexos pendiente de aplicar al ciclo destino."""
+
+    class Estado(models.TextChoices):
+        EN_TRANSITO = "en_transito", "En tránsito"
+        APLICADO = "aplicado", "Aplicado"
+        CANCELADO = "cancelado", "Cancelado"
+
+    docente_cuil = models.CharField(max_length=11, db_index=True)
+    docente_nombre_snapshot = models.CharField(max_length=255, blank=True)
+    docente_dni_snapshot = models.CharField(max_length=20, blank=True)
+    cueanexo_origen = models.CharField(max_length=9, db_index=True)
+    cueanexo_destino = models.CharField(max_length=9, db_index=True)
+    ciclo_origen = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="traslados_docentes_origen",
+    )
+    ciclo_destino = models.ForeignKey(
+        EspecialCiclo,
+        on_delete=models.PROTECT,
+        related_name="traslados_docentes_destino",
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.EN_TRANSITO,
+        db_index=True,
+    )
+    fecha_solicitud = models.DateField(default=timezone.localdate)
+    fecha_aplicacion = models.DateField(blank=True, null=True)
+    observaciones = models.TextField(blank=True)
+
+    class Meta:
+        db_table = '"especial"."traslado_docente"'
+        constraints = [
+            models.UniqueConstraint(
+                fields=["docente_cuil", "cueanexo_destino", "ciclo_destino"],
+                condition=Q(estado="en_transito"),
+                name="uq_esp_traslado_docente_transito",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["cueanexo_destino", "ciclo_destino", "estado"], name="idx_esp_tras_doc_dest"),
+        ]
+
+    def clean(self):
+        self.docente_cuil = solo_digitos(self.docente_cuil)
+        self.cueanexo_origen = normalizar_cueanexo(self.cueanexo_origen)
+        self.cueanexo_destino = normalizar_cueanexo(self.cueanexo_destino)
+        errors = {}
+        if len(self.docente_cuil) != 11:
+            errors["docente_cuil"] = "El CUIL del docente debe tener 11 dígitos."
+        if not self.cueanexo_origen:
+            errors["cueanexo_origen"] = "El CUE-Anexo de origen es obligatorio."
+        if not self.cueanexo_destino:
+            errors["cueanexo_destino"] = "El CUE-Anexo de destino es obligatorio."
+        if self.cueanexo_origen and self.cueanexo_origen == self.cueanexo_destino:
+            errors["cueanexo_destino"] = "El CUE-Anexo de destino debe ser distinto del origen."
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

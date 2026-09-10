@@ -191,7 +191,7 @@ class NomencladorCeic(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.descripcion}'
+        return f'{self.descripcion} - {self.c_niv}'
 
 
 ##########
@@ -383,15 +383,12 @@ class TipoOS(models.Model):
         managed=False
         verbose_name='Tipo OS'
         verbose_name_plural='Tipos OS'
-        db_table='tipo_obra_social'
+        db_table='tipo_obra_social_bnh'
     
     def __str__(self):
         return self.descrip_os
 
 
-##########################
-# GRADO / AÑO
-##########################
 class Grado_anio(models.Model):
     c_grado_anio=models.BigAutoField(primary_key=True)
     nombre_grado_anio=models.CharField(max_length=100, null=True, blank=True, db_index=True)
@@ -408,12 +405,9 @@ class Grado_anio(models.Model):
         db_table="grado_anio"
         
     def __str__(self):
-        return self.nombre_grado_anio
+        return self.nombre_grado_anio or ""
 
 
-##########################
-# SECCION
-##########################
 class Secciones(models.Model):
     c_seccion=models.BigAutoField(primary_key=True)
     nombre_seccion=models.CharField(max_length=100, null=True, blank=True, db_index=True)
@@ -432,6 +426,13 @@ class Secciones(models.Model):
     def __str__(self):
         return self.nombre_seccion
 
+    class Meta:
+        verbose_name = "Seccion"
+        verbose_name_plural = "Secciones"
+        db_table = "Secciones"
+
+    def __str__(self):
+        return self.nombre_seccion or ""
 
 
 ##########################
@@ -481,6 +482,7 @@ class Personas(AuditoriaModel):
         choices=[('ACTIVO', 'Activo'), ('PASIVO', 'Pasivo')],
         default='ACTIVO'
     )
+    archivada = models.BooleanField(default=False)
 
     class Meta:
         db_table = "personas"

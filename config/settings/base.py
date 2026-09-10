@@ -69,7 +69,6 @@ LOCAL_APPS = [
     'apps.represlegales',
     'apps.intercultural',
     'apps.biblioteca',
-    'apps.especial',
     'apps.infraestructura',
     'apps.indicadoresie',
     'apps.operativoschaco',
@@ -91,6 +90,7 @@ LOCAL_APPS = [
     'apps.monitoreo_login',
     'apps.sirtee',
     'apps.sirtee.catalogos',
+    "apps.especial",
     'apps.reunidas_pof.apps.ReunidasPofConfig',
 
 ]
@@ -163,7 +163,7 @@ DATABASES = {
         'HOST': os.environ.get('POSTGRES_HOST'),
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=reunidas_pof,sirtee,bnh,public,supervisores,evaluacion,cenpe,indicadores,operativoschaco,pem,pof,cef,bnh_alumno'
+            'options': '-c search_path=especial,reunidas_pof,sirtee,bnh,public,supervisores,evaluacion,cenpe,indicadores,operativoschaco,pem,pof,cef,bnh_alumno'
         }
     },        
     'Evaluacion': {
