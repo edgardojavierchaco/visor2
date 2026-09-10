@@ -614,7 +614,6 @@
                     <div class="col-group">
                         <span class="col-group-label">Identific.</span>
                         <span class="col-badge active" data-cols="1">CUE-Anexo</span>
-                        <span class="col-badge"        data-cols="2">Agente</span>
                         <span class="col-badge active" data-cols="3">Nombre Escuela</span>
                         <span class="col-badge active" data-cols="4">Oferta</span>
                         <span class="col-badge"        data-cols="8">CUE</span>
@@ -948,7 +947,7 @@ $(document).ready(function () {
     function cargarSelectorBusquedaCompleto() {
         const selector = $('#searchScope');
         selector.empty().append('<option value="all" selected>🔍 Todas</option>');
-        const cruciales = [2, 3, 10, 11, 12, 13, 14, 15];
+        const cruciales = [3, 10, 11, 12, 13, 14, 15];
 
         table.columns().every(function () {
             const column = this;
@@ -1952,7 +1951,12 @@ $(document).ready(function () {
         syncBadges(); updateFooter();
     });
 
-    $('#btnShowAll').on('click', function () { table.columns().visible(true); syncBadges(); updateFooter(); });
+    $('#btnShowAll').on('click', function () {
+    table.columns().visible(true);
+    table.column(2).visible(false);
+    syncBadges();
+    updateFooter();
+    });
     $('#btnHideAll').on('click', function () { ALL_COLS.forEach(i => table.column(i).visible(i === 1 || i === 3)); syncBadges(); updateFooter(); });
     $('#btnDefault').on('click', function () { ALL_COLS.forEach(i => table.column(i).visible(DEFAULT_VISIBLE.includes(i))); syncBadges(); updateFooter(); });
 
