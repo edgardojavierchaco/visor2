@@ -2,16 +2,24 @@ from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-from . import views_analisis_sge_ra, views_dash
+from . import views, views_analisis_sge_ra, views_dash
 
 
 class FakeQuerySet:
     def __init__(self):
         self.filters = []
+        self.q_filters = []
+        self.annotations = {}
         self.none_called = False
 
-    def filter(self, **kwargs):
-        self.filters.append(kwargs)
+    def filter(self, *args, **kwargs):
+        self.q_filters.extend(args)
+        if kwargs:
+            self.filters.append(kwargs)
+        return self
+
+    def annotate(self, **kwargs):
+        self.annotations.update(kwargs)
         return self
 
     def none(self):
@@ -48,8 +56,10 @@ class SgeRoleScopeTests(TestCase):
 
     def test_supervisor_uses_all_assigned_cues_without_selector_or_region_scope(self):
         for rows, expected in (
-            ([("220084600", "Sede"), ("220084601", "Anexo")],
-             ["220084600", "220084601"]),
+            ([
+                ("220084600", "Sede", "Común - Primaria de 7 años "),
+                ("220084601", "Anexo", "Común - Jardín de infantes "),
+            ], ["220084600", "220084601"]),
             ([], []),
         ):
             with self.subTest(cueanexos=expected):
@@ -91,22 +101,40 @@ class SgeRoleScopeTests(TestCase):
 
     def test_supervisor_options_deduplicate_and_use_active_parameterized_sql(self):
         connection, cursor = self._connection([
-            ("2200846-00", " Sede "),
-            ("220084600", "Otra oferta"),
-            ("220084601", "   "),
-            ("220084602", None),
-            (None, "Sin CUE"),
-            (" ", "Sin CUE"),
-            ("abc", "Sin CUE"),
+            ("2200846-00", " Sede ", "Común - Primaria de 7 años "),
+            ("220084600", "Otra oferta", "Común - Servicios complementarios "),
+            ("220084601", "   ", "Común - Jardín de infantes "),
+            ("220084602", None, "Adultos - Primaria "),
+            (None, "Sin CUE", "Común - Primaria de 7 años "),
+            (" ", "Sin CUE", "Común - Primaria de 7 años "),
+            ("abc", "Sin CUE", "Común - Primaria de 7 años "),
         ])
         user = SimpleNamespace(username="20-12345678-3", is_authenticated=True)
         with patch.object(views_dash.psycopg2, "connect", return_value=connection):
             opciones = views_dash._opciones_cueanexo_supervisor_sge(user)
 
         self.assertEqual(opciones, [
-            {"cueanexo": "220084600", "nombre": "Sede", "region": ""},
-            {"cueanexo": "220084601", "nombre": "Establecimiento sin nombre", "region": ""},
-            {"cueanexo": "220084602", "nombre": "Establecimiento sin nombre", "region": ""},
+            {
+                "cueanexo": "220084600",
+                "nombre": "Sede",
+                "region": "",
+                "ofertas": [
+                    "Común - Primaria de 7 años",
+                    "Común - Servicios complementarios",
+                ],
+            },
+            {
+                "cueanexo": "220084601",
+                "nombre": "Establecimiento sin nombre",
+                "region": "",
+                "ofertas": ["Común - Jardín de infantes"],
+            },
+            {
+                "cueanexo": "220084602",
+                "nombre": "Establecimiento sin nombre",
+                "region": "",
+                "ofertas": ["Adultos - Primaria"],
+            },
         ])
         cursor.execute.assert_called_once()
         sql, params = cursor.execute.call_args.args
@@ -117,6 +145,7 @@ class SgeRoleScopeTests(TestCase):
         self.assertIn("FROM supervisores.supervisor_registro_supervisor AS s", sql)
         self.assertIn("JOIN supervisores.supervisor_registro_supervisor_regional AS sr", sql)
         self.assertIn("JOIN supervisores.supervisor_registro_supervisor_regional_oferta AS o", sql)
+        self.assertIn("o.oferta", sql)
         self.assertIn("ON sr.supervisor_id = s.id AND sr.activo = TRUE", sql)
         self.assertIn("ON o.supervisor_regional_id = sr.id AND o.activo = TRUE", sql)
         self.assertIn(
@@ -129,6 +158,109 @@ class SgeRoleScopeTests(TestCase):
         self.assertNotIn("responsable_alta_id", sql)
         self.assertNotIn("region_id", sql)
         connection.close.assert_called_once_with()
+
+    def test_listado_supervisor_filters_each_cue_by_its_assigned_offers(self):
+        contexto = {
+            "cargo": "Supervisor",
+            "cueanexo_opciones": [
+                {
+                    "cueanexo": "220084600",
+                    "ofertas": ["Común - Primaria de 7 años"],
+                },
+                {
+                    "cueanexo": "220084601",
+                    "ofertas": ["Común - Jardín de infantes"],
+                },
+            ],
+        }
+        queryset = FakeQuerySet()
+        view = views.InformeSGEListView()
+        view.request = self._request()
+
+        with (
+            patch.object(views, "resolver_contexto_sge", return_value=contexto),
+            patch.object(views.InformeSGE, "objects") as objects,
+            patch.object(views, "filtrar_queryset_sge", return_value=queryset),
+        ):
+            objects.all.return_value = queryset
+            result = view.get_queryset()
+
+        self.assertIs(result, queryset)
+        self.assertIn("tipo_oferta_normalizada", queryset.annotations)
+        self.assertEqual(len(queryset.q_filters), 1)
+        filtro = str(queryset.q_filters[0])
+        self.assertIn("220084600", filtro)
+        self.assertIn("Primario - Común", filtro)
+        self.assertIn("220084601", filtro)
+        self.assertIn("Inicial - Común", filtro)
+
+    def test_oferta_supervisor_se_traduce_al_tipo_oferta_del_listado(self):
+        casos = {
+            "Común - Jardín de infantes ": "Inicial - Común",
+            "Común - Jardín maternal": "Inicial - Común",
+            "Común - Primaria de 7 años ": "Primario - Común",
+            "Común - Secundaria Completa req. 7 años ": "Secundario - Común",
+            "Adultos - Primaria ": "Primario - Adultos",
+            "Adultos - Secundaria Completa": "Secundario - Adultos",
+            "Especial - Jardín de infantes": "Inicial - Especial",
+            "Especial - Primaria de 7 años": "Primario - Especial",
+            "Común - Servicios complementarios": "",
+            "Adultos - Formación Profesional": "",
+            "Especial - Integración": "",
+        }
+        for oferta, esperado in casos.items():
+            with self.subTest(oferta=oferta):
+                self.assertEqual(
+                    views._tipo_oferta_listado_desde_oferta_supervisor(oferta),
+                    esperado,
+                )
+
+    def test_ojito_listado_supervisor_limita_niveles_a_sus_ofertas_del_cue(self):
+        contexto = {
+            "cargo": "Supervisor",
+            "cueanexo_opciones": [
+                {
+                    "cueanexo": "220036600",
+                    "ofertas": [
+                        "Común - Primaria de 7 años ",
+                        "Común - Servicios complementarios ",
+                    ],
+                },
+                {
+                    "cueanexo": "220036601",
+                    "ofertas": [
+                        "Común - Jardín de infantes ",
+                        "Común - Secundaria Completa req. 7 años ",
+                    ],
+                },
+                {
+                    "cueanexo": "220036602",
+                    "ofertas": ["Adultos - Primaria "],
+                },
+            ],
+        }
+
+        self.assertEqual(
+            views_analisis_sge_ra._niveles_detalle_listado_supervisor(
+                contexto,
+                "220036600",
+            ),
+            ["Comun-Primaria"],
+        )
+        self.assertEqual(
+            views_analisis_sge_ra._niveles_detalle_listado_supervisor(
+                contexto,
+                "220036601",
+            ),
+            ["Comun-Inicial", "Comun-Secundaria"],
+        )
+        self.assertEqual(
+            views_analisis_sge_ra._niveles_detalle_listado_supervisor(
+                contexto,
+                "220036602",
+            ),
+            [],
+        )
 
     def test_supervisor_invalid_cuil_never_connects_and_denies_access(self):
         for user in (
