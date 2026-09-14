@@ -1728,6 +1728,40 @@ def _comparativa_reconciliar_estado_job(job_id, state):
             state,
             COMPARATIVA_SGE_RA_REFRESH_JOB_TIMEOUT,
         )
+        return state
+
+    # Si el proceso Python se corta antes de que PostgreSQL publique éxito o
+    # error, no dejar el job eternamente en progreso. El PID pertenece a la
+    # conexión exclusiva del thread y debe existir mientras el job siga vivo.
+    backend_pid = state.get('backend_pid')
+    if backend_pid:
+        backend_exists = True
+        try:
+            with connections[COMPARATIVA_SGE_RA_REFRESH_DB].cursor() as cursor:
+                cursor.execute(
+                    'SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE pid = %s);',
+                    [backend_pid],
+                )
+                backend_exists = bool(cursor.fetchone()[0])
+        except Exception:
+            # Un fallo del chequeo auxiliar no debe convertir un refresh válido
+            # en error. Se mantiene el estado y el próximo polling reintentará.
+            backend_exists = True
+
+        if not backend_exists:
+            state.update({
+                'status': 'error',
+                'message': (
+                    'El proceso de actualización se interrumpió antes de '
+                    'completar todas las etapas. Podés volver a intentarlo.'
+                ),
+                'elapsed_seconds': _comparativa_elapsed_seconds(state),
+            })
+            cache.set(
+                _comparativa_job_cache_key(job_id),
+                state,
+                COMPARATIVA_SGE_RA_REFRESH_JOB_TIMEOUT,
+            )
 
     return state
 
@@ -1735,7 +1769,7 @@ def _comparativa_reconciliar_estado_job(job_id, state):
 def _comparativa_estado_job_para_respuesta(state):
     response = {
         key: value for key, value in state.items()
-        if key not in {'started_monotonic', 'requested_fecha'}
+        if key not in {'started_monotonic', 'requested_fecha', 'backend_pid'}
     }
     if 'elapsed_seconds' not in response:
         response['elapsed_seconds'] = _comparativa_elapsed_seconds(state)
@@ -1753,30 +1787,26 @@ def _comparativa_mensaje_error_refresh(exc):
 
 
 def _monitorear_progreso_comparativa_sge_ra(job_id, backend_pid, stop_event):
+    # Trayectoria se refresca antes del procedimiento coordinado. De ese modo,
+    # cuando auditoria_sge_ra_estado publica OK ya finalizaron las cuatro etapas
+    # y la reconciliacion del polling puede tratar ese estado como terminal.
     etapas_por_lock = (
         (
             'auditoria_sge_ra',
-            1,
-            25,
+            2,
+            50,
             'Auditoría RA-SGE',
             'Actualizando auditoría RA-SGE...',
         ),
         (
             'resumen_sge_ra',
-            2,
-            50,
+            3,
+            75,
             'Resumen RA-SGE',
             'Actualizando resumen RA-SGE...',
         ),
-        (
-            'trayectoria_alumnos_sge',
-            3,
-            75,
-            'Trayectoria SGE',
-            'Actualizando trayectoria de alumnos SGE...',
-        ),
     )
-    last_step = 0
+    last_step = 1
 
     close_old_connections()
     try:
@@ -1799,8 +1829,7 @@ def _monitorear_progreso_comparativa_sge_ra(job_id, backend_pid, stop_event):
                       AND c.relname IN (
                           'analisis_sge_ra',
                           'auditoria_sge_ra',
-                          'resumen_sge_ra',
-                          'trayectoria_alumnos_sge'
+                          'resumen_sge_ra'
                       );
                     """,
                     [backend_pid],
@@ -1890,9 +1919,29 @@ def _ejecutar_refresh_comparativa_sge_ra_job(job_id, nueva_fecha):
             _comparativa_actualizar_estado_job(
                 job_id,
                 status='running',
+                backend_pid=refresh_backend_pid,
                 step=0,
                 total=4,
                 percent=0,
+                current_view='Trayectoria SGE',
+                message='Actualizando trayectoria de alumnos SGE...',
+            )
+
+            # Trayectoria debe terminar antes del CALL coordinado. Así, el OK
+            # persistente de auditoria_sge_ra_estado sólo puede corresponder a
+            # un job cuya cuarta materializada ya se reconstruyó correctamente.
+            cursor.execute(
+                'REFRESH MATERIALIZED VIEW CONCURRENTLY '
+                'public.trayectoria_alumnos_sge;'
+            )
+            cursor.execute('ANALYZE public.trayectoria_alumnos_sge;')
+
+            _comparativa_actualizar_estado_job(
+                job_id,
+                status='running',
+                step=1,
+                total=4,
+                percent=25,
                 current_view='Análisis RA-SGE',
                 message='Actualizando análisis RA-SGE...',
             )
@@ -1904,17 +1953,10 @@ def _ejecutar_refresh_comparativa_sge_ra_job(job_id, nueva_fecha):
             )
             monitor_thread.start()
             try:
-                # A/B/F mantienen intacto su refresh coordinado V3.3.
+                # A/B/F mantienen intacto su refresh coordinado V3.3. Como la
+                # trayectoria ya terminó, su estado persistente OK representa
+                # el éxito del proceso completo y es seguro para reconciliar.
                 cursor.execute('CALL public.refrescar_auditoria_sge_ra();')
-
-                # La trayectoria es un dataset adicional e independiente. Se
-                # reconstruye con el mismo botón y antes de actualizar la fecha
-                # visible, sin alterar la lógica interna de A/B/F.
-                cursor.execute(
-                    'REFRESH MATERIALIZED VIEW CONCURRENTLY '
-                    'public.trayectoria_alumnos_sge;'
-                )
-                cursor.execute('ANALYZE public.trayectoria_alumnos_sge;')
             finally:
                 monitor_stop.set()
                 monitor_thread.join(timeout=1)
