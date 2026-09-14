@@ -531,6 +531,29 @@ def _serializar_fila_detalle_listado_sge(row):
     }
 
 
+def _niveles_detalle_listado_supervisor(contexto_sge, cueanexo):
+    cueanexo = _cueanexo(cueanexo)
+    niveles = set()
+    for opcion in contexto_sge.get('cueanexo_opciones') or []:
+        if _cueanexo(opcion.get('cueanexo')) != cueanexo:
+            continue
+        for oferta in opcion.get('ofertas') or []:
+            texto = ' '.join(_texto(oferta).strip().split()).casefold()
+            if not texto.startswith('común -'):
+                continue
+            if (
+                'jardín de infantes' in texto
+                or 'jardín maternal' in texto
+                or 'nivel inicial' in texto
+            ):
+                niveles.add('Comun-Inicial')
+            elif 'primaria' in texto or 'nivel primario' in texto:
+                niveles.add('Comun-Primaria')
+            elif 'secundaria' in texto:
+                niveles.add('Comun-Secundaria')
+    return sorted(niveles)
+
+
 @login_required
 @never_cache
 def detalle_listado_sge_ra_json(request):
@@ -559,7 +582,20 @@ def detalle_listado_sge_ra_json(request):
         AnalisisSgeRa.objects.using('sge_nacion')
         .annotate(cueanexo_limpio=Trim('cueanexo'))
         .filter(cueanexo_limpio=cueanexo, sistema__in=('RA', 'SGE'))
-        .values(*DETALLE_ANALISIS_FIELDS)
+    )
+    if contexto_sge.get('cargo') == 'Supervisor':
+        niveles_permitidos = _niveles_detalle_listado_supervisor(
+            contexto_sge,
+            cueanexo,
+        )
+        queryset = (
+            queryset.filter(nivel__in=niveles_permitidos)
+            if niveles_permitidos
+            else queryset.none()
+        )
+
+    queryset = (
+        queryset.values(*DETALLE_ANALISIS_FIELDS)
         .order_by('sistema', 'nivel', 'grado', 'seccion', 'turno', 'tipo_secc', 'id')
     )
     for row in queryset:
