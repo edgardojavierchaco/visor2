@@ -29,18 +29,6 @@ from .niveles_service import (
 )
 
 
-PAGE_SIZE_OPTIONS = (10, 30, 50, 100)
-
-
-def _obtener_page_size(request):
-    try:
-        page_size = int(request.GET.get("page_size", PAGE_SIZE_OPTIONS[0]))
-    except (TypeError, ValueError):
-        return PAGE_SIZE_OPTIONS[0]
-
-    return page_size if page_size in PAGE_SIZE_OPTIONS else PAGE_SIZE_OPTIONS[0]
-
-
 def _obtener_filtros_consulta(request):
     filtros, _ = _obtener_filtros_consulta_con_errores(request)
     return filtros
@@ -222,7 +210,6 @@ def _obtener_page_range(paginator, page_obj):
 
 def construir_contexto_consulta(request):
     filtros, errores_filtros = _obtener_filtros_consulta_con_errores(request)
-    page_size = _obtener_page_size(request)
     hay_intencion_filtros = filtros_tienen_intencion(filtros)
     filtros_cargos_validos = filtros_cargos_suficientes(filtros)
 
@@ -247,13 +234,13 @@ def construir_contexto_consulta(request):
             queryset = queryset.none()
 
     try:
-        paginator = Paginator(queryset, page_size)
+        paginator = Paginator(queryset, 10)
         page_obj = paginator.get_page(request.GET.get("page", 1))
         total_registros = paginator.count
         cargos = [_serializar_cargo(cargo) for cargo in page_obj.object_list]
         tabla_cargos_no_migrada = False
     except (ProgrammingError, OperationalError):
-        paginator = Paginator([], page_size)
+        paginator = Paginator([], 10)
         page_obj = paginator.get_page(1)
         total_registros = 0
         cargos = []
@@ -261,7 +248,8 @@ def construir_contexto_consulta(request):
 
     query_params = request.GET.copy()
     query_params.pop("page", None)
-    query_params["page_size"] = str(page_size)
+    query_params.pop("texto", None)
+    query_params.pop("page_size", None)
 
     for nombre, valor in filtros.items():
         if valor:
@@ -298,15 +286,13 @@ def construir_contexto_consulta(request):
                 else ""
             )
         ),
-        "limpiar_filtros_querystring": querystring_limpio_cargos(request, page_size),
+        "limpiar_filtros_querystring": querystring_limpio_cargos(),
         "page_obj": page_obj,
         "paginator": paginator,
         "cargos": cargos,
         "total_registros": total_registros,
         "showing_start": page_obj.start_index() if total_registros else 0,
         "showing_end": page_obj.end_index() if total_registros else 0,
-        "page_size": page_size,
-        "page_size_options": PAGE_SIZE_OPTIONS,
         "query_params_base": query_params.urlencode(),
         "page_range": _obtener_page_range(paginator, page_obj),
         "tabla_cargos_no_migrada": tabla_cargos_no_migrada,
