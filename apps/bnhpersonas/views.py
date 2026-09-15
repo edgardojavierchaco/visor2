@@ -203,14 +203,165 @@ def integer_param(request, name):
 @operator_required
 @require_GET
 def filtrar_datos_actividad(request):
-    try:
-        modalidad, nivel, grado = (integer_param(request, key) for key in ("modalidad", "nivel", "grado"))
-        niveles = available_levels(modalidad)
-        ceic, grados, secciones = activity_catalogs(modalidad, nivel, grado)
-        return JsonResponse({"niveles": list(niveles.values("c_nivel", "descrip_nivel")), "ceic": list(ceic.values("c_ceic", "descripcion")), "grado": list(grados.values("c_grado_anio", "nombre_grado_anio")), "secciones": list(secciones.values("c_seccion", "nombre_seccion")), "dependencia_seccion": "modalidad_nivel_con_grado_valido"})
-    except ValidationError as exc:
-        return JsonResponse({"error": exc.messages}, status=400)
 
+    try:
+        modalidad = integer_param(
+            request,
+            "modalidad",
+        )
+
+        nivel = integer_param(
+            request,
+            "nivel",
+        )
+
+        grado = integer_param(
+            request,
+            "grado",
+        )
+
+        categoria = (
+            request.GET
+            .get("categoria", "")
+            .strip()
+            .upper()
+        )
+
+        # ====================================================
+        # VALIDAR CATEGORÍA
+        # ====================================================
+
+        if categoria not in (
+            "",
+            "DOCENTE",
+            "NO DOCENTE",
+        ):
+            raise ValidationError(
+                "Tipo de personal inválido."
+            )
+
+        # ====================================================
+        # PERSONAL NO DOCENTE
+        # ====================================================
+        #
+        # El CEIC no depende de modalidad, nivel ni grado.
+        #
+        # Solamente:
+        #
+        # c_niv 1023
+        # c_niv 1024
+        # c_niv 1025
+        #
+        # ====================================================
+
+        if categoria == "NO DOCENTE":
+
+            from .models import NomencladorCeic
+
+            ceic = (
+                NomencladorCeic.objects
+                .filter(
+                    c_niv__gte=1023,
+                    c_niv__lte=1025,
+                )
+                .order_by(
+                    "c_niv",
+                    "descripcion",
+                )
+            )
+
+            return JsonResponse(
+                {
+                    "categoria": "NO DOCENTE",
+
+                    "modo": "NO_DOCENTE",
+
+                    "niveles": [],
+
+                    "ceic": list(
+                        ceic.values(
+                            "c_ceic",
+                            "c_niv",
+                            "descripcion",
+                        )
+                    ),
+
+                    "grado": [],
+
+                    "secciones": [],
+
+                    "dependencia_seccion": (
+                        "no_aplica"
+                    ),
+                }
+            )
+
+        # ====================================================
+        # PERSONAL DOCENTE
+        # ====================================================
+
+        niveles = available_levels(
+            modalidad
+        )
+
+        ceic, grados, secciones = (
+            activity_catalogs(
+                modalidad,
+                nivel,
+                grado,
+                categoria=categoria,
+            )
+        )
+
+        return JsonResponse(
+            {
+                "categoria": categoria,
+
+                "modo": "DOCENTE",
+
+                "niveles": list(
+                    niveles.values(
+                        "c_nivel",
+                        "descrip_nivel",
+                    )
+                ),
+
+                "ceic": list(
+                    ceic.values(
+                        "c_ceic",
+                        "c_niv",
+                        "descripcion",
+                    )
+                ),
+
+                "grado": list(
+                    grados.values(
+                        "c_grado_anio",
+                        "nombre_grado_anio",
+                    )
+                ),
+
+                "secciones": list(
+                    secciones.values(
+                        "c_seccion",
+                        "nombre_seccion",
+                    )
+                ),
+
+                "dependencia_seccion": (
+                    "modalidad_nivel_con_grado_valido"
+                ),
+            }
+        )
+
+    except ValidationError as exc:
+
+        return JsonResponse(
+            {
+                "error": exc.messages
+            },
+            status=400,
+        )
 
 @operator_required
 @require_GET
