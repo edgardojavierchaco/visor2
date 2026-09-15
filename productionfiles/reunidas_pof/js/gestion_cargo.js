@@ -323,7 +323,7 @@
         renderizarGrupo(
           "Ofertas sugeridas",
           sugeridas,
-          "No hay ofertas sugeridas para el nivel de la Reunida.",
+          "No hay ofertas sugeridas para el nivel de la POF.",
         ) + renderizarGrupo("Otras ofertas", otras, "No hay otras ofertas.");
     } else {
       ofertasOpciones.innerHTML = ofertasIndexadas

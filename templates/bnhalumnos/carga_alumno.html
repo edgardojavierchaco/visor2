@@ -1867,7 +1867,7 @@ function blindarAutofillBnh(input, token) {
                     <input type="text" data-field="nombres" required>
                 </div>
 
-                <!-- Selectores de catálogos compartidos: documento y sexo. -->
+                <!-- Selectores de catálogos compartidos: documento, sexo y nacionalidad. -->
                 <div class="bnh-field bnh-col-3">
                     <label class="bnh-required">Tipo de documento</label>
                     <select class="bnh-select" data-field="tipo_doc" required>
@@ -1885,6 +1885,20 @@ function blindarAutofillBnh(input, token) {
                         <option value="">Seleccione</option>
                         {% for item in sexos %}<option value="{{ item.pk }}">{{ item }}</option>{% endfor %}
                     </select>
+                </div>
+                <div class="bnh-field bnh-col-3">
+                    <label class="bnh-required">Nacionalidad</label>
+                    <select class="bnh-select" data-field="nacionalidad" required>
+                        <option value="">Seleccione</option>
+                        {% for item in nacionalidades %}
+                            <option value="{{ item.pk }}">{{ item }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="bnh-help">
+                        Según consta en el documento. Si se desconoce totalmente, seleccione
+                        “Sin información”. Si se sabe que es extranjera pero se desconoce
+                        cuál, seleccione “Extranjera”.
+                    </span>
                 </div>
                 <!-- Selectores de país/provincia/localidad usados para nacimiento y residencia. -->
                 <div class="bnh-field bnh-col-4">
@@ -2285,6 +2299,7 @@ function blindarAutofillBnh(input, token) {
         tipo_doc: "Tipo de documento",
         nro_doc: "Número de documento",
         sexo: "Sexo",
+        nacionalidad: "Nacionalidad",
         nivel_formacion: "Nivel de formación",
         pais_nacimiento: "País de nacimiento",
         prov_nacimiento: "Provincia de nacimiento",
@@ -3000,6 +3015,7 @@ function blindarAutofillBnh(input, token) {
         setRandomSelect("[data-field=\"tipo_doc\"]");
         setMainRandomField("nro_doc", persona.dni);
         setRandomSelect("[data-field=\"sexo\"]");
+        setRandomSelect("[data-field=\"nacionalidad\"]");
         setPaisNacimientoAzar("[data-field=\"pais_nacimiento\"]");
         actualizarNacimientoExtranjero();
         if (normalizarTexto(optionTextFromSelector("[data-field=\"pais_nacimiento\"]")).indexOf("ARGENT") !== -1) {
@@ -3166,6 +3182,13 @@ function blindarAutofillBnh(input, token) {
             }
         }
         if (!tieneValor("[data-field=\"sexo\"]")) { agregarError(errores, "Debe seleccionar el sexo del alumno.", "[data-field=\"sexo\"]"); }
+        if (!tieneValor("[data-field=\"nacionalidad\"]")) {
+            agregarError(
+                errores,
+                "Debe seleccionar la nacionalidad del alumno.",
+                "[data-field=\"nacionalidad\"]"
+            );
+        }
         if (!tieneValor("[data-field=\"pais_nacimiento\"]")) { agregarError(errores, "Debe seleccionar el país de nacimiento.", "[data-field=\"pais_nacimiento\"]"); }
         if (paisNacimientoTexto.indexOf("ARGENT") !== -1) {
             if (!tieneValor("[data-field=\"prov_nacimiento\"]")) { agregarError(errores, "Debe seleccionar la provincia de nacimiento para alumnos nacidos en Argentina.", "[data-field=\"prov_nacimiento\"]"); }

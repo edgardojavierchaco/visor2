@@ -31,6 +31,26 @@ function renderizarBadgeEstadoOfertaComun(estado) {
 }
 
 /**
+ * Sincroniza la apertura visual con el índice abierto que ya controla cada flujo.
+ *
+ * Conserva los nodos y handlers para que el FILL pueda transicionar sin recrear
+ * el listado. No selecciona ofertas ni modifica datos; el panel cambia al instante.
+ */
+function actualizarAperturaVisualOfertas(contenedor, indiceAbierto) {
+    contenedor.querySelectorAll("[data-oferta-index]").forEach(tarjeta => {
+        const abierta = Number(tarjeta.dataset.ofertaIndex) === indiceAbierto;
+        const cabecera = tarjeta.querySelector(".pof-offer-card-header");
+        const icono = cabecera.querySelector(".pof-offer-card-toggle");
+        const detalle = tarjeta.querySelector(".pof-offer-card-body");
+
+        tarjeta.classList.toggle("pof-offer-card-open", abierta);
+        cabecera.setAttribute("aria-expanded", abierta ? "true" : "false");
+        icono.textContent = abierta ? "expand_circle_down" : "expand_circle_right";
+        detalle.classList.toggle("pof-hidden", !abierta);
+    });
+}
+
+/**
  * Genera la clave estable para identificar un cargo temporal por CEIC y unidad.
  *
  * - Normaliza el CEIC como número y la unidad en mayúsculas.

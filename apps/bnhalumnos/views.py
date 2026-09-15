@@ -28,7 +28,6 @@ from apps.bnhpersonas.models import (
     RelacionParentesco,
     TipoPlanesSociales,
     NivelFormacion,
-    TipoOS,
     TipoComunidadOriginaria,
     TipoLenguaOriginaria,
     TipoDiscapacidad,
@@ -41,6 +40,7 @@ from .models import (
     Tutor,
     CatalogoObraSocial,
     CatalogoSinoTipo,
+    TipoObraSocial,
 )
 from .forms import (
     AlumnoForm,
@@ -135,6 +135,7 @@ def _alumno_payload(alumno):
         "cuil": alumno.cuil or "",
         "fecha_nacimiento": _fecha_iso(alumno.fecha_nacimiento),
         "sexo": _fk_id(alumno, "sexo"),
+        "nacionalidad": _fk_id(alumno, "nacionalidad"),
         "prov_nacimiento": _fk_id(alumno, "prov_nacimiento"),
         "lugar_nacimiento": alumno.lugar_nacimiento or "",
         "loc_nacimiento": _fk_id(alumno, "loc_nacimiento"),
@@ -280,6 +281,12 @@ def carga_alumno_view(request):
 
     # El template recibe catálogos completos porque la pantalla filtra y arma
     # varias relaciones en el navegador antes de enviar el POST final.
+    nacionalidades = _catalogo(Nacionalidad)
+    prioridad_nacionalidad = {-2: 0, 300: 1}
+    nacionalidades.sort(
+        key=lambda item: prioridad_nacionalidad.get(item.pk, 2)
+    )
+
     context = {
         "cuil_inicial": _solo_digitos(request.GET.get("cuil")),
         "next_url": next_url,
@@ -287,13 +294,13 @@ def carga_alumno_view(request):
         "tipos_documento": _catalogo(DocumentoTipo),
         "provincias": _catalogo(Provincias),
         "localidades": _catalogo(Localidades),
-        "nacionalidades": _catalogo(Nacionalidad),
+        "nacionalidades": nacionalidades,
         "paises": _catalogo(Pais),
         "sexos": _catalogo(Sexo),
         "parentescos": _catalogo(RelacionParentesco),
         "beneficios": _catalogo(TipoPlanesSociales),
         "niveles_formacion": _catalogo(NivelFormacion),
-        "tipos_obra_social": _catalogo(TipoOS),
+        "tipos_obra_social": _catalogo(TipoObraSocial),
         "catalogo_obras_sociales": _catalogo(CatalogoObraSocial),
         "catalogo_sino_tipo": _catalogo(CatalogoSinoTipo),
         "estados_civiles": _catalogo(EstadosCiviles),
