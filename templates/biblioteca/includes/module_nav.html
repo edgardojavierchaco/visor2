@@ -9,16 +9,20 @@
             </span>
             <span class="biblioteca-module-nav__brand-copy">
                 <strong>Biblioteca</strong>
-                <small>Relevamiento estadístico</small>
+                <small title="{% if biblioteca_establecimiento %}{{ biblioteca_establecimiento.nombre_navbar }}{% else %}Relevamiento estadístico{% endif %}">
+                    {% if biblioteca_establecimiento %}{{ biblioteca_establecimiento.nombre_navbar }}{% else %}Relevamiento estadístico{% endif %}
+                </small>
             </span>
         </span>
 
-        <span class="biblioteca-module-nav__link biblioteca-module-nav__link--guide biblioteca-module-nav__link--disabled"
-              aria-disabled="true"
-              title="Sección aún no disponible">
+        <button type="button"
+                class="biblioteca-module-nav__link biblioteca-module-nav__link--guide"
+                aria-controls="bibliotecaGuiaUsoModal"
+                aria-haspopup="dialog"
+                data-biblioteca-guia-abrir>
             <span class="biblioteca-symbol" aria-hidden="true">help</span>
             <span>Guía de uso</span>
-        </span>
+        </button>
         <a href="{% url 'bibliotecas:dashboard' %}"
            class="biblioteca-module-nav__link"
            {% if section == 'inicio' %}aria-current="page"{% endif %}>

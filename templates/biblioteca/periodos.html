@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block head %}
-<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260909-2">
+<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260914-2">
 {% endblock %}
 
 {% block content_header %}{% endblock %}
@@ -26,28 +26,53 @@
             {% endif %}
         </div>
 
-        {% if periodos_pendientes_ambiguos %}
+        {% if cueanexos_inconsistentes %}
             <div class="biblioteca-aviso biblioteca-aviso--advertencia" role="status">
                 <span class="biblioteca-aviso__icono" aria-hidden="true">
                     <span class="biblioteca-symbol">warning</span>
                 </span>
                 <div>
-                    <p class="biblioteca-aviso__titulo">Hay más de un período pendiente de envío.</p>
+                    <p class="biblioteca-aviso__titulo">Hay más de un período pendiente para el mismo CUE-Anexo.</p>
                     <p class="biblioteca-aviso__texto">
-                        Se muestran todos sin seleccionar uno como período activo.
+                        Se muestran todos, pero ninguno de los períodos de ese CUE-Anexo puede seleccionarse automáticamente.
                     </p>
                 </div>
             </div>
+        {% endif %}
+
+        {% if periodos_pendientes|length > 1 %}
             <div class="biblioteca-periodos__pendientes">
-                {% for informe in periodos_pendientes %}
+                {% for opcion in opciones_periodos %}
                     <article class="biblioteca-periodos__pendiente">
                         <div>
-                            <span class="biblioteca-periodos__cue">CUE-Anexo {{ informe.cueanexo }}</span>
-                            <h3>{{ informe.meses|capfirst }} {{ informe.annos }}</h3>
+                            <span class="biblioteca-periodos__cue">CUE-Anexo {{ opcion.periodo.cueanexo }}</span>
+                            <h3>{{ opcion.periodo.meses|capfirst }} {{ opcion.periodo.annos }}</h3>
                         </div>
                         <div class="biblioteca-periodos__meta">
                             <span class="biblioteca-estado biblioteca-estado--pendiente">PENDIENTE DE ENVÍO</span>
-                            <span>Generado el {{ informe.f_generacion|date:"d/m/Y H:i" }}</span>
+                            <span>Generado el {{ opcion.periodo.f_generacion|date:"d/m/Y H:i" }}</span>
+                            <div class="biblioteca-periodos__acciones">
+                                {% if opcion.seleccionable %}
+                                    <a class="btn btn-primary biblioteca-operativa__accion"
+                                       href="{% url 'bibliotecas:carga' %}?periodo={{ opcion.periodo.pk }}">
+                                        Continuar carga
+                                        <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
+                                    </a>
+                                {% else %}
+                                    <span>Requiere revisión</span>
+                                {% endif %}
+                                <button type="button"
+                                        class="btn btn-outline-danger biblioteca-periodos__eliminar"
+                                        data-toggle="modal"
+                                        data-target="#modalEliminarPeriodo"
+                                        data-delete-url="{% url 'bibliotecas:periodo_pendiente_eliminar' opcion.periodo.pk %}"
+                                        data-periodo-mes="{{ opcion.periodo.meses|capfirst }}"
+                                        data-periodo-anio="{{ opcion.periodo.annos }}"
+                                        data-periodo-cue="{{ opcion.periodo.cueanexo }}">
+                                    <span class="biblioteca-symbol" aria-hidden="true">delete</span>
+                                    Eliminar período
+                                </button>
+                            </div>
                         </div>
                     </article>
                 {% endfor %}
@@ -66,11 +91,24 @@
                     <span class="biblioteca-periodos__fecha-label">Fecha de generación</span>
                     <strong>{{ periodo_pendiente.f_generacion|date:"d/m/Y H:i" }}</strong>
                 </div>
-                <a class="btn btn-primary biblioteca-operativa__accion"
-                    href="{% url 'bibliotecas:carga' %}">
-                    Ir a carga
-                    <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
-                </a>
+                <div class="biblioteca-periodos__acciones">
+                    <a class="btn btn-primary biblioteca-operativa__accion"
+                        href="{% url 'bibliotecas:carga' %}?periodo={{ periodo_pendiente.pk }}">
+                        Ir a carga
+                        <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
+                    </a>
+                    <button type="button"
+                            class="btn btn-outline-danger biblioteca-periodos__eliminar"
+                            data-toggle="modal"
+                            data-target="#modalEliminarPeriodo"
+                            data-delete-url="{% url 'bibliotecas:periodo_pendiente_eliminar' periodo_pendiente.pk %}"
+                            data-periodo-mes="{{ periodo_pendiente.meses|capfirst }}"
+                            data-periodo-anio="{{ periodo_pendiente.annos }}"
+                            data-periodo-cue="{{ periodo_pendiente.cueanexo }}">
+                        <span class="biblioteca-symbol" aria-hidden="true">delete</span>
+                        Eliminar período
+                    </button>
+                </div>
             </article>
         {% else %}
             <div class="biblioteca-aviso biblioteca-aviso--vacio" role="status">
@@ -100,28 +138,50 @@
                 {% for informe in historial %}
                     <li class="biblioteca-linea-tiempo__item">
                         <span class="biblioteca-linea-tiempo__marca" aria-hidden="true"></span>
-                        <article class="biblioteca-linea-tiempo__contenido">
-                            <div>
-                                <span class="biblioteca-periodos__cue">CUE-Anexo {{ informe.cueanexo }}</span>
-                                <h3>{{ informe.meses|capfirst }} {{ informe.annos }}</h3>
+                        <article class="biblioteca-linea-tiempo__contenido biblioteca-periodos__historico"
+                                 data-periodo-historico
+                                 data-summary-url="{% url 'bibliotecas:periodo_relevamiento_resumen' informe.pk %}"
+                                 data-detail-url-template="{% url 'bibliotecas:periodo_relevamiento_detalle' informe.pk '__seccion__' %}">
+                            <div class="biblioteca-periodos__historico-resumen">
+                                <div>
+                                    <span class="biblioteca-periodos__cue">CUE-Anexo {{ informe.cueanexo }}</span>
+                                    <h3>{{ informe.meses|capfirst }} {{ informe.annos }}</h3>
+                                </div>
+                                <dl class="biblioteca-linea-tiempo__fechas">
+                                    <div>
+                                        <dt>Generado</dt>
+                                        <dd>{{ informe.f_generacion|date:"d/m/Y H:i" }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Enviado</dt>
+                                        <dd>
+                                            {% if informe.f_envio %}
+                                                {{ informe.f_envio|date:"d/m/Y H:i" }}
+                                            {% else %}
+                                                Sin fecha registrada
+                                            {% endif %}
+                                        </dd>
+                                    </div>
+                                </dl>
+                                <span class="biblioteca-estado biblioteca-estado--enviado">ENVIADO</span>
+                                <button type="button"
+                                        id="periodo-historico-{{ informe.pk }}-accion"
+                                        class="btn biblioteca-periodos__ver-relevamiento"
+                                        aria-expanded="false"
+                                        aria-controls="periodo-historico-{{ informe.pk }}-panel"
+                                        data-historico-accion>
+                                    <span class="biblioteca-symbol" aria-hidden="true">visibility</span>
+                                    <span data-historico-accion-texto>Ver relevamiento</span>
+                                </button>
                             </div>
-                            <dl class="biblioteca-linea-tiempo__fechas">
-                                <div>
-                                    <dt>Generado</dt>
-                                    <dd>{{ informe.f_generacion|date:"d/m/Y H:i" }}</dd>
-                                </div>
-                                <div>
-                                    <dt>Enviado</dt>
-                                    <dd>
-                                        {% if informe.f_envio %}
-                                            {{ informe.f_envio|date:"d/m/Y H:i" }}
-                                        {% else %}
-                                            Sin fecha registrada
-                                        {% endif %}
-                                    </dd>
-                                </div>
-                            </dl>
-                            <span class="biblioteca-estado biblioteca-estado--enviado">ENVIADO</span>
+                            <div id="periodo-historico-{{ informe.pk }}-panel"
+                                 class="biblioteca-periodos__relevamiento"
+                                 data-historico-panel
+                                 role="region"
+                                 aria-labelledby="periodo-historico-{{ informe.pk }}-accion"
+                                 hidden>
+                                <div data-historico-contenido aria-live="polite"></div>
+                            </div>
                         </article>
                     </li>
                 {% endfor %}
@@ -139,4 +199,69 @@
         {% endif %}
     </section>
 </main>
+
+{% if periodos_pendientes %}
+<div class="modal fade biblioteca-periodos__modal-eliminar"
+     id="modalEliminarPeriodo"
+     tabindex="-1"
+     role="dialog"
+     aria-labelledby="modalEliminarPeriodoTitulo"
+     aria-describedby="modalEliminarPeriodoDescripcion"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="modalEliminarPeriodoTitulo">
+                    <span class="biblioteca-symbol" aria-hidden="true">delete</span>
+                    Eliminar período
+                </h2>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" data-periodo-eliminar-form>
+                {% csrf_token %}
+                <div class="modal-body">
+                    <dl class="biblioteca-periodos__modal-identidad">
+                        <div>
+                            <dt>Período</dt>
+                            <dd><span data-periodo-eliminar-mes></span> <span data-periodo-eliminar-anio></span></dd>
+                        </div>
+                        <div>
+                            <dt>CUE-Anexo</dt>
+                            <dd data-periodo-eliminar-cue></dd>
+                        </div>
+                    </dl>
+                    <div class="biblioteca-periodos__modal-advertencia" id="modalEliminarPeriodoDescripcion">
+                        <span class="biblioteca-symbol" aria-hidden="true">warning</span>
+                        <div>
+                            <p>Se eliminarán el período pendiente y todos los registros cargados en sus secciones.</p>
+                            <strong>Esta acción no se puede deshacer.</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-dismiss="modal"
+                            data-periodo-eliminar-cancelar>
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger" data-periodo-eliminar-confirmar>
+                        <span class="biblioteca-symbol" aria-hidden="true">delete</span>
+                        Eliminar período
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+{% if historial or periodos_pendientes %}
+<script src="{% static 'biblioteca/js/periodos.js' %}?v=20260914-3"></script>
+{% endif %}
 {% endblock %}

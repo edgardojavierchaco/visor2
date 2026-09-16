@@ -23,9 +23,16 @@
     padding: .625rem 1rem;
 }
 
+.biblioteca-informe__desplegar:focus {
+    box-shadow: none;
+    outline: 0;
+}
+
 .biblioteca-operativa__accion:focus-visible,
 .biblioteca-aviso__enlace:focus-visible,
 .biblioteca-seccion:focus-visible,
+.biblioteca-periodos__ver-relevamiento:focus-visible,
+.biblioteca-periodos__eliminar:focus-visible,
 .biblioteca-informe__desplegar:focus-visible,
 .biblioteca-informe__editar:focus-visible {
     box-shadow: var(--biblioteca-shadow-focus);
@@ -234,6 +241,80 @@
     text-align: right;
 }
 
+.biblioteca-periodos__acciones {
+    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+.biblioteca-periodos__eliminar {
+    align-items: center;
+    display: inline-flex;
+    font-weight: 600;
+    gap: .4rem;
+    justify-content: center;
+    min-height: 2.5rem;
+    padding: .5rem .75rem;
+}
+
+.biblioteca-periodos__eliminar .biblioteca-symbol,
+.biblioteca-periodos__modal-eliminar .biblioteca-symbol {
+    font-size: 1.15rem;
+}
+
+.biblioteca-periodos__modal-eliminar .modal-title {
+    align-items: center;
+    color: var(--biblioteca-danger-text);
+    display: inline-flex;
+    font-weight: 700;
+    gap: .5rem;
+}
+
+.biblioteca-periodos__modal-eliminar [data-periodo-eliminar-confirmar] {
+    align-items: center;
+    display: inline-flex;
+    gap: .4rem;
+}
+
+.biblioteca-periodos__modal-identidad {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0 0 1.25rem;
+}
+
+.biblioteca-periodos__modal-identidad dt {
+    color: var(--biblioteca-muted);
+    font-size: .75rem;
+    font-weight: 700;
+    margin-bottom: .25rem;
+    text-transform: uppercase;
+}
+
+.biblioteca-periodos__modal-identidad dd {
+    color: var(--biblioteca-tinta);
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    margin: 0;
+}
+
+.biblioteca-periodos__modal-advertencia {
+    align-items: flex-start;
+    background: var(--biblioteca-danger-background);
+    border: 1px solid var(--biblioteca-danger-text);
+    border-radius: var(--biblioteca-radius-sm);
+    color: var(--biblioteca-danger-text);
+    display: flex;
+    gap: .75rem;
+    padding: 1rem;
+}
+
+.biblioteca-periodos__modal-advertencia p {
+    margin: 0 0 .35rem;
+}
+
 .biblioteca-linea-tiempo {
     list-style: none;
     margin: 0;
@@ -288,6 +369,117 @@
     color: var(--biblioteca-texto);
     font-variant-numeric: tabular-nums;
     margin: 0;
+}
+
+.biblioteca-linea-tiempo__contenido.biblioteca-periodos__historico {
+    display: block;
+    overflow: hidden;
+    padding: 0;
+}
+
+.biblioteca-periodos__historico--abierto {
+    border-color: var(--biblioteca-azul-borde);
+}
+
+.biblioteca-periodos__historico-resumen {
+    align-items: center;
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 1.2fr) auto auto;
+    padding: 1rem 1.25rem;
+}
+
+.biblioteca-periodos__ver-relevamiento {
+    align-items: center;
+    background: var(--biblioteca-superficie);
+    border: 1px solid var(--biblioteca-azul-borde);
+    color: var(--biblioteca-azul-oscuro);
+    display: inline-flex;
+    font-weight: 700;
+    gap: .45rem;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: .625rem .875rem;
+    white-space: nowrap;
+}
+
+.biblioteca-periodos__ver-relevamiento:hover,
+.biblioteca-periodos__ver-relevamiento[aria-expanded="true"] {
+    background: var(--biblioteca-azul-suave);
+    border-color: var(--biblioteca-azul);
+    color: var(--biblioteca-azul-oscuro);
+}
+
+.biblioteca-periodos__ver-relevamiento:active {
+    background: var(--biblioteca-azul-suave);
+}
+
+.biblioteca-periodos__relevamiento {
+    background: var(--biblioteca-superficie);
+    border-top: 1px solid var(--biblioteca-borde);
+    min-width: 0;
+    padding: 1.25rem;
+}
+
+.biblioteca-periodos__relevamiento[hidden],
+.biblioteca-periodos__seccion-panel[hidden] {
+    display: none;
+}
+
+.biblioteca-periodos__relevamiento-encabezado {
+    align-items: center;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.biblioteca-periodos__relevamiento-encabezado h4 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 0 0 .25rem;
+}
+
+.biblioteca-periodos__relevamiento-encabezado p {
+    color: var(--biblioteca-muted);
+    font-size: .825rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    margin: 0;
+}
+
+.biblioteca-periodos__solo-lectura {
+    align-items: center;
+    background: var(--biblioteca-superficie-suave);
+    border: 1px solid var(--biblioteca-borde);
+    color: var(--biblioteca-texto);
+    gap: .3rem;
+}
+
+.biblioteca-periodos__solo-lectura .biblioteca-symbol {
+    font-size: 1rem;
+}
+
+.biblioteca-periodos__secciones {
+    margin-top: 1rem;
+}
+
+.biblioteca-periodos__seccion-boton {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+}
+
+.biblioteca-periodos__seccion--vacia .biblioteca-periodos__seccion-boton {
+    cursor: default;
+    opacity: 1;
+}
+
+.biblioteca-periodos__seccion--vacia .biblioteca-periodos__seccion-boton:hover {
+    background: transparent;
+}
+
+.biblioteca-periodos__seccion--vacia .biblioteca-seccion__icono {
+    background: var(--biblioteca-superficie-suave);
+    color: var(--biblioteca-muted);
 }
 
 .biblioteca-carga__resumen {
@@ -505,6 +697,10 @@
     overflow: hidden;
 }
 
+.biblioteca-informe__seccion:has(.biblioteca-informe__desplegar[aria-expanded="true"]) {
+    border-color: var(--biblioteca-azul-borde);
+}
+
 .biblioteca-informe__seccion-encabezado {
     align-items: stretch;
     display: flex;
@@ -627,6 +823,19 @@
     vertical-align: top;
 }
 
+.biblioteca-informe__tabla tfoot th,
+.biblioteca-informe__tabla tfoot td {
+    background: var(--biblioteca-superficie-suave);
+    border-bottom: 0;
+    border-top: 1px solid var(--biblioteca-borde);
+    color: var(--biblioteca-tinta);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    padding: .65rem .75rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
 .biblioteca-informe__finalizacion {
     align-items: center;
     background: var(--biblioteca-superficie);
@@ -708,7 +917,7 @@
         grid-row: 2;
     }
 
-    .biblioteca-periodos__actual .biblioteca-operativa__accion {
+    .biblioteca-periodos__actual .biblioteca-periodos__acciones {
         grid-column: 3;
         grid-row: 1 / span 2;
     }
@@ -737,12 +946,28 @@
         grid-row: 2;
     }
 
+    .biblioteca-periodos__historico-resumen {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .biblioteca-periodos__historico-resumen > .biblioteca-estado {
+        grid-column: 1;
+        grid-row: 3;
+        justify-self: start;
+    }
+
+    .biblioteca-periodos__ver-relevamiento {
+        grid-column: 2;
+        grid-row: 3;
+    }
+
 }
 
 @media (max-width: 767.98px) {
     .biblioteca-carga__grilla {
         grid-template-columns: 1fr;
     }
+
 }
 
 @media (max-width: 575.98px) {
@@ -775,7 +1000,7 @@
 
     .biblioteca-periodos__actual-principal,
     .biblioteca-periodos__actual-secundario,
-    .biblioteca-periodos__actual .biblioteca-operativa__accion,
+    .biblioteca-periodos__actual .biblioteca-periodos__acciones,
     .biblioteca-carga__resumen .biblioteca-operativa__accion {
         grid-column: auto;
         grid-row: auto;
@@ -803,6 +1028,38 @@
         grid-column: auto;
         grid-row: auto;
         grid-template-columns: 1fr;
+    }
+
+    .biblioteca-periodos__historico-resumen {
+        grid-template-columns: 1fr;
+    }
+
+    .biblioteca-periodos__historico-resumen > .biblioteca-estado,
+    .biblioteca-periodos__ver-relevamiento {
+        grid-column: auto;
+        grid-row: auto;
+        justify-self: stretch;
+    }
+
+    .biblioteca-periodos__historico-resumen > .biblioteca-estado {
+        justify-self: start;
+    }
+
+    .biblioteca-periodos__ver-relevamiento {
+        width: 100%;
+    }
+
+    .biblioteca-periodos__modal-identidad {
+        grid-template-columns: 1fr;
+    }
+
+    .biblioteca-periodos__relevamiento {
+        padding: 1rem;
+    }
+
+    .biblioteca-periodos__relevamiento-encabezado {
+        align-items: flex-start;
+        flex-direction: column;
     }
 
     .biblioteca-carga__avance {
@@ -861,6 +1118,10 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+    .biblioteca-periodos__ver-relevamiento {
+        transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+
     .biblioteca-seccion__icono {
         transition: background-color 140ms ease, color 140ms ease;
     }

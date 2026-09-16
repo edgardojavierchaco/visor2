@@ -24,7 +24,7 @@
             {% endif %}
         </div>
     </div>
-    <a href="{% url 'bibliotecas:carga' %}" class="btn biblioteca-crud__volver">
+    <a href="{% url 'bibliotecas:carga' %}?periodo={{ periodo_activo_id }}" class="btn biblioteca-crud__volver">
         <span class="biblioteca-symbol" aria-hidden="true">arrow_back</span>
         Volver a Carga
     </a>

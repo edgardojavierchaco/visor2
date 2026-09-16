@@ -11,18 +11,18 @@
 <main class="biblioteca-screen biblioteca-operativa biblioteca-informe" aria-labelledby="biblioteca-informe-titulo">
     {% include 'biblioteca/includes/operational_hero.html' with hero_id='biblioteca-informe-titulo' hero_icon='description' hero_title='REVISIÓN Y ENVÍO' hero_subtitle='Revisá lo cargado antes de finalizar el relevamiento' hero_period=periodo_pendiente only %}
 
-    {% if periodos_pendientes_ambiguos %}
-        <section class="biblioteca-bloque" aria-labelledby="biblioteca-informe-ambiguo">
+    {% if cueanexos_inconsistentes %}
+        <section class="biblioteca-bloque" aria-labelledby="biblioteca-informe-inconsistente">
             <div class="biblioteca-aviso biblioteca-aviso--advertencia" role="status">
                 <span class="biblioteca-aviso__icono" aria-hidden="true">
                     <span class="biblioteca-symbol">warning</span>
                 </span>
                 <div>
-                    <h2 id="biblioteca-informe-ambiguo" class="biblioteca-aviso__titulo">
-                        Hay más de un período pendiente de envío.
+                    <h2 id="biblioteca-informe-inconsistente" class="biblioteca-aviso__titulo">
+                        Hay más de un período pendiente para el mismo CUE-Anexo.
                     </h2>
                     <p class="biblioteca-aviso__texto">
-                        La revisión y la finalización permanecen bloqueadas porque no existe una regla segura para elegir uno.
+                        Esos períodos no se seleccionan automáticamente. Elegí otro período disponible o revisá la situación.
                     </p>
                     <a href="{% url 'bibliotecas:periodos' %}" class="biblioteca-aviso__enlace">
                         Volver a Períodos
@@ -30,7 +30,35 @@
                 </div>
             </div>
         </section>
-    {% elif not periodo_pendiente %}
+    {% endif %}
+
+    {% if requiere_seleccion_periodo %}
+        <section class="biblioteca-bloque" aria-labelledby="biblioteca-informe-seleccion">
+            <div class="biblioteca-bloque__encabezado">
+                <div>
+                    <p class="biblioteca-operativa__rotulo">PERÍODOS PENDIENTES</p>
+                    <h2 id="biblioteca-informe-seleccion">Elegí cuál querés revisar</h2>
+                </div>
+            </div>
+            <div class="biblioteca-periodos__pendientes">
+                {% for opcion in opciones_periodos %}
+                    {% if opcion.seleccionable %}
+                        <article class="biblioteca-periodos__pendiente">
+                            <div>
+                                <span class="biblioteca-periodos__cue">CUE-Anexo {{ opcion.periodo.cueanexo }}</span>
+                                <h3>{{ opcion.periodo.meses|capfirst }} {{ opcion.periodo.annos }}</h3>
+                            </div>
+                            <a class="btn btn-primary biblioteca-operativa__accion"
+                               href="{% url 'bibliotecas:informe' %}?periodo={{ opcion.periodo.pk }}">
+                                Revisar período
+                                <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
+                            </a>
+                        </article>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </section>
+    {% elif not periodo_pendiente and not cueanexos_inconsistentes %}
         <section class="biblioteca-bloque" aria-labelledby="biblioteca-informe-vacio">
             <div class="biblioteca-aviso biblioteca-aviso--vacio" role="status">
                 <span class="biblioteca-aviso__icono" aria-hidden="true">
@@ -43,13 +71,14 @@
                     <p class="biblioteca-aviso__texto">
                         Consultá el historial o creá un nuevo período desde Períodos.
                     </p>
-                    <a href="{% url 'bibliotecas:periodos' %}" class="biblioteca-aviso__enlace">
+                    <a href="{% url 'bibliotecas:periodos' %}" class="btn btn-primary biblioteca-operativa__accion">
                         Ir a Períodos
+                        <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
                     </a>
                 </div>
             </div>
         </section>
-    {% else %}
+    {% elif periodo_pendiente %}
         <section class="biblioteca-informe__resumen" aria-labelledby="biblioteca-informe-periodo">
             <div class="biblioteca-carga__periodo">
                 <p class="biblioteca-operativa__rotulo">PERÍODO PENDIENTE</p>
@@ -83,7 +112,7 @@
                                         class="biblioteca-informe__desplegar collapsed"
                                         data-toggle="collapse"
                                         data-target="#informe-seccion-{{ seccion.numero }}-detalle"
-                                        data-detail-url="{% url 'bibliotecas:informe_detalle' seccion.clave %}"
+                                        data-detail-url="{% url 'bibliotecas:informe_detalle' seccion.clave %}?periodo={{ periodo_pendiente.pk }}"
                                         aria-expanded="false"
                                         aria-controls="informe-seccion-{{ seccion.numero }}-detalle">
                                     <span class="biblioteca-seccion__numero">{{ seccion.numero|stringformat:"02d" }}</span>
@@ -127,21 +156,17 @@
                 <p class="biblioteca-operativa__rotulo">FINALIZACIÓN</p>
                 <h2 id="biblioteca-informe-finalizacion-titulo">Finalizar y generar PDF</h2>
                 <p>
-                    Esta acción generaría el PDF, cambiaría el informe a Enviado y el período dejaría de estar pendiente.
-                </p>
-                <p class="biblioteca-informe__bloqueo" role="status">
-                    <span class="biblioteca-symbol" aria-hidden="true">lock</span>
-                    La finalización está deshabilitada: el generador actual no puede garantizar que cierre exactamente este período.
+                    Esta acción generará el PDF, cambiará el informe a Enviado y el período dejará de estar pendiente.
                 </p>
             </div>
-            <button type="button"
-                    class="btn btn-primary biblioteca-operativa__accion"
-                    disabled
-                    aria-disabled="true"
-                    title="Finalización no disponible hasta asegurar el período en el servidor">
-                Finalizar y generar PDF
-                <span class="biblioteca-symbol" aria-hidden="true">picture_as_pdf</span>
-            </button>
+            <form method="post"
+                  action="{% url 'bibliotecas:generar_pdf' %}?periodo={{ periodo_pendiente.pk }}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary biblioteca-operativa__accion">
+                    Finalizar y generar PDF
+                    <span class="biblioteca-symbol" aria-hidden="true">picture_as_pdf</span>
+                </button>
+            </form>
         </section>
     {% endif %}
 </main>
@@ -149,7 +174,7 @@
 
 {% block javascript %}
 {{ block.super }}
-{% if periodo_pendiente and not periodos_pendientes_ambiguos %}
+{% if periodo_pendiente %}
 <script src="{% static 'biblioteca/js/informe.js' %}"></script>
 {% endif %}
 {% endblock %}

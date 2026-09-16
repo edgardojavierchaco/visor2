@@ -1,5 +1,7 @@
 from django import template
 
+from ..mixins import resolver_identidad_establecimiento
+
 
 register = template.Library()
 
@@ -27,8 +29,22 @@ CARGA_ROUTE_NAMES = {
 }
 
 
+@register.simple_tag(takes_context=True)
+def biblioteca_establecimiento_identidad(context):
+    request = context['request']
+    if 'periodo_pendiente' in context:
+        periodo = context.get('periodo_pendiente')
+        return resolver_identidad_establecimiento(request, periodo)
+    if 'periodo_activo' in context:
+        periodo = context.get('periodo_activo')
+        return resolver_identidad_establecimiento(request, periodo)
+    return resolver_identidad_establecimiento(request)
+
+
 @register.filter
 def biblioteca_nav_section(url_name):
+    if url_name == 'guia':
+        return 'guia'
     if url_name == 'dashboard':
         return 'inicio'
     if url_name in {'periodos', 'generar_info', 'generar_informe'}:

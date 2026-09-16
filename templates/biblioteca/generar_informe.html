@@ -21,20 +21,54 @@
                 <p class="biblioteca-operativa__rotulo">BIBLIOTECA</p>
                 <h2 id="biblioteca-nuevo-periodo-titulo">Nuevo período</h2>
                 <p class="biblioteca-operativa__introduccion">
-                    Indicá el CUE-Anexo y el período del relevamiento que vas a iniciar.
+                    {% if sin_cueanexos_disponibles %}
+                        No hay un CUE-Anexo disponible para iniciar otro relevamiento.
+                    {% elif cueanexo_unico %}
+                        Indicá el período del relevamiento que vas a iniciar para tu CUE-Anexo.
+                    {% else %}
+                        Indicá el CUE-Anexo y el período del relevamiento que vas a iniciar.
+                    {% endif %}
                 </p>
             </div>
         </div>
-        <button class="btn btn-primary biblioteca-operativa__accion"
-                type="button"
-                data-toggle="modal"
-                data-target="#modalInforme">
-            Crear período
-            <span class="biblioteca-symbol" aria-hidden="true">add</span>
-        </button>
+        {% if cueanexos_disponibles %}
+            <button class="btn btn-primary biblioteca-operativa__accion"
+                    type="button"
+                    data-toggle="modal"
+                    data-target="#modalInforme">
+                Crear período
+                <span class="biblioteca-symbol" aria-hidden="true">add</span>
+            </button>
+        {% endif %}
     </header>
 
     <section class="biblioteca-bloque">
+        {% if not cueanexos_usuario %}
+        <div class="biblioteca-aviso biblioteca-aviso--advertencia" role="status">
+            <span class="biblioteca-aviso__icono" aria-hidden="true">
+                <span class="biblioteca-symbol">warning</span>
+            </span>
+            <div>
+                <p class="biblioteca-aviso__titulo">No hay CUE-Anexos autorizados.</p>
+                <p class="biblioteca-aviso__texto">
+                    No es posible crear un período con el usuario actual.
+                </p>
+            </div>
+        </div>
+        {% elif sin_cueanexos_disponibles %}
+        <div class="biblioteca-aviso biblioteca-aviso--advertencia" role="status">
+            <span class="biblioteca-aviso__icono" aria-hidden="true">
+                <span class="biblioteca-symbol">pending_actions</span>
+            </span>
+            <div>
+                <p class="biblioteca-aviso__titulo">No hay CUE-Anexos disponibles.</p>
+                <p class="biblioteca-aviso__texto">
+                    Cada CUE-Anexo autorizado ya tiene un período pendiente de envío.
+                    Para crear otro, primero debés finalizar el correspondiente a ese CUE-Anexo.
+                </p>
+            </div>
+        </div>
+        {% else %}
         <div class="biblioteca-aviso biblioteca-aviso--vacio">
             <span class="biblioteca-aviso__icono" aria-hidden="true">
                 <span class="biblioteca-symbol">calendar_add_on</span>
@@ -46,9 +80,11 @@
                 </p>
             </div>
         </div>
+        {% endif %}
     </section>
 </main>
 
+{% if cueanexos_disponibles %}
 <div class="modal fade biblioteca-nuevo-periodo-modal" id="modalInforme" tabindex="-1" role="dialog" aria-labelledby="modalInformeTitulo" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -63,17 +99,24 @@
             </div>
 
             <div class="modal-body">
-                <form id="formInforme">
+                <form id="formInforme" data-cueanexo-fijo="{{ cueanexo_unico|default:'' }}">
                     {% csrf_token %}
 
                     <div class="form-group">
-                        <label for="cueanexo">CUE-Anexo</label>
-                        <select name="cueanexo" id="cueanexo" class="form-control select2">
-                            <option value="">Seleccione...</option>
-                            {% for c in cueanexos_usuario %}
-                                <option value="{{ c }}">{{ c }}</option>
-                            {% endfor %}
-                        </select>
+                        {% if cueanexo_unico %}
+                            <span class="d-block">CUE-Anexo</span>
+                            <p class="form-control-plaintext mb-0">
+                                <strong>{{ cueanexo_unico }}</strong>
+                            </p>
+                        {% else %}
+                            <label for="cueanexo">CUE-Anexo</label>
+                            <select name="cueanexo" id="cueanexo" class="form-control select2">
+                                <option value="">Seleccione...</option>
+                                {% for c in cueanexos_disponibles %}
+                                    <option value="{{ c }}">{{ c }}</option>
+                                {% endfor %}
+                            </select>
+                        {% endif %}
                     </div>
 
                     <div class="form-group">
@@ -109,10 +152,12 @@
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block javascript %}
 <script src="{% static 'lib/select2-4.0.13/js/select2.min.js' %}"></script>
+{% if cueanexos_disponibles %}
 <script>
 $('#modalInforme').on('shown.bs.modal', function () {
     $('.select2').select2({
@@ -134,9 +179,15 @@ function getCookie(name) {
 }
 
 const csrftoken = getCookie('csrftoken');
+const formInforme = document.getElementById('formInforme');
+const cueanexoSelect = document.getElementById('cueanexo');
+const cueanexoFijo = formInforme.dataset.cueanexoFijo;
+const meses = document.getElementById('meses');
+const annos = document.getElementById('annos');
+const alertaDup = document.getElementById('alertaDup');
 
 function verificarDuplicado() {
-    let cue = cueanexo.value;
+    let cue = cueanexoSelect ? cueanexoSelect.value : cueanexoFijo;
     let mes = meses.value;
     let anio = annos.value;
 
@@ -153,7 +204,9 @@ function verificarDuplicado() {
     });
 }
 
-cueanexo.onchange = verificarDuplicado;
+if (cueanexoSelect) {
+    cueanexoSelect.onchange = verificarDuplicado;
+}
 meses.onchange = verificarDuplicado;
 annos.onchange = verificarDuplicado;
 
@@ -202,4 +255,5 @@ formInforme.onsubmit = function(e){
     });
 }
 </script>
+{% endif %}
 {% endblock %}

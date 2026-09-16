@@ -10,7 +10,7 @@
 {% block content %}
 <main class="biblioteca-crud biblioteca-crud--formulario">
     {% include 'biblioteca/includes/crud_section_header.html' with material_icon='payments' %}
-    <form method="post" action="." enctype="multipart/form-data" class="biblioteca-crud__form">
+    <form method="post" action="?periodo={{ periodo_activo_id }}" enctype="multipart/form-data" class="biblioteca-crud__form">
         <div class="card biblioteca-crud__panel">
             <div class="card-header">
                 <h3 class="card-title">
@@ -128,7 +128,7 @@
         var parameters = new FormData(this);
 
         submit_with_ajax(
-            window.location.pathname,
+            window.location.pathname + window.location.search,
             'Notificación',
             '¿Estás seguro de realizar la siguiente acción?',
             parameters,

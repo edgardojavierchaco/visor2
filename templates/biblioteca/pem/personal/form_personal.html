@@ -11,7 +11,7 @@
 {% block content %}
 <main class="biblioteca-crud biblioteca-crud--formulario">
     {% include 'biblioteca/includes/crud_section_header.html' with material_icon='badge' %}
-    <form method="post" action="." enctype="multipart/form-data" class="biblioteca-crud__form">
+    <form method="post" action="?periodo={{ periodo_activo_id }}" enctype="multipart/form-data" class="biblioteca-crud__form">
         <div class="card biblioteca-crud__panel">
             <div class="card-header">
                 <h3 class="card-title">
@@ -352,7 +352,7 @@ $('form').on('submit', function (e) {
     var parameters = new FormData(this);
 
     $.ajax({
-        url: window.location.pathname,
+        url: window.location.pathname + window.location.search,
         type: 'POST',
         headers: {
             "X-CSRFToken": getCSRFToken()

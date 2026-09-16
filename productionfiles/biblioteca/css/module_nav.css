@@ -43,10 +43,16 @@
     width: 2.25rem;
 }
 
+.biblioteca-module-nav__brand-icon .biblioteca-symbol {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
 .biblioteca-module-nav__brand-copy {
     display: flex;
     flex-direction: column;
     line-height: 1.15;
+    min-width: 0;
+    width: min(24vw, 22rem);
 }
 
 .biblioteca-module-nav__brand-copy strong {
@@ -59,6 +65,9 @@
     font-size: .7rem;
     font-weight: 400;
     margin-top: .15rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .biblioteca-module-nav__link {
@@ -70,6 +79,14 @@
     padding: .625rem .75rem;
     text-decoration: none;
     transition: background-color 160ms cubic-bezier(.23, 1, .32, 1), color 160ms cubic-bezier(.23, 1, .32, 1), box-shadow 160ms cubic-bezier(.23, 1, .32, 1);
+}
+
+.biblioteca-module-nav__link--guide {
+    margin-left: auto;
+}
+
+.biblioteca-module-nav__icon--carga {
+    transform: translateY(1px);
 }
 
 .biblioteca-module-nav__link:not(.biblioteca-module-nav__link--disabled):hover {
@@ -110,6 +127,10 @@
 
     .biblioteca-module-nav__brand-copy small {
         display: none;
+    }
+
+    .biblioteca-module-nav__brand-copy {
+        width: auto;
     }
 
     .biblioteca-module-nav__link {
