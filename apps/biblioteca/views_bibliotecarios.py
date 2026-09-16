@@ -3,13 +3,10 @@ from django.shortcuts import render
 from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, UpdateView, DeleteView, ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import F, Func, Value
-import re
 from .mixins import InformeBloqueoMixin
 
-from .models import BibliotecariosCue, GenerarInforme
+from .models import BibliotecariosCue
 from .forms import BibliotecariosCueForm
-from apps.consultasge.models_padron import CapaUnicaOfertas
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
@@ -17,32 +14,6 @@ from django.utils.decorators import method_decorator
 # =========================
 # 🔹 UTIL
 # =========================
-def get_cueanexos_usuario(user):
-    usuario_limpio = re.sub(r'\D', '', user.username)
-
-    return list(
-        CapaUnicaOfertas.objects.annotate(
-            cuit_limpio=Func(
-                F('resploc_cuitcuil'),
-                Value('-'),
-                Value(''),
-                function='REPLACE'
-            )
-        ).filter(
-            cuit_limpio=usuario_limpio,
-            oferta='Común - Servicios complementarios ',
-            acronimo__startswith='BI'
-        ).values_list('cueanexo', flat=True)
-    )
-
-
-def get_cueanexo_activo(request):
-    return request.session.get("cueanexo_activo")
-
-
-# ==========================================================
-# CREATE
-# ==========================================================
 class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,CreateView):
     model = BibliotecariosCue
     form_class = BibliotecariosCueForm
@@ -52,51 +23,7 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
     # =========================
     # DISPATCH
     # =========================
-    def dispatch(self, request, *args, **kwargs):
-
-        cueanexo = request.session.get("cueanexo_activo")
-        print("cueanexo sesion:", cueanexo)
-
-        if not cueanexo:
-            cueanexos = get_cueanexos_usuario(request.user)
-            cueanexo = cueanexos[0] if cueanexos else None
-            request.session["cueanexo_activo"] = cueanexo
-
-        return super().dispatch(request, *args, **kwargs)
-
-    # =========================
-    # FORM VALID
-    # =========================
-    def form_valid(self, form):
-
-        if self.informe_bloqueado():
-            return JsonResponse({
-                "error": True,
-                "message": "El último informe ya fue ENVIADO. No se puede modificar."
-            }, status=403)
-
-        cueanexo = self.request.session.get("cueanexo_activo")
-
-        if not cueanexo:
-            return JsonResponse({
-                "error": True,
-                "message": "No hay cueanexo activo"
-            })
-
-        form.instance.cueanexo = cueanexo
-
-        return super().form_valid(form)
-
-    # =========================
-    # POST AJAX
-    # =========================
     def post(self, request, *args, **kwargs):
-
-        if self.informe_bloqueado():
-            return JsonResponse({
-                "error": True,
-                "message": "El último informe ya fue ENVIADO. No se puede modificar."
-            }, status=403)
 
         try:
             action = request.POST.get('action')
@@ -106,18 +33,10 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
                 form = self.get_form()
 
                 if form.is_valid():
-                    
-                    cueanexo = request.session.get("cueanexo_activo")
-
-                    if not cueanexo:
-                        return JsonResponse({
-                            'error': True,
-                            'message': 'No hay cueanexo activo en sesión'
-                        })
-                    
                     instance = form.save(commit=False)
-                    instance.cueanexo = cueanexo
+                    self.aplicar_periodo_activo(instance)
                     instance.save()
+                    form.save_m2m()
                     return JsonResponse(instance.toJSON())
                 else:
                     return JsonResponse({
@@ -143,27 +62,15 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
 
         context = super().get_context_data(**kwargs)
 
-        cueanexo = self.request.session.get("cueanexo_activo")
-        print("cueanexo activo:",cueanexo)
 
-        context['cueanexo'] = cueanexo
-        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
 
-        ultimo = None
-        if cueanexo:
-            ultimo = GenerarInforme.objects.filter(
-                cueanexo=cueanexo
-            ).order_by('-annos', '-meses').first()
 
-        context['mes'] = ultimo.meses if ultimo else None
-        context['anno'] = ultimo.annos if ultimo else None           
         
         context['title'] = 'Carga Servicios de Referencia'
         context['entity'] = 'Servicios_Referencia'
         context['list_url'] = self.success_url
         context['action'] = 'add'
         
-        print(context)        
 
         return context
 
@@ -171,7 +78,7 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
 # =========================================================
 # UPDATE
 # =========================================================
-class BibliotecariosCueUpdateView(InformeBloqueoMixin,LoginRequiredMixin ,UpdateView):
+class BibliotecariosCueUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
     model = BibliotecariosCue
     form_class = BibliotecariosCueForm
     template_name = 'biblioteca/pem/personal/create.html'
@@ -181,31 +88,9 @@ class BibliotecariosCueUpdateView(InformeBloqueoMixin,LoginRequiredMixin ,Update
     # =========================
     # DISPATCH
     # =========================
-    def dispatch(self, request, *args, **kwargs):
-
-        self.object = self.get_object()
-
-        cueanexo = request.session.get("cueanexo_activo")
-
-        if not cueanexo:
-            cueanexos = get_cueanexos_usuario(request.user)
-            cueanexo = cueanexos[0] if cueanexos else None
-            request.session["cueanexo_activo"] = cueanexo
-
-        return super().dispatch(request, *args, **kwargs)
-
-    # =========================
-    # POST AJAX
-    # =========================
     def post(self, request, *args, **kwargs):
 
         # 🔒 BLOQUEO
-        if self.informe_bloqueado():
-            return JsonResponse({
-                "error": True,
-                "message": "El último informe ya fue ENVIADO. No se puede modificar."
-            }, status=403)
-
         try:
             action = request.POST.get('action')
 
@@ -214,7 +99,10 @@ class BibliotecariosCueUpdateView(InformeBloqueoMixin,LoginRequiredMixin ,Update
                 form = self.get_form()
 
                 if form.is_valid():
-                    instance = form.save()
+                    instance = form.save(commit=False)
+                    self.aplicar_periodo_activo(instance)
+                    instance.save()
+                    form.save_m2m()
                     return JsonResponse(instance.toJSON())
                 else:
                     return JsonResponse({
@@ -240,25 +128,14 @@ class BibliotecariosCueUpdateView(InformeBloqueoMixin,LoginRequiredMixin ,Update
 
         context = super().get_context_data(**kwargs)
 
-        cueanexo = self.request.session.get("cueanexo_activo")
 
-        context['cueanexo'] = cueanexo
-        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
     
         context['title'] = 'Editar Bibliotecario'
         context['entity'] = 'Personal'
         context['list_url'] = self.success_url
         context['action'] = 'edit'
-        context['cueanexo'] = cueanexo
         
-        ultimo = None
-        if cueanexo:
-            ultimo = GenerarInforme.objects.filter(
-                cueanexo=cueanexo
-            ).order_by('-annos', '-meses').first()
 
-        context['mes'] = ultimo.meses if ultimo else None
-        context['anno'] = ultimo.annos if ultimo else None
             
         return context
 
@@ -275,31 +152,9 @@ class BibliotecariosCueDeleteView(LoginRequiredMixin, InformeBloqueoMixin, Delet
     # =========================
     # DISPATCH
     # =========================
-    def dispatch(self, request, *args, **kwargs):
-
-        self.object = self.get_object()
-
-        cueanexo = request.session.get("cueanexo_activo")
-
-        if not cueanexo:
-            cueanexos = get_cueanexos_usuario(request.user)
-            cueanexo = cueanexos[0] if cueanexos else None
-            request.session["cueanexo_activo"] = cueanexo
-
-        return super().dispatch(request, *args, **kwargs)
-
-    # =========================
-    # DELETE (AJAX)
-    # =========================
     def post(self, request, *args, **kwargs):
 
         # 🔒 BLOQUEO
-        if self.informe_bloqueado():
-            return JsonResponse({
-                "error": True,
-                "message": "El último informe ya fue ENVIADO. No se puede eliminar."
-            }, status=403)
-
         try:
             self.object.delete()
 
@@ -321,10 +176,6 @@ class BibliotecariosCueDeleteView(LoginRequiredMixin, InformeBloqueoMixin, Delet
 
         context = super().get_context_data(**kwargs)
 
-        context['cueanexo'] = self.object.cueanexo
-        context['mes'] = self.object.mes
-        context['anno'] = self.object.anio
-        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
         
         context['title'] = 'Eliminación Personal'
         context['entity'] = 'Personal'
@@ -335,50 +186,23 @@ class BibliotecariosCueDeleteView(LoginRequiredMixin, InformeBloqueoMixin, Delet
 #=========================
 # LIST
 #=========================
-class BibliotecariosCueListView(LoginRequiredMixin, ListView):
+class BibliotecariosCueListView(LoginRequiredMixin, InformeBloqueoMixin, ListView):
     model = BibliotecariosCue
     template_name = 'biblioteca/pem/personal/list_bibliotecario.html'    
 
     # =========================
     # SESSION
     # =========================
-    def dispatch(self, request, *args, **kwargs):
-
-        cueanexo = request.session.get("cueanexo_activo")
-
-        if not cueanexo:
-            cueanexos = get_cueanexos_usuario(request.user)
-            cueanexo = cueanexos[0] if cueanexos else None
-            request.session["cueanexo_activo"] = cueanexo
-
-        return super().dispatch(request, *args, **kwargs)
-
-    # =========================
-    # QUERYSET
-    # =========================
     def get_queryset(self):
+        periodo = self.get_periodo_activo()
+        return self.model.objects.filter(
+            cueanexo=str(periodo.cueanexo),
+            mes=periodo.meses,
+            anio=periodo.annos,
+        ).select_related(
+            'turno', 'licencia_permiso', 'situacion_laboral'
+        ).order_by('-anio', '-mes')
 
-        cueanexo = self.request.session.get("cueanexo_activo")
-
-        if not cueanexo:
-            return BibliotecariosCue.objects.none()
-        
-        qs = BibliotecariosCue.objects.filter(cueanexo=cueanexo)
-
-        anio = self.request.GET.get('anio')
-        mes = self.request.GET.get('mes')
-
-        if anio:
-            qs = qs.filter(anio=anio)
-
-        if mes:
-            qs = qs.filter(mes=mes)
-
-        return qs.order_by('-anio', '-mes')
-
-    # =========================
-    # AJAX
-    # =========================
     def post(self, request, *args, **kwargs):
 
         try:
@@ -409,26 +233,17 @@ class BibliotecariosCueListView(LoginRequiredMixin, ListView):
 
         context = super().get_context_data(**kwargs)
 
-        cueanexo = self.request.session.get("cueanexo_activo")
 
-        context['cueanexo'] = cueanexo
-        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
     
-        mes = self.request.GET.get('mes')
-        anio = self.request.GET.get('anio')
 
-        context['mes'] = mes
-        context['anno'] = anio
         context['title'] = 'Listado de Personal Bibliotecario'
         context['create_url'] = reverse_lazy('bibliotecas:bibliotecario_create')
         context['list_url'] = reverse_lazy('bibliotecas:bibliotecario_list')
         context['update_url'] = reverse_lazy('bibliotecas:bibliotecario_update', args=[0])
-        context['hide_lock_button'] = True      
         context['generar_pdf_button'] = False
         context['generar_pdf_url'] = reverse_lazy('bibliotecas:generar_pdf')
+        context['before_url'] = reverse_lazy('bibliotecas:fondos_list')
         context['entity'] = 'Personal'
         
         return context
         
-
-

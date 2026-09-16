@@ -1,10 +1,23 @@
 from dataclasses import dataclass
 from datetime import date, datetime
+import logging
 from urllib.parse import urlencode
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Case, IntegerField, Value, When
+from django.db import DatabaseError, transaction
+from django.db.models import (
+    Case,
+    Count,
+    IntegerField,
+    OuterRef,
+    Subquery,
+    Value,
+    When,
+)
+from django.db.models.functions import Coalesce
 from django.http import Http404, JsonResponse
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -26,7 +39,10 @@ from .models import (
     ServicioReferencia,
     ServicioReferenciaVirtual,
 )
-from .views_generarinforme import get_cueanexos_usuario
+from .mixins import PERIODO_ACTIVO_SESSION_KEY, get_cueanexos_usuario
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -38,6 +54,8 @@ class SeccionCarga:
     icono: str
     material_icon: str
     columnas: tuple
+    campos_totalizables: tuple = ()
+    modo_total: str = 'sum'
 
 
 SECCIONES_CARGA = (
@@ -54,6 +72,7 @@ SECCIONES_CARGA = (
             ('t_material__nom_material', 'Material'),
             ('cantidad', 'Cantidad'),
         ),
+        campos_totalizables=('cantidad',),
     ),
     SeccionCarga(
         'referencia',
@@ -68,6 +87,7 @@ SECCIONES_CARGA = (
             ('varones', 'Varones'),
             ('total', 'Total'),
         ),
+        campos_totalizables=('varones', 'total'),
     ),
     SeccionCarga(
         'referencia-virtual',
@@ -82,6 +102,7 @@ SECCIONES_CARGA = (
             ('varones', 'Varones'),
             ('total', 'Total'),
         ),
+        campos_totalizables=('varones', 'total'),
     ),
     SeccionCarga(
         'prestamos',
@@ -96,6 +117,7 @@ SECCIONES_CARGA = (
             ('instalacion', 'Instalación'),
             ('total', 'Total'),
         ),
+        campos_totalizables=('total',),
     ),
     SeccionCarga(
         'informe-pedagogico',
@@ -109,6 +131,7 @@ SECCIONES_CARGA = (
             ('varones', 'Varones'),
             ('total', 'Total'),
         ),
+        campos_totalizables=('varones', 'total'),
     ),
     SeccionCarga(
         'asistencia',
@@ -123,6 +146,7 @@ SECCIONES_CARGA = (
             ('varones', 'Varones'),
             ('total', 'Total'),
         ),
+        campos_totalizables=('varones', 'total'),
     ),
     SeccionCarga(
         'instituciones',
@@ -138,6 +162,7 @@ SECCIONES_CARGA = (
             ('matricdisc', 'Matrícula con discapacidad'),
             ('etnia', 'Etnia'),
         ),
+        campos_totalizables=('matricula', 'docentes', 'matricdisc', 'etnia'),
     ),
     SeccionCarga(
         'procesos-tecnicos',
@@ -151,6 +176,7 @@ SECCIONES_CARGA = (
             ('procesos', 'Proceso'),
             ('total', 'Total'),
         ),
+        campos_totalizables=('total',),
     ),
     SeccionCarga(
         'aguapey',
@@ -165,6 +191,7 @@ SECCIONES_CARGA = (
             ('total_usuarios', 'Total de usuarios'),
             ('observaciones', 'Observaciones'),
         ),
+        campos_totalizables=('total_mes', 'total_base', 'total_usuarios'),
     ),
     SeccionCarga(
         'destino-fondos',
@@ -178,6 +205,7 @@ SECCIONES_CARGA = (
             ('descripcion', 'Descripción'),
             ('cantidad', 'Cantidad'),
         ),
+        campos_totalizables=('cantidad',),
     ),
     SeccionCarga(
         'personal-bibliotecario',
@@ -196,6 +224,7 @@ SECCIONES_CARGA = (
             ('f_hasta', 'Hasta'),
             ('turno__nom_turno', 'Turno'),
         ),
+        modo_total='count',
     ),
 )
 
@@ -203,11 +232,26 @@ SECCIONES_CARGA_POR_CLAVE = {
     seccion.clave: seccion for seccion in SECCIONES_CARGA
 }
 
-
 def _cueanexos_autorizados(user):
     return list(dict.fromkeys(
         str(cueanexo) for cueanexo in get_cueanexos_usuario(user)
     ))
+
+
+def _resolver_periodo_enviado_autorizado(request, periodo_id):
+    cueanexos_autorizados = _cueanexos_autorizados(request.user)
+    try:
+        return (
+            GenerarInforme.objects
+            .only('pk', 'cueanexo', 'meses', 'annos', 'estado')
+            .get(
+                pk=periodo_id,
+                estado='ENVIADO',
+                cueanexo__in=cueanexos_autorizados,
+            )
+        )
+    except GenerarInforme.DoesNotExist:
+        raise Http404('El período solicitado no está disponible.')
 
 
 def _periodos_pendientes(cueanexos):
@@ -216,33 +260,167 @@ def _periodos_pendientes(cueanexos):
             cueanexo__in=cueanexos,
             estado='GENERADO',
         )
-        .only('cueanexo', 'meses', 'annos', 'estado', 'f_generacion')
-        .order_by('pk')[:2]
+        .only('pk', 'cueanexo', 'meses', 'annos', 'estado', 'f_generacion')
+        .order_by('pk')
     )
 
 
-def _alinear_cue_sesion(request, periodo_pendiente):
+def _alinear_periodo_sesion(request, periodo_pendiente):
     cueanexo = str(periodo_pendiente.cueanexo)
+    if request.session.get(PERIODO_ACTIVO_SESSION_KEY) != periodo_pendiente.pk:
+        request.session[PERIODO_ACTIVO_SESSION_KEY] = periodo_pendiente.pk
     if str(request.session.get('cueanexo_activo') or '') != cueanexo:
         request.session['cueanexo_activo'] = cueanexo
     return cueanexo
 
 
+def _limpiar_periodo_sesion(request):
+    request.session.pop(PERIODO_ACTIVO_SESSION_KEY, None)
+    request.session.pop('cueanexo_activo', None)
+
+
+def _resolver_periodo_pendiente(request, cueanexos_autorizados, pendientes):
+    request._biblioteca_cueanexos_autorizados = cueanexos_autorizados
+    cueanexos_autorizados_set = set(cueanexos_autorizados)
+    pendientes = [
+        periodo
+        for periodo in pendientes
+        if (
+            periodo.estado == 'GENERADO'
+            and str(periodo.cueanexo) in cueanexos_autorizados_set
+        )
+    ]
+    cantidad_por_cue = {}
+    for periodo in pendientes:
+        cueanexo = str(periodo.cueanexo)
+        cantidad_por_cue[cueanexo] = cantidad_por_cue.get(cueanexo, 0) + 1
+
+    cueanexos_inconsistentes = tuple(
+        cueanexo
+        for cueanexo, cantidad in cantidad_por_cue.items()
+        if cantidad > 1
+    )
+    cueanexos_inconsistentes_set = set(cueanexos_inconsistentes)
+    periodos_seleccionables = [
+        periodo
+        for periodo in pendientes
+        if str(periodo.cueanexo) not in cueanexos_inconsistentes_set
+    ]
+
+    periodo_pendiente = None
+    periodo_solicitado = request.GET.get('periodo')
+    periodo_solicitado_invalido = False
+
+    if periodo_solicitado is not None:
+        periodo_pendiente = next(
+            (
+                periodo
+                for periodo in periodos_seleccionables
+                if str(periodo.pk) == str(periodo_solicitado)
+            ),
+            None,
+        )
+        periodo_solicitado_invalido = periodo_pendiente is None
+
+    if periodo_solicitado is None and periodo_pendiente is None:
+        periodo_sesion = request.session.get(PERIODO_ACTIVO_SESSION_KEY)
+        periodo_pendiente = next(
+            (
+                periodo
+                for periodo in periodos_seleccionables
+                if str(periodo.pk) == str(periodo_sesion)
+            ),
+            None,
+        )
+
+    if (
+        periodo_solicitado is None
+        and periodo_pendiente is None
+        and len(periodos_seleccionables) == 1
+    ):
+        periodo_pendiente = periodos_seleccionables[0]
+
+    if periodo_pendiente is not None:
+        _alinear_periodo_sesion(request, periodo_pendiente)
+    elif not periodo_solicitado_invalido:
+        _limpiar_periodo_sesion(request)
+
+    return {
+        'periodo_pendiente': periodo_pendiente,
+        'periodos_pendientes': pendientes,
+        'opciones_periodos': [
+            {
+                'periodo': periodo,
+                'seleccionable': (
+                    str(periodo.cueanexo) not in cueanexos_inconsistentes_set
+                ),
+            }
+            for periodo in pendientes
+        ],
+        'requiere_seleccion_periodo': (
+            periodo_pendiente is None and len(periodos_seleccionables) > 1
+        ),
+        'hay_varios_periodos_seleccionables': len(periodos_seleccionables) > 1,
+        'cueanexos_inconsistentes': cueanexos_inconsistentes,
+        'periodo_solicitado_invalido': periodo_solicitado_invalido,
+    }
+
+
+def _obtener_conteos_secciones(periodo):
+    cueanexo = str(periodo.cueanexo)
+    anotaciones_conteo = {}
+    alias_por_seccion = {}
+
+    for numero, seccion in enumerate(SECCIONES_CARGA, 1):
+        alias = f'cantidad_seccion_{numero}'
+        conteo_seccion = (
+            seccion.modelo.objects.filter(
+                cueanexo=OuterRef('cueanexo'),
+                mes=OuterRef('meses'),
+                anio=OuterRef('annos'),
+            )
+            .values('cueanexo', 'mes', 'anio')
+            .annotate(total=Count('pk'))
+            .values('total')[:1]
+        )
+        anotaciones_conteo[alias] = Coalesce(
+            Subquery(conteo_seccion, output_field=IntegerField()),
+            Value(0),
+            output_field=IntegerField(),
+        )
+        alias_por_seccion[seccion.clave] = alias
+
+    conteos = (
+        GenerarInforme.objects
+        .filter(
+            pk=periodo.pk,
+            cueanexo=cueanexo,
+            meses=periodo.meses,
+            annos=periodo.annos,
+        )
+        .annotate(**anotaciones_conteo)
+        .values(*alias_por_seccion.values())
+        .get()
+    )
+
+    return {
+        seccion.clave: conteos[alias_por_seccion[seccion.clave]]
+        for seccion in SECCIONES_CARGA
+    }
+
+
 def _construir_resumen_secciones(periodo_pendiente):
     cueanexo = str(periodo_pendiente.cueanexo)
-    filtros_periodo = {
-        'cueanexo': cueanexo,
-        'mes': periodo_pendiente.meses,
-        'anio': periodo_pendiente.annos,
-    }
     querystring = urlencode({
+        'periodo': periodo_pendiente.pk,
         'anio': periodo_pendiente.annos,
         'mes': periodo_pendiente.meses,
     })
+    conteos = _obtener_conteos_secciones(periodo_pendiente)
     secciones = []
 
     for numero, seccion in enumerate(SECCIONES_CARGA, 1):
-        cantidad = seccion.modelo.objects.filter(**filtros_periodo).count()
+        cantidad = conteos[seccion.clave]
         secciones.append({
             'numero': numero,
             'clave': seccion.clave,
@@ -255,6 +433,31 @@ def _construir_resumen_secciones(periodo_pendiente):
         })
 
     return secciones
+
+
+def _construir_totales_seccion(seccion_config, campos, registros):
+    if seccion_config.modo_total == 'count':
+        return {
+            'tipo': 'conteo',
+            'etiqueta': 'TOTAL DE PERSONAL',
+            'valor': len(registros),
+        }
+
+    indice_por_campo = {
+        campo: indice for indice, (campo, _etiqueta) in enumerate(
+            seccion_config.columnas
+        )
+    }
+    valores = [None] * len(campos)
+    for campo in seccion_config.campos_totalizables:
+        indice = indice_por_campo[campo]
+        valores[indice] = sum(
+            registro[indice] or 0 for registro in registros
+        )
+    return {
+        'tipo': 'sumas',
+        'valores': valores,
+    }
 
 
 def _valor_detalle_visible(valor):
@@ -281,13 +484,20 @@ class DashboardView(TemplateView):
 
         cueanexos_autorizados = _cueanexos_autorizados(self.request.user)
         pendientes = _periodos_pendientes(cueanexos_autorizados)
+        context.update(_resolver_periodo_pendiente(
+            self.request,
+            cueanexos_autorizados,
+            pendientes,
+        ))
+        return context
 
-        periodo_pendiente = pendientes[0] if len(pendientes) == 1 else None
 
-        context.update({
-            'periodo_pendiente': periodo_pendiente,
-            'periodos_pendientes_ambiguos': len(pendientes) > 1,
-        })
+class GuiaUsoView(LoginRequiredMixin, TemplateView):
+    template_name = 'biblioteca/guia.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = 'Biblioteca | Guía de uso'
         return context
 
 
@@ -320,17 +530,172 @@ class PeriodosView(LoginRequiredMixin, TemplateView):
             .order_by('-annos', '-orden_mes', '-f_generacion', '-pk')
         )
         pendientes = [informe for informe in informes if informe.estado == 'GENERADO']
+        cueanexos_ocupados = {
+            str(informe.cueanexo) for informe in pendientes
+        }
+
+        context.update(_resolver_periodo_pendiente(
+            self.request,
+            cueanexos_autorizados,
+            pendientes,
+        ))
 
         context.update({
-            'periodo_pendiente': pendientes[0] if len(pendientes) == 1 else None,
-            'periodos_pendientes': pendientes,
-            'periodos_pendientes_ambiguos': len(pendientes) > 1,
             'historial': [
                 informe for informe in informes if informe.estado == 'ENVIADO'
             ],
-            'puede_crear_periodo': not pendientes,
+            'puede_crear_periodo': any(
+                cueanexo not in cueanexos_ocupados
+                for cueanexo in cueanexos_autorizados
+            ),
         })
         return context
+
+
+class PeriodoPendienteDeleteView(LoginRequiredMixin, View):
+    http_method_names = ('post',)
+
+    def post(self, request, periodo_id, *args, **kwargs):
+        cueanexos_autorizados = _cueanexos_autorizados(request.user)
+
+        try:
+            with transaction.atomic():
+                try:
+                    periodo = (
+                        GenerarInforme.objects
+                        .select_for_update()
+                        .only('pk', 'cueanexo', 'meses', 'annos')
+                        .get(
+                            pk=periodo_id,
+                            cueanexo__in=cueanexos_autorizados,
+                            estado='GENERADO',
+                            f_envio__isnull=True,
+                        )
+                    )
+                except GenerarInforme.DoesNotExist:
+                    messages.error(
+                        request,
+                        'El período no está disponible para eliminar.',
+                    )
+                    return redirect(reverse('bibliotecas:periodos'))
+
+                cueanexo = str(periodo.cueanexo)
+                mes = periodo.meses
+                anio = periodo.annos
+                periodo_eliminado_id = periodo.pk
+
+                periodos_con_misma_identidad = list(
+                    GenerarInforme.objects
+                    .select_for_update()
+                    .filter(
+                        cueanexo=cueanexo,
+                        meses=mes,
+                        annos=anio,
+                    )
+                    .exclude(pk=periodo_eliminado_id)
+                    .values_list('pk', flat=True)
+                )
+                if periodos_con_misma_identidad:
+                    messages.error(
+                        request,
+                        'El período no puede eliminarse porque existe otro '
+                        'relevamiento con el mismo CUE-Anexo, mes y año. '
+                        'Requiere revisión.',
+                    )
+                    return redirect(reverse('bibliotecas:periodos'))
+
+                for seccion in SECCIONES_CARGA:
+                    seccion.modelo.objects.filter(
+                        cueanexo=cueanexo,
+                        mes=mes,
+                        anio=anio,
+                    ).delete()
+
+                periodo.delete()
+        except DatabaseError:
+            logger.exception(
+                'No se pudo eliminar el período pendiente %s.',
+                periodo_id,
+            )
+            messages.error(
+                request,
+                'No fue posible eliminar el período. Los datos se conservaron.',
+            )
+            return redirect(reverse('bibliotecas:periodos'))
+
+        if str(request.session.get(PERIODO_ACTIVO_SESSION_KEY)) == str(
+            periodo_eliminado_id
+        ):
+            _limpiar_periodo_sesion(request)
+
+        messages.success(
+            request,
+            f'El período {mes.capitalize()} {anio} fue eliminado.',
+        )
+        return redirect(reverse('bibliotecas:periodos'))
+
+
+@method_decorator(never_cache, name='dispatch')
+class PeriodoHistoricoResumenView(LoginRequiredMixin, View):
+    def get(self, request, periodo_id, *args, **kwargs):
+        periodo = _resolver_periodo_enviado_autorizado(request, periodo_id)
+        conteos = _obtener_conteos_secciones(periodo)
+        secciones = []
+
+        for seccion in SECCIONES_CARGA:
+            cantidad = conteos[seccion.clave]
+            secciones.append({
+                'clave': seccion.clave,
+                'nombre': seccion.nombre,
+                'material_icon': seccion.material_icon,
+                'cantidad': cantidad,
+                'tiene_registros': cantidad > 0,
+            })
+
+        return JsonResponse({
+            'periodo': {
+                'id': periodo.pk,
+                'cueanexo': str(periodo.cueanexo),
+                'mes': periodo.meses,
+                'anio': periodo.annos,
+                'estado': periodo.estado,
+            },
+            'secciones': secciones,
+        })
+
+
+@method_decorator(never_cache, name='dispatch')
+class PeriodoHistoricoDetalleView(LoginRequiredMixin, View):
+    def get(self, request, periodo_id, seccion, *args, **kwargs):
+        seccion_config = SECCIONES_CARGA_POR_CLAVE.get(seccion)
+        if not seccion_config:
+            raise Http404('La sección solicitada no existe.')
+
+        periodo = _resolver_periodo_enviado_autorizado(request, periodo_id)
+        campos = tuple(campo for campo, _etiqueta in seccion_config.columnas)
+        registros = list(
+            seccion_config.modelo.objects.filter(
+                cueanexo=str(periodo.cueanexo),
+                mes=periodo.meses,
+                anio=periodo.annos,
+            ).order_by('pk').values_list(*campos)
+        )
+
+        filas = [
+            [_valor_detalle_visible(valor) for valor in registro]
+            for registro in registros
+        ]
+        totales = _construir_totales_seccion(
+            seccion_config,
+            campos,
+            registros,
+        )
+        return JsonResponse({
+            'seccion': seccion_config.nombre,
+            'columnas': [etiqueta for _campo, etiqueta in seccion_config.columnas],
+            'filas': filas,
+            'totales': totales,
+        })
 
 
 class CargaView(LoginRequiredMixin, TemplateView):
@@ -341,18 +706,19 @@ class CargaView(LoginRequiredMixin, TemplateView):
         context['title'] = 'Biblioteca | Carga'
         cueanexos_autorizados = _cueanexos_autorizados(self.request.user)
         pendientes = _periodos_pendientes(cueanexos_autorizados)
-        periodo_pendiente = pendientes[0] if len(pendientes) == 1 else None
+        resolucion = _resolver_periodo_pendiente(
+            self.request,
+            cueanexos_autorizados,
+            pendientes,
+        )
+        periodo_pendiente = resolucion['periodo_pendiente']
 
-        context.update({
-            'periodo_pendiente': periodo_pendiente,
-            'periodos_pendientes_ambiguos': len(pendientes) > 1,
-            'secciones': [],
-        })
+        context.update(resolucion)
+        context['secciones'] = []
 
         if not periodo_pendiente:
             return context
 
-        _alinear_cue_sesion(self.request, periodo_pendiente)
         secciones = _construir_resumen_secciones(periodo_pendiente)
 
         primera_sin_registros = next(
@@ -380,18 +746,19 @@ class InformeView(LoginRequiredMixin, TemplateView):
         context['title'] = 'Biblioteca | Informe'
         cueanexos_autorizados = _cueanexos_autorizados(self.request.user)
         pendientes = _periodos_pendientes(cueanexos_autorizados)
-        periodo_pendiente = pendientes[0] if len(pendientes) == 1 else None
+        resolucion = _resolver_periodo_pendiente(
+            self.request,
+            cueanexos_autorizados,
+            pendientes,
+        )
+        periodo_pendiente = resolucion['periodo_pendiente']
 
-        context.update({
-            'periodo_pendiente': periodo_pendiente,
-            'periodos_pendientes_ambiguos': len(pendientes) > 1,
-            'secciones': [],
-        })
+        context.update(resolucion)
+        context['secciones'] = []
 
         if not periodo_pendiente:
             return context
 
-        _alinear_cue_sesion(self.request, periodo_pendiente)
         secciones = _construir_resumen_secciones(periodo_pendiente)
         context.update({
             'secciones': secciones,
@@ -411,15 +778,25 @@ class InformeDetalleView(LoginRequiredMixin, View):
 
         cueanexos_autorizados = _cueanexos_autorizados(request.user)
         pendientes = _periodos_pendientes(cueanexos_autorizados)
-        if len(pendientes) != 1:
+        resolucion = _resolver_periodo_pendiente(
+            request,
+            cueanexos_autorizados,
+            pendientes,
+        )
+        if resolucion['periodo_solicitado_invalido']:
+            return JsonResponse({
+                'detail': 'El período solicitado no está disponible para revisar.',
+            }, status=409)
+
+        periodo_pendiente = resolucion['periodo_pendiente']
+        if not periodo_pendiente:
             mensaje = (
                 'No hay un período pendiente disponible para revisar.'
                 if not pendientes
-                else 'Hay más de un período pendiente y no se puede elegir uno de forma segura.'
+                else 'Seleccioná el período que querés revisar antes de abrir una sección.'
             )
             return JsonResponse({'detail': mensaje}, status=409)
 
-        periodo_pendiente = pendientes[0]
         campos = tuple(campo for campo, _etiqueta in seccion_config.columnas)
         registros = seccion_config.modelo.objects.filter(
             cueanexo=str(periodo_pendiente.cueanexo),

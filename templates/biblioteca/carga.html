@@ -11,18 +11,18 @@
 <main class="biblioteca-screen biblioteca-operativa biblioteca-carga" aria-labelledby="biblioteca-carga-titulo">
     {% include 'biblioteca/includes/operational_hero.html' with hero_id='biblioteca-carga-titulo' hero_icon='edit_note' hero_title='CARGA DEL INFORME' hero_subtitle='Completá las secciones del relevamiento' hero_period=periodo_pendiente only %}
 
-    {% if periodos_pendientes_ambiguos %}
-        <section class="biblioteca-bloque" aria-labelledby="biblioteca-carga-ambigua">
+    {% if cueanexos_inconsistentes %}
+        <section class="biblioteca-bloque" aria-labelledby="biblioteca-carga-inconsistente">
             <div class="biblioteca-aviso biblioteca-aviso--advertencia" role="status">
                 <span class="biblioteca-aviso__icono" aria-hidden="true">
                     <span class="biblioteca-symbol">warning</span>
                 </span>
                 <div>
-                    <h2 id="biblioteca-carga-ambigua" class="biblioteca-aviso__titulo">
-                        Hay más de un período pendiente de envío.
+                    <h2 id="biblioteca-carga-inconsistente" class="biblioteca-aviso__titulo">
+                        Hay más de un período pendiente para el mismo CUE-Anexo.
                     </h2>
                     <p class="biblioteca-aviso__texto">
-                        No se habilitó la carga porque no existe una regla segura para elegir uno.
+                        Esos períodos no se seleccionan automáticamente. Elegí otro período disponible o revisá la situación.
                     </p>
                     <a href="{% url 'bibliotecas:periodos' %}" class="biblioteca-aviso__enlace">
                         Volver a Períodos
@@ -30,7 +30,35 @@
                 </div>
             </div>
         </section>
-    {% elif not periodo_pendiente %}
+    {% endif %}
+
+    {% if requiere_seleccion_periodo %}
+        <section class="biblioteca-bloque" aria-labelledby="biblioteca-carga-seleccion">
+            <div class="biblioteca-bloque__encabezado">
+                <div>
+                    <p class="biblioteca-operativa__rotulo">PERÍODOS PENDIENTES</p>
+                    <h2 id="biblioteca-carga-seleccion">Elegí cuál querés cargar</h2>
+                </div>
+            </div>
+            <div class="biblioteca-periodos__pendientes">
+                {% for opcion in opciones_periodos %}
+                    {% if opcion.seleccionable %}
+                        <article class="biblioteca-periodos__pendiente">
+                            <div>
+                                <span class="biblioteca-periodos__cue">CUE-Anexo {{ opcion.periodo.cueanexo }}</span>
+                                <h3>{{ opcion.periodo.meses|capfirst }} {{ opcion.periodo.annos }}</h3>
+                            </div>
+                            <a class="btn btn-primary biblioteca-operativa__accion"
+                               href="{% url 'bibliotecas:carga' %}?periodo={{ opcion.periodo.pk }}">
+                                Continuar carga
+                                <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
+                            </a>
+                        </article>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </section>
+    {% elif not periodo_pendiente and not cueanexos_inconsistentes %}
         <section class="biblioteca-bloque" aria-labelledby="biblioteca-carga-vacia">
             <div class="biblioteca-aviso biblioteca-aviso--vacio" role="status">
                 <span class="biblioteca-aviso__icono" aria-hidden="true">
@@ -43,13 +71,14 @@
                     <p class="biblioteca-aviso__texto">
                         Revisá el historial o creá un nuevo período desde Períodos.
                     </p>
-                    <a href="{% url 'bibliotecas:periodos' %}" class="biblioteca-aviso__enlace">
+                    <a href="{% url 'bibliotecas:periodos' %}" class="btn btn-primary biblioteca-operativa__accion">
                         Ir a Períodos
+                        <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
                     </a>
                 </div>
             </div>
         </section>
-    {% else %}
+    {% elif periodo_pendiente %}
         <section class="biblioteca-carga__resumen" aria-labelledby="biblioteca-carga-periodo">
             <div class="biblioteca-carga__periodo">
                 <p class="biblioteca-operativa__rotulo">PERÍODO PENDIENTE</p>

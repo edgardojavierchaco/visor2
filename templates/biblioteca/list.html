@@ -1,7 +1,7 @@
 {% extends 'biblioteca/layout.html' %}
 {% load static %}
 {% block head %}
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260908-6">
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260914-2">
     <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
     <link rel="stylesheet"
           href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
@@ -9,7 +9,10 @@
     <script src="{% static 'lib/datatables-1.10.20/js/dataTables.bootstrap4.min.js' %}"></script>
     <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/dataTables.responsive.min.js' %}"></script>
     <script src="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/js/responsive.bootstrap4.min.js' %}"></script>
-    <script src="{% static 'biblioteca/js/crud-list.js' %}?v=20260908-2"></script>
+    <script>
+        window.bibliotecaPeriodoActivoId = '{{ periodo_activo_id|escapejs }}';
+    </script>
+    <script src="{% static 'biblioteca/js/crud-list.js' %}?v=20260914-1"></script>
 
     {% block head_list %}
 
@@ -54,7 +57,8 @@
                 <table class="table table-bordered"
                        id="data"
                        data-page-length="10"
-                       data-length-change="false">
+                       data-length-change="false"
+                       data-actions-column="last">
                     <thead>
                     {% block columns %}
 
@@ -73,19 +77,26 @@
                 </table>
             </div>
         </div>
-        {% if not hide_lock_button %}
+        {% if before_url or next_url %}
             <div class="card-footer biblioteca-crud__section-nav-wrap">
                 {% block buttons_list %}
                 <nav class="biblioteca-crud__section-nav" aria-label="Navegación entre secciones">
-                    <a href="{{ before_url }}" class="btn btn-light btn-flat">
-                        <span class="biblioteca-symbol" aria-hidden="true">arrow_back</span>
-                        Anterior
-                    </a>
-                    <span class="biblioteca-crud__section-nav-label">Navegación entre secciones</span>
-                    <a href="{{ next_url }}" class="btn btn-light btn-flat">
-                        Siguiente
-                        <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
-                    </a>
+                    {% if before_url %}
+                        <a href="{{ before_url }}" class="btn btn-light btn-flat biblioteca-crud__section-nav-before">
+                            <span class="biblioteca-symbol" aria-hidden="true">arrow_back</span>
+                            Anterior
+                        </a>
+                    {% endif %}
+                    <span class="biblioteca-crud__section-nav-context">
+                        <span class="biblioteca-crud__section-nav-label">Navegación entre secciones</span>
+                        <span class="biblioteca-crud__section-nav-current">{{ title }}</span>
+                    </span>
+                    {% if next_url %}
+                        <a href="{{ next_url }}" class="btn btn-primary btn-flat biblioteca-crud__section-nav-next">
+                            Siguiente
+                            <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
+                        </a>
+                    {% endif %}
                 </nav>
                 {% endblock %}
             </div>

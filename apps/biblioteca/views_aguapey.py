@@ -6,44 +6,15 @@ from django.views.generic import CreateView, UpdateView, ListView, DeleteView
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-from django.db.models import F, Func, Value
-import re
 from .mixins import InformeBloqueoMixin
 
-from .models import Aguapey, GenerarInforme
+from .models import Aguapey
 from .forms import AguapeyForm
-from apps.consultasge.models_padron import CapaUnicaOfertas
 
 
 # =========================
 # 🔹 UTIL
 # =========================
-def get_cueanexos_usuario(user):
-    usuario_limpio = re.sub(r'\D', '', user.username)
-
-    return list(
-        CapaUnicaOfertas.objects.annotate(
-            cuit_limpio=Func(
-                F('resploc_cuitcuil'),
-                Value('-'),
-                Value(''),
-                function='REPLACE'
-            )
-        ).filter(
-            cuit_limpio=usuario_limpio,
-            oferta='Común - Servicios complementarios ',
-            acronimo__startswith='BI'
-        ).values_list('cueanexo', flat=True)
-    )
-
-
-def get_cueanexo_activo(request):
-    return request.session.get("cueanexo_activo")
-
-
-# ==========================================================
-# CREATE
-# ==========================================================
 class AguapeyCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
     model = Aguapey
     form_class = AguapeyForm
@@ -53,50 +24,7 @@ class AguapeyCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
     # =========================
     # DISPATCH
     # =========================
-    def dispatch(self, request, *args, **kwargs):
-
-        cueanexo = request.session.get("cueanexo_activo")
-
-        if not cueanexo:
-            cueanexos = get_cueanexos_usuario(request.user)
-            cueanexo = cueanexos[0] if cueanexos else None
-            request.session["cueanexo_activo"] = cueanexo
-
-        return super().dispatch(request, *args, **kwargs)
-
-    # =========================
-    # FORM VALID
-    # =========================
-    def form_valid(self, form):
-
-        if self.informe_bloqueado():
-            return JsonResponse({
-                "error": True,
-                "message": "El último informe ya fue ENVIADO. No se puede modificar."
-            }, status=403)
-
-        cueanexo = self.request.session.get("cueanexo_activo")
-
-        if not cueanexo:
-            return JsonResponse({
-                "error": True,
-                "message": "No hay cueanexo activo"
-            })
-
-        form.instance.cueanexo = cueanexo
-
-        return super().form_valid(form)
-
-    # =========================
-    # POST AJAX
-    # =========================
     def post(self, request, *args, **kwargs):
-
-        if self.informe_bloqueado():
-            return JsonResponse({
-                "error": True,
-                "message": "El último informe ya fue ENVIADO. No se puede modificar."
-            }, status=403)
 
         try:
             action = request.POST.get('action')
@@ -106,7 +34,10 @@ class AguapeyCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
                 form = self.get_form()
 
                 if form.is_valid():
-                    instance = form.save()
+                    instance = form.save(commit=False)
+                    self.aplicar_periodo_activo(instance)
+                    instance.save()
+                    form.save_m2m()
                     return JsonResponse(instance.toJSON())
                 else:
                     return JsonResponse({
@@ -132,26 +63,15 @@ class AguapeyCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
 
         context = super().get_context_data(**kwargs)
 
-        cueanexo = self.request.session.get("cueanexo_activo")
 
-        context['cueanexo'] = cueanexo
-        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
 
-        ultimo = None
-        if cueanexo:
-            ultimo = GenerarInforme.objects.filter(
-                cueanexo=cueanexo
-            ).order_by('-annos', '-meses').first()
 
-        context['mes'] = ultimo.meses if ultimo else None
-        context['anno'] = ultimo.annos if ultimo else None
 
         context['title'] = 'Carga de Aguapey'
         context['entity'] = 'Aguapey'
         context['list_url'] = self.success_url
         context['action'] = 'add'
         
-        print(context)
         return context
 
 
@@ -167,31 +87,9 @@ class AguapeyUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
     # =========================
     # DISPATCH
     # =========================
-    def dispatch(self, request, *args, **kwargs):
-
-        self.object = self.get_object()
-
-        cueanexo = request.session.get("cueanexo_activo")
-
-        if not cueanexo:
-            cueanexos = get_cueanexos_usuario(request.user)
-            cueanexo = cueanexos[0] if cueanexos else None
-            request.session["cueanexo_activo"] = cueanexo
-
-        return super().dispatch(request, *args, **kwargs)
-
-    # =========================
-    # POST AJAX
-    # =========================
     def post(self, request, *args, **kwargs):
 
         # 🔒 BLOQUEO
-        if self.informe_bloqueado():
-            return JsonResponse({
-                "error": True,
-                "message": "El último informe ya fue ENVIADO. No se puede modificar."
-            }, status=403)
-
         try:
             action = request.POST.get('action')
 
@@ -200,7 +98,10 @@ class AguapeyUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
                 form = self.get_form()
 
                 if form.is_valid():
-                    instance = form.save()
+                    instance = form.save(commit=False)
+                    self.aplicar_periodo_activo(instance)
+                    instance.save()
+                    form.save_m2m()
                     return JsonResponse(instance.toJSON())
                 else:
                     return JsonResponse({
@@ -226,24 +127,14 @@ class AguapeyUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
 
         context = super().get_context_data(**kwargs)
 
-        cueanexo = self.request.session.get("cueanexo_activo")
 
-        context['cueanexo'] = cueanexo
-        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
 
         context['title'] = 'Edición de Aguapey'
         context['entity'] = 'Aguapey'
         context['list_url'] = self.success_url
         context['action'] = 'edit'        
 
-        ultimo = None
-        if cueanexo:
-            ultimo = GenerarInforme.objects.filter(
-                cueanexo=cueanexo
-            ).order_by('-annos', '-meses').first()
 
-        context['mes'] = ultimo.meses if ultimo else None
-        context['anno'] = ultimo.annos if ultimo else None
 
         return context
 
@@ -259,31 +150,9 @@ class AguapeyDeleteView(LoginRequiredMixin, InformeBloqueoMixin,DeleteView):
     # =========================
     # DISPATCH
     # =========================
-    def dispatch(self, request, *args, **kwargs):
-
-        self.object = self.get_object()
-
-        cueanexo = request.session.get("cueanexo_activo")
-
-        if not cueanexo:
-            cueanexos = get_cueanexos_usuario(request.user)
-            cueanexo = cueanexos[0] if cueanexos else None
-            request.session["cueanexo_activo"] = cueanexo
-
-        return super().dispatch(request, *args, **kwargs)
-
-    # =========================
-    # DELETE (AJAX)
-    # =========================
     def post(self, request, *args, **kwargs):
 
         # 🔒 BLOQUEO
-        if self.informe_bloqueado():
-            return JsonResponse({
-                "error": True,
-                "message": "El último informe ya fue ENVIADO. No se puede eliminar."
-            }, status=403)
-
         try:
             self.object.delete()
 
@@ -305,10 +174,6 @@ class AguapeyDeleteView(LoginRequiredMixin, InformeBloqueoMixin,DeleteView):
 
         context = super().get_context_data(**kwargs)
 
-        context['cueanexo'] = self.object.cueanexo
-        context['mes'] = self.object.mes
-        context['anno'] = self.object.anio
-        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
     
         context['title'] = 'Eliminación de Aguapey'
         context['entity'] = 'Aguapey'
@@ -319,50 +184,21 @@ class AguapeyDeleteView(LoginRequiredMixin, InformeBloqueoMixin,DeleteView):
 #=========================
 # LIST
 #=========================
-class AguapeyListView(LoginRequiredMixin, ListView):
+class AguapeyListView(LoginRequiredMixin, InformeBloqueoMixin, ListView):
     model = Aguapey
     template_name = 'biblioteca/pem/aguapey/list_aguapey.html'
 
     # =========================
     # SESSION
     # =========================
-    def dispatch(self, request, *args, **kwargs):
-
-        cueanexo = request.session.get("cueanexo_activo")
-
-        if not cueanexo:
-            cueanexos = get_cueanexos_usuario(request.user)
-            cueanexo = cueanexos[0] if cueanexos else None
-            request.session["cueanexo_activo"] = cueanexo
-
-        return super().dispatch(request, *args, **kwargs)
-
-    # =========================
-    # QUERYSET
-    # =========================
     def get_queryset(self):
+        periodo = self.get_periodo_activo()
+        return self.model.objects.filter(
+            cueanexo=str(periodo.cueanexo),
+            mes=periodo.meses,
+            anio=periodo.annos,
+        ).order_by('-anio', '-mes')
 
-        cueanexo = self.request.session.get("cueanexo_activo")
-
-        if not cueanexo:
-            return Aguapey.objects.none()
-        
-        qs = Aguapey.objects.filter(cueanexo=cueanexo)
-
-        anio = self.request.GET.get('anio')
-        mes = self.request.GET.get('mes')
-
-        if anio:
-            qs = qs.filter(anio=anio)
-
-        if mes:
-            qs = qs.filter(mes=mes)
-
-        return qs.order_by('-anio', '-mes')
-
-    # =========================
-    # AJAX
-    # =========================
     def post(self, request, *args, **kwargs):
 
         try:
@@ -393,16 +229,9 @@ class AguapeyListView(LoginRequiredMixin, ListView):
 
         context = super().get_context_data(**kwargs)
 
-        cueanexo = self.request.session.get("cueanexo_activo")
 
-        context['cueanexo'] = cueanexo
-        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
         
-        mes = self.request.GET.get('mes')
-        anio = self.request.GET.get('anio')
 
-        context['mes'] = mes
-        context['anno'] = anio
         context['title'] = 'Listado de Aguapey'
         context['create_url'] = reverse_lazy('bibliotecas:aguapey_create')
         context['list_url'] = reverse_lazy('bibliotecas:aguapey_list')
@@ -411,6 +240,6 @@ class AguapeyListView(LoginRequiredMixin, ListView):
         context['hide_lock_button'] = False
         context['generar_pdf_button'] = True
         context['before_url'] = reverse_lazy('bibliotecas:proctec_list')
-        context['next_url'] = reverse_lazy('bibliotecas:fondos_create')
+        context['next_url'] = reverse_lazy('bibliotecas:fondos_list')
 
         return context

@@ -13,7 +13,7 @@
     {% block section_header %}
         {% include 'biblioteca/includes/crud_section_header.html' with material_icon='delete' %}
     {% endblock %}
-    <form method="post" action="." class="biblioteca-crud__form">
+    <form method="post" action="?periodo={{ periodo_activo_id }}" class="biblioteca-crud__form">
         <div class="card biblioteca-crud__panel">
             <div class="card-header">
                 <h3 class="card-title">
@@ -62,7 +62,7 @@
         $('form').on('submit', function (e) {
             e.preventDefault();
             var parameters = new FormData(this);
-            submit_with_ajax(window.location.pathname, 'Notificación', '¿Estas seguro de eliminar el siguiente registro?', parameters, function () {
+            submit_with_ajax(window.location.pathname + window.location.search, 'Notificación', '¿Estas seguro de eliminar el siguiente registro?', parameters, function () {
                 location.href = '{{ list_url }}';
             });
         });

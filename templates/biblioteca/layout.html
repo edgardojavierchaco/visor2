@@ -1,4 +1,5 @@
 {% extends 'biblioteca/home.html' %}
+{% load biblioteca_nav %}
 
 {% block body %}
 <body class="hold-transition sidebar-mini layout-fixed biblioteca-shell">
@@ -35,6 +36,7 @@
 
         <div class="content">
             <div class="container-fluid">
+                {% biblioteca_establecimiento_identidad as biblioteca_establecimiento %}
                 {% include 'biblioteca/includes/module_nav.html' %}
 
                 {% block content %}{% endblock %}
@@ -45,6 +47,8 @@
     {% include 'biblioteca/footer.html' %}
 </div>
 
+{% include 'biblioteca/includes/guia_modal.html' %}
+
 {% block javascript %}{% endblock %}
 
 {% if messages %}
@@ -54,10 +58,19 @@
         html += '{{ message|escapejs }}<br>';
     {% endfor %}
     html += '</p>';
+    var messageType = 'info';
+    {% for message in messages %}
+        var tags = '{{ message.tags|escapejs }}'.split(' ');
+        if (tags.indexOf('error') !== -1) {
+            messageType = 'error';
+        } else if (messageType !== 'error' && tags.indexOf('success') !== -1) {
+            messageType = 'success';
+        }
+    {% endfor %}
     Swal.fire({
-        title: 'Error!',
+        title: messageType === 'error' ? 'Error' : (messageType === 'success' ? 'Listo' : 'Aviso'),
         html: html,
-        icon: 'error'
+        icon: messageType
     });
 </script>
 {% endif %}

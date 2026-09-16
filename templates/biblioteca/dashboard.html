@@ -9,7 +9,11 @@
 
 {% block content %}
 <main class="biblioteca-screen biblioteca-inicio" aria-labelledby="biblioteca-inicio-titulo">
-    {% include 'biblioteca/includes/operational_hero.html' with hero_id='biblioteca-inicio-titulo' hero_icon='local_library' hero_title='BIBLIOTECA' hero_subtitle='Relevamiento y declaración estadística de bibliotecas educativas' hero_period=periodo_pendiente only %}
+    {% if biblioteca_establecimiento %}
+        {% include 'biblioteca/includes/operational_hero.html' with hero_id='biblioteca-inicio-titulo' hero_icon='local_library' hero_title=biblioteca_establecimiento.titulo_hero hero_subtitle='Relevamiento y declaración estadística de bibliotecas educativas' hero_period=periodo_pendiente only %}
+    {% else %}
+        {% include 'biblioteca/includes/operational_hero.html' with hero_id='biblioteca-inicio-titulo' hero_icon='local_library' hero_title='BIBLIOTECA' hero_subtitle='Relevamiento y declaración estadística de bibliotecas educativas' hero_period=periodo_pendiente only %}
+    {% endif %}
 
     <section class="biblioteca-periodo" aria-labelledby="biblioteca-periodo-titulo">
         <div class="biblioteca-periodo__cabecera">
@@ -21,10 +25,12 @@
             <div>
                 <p class="biblioteca-periodo__rotulo">PERÍODO ACTUAL</p>
                 <h2 id="biblioteca-periodo-titulo">
-                    {% if periodos_pendientes_ambiguos %}
-                        No se pudo determinar un único período
+                    {% if hay_varios_periodos_seleccionables %}
+                        Elegí un período pendiente
                     {% elif periodo_pendiente %}
                         Relevamiento pendiente de envío
+                    {% elif cueanexos_inconsistentes %}
+                        Hay períodos que requieren revisión
                     {% else %}
                         Sin período pendiente
                     {% endif %}
@@ -32,18 +38,43 @@
             </div>
         </div>
 
-        {% if periodos_pendientes_ambiguos %}
+        {% if cueanexos_inconsistentes %}
             <div class="biblioteca-periodo__aviso" role="status">
                 <span class="biblioteca-periodo__icono" aria-hidden="true">
                     <span class="biblioteca-symbol">warning</span>
                 </span>
                 <div>
-                    <p class="biblioteca-periodo__mensaje">Hay más de un período pendiente de envío.</p>
+                    <p class="biblioteca-periodo__mensaje">Hay más de un período pendiente para el mismo CUE-Anexo.</p>
                     <p class="biblioteca-periodo__detalle">
-                        No se seleccionó uno como período actual porque el sistema no define cuál corresponde.
+                        Esos períodos no se seleccionan automáticamente. Revisá la situación antes de continuar con ese CUE-Anexo.
                     </p>
                 </div>
             </div>
+        {% endif %}
+
+        {% if hay_varios_periodos_seleccionables %}
+            {% for opcion in opciones_periodos %}
+                {% if opcion.seleccionable %}
+                    <div class="biblioteca-periodo__vacio">
+                        <span class="biblioteca-periodo__icono" aria-hidden="true">
+                            <span class="biblioteca-symbol">event_note</span>
+                        </span>
+                        <div class="biblioteca-periodo__vacio-contenido">
+                            <p class="biblioteca-periodo__mensaje">
+                                CUE-Anexo {{ opcion.periodo.cueanexo }}
+                            </p>
+                            <p class="biblioteca-periodo__detalle">
+                                {{ opcion.periodo.meses|capfirst }} {{ opcion.periodo.annos }} · Pendiente de envío
+                            </p>
+                        </div>
+                        <a class="btn btn-primary biblioteca-periodo__accion"
+                           href="{% url 'bibliotecas:carga' %}?periodo={{ opcion.periodo.pk }}">
+                            Continuar carga
+                            <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
+                        </a>
+                    </div>
+                {% endif %}
+            {% endfor %}
         {% elif periodo_pendiente %}
             <dl class="biblioteca-periodo__datos">
                 <div class="biblioteca-periodo__dato biblioteca-periodo__dato--principal">
@@ -63,12 +94,12 @@
             <div class="biblioteca-periodo__pie">
                 <p>Podés continuar con la carga y revisar el informe antes de finalizar el envío.</p>
                 <a class="btn btn-primary biblioteca-periodo__accion"
-                   href="{% url 'bibliotecas:carga' %}">
+                   href="{% url 'bibliotecas:carga' %}?periodo={{ periodo_pendiente.pk }}">
                     Ir a carga
                     <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
                 </a>
             </div>
-        {% else %}
+        {% elif not cueanexos_inconsistentes %}
             <div class="biblioteca-periodo__vacio">
                 <span class="biblioteca-periodo__icono" aria-hidden="true">
                     <span class="biblioteca-symbol">event</span>
