@@ -1,0 +1,19 @@
+<div class="biblioteca-form__block-head">
+    <div class="biblioteca-form__block-head-left">
+        <span class="biblioteca-form__block-icon" aria-hidden="true">
+            <span class="biblioteca-symbol">{{ block_icon|default:'edit_square' }}</span>
+        </span>
+        <div>
+            <h4 class="biblioteca-form__block-title"{% if block_id %} id="{{ block_id }}"{% endif %}>{{ block_title|default:'Datos a completar' }}</h4>
+            {% if block_subtitle %}
+                <p class="biblioteca-form__block-subtitle">{{ block_subtitle }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% if show_info %}
+        <button type="button" class="btn btn-info biblioteca-form__info-btn" id="showPopupBtn">
+            <span class="biblioteca-symbol" aria-hidden="true">info</span>
+            Info
+        </button>
+    {% endif %}
+</div>
