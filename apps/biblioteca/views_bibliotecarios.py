@@ -1,10 +1,14 @@
+import re
+
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, UpdateView, DeleteView, ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .mixins import InformeBloqueoMixin
 
+from apps.bnhpersonas.models import Personas
+
+from .mixins import InformeBloqueoMixin
 from .models import BibliotecariosCue
 from .forms import BibliotecariosCueForm
 from django.views.decorators.csrf import csrf_exempt
@@ -12,13 +16,89 @@ from django.utils.decorators import method_decorator
 
 
 # =========================
-# 🔹 UTIL
+# UTIL: PERSONA BNH (SOLO LECTURA)
 # =========================
+def _normalizar_cuil(cuil):
+    return re.sub(r'\D', '', cuil or '')
+
+
+def _buscar_persona_bnh(cuil):
+    cuil = _normalizar_cuil(cuil)
+    if len(cuil) != 11:
+        return None
+    return (
+        Personas.objects
+        .filter(cuil=cuil)
+        .values('cuil', 'dni', 'apellido', 'nombre')
+        .first()
+    )
+
+
+class BibliotecarioPersonaLookupView(
+    LoginRequiredMixin,
+    InformeBloqueoMixin,
+    View,
+):
+    """Consulta de identidad BNH por CUIL para un período editable."""
+
+    def get(self, request, *args, **kwargs):
+        cuil = _normalizar_cuil(request.GET.get('cuil'))
+        if len(cuil) != 11:
+            return JsonResponse({
+                'error': True,
+                'message': 'Ingresá un CUIL válido de 11 dígitos.',
+            }, status=400)
+
+        persona = _buscar_persona_bnh(cuil)
+        if persona is None:
+            return JsonResponse({
+                'error': True,
+                'message': 'No se encontró una persona con ese CUIL en BNH.',
+            }, status=404)
+
+        return JsonResponse({
+            'error': False,
+            'persona': {
+                'cuil': persona['cuil'] or '',
+                'dni': persona['dni'] or '',
+                'apellido': persona['apellido'] or '',
+                'nombre': persona['nombre'] or '',
+            },
+        })
+
+
 class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,CreateView):
     model = BibliotecariosCue
     form_class = BibliotecariosCueForm
     template_name = 'biblioteca/pem/personal/create.html'
     success_url = reverse_lazy('bibliotecas:bibliotecario_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        data = kwargs.get('data')
+        self.persona_bnh_error = None
+
+        if data is None:
+            return kwargs
+
+        data = data.copy()
+        cuil = _normalizar_cuil(data.get('cuil'))
+        data['cuil'] = cuil
+
+        if len(cuil) != 11:
+            self.persona_bnh_error = 'Ingresá un CUIL válido de 11 dígitos.'
+        else:
+            persona = _buscar_persona_bnh(cuil)
+            if persona is None:
+                self.persona_bnh_error = 'No se encontró una persona con ese CUIL en BNH.'
+            else:
+                # BNH es la fuente de identidad para las altas nuevas.
+                data['n_doc'] = persona['dni'] or ''
+                data['apellidos'] = persona['apellido'] or ''
+                data['nombres'] = persona['nombre'] or ''
+
+        kwargs['data'] = data
+        return kwargs
 
     # =========================
     # DISPATCH
@@ -31,6 +111,14 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
             if action == 'add':
 
                 form = self.get_form()
+
+                if self.persona_bnh_error:
+                    return JsonResponse({
+                        'error': True,
+                        'errors': {
+                            'cuil': [self.persona_bnh_error]
+                        }
+                    })
 
                 if form.is_valid():
                     instance = form.save(commit=False)
@@ -66,8 +154,8 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
 
 
         
-        context['title'] = 'Carga Servicios de Referencia'
-        context['entity'] = 'Servicios_Referencia'
+        context['title'] = 'Personal bibliotecario'
+        context['entity'] = 'Personal'
         context['list_url'] = self.success_url
         context['action'] = 'add'
         
@@ -84,6 +172,23 @@ class BibliotecariosCueUpdateView(LoginRequiredMixin, InformeBloqueoMixin, Updat
     template_name = 'biblioteca/pem/personal/create.html'
     success_url = reverse_lazy('bibliotecas:bibliotecario_list')
     url_redirect = success_url
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        data = kwargs.get('data')
+
+        if data is None:
+            return kwargs
+
+        data = data.copy()
+        objeto = self.get_object()
+        # La identidad histórica del registro no se modifica desde campos ocultos.
+        data['cuil'] = objeto.cuil
+        data['n_doc'] = objeto.n_doc
+        data['apellidos'] = objeto.apellidos
+        data['nombres'] = objeto.nombres
+        kwargs['data'] = data
+        return kwargs
 
     # =========================
     # DISPATCH
@@ -130,7 +235,7 @@ class BibliotecariosCueUpdateView(LoginRequiredMixin, InformeBloqueoMixin, Updat
 
 
     
-        context['title'] = 'Editar Bibliotecario'
+        context['title'] = 'Personal bibliotecario'
         context['entity'] = 'Personal'
         context['list_url'] = self.success_url
         context['action'] = 'edit'
@@ -236,7 +341,8 @@ class BibliotecariosCueListView(LoginRequiredMixin, InformeBloqueoMixin, ListVie
 
     
 
-        context['title'] = 'Listado de Personal Bibliotecario'
+        context['title'] = 'Personal bibliotecario'
+        context['section_nav_title'] = 'Listado de Personal Bibliotecario'
         context['create_url'] = reverse_lazy('bibliotecas:bibliotecario_create')
         context['list_url'] = reverse_lazy('bibliotecas:bibliotecario_list')
         context['update_url'] = reverse_lazy('bibliotecas:bibliotecario_update', args=[0])

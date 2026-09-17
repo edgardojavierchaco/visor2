@@ -68,6 +68,10 @@ def build_table(data):
     return table
 
 
+def valor_pdf(valor):
+    return '—' if valor is None or valor == '' else valor
+
+
 def build_qr(data_str):
     qr = qrcode.QRCode(
         version=None,
@@ -549,14 +553,36 @@ def generar_pdf_material_bibliografico(request):
         cueanexo=cueanexo_activo, mes=mes, anio=anio
     )
 
-    data = [["CUIL", "APELLIDO", "NOMBRE", "CARGO", "FECHA INGRESO", "FECHA HASTA","TURNO", "LICENCIA", "DESDE","HASTA"]] + [
-        [r.cuil, r.apellidos, r.nombres, r.cargo, r.f_ingreso, r.f_hasta, r.turno, r.licencia_permiso, r.f_desde_lic, r.f_hasta_lic]
+    data = [["CUIL", "APELLIDO", "NOMBRE", "CARGO", "FECHA INGRESO", "FECHA HASTA", "TURNO", "LICENCIA", "DESDE", "HASTA"]] + [
+        [
+            r.cuil,
+            r.apellidos,
+            r.nombres,
+            valor_pdf(r.cargo),
+            valor_pdf(r.f_ingreso),
+            valor_pdf(r.f_hasta),
+            valor_pdf(r.turno),
+            valor_pdf(r.licencia_permiso),
+            valor_pdf(r.f_desde_lic),
+            valor_pdf(r.f_hasta_lic),
+        ]
         for r in bib
     ]
-    
+
     qr_bibliotecarios_data = "\n".join([
-        f"{r.cuil} | {r.apellidos} | {r.nombres} | {r.cargo} | {r.f_ingreso} | {r.f_hasta} | {r.turno} | {r.licencia_permiso} | {r.f_desde_lic} | {r.f_hasta_lic}"
-        for r in bib    
+        " | ".join(str(valor_pdf(valor)) for valor in [
+            r.cuil,
+            r.apellidos,
+            r.nombres,
+            r.cargo,
+            r.f_ingreso,
+            r.f_hasta,
+            r.turno,
+            r.licencia_permiso,
+            r.f_desde_lic,
+            r.f_hasta_lic,
+        ])
+        for r in bib
     ])
 
     engine.add_section(

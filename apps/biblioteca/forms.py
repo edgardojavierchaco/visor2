@@ -793,21 +793,31 @@ class DocentePonMensualForm(forms.ModelForm):
 class BibliotecariosCueForm(forms.ModelForm):
     class Meta:
         model = BibliotecariosCue
-        exclude = ['cueanexo']
+        fields = [
+            'cuil',
+            'n_doc',
+            'apellidos',
+            'nombres',
+            'cuof',
+            'cuof_anexo',
+            'mes',
+            'anio',
+            'licencia_permiso',
+            'f_desde_lic',
+            'f_hasta_lic',
+            'observaciones',
+            'situacion_laboral',
+        ]
         widgets = {
-            'f_nac': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
-            'f_ingreso': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
-            'f_hasta': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
             'f_desde_lic': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
             'f_hasta_lic': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        for field in ['f_nac', 'f_ingreso', 'f_hasta', 'f_desde_lic', 'f_hasta_lic']:
+        for field in ['f_desde_lic', 'f_hasta_lic']:
             self.fields[field].input_formats = ['%Y-%m-%d']
-            
+
     def clean_n_doc(self):
         n_doc = self.cleaned_data.get('n_doc', '')
         if not n_doc.isdigit():
@@ -818,76 +828,33 @@ class BibliotecariosCueForm(forms.ModelForm):
 
     def clean_apellidos(self):
         apellidos = self.cleaned_data.get('apellidos', '').upper()
-
         if not re.match(r'^[A-ZÁÉÍÓÚÑ\s]+$', apellidos):
-                raise forms.ValidationError("El apellido solo puede contener letras.")
-
+            raise forms.ValidationError("El apellido solo puede contener letras.")
         return apellidos
-
 
     def clean_nombres(self):
         nombres = self.cleaned_data.get('nombres', '').upper()
-
         if not re.match(r'^[A-ZÁÉÍÓÚÑ\s]+$', nombres):
-                raise forms.ValidationError("El nombre solo puede contener letras.")
-
+            raise forms.ValidationError("El nombre solo puede contener letras.")
         return nombres
 
     def clean(self):
         cleaned_data = super().clean()
-        
-        f_nac = cleaned_data.get('f_nac')
-        f_ingreso = cleaned_data.get('f_ingreso')
-        f_hasta = cleaned_data.get('f_hasta')
         f_desde_lic = cleaned_data.get('f_desde_lic')
         f_hasta_lic = cleaned_data.get('f_hasta_lic')
         licencia = cleaned_data.get('licencia_permiso')
 
-        hoy = date.today()
-
-        # =========================
-        # 🔹 Fecha de nacimiento no futura
-        # =========================
-        if f_nac and f_nac > hoy:
-                self.add_error('f_nac', 'La fecha de nacimiento no puede ser futura.')
-
-        # =========================
-        # 🔹 Fecha de ingreso no futura
-        # =========================
-        if f_ingreso and f_ingreso > hoy:
-                self.add_error('f_ingreso', 'La fecha de ingreso no puede ser futura.')
-
-        # =========================
-        # 1️⃣ Edad mínima 18 años al ingreso
-        # =========================
-        if f_nac and f_ingreso:
-                edad = f_ingreso.year - f_nac.year - (
-                        (f_ingreso.month, f_ingreso.day) < (f_nac.month, f_nac.day)
-                )
-                if edad < 18:
-                        self.add_error('f_ingreso', 'Debe tener al menos 18 años al momento del ingreso.')
-
-        # =========================
-        # 2️⃣ f_hasta >= f_ingreso
-        # =========================
-        if f_ingreso and f_hasta:
-                if f_hasta < f_ingreso:
-                        self.add_error('f_hasta', 'La fecha hasta no puede ser menor que la fecha de ingreso.')
-
-        # =========================
-        # 3️⃣ Validaciones de licencia
-        # =========================
         if licencia:
-                if not f_desde_lic:
-                        self.add_error('f_desde_lic', "Debe completar esta fecha.")
-                if not f_hasta_lic:
-                        self.add_error('f_hasta_lic', "Debe completar esta fecha.")
-
-                if f_desde_lic and f_hasta_lic:
-                        if f_hasta_lic < f_desde_lic:
-                                self.add_error('f_hasta_lic', "La fecha hasta no puede ser menor que la fecha desde.")
-
+            if not f_desde_lic:
+                self.add_error('f_desde_lic', "Debe completar esta fecha.")
+            if not f_hasta_lic:
+                self.add_error('f_hasta_lic', "Debe completar esta fecha.")
+            if f_desde_lic and f_hasta_lic and f_hasta_lic < f_desde_lic:
+                self.add_error('f_hasta_lic', "La fecha hasta no puede ser menor que la fecha desde.")
         elif f_desde_lic or f_hasta_lic:
-                self.add_error('licencia_permiso', "Debe seleccionar un tipo de licencia si indica fechas.")
+            self.add_error(
+                'licencia_permiso',
+                "Debe seleccionar un tipo de licencia si indica fechas."
+            )
 
         return cleaned_data

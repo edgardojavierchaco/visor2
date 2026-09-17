@@ -1,7 +1,7 @@
 {% extends 'biblioteca/layout.html' %}
 {% load static %}
 {% block head %}
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260914-2">
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260917-list-2">
     <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
     <link rel="stylesheet"
           href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
@@ -23,7 +23,7 @@
 {% block content_header %}{% endblock %}
 
 {% block content %}
-<main class="biblioteca-crud biblioteca-crud--listado">
+<main class="biblioteca-crud biblioteca-crud--listado {% block list_main_class %}{% endblock %}">
     {% block section_header %}
         {% include 'biblioteca/includes/crud_section_header.html' with material_icon='table_rows' %}
     {% endblock %}
@@ -38,7 +38,7 @@
         <div class="card-body">
             <div class="biblioteca-crud__list-toolbar">
                 <a href="{{ create_url }}" class="btn btn-primary btn-flat btnTest">
-                    <span class="biblioteca-symbol" aria-hidden="true">add_notes</span>
+                    <span class="biblioteca-symbol" aria-hidden="true">{% block create_icon %}add_notes{% endblock %}</span>
                     Nuevo registro
                 </a>
                 <label class="biblioteca-crud__list-search" for="biblioteca-crud-search">
@@ -89,7 +89,7 @@
                     {% endif %}
                     <span class="biblioteca-crud__section-nav-context">
                         <span class="biblioteca-crud__section-nav-label">Navegación entre secciones</span>
-                        <span class="biblioteca-crud__section-nav-current">{{ title }}</span>
+                        <span class="biblioteca-crud__section-nav-current">{{ section_nav_title|default:title }}</span>
                     </span>
                     {% if next_url %}
                         <a href="{{ next_url }}" class="btn btn-primary btn-flat biblioteca-crud__section-nav-next">
