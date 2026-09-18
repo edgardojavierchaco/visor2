@@ -1,7 +1,18 @@
 import re
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Personas, RegistroActividades, Localidades, HorarioActividad, ModalidadNivel, validar_cuil, validar_dni
+from .models import (
+    Personas, 
+    RegistroActividades, 
+    Localidades, 
+    HorarioActividad, 
+    ModalidadNivel, 
+    Grado_anio,
+    Secciones,
+    validar_cuil, 
+    validar_dni
+)
+    
 from .domain.access import scoped_offers, user_has_cueanexo_access
 from .domain.catalogs import activity_catalogs, available_levels
 
@@ -65,61 +76,334 @@ class PersonaForm(StyledForm):
 
 
 class ActividadDirectorForm(StyledForm):
-    cueanexo = forms.ChoiceField(label="Institución / CUEANEXO")
-    operation_id = forms.UUIDField(widget=forms.HiddenInput, required=False)
+
+    cueanexo = forms.ChoiceField(
+        label="Institución / CUEANEXO"
+    )
+
+    operation_id = forms.UUIDField(
+        widget=forms.HiddenInput,
+        required=False
+    )
 
     class Meta:
-        model = RegistroActividades
-        fields = ["cueanexo", "categoria", "modalidad", "niveles", "sit_revista", "cond_actividad", "designacion", "t_designacion", "ceic", "grado_anio", "turno", "secciones", "espacios", "f_desde", "f_hasta", "carga_horaria", "estado", "funciones", "f_desde_funciones", "f_hasta_funciones"]
-        labels = {"categoria": "Tipo de personal", "niveles": "Nivel", "sit_revista": "Situación de revista", "cond_actividad": "Condición de actividad", "t_designacion": "Tipo de designación", "ceic": "Cargo / CEIC", "f_desde": "Inicio del cargo", "f_hasta": "Fin del cargo (si corresponde)", "f_desde_funciones": "Inicio de funciones", "f_hasta_funciones": "Fin de funciones (si corresponde)"}
 
-    def __init__(self, *args, user=None, **kwargs):
+        model = RegistroActividades
+
+        fields = [
+            "cueanexo",
+            "categoria",
+            "modalidad",
+            "niveles",
+            "sit_revista",
+            "cond_actividad",
+            "designacion",
+            "t_designacion",
+            "ceic",
+            "grado_anio",
+            "turno",
+            "secciones",
+            "espacios",
+            "f_desde",
+            "f_hasta",
+            "carga_horaria",
+            "estado",
+            "funciones",
+            "f_desde_funciones",
+            "f_hasta_funciones",
+        ]
+
+        labels = {
+            "categoria": "Tipo de personal",
+            "niveles": "Nivel",
+            "sit_revista": "Situación de revista",
+            "cond_actividad": "Condición de actividad",
+            "t_designacion": "Tipo de designación",
+            "ceic": "Cargo / CEIC",
+            "f_desde": "Inicio del cargo",
+            "f_hasta": "Fin del cargo (si corresponde)",
+            "f_desde_funciones": "Inicio de funciones",
+            "f_hasta_funciones": "Fin de funciones (si corresponde)",
+        }
+
+    def __init__(
+        self,
+        *args,
+        user=None,
+        **kwargs
+    ):
+
         self.user = user
+
         super().__init__(*args, **kwargs)
-        self.fields["operation_id"].required = not bool(self.instance.pk)
-        self.initial["operation_id"] = self.instance.uuid
+
+        # ====================================================
+        # OPERATION ID
+        # ====================================================
+
+        self.fields["operation_id"].required = (
+            not bool(self.instance.pk)
+        )
+
+        self.initial["operation_id"] = (
+            self.instance.uuid
+        )
+
+        # ====================================================
+        # CUEANEXOS HABILITADOS
+        # ====================================================
+
         choices = {}
-        for cue, name in scoped_offers(user).order_by("cueanexo_str", "nom_est").values_list("cueanexo_str", "nom_est"):
-            choices.setdefault(cue, f"{cue} — {name}")
-        self.fields["cueanexo"].choices = [("", "Seleccione institución")] + list(choices.items())
-        # Traslados son un nuevo cargo; nunca se mueven horarios de una escuela a otra.
+
+        ofertas = (
+            scoped_offers(user)
+            .order_by(
+                "cueanexo_str",
+                "nom_est",
+            )
+            .values_list(
+                "cueanexo_str",
+                "nom_est",
+            )
+        )
+
+        for cue, name in ofertas:
+
+            choices.setdefault(
+                cue,
+                f"{cue} — {name}"
+            )
+
+        self.fields["cueanexo"].choices = [
+            (
+                "",
+                "Seleccione institución",
+            )
+        ] + list(
+            choices.items()
+        )
+
+        # ----------------------------------------------------
+        # Una actividad existente no cambia de institución.
+        # Un traslado implica un nuevo cargo.
+        # ----------------------------------------------------
+
         if self.instance.pk:
             self.fields["cueanexo"].disabled = True
+
+        # ====================================================
+        # OBTENER VALORES DEL FORMULARIO
+        # ====================================================
+
         def value(name):
-            raw = self.data.get(self.add_prefix(name)) if self.is_bound else getattr(self.instance, name + "_id", None)
+
+            if self.is_bound:
+                raw = self.data.get(
+                    self.add_prefix(name)
+                )
+            else:
+                raw = getattr(
+                    self.instance,
+                    name + "_id",
+                    None,
+                )
+
             try:
                 return int(raw)
+
             except (TypeError, ValueError):
                 return None
-        self.fields["niveles"].queryset = available_levels(value("modalidad"))
+
+        # ====================================================
+        # CATEGORÍA
+        # ====================================================
+
+        if self.is_bound:
+
+            categoria = str(
+                self.data.get(
+                    self.add_prefix("categoria")
+                )
+                or ""
+            ).strip().upper()
+
+        else:
+
+            categoria = str(
+                getattr(
+                    self.instance,
+                    "categoria",
+                    "",
+                )
+                or ""
+            ).strip().upper()
+
+        modalidad = value("modalidad")
+        nivel = value("niveles")
+        grado = value("grado_anio")
+
+        # ====================================================
+        # NIVELES
+        # ====================================================
+
+        self.fields["niveles"].queryset = (
+            available_levels(modalidad)
+        )
+
+        # ====================================================
+        # CATÁLOGOS DE ACTIVIDAD
+        # ====================================================
+
         try:
-            ceic, grados, secciones = activity_catalogs(value("modalidad"), value("niveles"), value("grado_anio"))
+
+            ceic, grados, secciones = (
+                activity_catalogs(
+                    modalidad,
+                    nivel,
+                    grado,
+                    categoria=categoria,
+                )
+            )
+
         except ValidationError:
-            from .models import NomencladorCeic, Grado_anio, Secciones
-            ceic, grados, secciones = NomencladorCeic.objects.none(), Grado_anio.objects.none(), Secciones.objects.none()
+
+            from .models import (
+                NomencladorCeic,
+                Grado_anio,
+                Secciones,
+            )
+
+            ceic = NomencladorCeic.objects.none()
+            grados = Grado_anio.objects.none()
+            secciones = Secciones.objects.none()
+
         self.fields["ceic"].queryset = ceic
         self.fields["grado_anio"].queryset = grados
         self.fields["secciones"].queryset = secciones
-        self.fields["secciones"].help_text = "Seleccione primero un grado. Se muestran las secciones del mismo par modalidad/nivel; el catálogo no contiene asignaciones por curso de cada escuela."
-        self.fields["f_hasta"].help_text = "Deje vacío si no existe una fecha de cese conocida."
+
+        # ====================================================
+        # PERSONAL NO DOCENTE
+        # ====================================================
+
+        if categoria == "NO DOCENTE":
+
+            # No corresponden estos campos.
+            self.fields["grado_anio"].required = False
+            self.fields["secciones"].required = False
+            self.fields["espacios"].required = False
+
+            self.fields["grado_anio"].queryset = (
+                Grado_anio.objects.none()
+            )
+
+            self.fields["secciones"].queryset = (
+                Secciones.objects.none()
+            )
+
+            self.fields["grado_anio"].help_text = (
+                "No corresponde para personal no docente."
+            )
+
+            self.fields["secciones"].help_text = (
+                "No corresponde para personal no docente."
+            )
+
+        else:
+
+            self.fields["secciones"].help_text = (
+                "Seleccione primero un grado. "
+                "Se muestran las secciones del mismo par "
+                "modalidad/nivel; el catálogo no contiene "
+                "asignaciones por curso de cada escuela."
+            )
+
+        self.fields["f_hasta"].help_text = (
+            "Deje vacío si no existe una fecha "
+            "de cese conocida."
+        )
+
+    # ========================================================
+    # VALIDACIÓN CUEANEXO
+    # ========================================================
 
     def clean_cueanexo(self):
+
         value = self.cleaned_data["cueanexo"]
-        if not user_has_cueanexo_access(self.user, value):
-            raise forms.ValidationError("Institución no autorizada.")
+
+        if not user_has_cueanexo_access(
+            self.user,
+            value,
+        ):
+            raise forms.ValidationError(
+                "Institución no autorizada."
+            )
+
         return value
 
+    # ========================================================
+    # VALIDACIÓN GENERAL
+    # ========================================================
+
     def clean(self):
+
         data = super().clean()
-        modalidad, nivel = data.get("modalidad"), data.get("niveles")
-        if modalidad and nivel and not ModalidadNivel.objects.filter(modalidad=modalidad, nivel=nivel).exists():
-            self.add_error("niveles", "El nivel no está habilitado para esta modalidad.")
-        if data.get("categoria") == "NO DOCENTE":
-            for name in ("grado_anio", "secciones", "espacios"):
-                data[name] = None
+
+        categoria = str(
+            data.get("categoria") or ""
+        ).strip().upper()
+        modalidad = data.get("modalidad")
+        nivel = data.get("niveles")
+        ceic = data.get("ceic")
+
+        # ----------------------------------------------------
+        # VALIDACIÓN MODALIDAD / NIVEL
+        # ----------------------------------------------------
+
+        if (
+            modalidad
+            and nivel
+            and not ModalidadNivel.objects
+            .filter(
+                modalidad=modalidad,
+                nivel=nivel,
+            )
+            .exists()
+        ):
+
+            self.add_error(
+                "niveles",
+                "El nivel no está habilitado "
+                "para esta modalidad."
+            )
+
+        # ----------------------------------------------------
+        # PERSONAL NO DOCENTE
+        # ----------------------------------------------------
+
+        if categoria == "NO DOCENTE":
+
+            # Estos campos no corresponden.
+            data["grado_anio"] = None
+            data["secciones"] = None
+            data["espacios"] = None
+
+            # Seguridad adicional:
+            # aunque modifiquen el POST manualmente,
+            # solamente aceptamos CEIC con c_niv 1023-1025.
+
+            if ceic and not (
+                1023 <= ceic.c_niv <= 1025
+            ):
+
+                self.add_error(
+                    "ceic",
+                    "Para personal no docente "
+                    "el cargo debe corresponder "
+                    "a un CEIC con c_niv entre "
+                    "1023 y 1025."
+                )
+
         return data
-
-
 class HorarioActividadForm(StyledForm):
     class Meta:
         model = HorarioActividad

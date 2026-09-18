@@ -29,22 +29,9 @@ ROLES_POF_ACCESO_COMPLETO = {
 }
 
 ROLES_POF_SOLO_VISUALIZACION_COMPLETA = {
-    "Director de Modalidad Adultos",
-    "Director de Modalidad Contexto",
-    "Director de Modalidad Especial",
-    "Director de Modalidad Rural",
-    "Director de Nivel",
-    "Director de Nivel Inicial",
-    "Director de Nivel Primario",
-    "Director de Nivel Secundario",
-    "Director de Nivel Superior",
-    "Director de Servicios Complementarios",
     "Director General",
-    "Gestor",
-    "Ministro",
-    "Infraestructura",
     "Subsecretario",
-    "Supervisor",
+    "Gestor",
 }
 
 ROL_POF_REGIONAL = "Regional"
@@ -53,7 +40,6 @@ ROL_POF_DIRECTOR = "Director"
 ROLES_AUTORIZADOS_POF = (
     ROLES_POF_ACCESO_COMPLETO
     | ROLES_POF_SOLO_VISUALIZACION_COMPLETA
-    | {ROL_POF_REGIONAL, ROL_POF_DIRECTOR}
 )
 
 
