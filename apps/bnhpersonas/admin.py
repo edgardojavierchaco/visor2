@@ -1,5 +1,10 @@
 from django.contrib import admin
-from .models import Personas, RegistroActividades, AccesoRegional, EventoAuditoria, ModalidadNivel, ModalidadNivelCeic
+from .models import (
+    Personas, RegistroActividades, AccesoRegional, EventoAuditoria,
+    ModalidadNivel, ModalidadNivelCeic, ModalidadTipo, NivelServicioTipo,
+    TitulacionNombre, TitulacionSuperior, TitulacionFP, EspacioCurricularNombre,
+    TipoPersonal, CondicionActividadNombre,
+)
 
 class SuperuserAdmin(admin.ModelAdmin):
     def has_module_permission(self, request):
@@ -26,8 +31,8 @@ class PersonasAdmin(ReadOnlyAdmin):
 
 @admin.register(RegistroActividades)
 class RegistroAdmin(ReadOnlyAdmin):
-    list_display = ("persona", "cueanexo", "categoria", "eliminado", "validacion")
-    list_filter = ("categoria", "eliminado", "validacion")
+    list_display = ("persona", "cueanexo", "tipo_personal", "eliminado", "validacion")
+    list_filter = ("tipo_personal", "eliminado", "validacion")
     list_select_related = ("persona",)
 
 @admin.register(AccesoRegional)
@@ -55,3 +60,15 @@ class AuditoriaAdmin(ReadOnlyAdmin):
 
 admin.site.register(ModalidadNivel, SuperuserAdmin)
 admin.site.register(ModalidadNivelCeic, SuperuserAdmin)
+
+
+# Catálogos curriculares: sólo lectura desde admin.
+admin.site.register(ModalidadTipo, ReadOnlyAdmin)
+admin.site.register(NivelServicioTipo, ReadOnlyAdmin)
+admin.site.register(TitulacionNombre, ReadOnlyAdmin)
+admin.site.register(TitulacionSuperior, ReadOnlyAdmin)
+admin.site.register(TitulacionFP, ReadOnlyAdmin)
+admin.site.register(EspacioCurricularNombre, ReadOnlyAdmin)
+
+admin.site.register(TipoPersonal, ReadOnlyAdmin)
+admin.site.register(CondicionActividadNombre, ReadOnlyAdmin)

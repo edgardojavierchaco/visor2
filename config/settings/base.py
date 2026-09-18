@@ -164,7 +164,6 @@ DATABASES = {
         'PORT': os.environ.get('POSTGRES_PORT'),
         'OPTIONS': {
             'options': '-c search_path=especial,reunidas_pof,sirtee,bnh,public,supervisores,evaluacion,cenpe,indicadores,operativoschaco,pem,pof,cef,bnh_alumno'
-        }
     },        
     'Evaluacion': {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
