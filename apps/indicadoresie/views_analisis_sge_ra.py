@@ -527,8 +527,31 @@ def _obtener_filas_analisis(cueanexo):
 def _serializar_fila_detalle_listado_sge(row):
     return {
         campo: row.get(campo)
-        for campo in DETALLE_ANALISIS_FIELDS
+        for campo in ANALISIS_FIELDS
     }
+
+
+def _niveles_detalle_listado_supervisor(contexto_sge, cueanexo):
+    cueanexo = _cueanexo(cueanexo)
+    niveles = set()
+    for opcion in contexto_sge.get('cueanexo_opciones') or []:
+        if _cueanexo(opcion.get('cueanexo')) != cueanexo:
+            continue
+        for oferta in opcion.get('ofertas') or []:
+            texto = ' '.join(_texto(oferta).strip().split()).casefold()
+            if not texto.startswith('común -'):
+                continue
+            if (
+                'jardín de infantes' in texto
+                or 'jardín maternal' in texto
+                or 'nivel inicial' in texto
+            ):
+                niveles.add('Comun-Inicial')
+            elif 'primaria' in texto or 'nivel primario' in texto:
+                niveles.add('Comun-Primaria')
+            elif 'secundaria' in texto:
+                niveles.add('Comun-Secundaria')
+    return sorted(niveles)
 
 
 @login_required
@@ -559,7 +582,20 @@ def detalle_listado_sge_ra_json(request):
         AnalisisSgeRa.objects.using('sge_nacion')
         .annotate(cueanexo_limpio=Trim('cueanexo'))
         .filter(cueanexo_limpio=cueanexo, sistema__in=('RA', 'SGE'))
-        .values(*DETALLE_ANALISIS_FIELDS)
+    )
+    if contexto_sge.get('cargo') == 'Supervisor':
+        niveles_permitidos = _niveles_detalle_listado_supervisor(
+            contexto_sge,
+            cueanexo,
+        )
+        queryset = (
+            queryset.filter(nivel__in=niveles_permitidos)
+            if niveles_permitidos
+            else queryset.none()
+        )
+
+    queryset = (
+        queryset.values(*ANALISIS_FIELDS)
         .order_by('sistema', 'nivel', 'grado', 'seccion', 'turno', 'tipo_secc', 'id')
     )
     for row in queryset:
@@ -1532,12 +1568,13 @@ def comparativa_sge_ra_json(request):
 # Actualización de fecha y materializadas exclusiva de Comparativa RA-SGE.
 COMPARATIVA_SGE_RA_REFRESH_DB = 'sge_nacion'
 COMPARATIVA_SGE_RA_REFRESH_JOB_CACHE_PREFIX = 'comparativa_sge_ra_refresh_job'
-COMPARATIVA_SGE_RA_REFRESH_JOB_TIMEOUT = 30 * 60
+COMPARATIVA_SGE_RA_REFRESH_JOB_TIMEOUT = 6 * 60 * 60
 COMPARATIVA_SGE_RA_REFRESH_LOCK_NAME = 'indicadoresie_comparativa_sge_ra_refresh'
 COMPARATIVA_SGE_RA_MATERIALIZADAS = (
     'public.analisis_sge_ra',
     'public.auditoria_sge_ra',
     'public.resumen_sge_ra',
+    'public.trayectoria_alumnos_sge',
 )
 
 
@@ -1545,17 +1582,18 @@ def _comparativa_job_cache_key(job_id):
     return f'{COMPARATIVA_SGE_RA_REFRESH_JOB_CACHE_PREFIX}:{job_id}'
 
 
-def _comparativa_estado_base_job(job_id, started_at=None):
+def _comparativa_estado_base_job(job_id, started_at=None, requested_fecha=None):
     job_started_at = started_at or timezone.now()
     return {
         'status': 'queued',
         'job_id': str(job_id),
         'step': 0,
-        'total': 3,
+        'total': 4,
         'percent': 0,
         'current_view': '',
         'message': 'Actualización de Comparativa RA-SGE en cola.',
         'started_at': job_started_at.isoformat(),
+        'requested_fecha': requested_fecha.isoformat() if requested_fecha else '',
         'started_monotonic': time.monotonic(),
     }
 
@@ -1568,15 +1606,173 @@ def _comparativa_actualizar_estado_job(job_id, **updates):
     return state
 
 
+def _comparativa_parsear_fecha_estado(value):
+    if not value:
+        return None
+    if isinstance(value, datetime.datetime):
+        parsed = value
+    else:
+        try:
+            parsed = datetime.datetime.fromisoformat(str(value))
+        except (TypeError, ValueError):
+            return None
+    if timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed)
+    return parsed
+
+
+def _comparativa_elapsed_seconds(state):
+    if 'elapsed_seconds' in state:
+        return state['elapsed_seconds']
+
+    started_monotonic = state.get('started_monotonic')
+    if isinstance(started_monotonic, (int, float)):
+        return round(max(0, time.monotonic() - started_monotonic), 2)
+
+    started_at = _comparativa_parsear_fecha_estado(state.get('started_at'))
+    if started_at:
+        return round(max(0, (timezone.now() - started_at).total_seconds()), 2)
+    return 0
+
+
+def _comparativa_reconciliar_estado_job(job_id, state):
+    if state.get('status') not in {'queued', 'running'}:
+        return state
+
+    started_at = _comparativa_parsear_fecha_estado(state.get('started_at'))
+    if not started_at:
+        return state
+
+    estado_auditoria = (
+        AuditoriaSgeRaEstado.objects.using(COMPARATIVA_SGE_RA_REFRESH_DB)
+        .filter(id=1)
+        .first()
+    )
+    if not estado_auditoria:
+        return state
+
+    success_at = estado_auditoria.ultimo_refresco_exitoso_en
+    error_at = estado_auditoria.ultimo_error_en
+    success_matches = (
+        success_at is not None
+        and success_at >= started_at
+        and bool(estado_auditoria.valida)
+        and estado_auditoria.estado_base == 'OK'
+        and estado_auditoria.estado_auditoria == 'OK'
+        and (error_at is None or error_at <= success_at)
+    )
+    error_matches = (
+        error_at is not None
+        and error_at >= started_at
+        and (success_at is None or error_at > success_at)
+    )
+
+    if success_matches:
+        requested_fecha = _comparativa_parsear_fecha_estado(
+            state.get('requested_fecha')
+        )
+        if requested_fecha:
+            try:
+                FechaActualizacionComparativaSgeRa.objects.update_or_create(
+                    id=1,
+                    defaults={'fecha': requested_fecha},
+                )
+            except Exception as exc:
+                state.update({
+                    'status': 'error',
+                    'message': (
+                        'El refresh terminó correctamente, pero no se pudo '
+                        'actualizar la fecha visible: '
+                        + _comparativa_mensaje_error_refresh(exc)
+                    ),
+                    'elapsed_seconds': _comparativa_elapsed_seconds(state),
+                })
+                cache.set(
+                    _comparativa_job_cache_key(job_id),
+                    state,
+                    COMPARATIVA_SGE_RA_REFRESH_JOB_TIMEOUT,
+                )
+                return state
+
+        state.update({
+            'status': 'success',
+            'step': 4,
+            'total': 4,
+            'percent': 100,
+            'current_view': '',
+            'message': (
+                'Actualización completada correctamente.'
+                if requested_fecha
+                else 'Refresh completado; la fecha solicitada no estaba disponible para recuperación automática.'
+            ),
+            'elapsed_seconds': _comparativa_elapsed_seconds(state),
+        })
+        cache.set(
+            _comparativa_job_cache_key(job_id),
+            state,
+            COMPARATIVA_SGE_RA_REFRESH_JOB_TIMEOUT,
+        )
+        return state
+
+    if error_matches:
+        state.update({
+            'status': 'error',
+            'message': (
+                estado_auditoria.detalle_estado
+                or 'No se pudo completar el refresh de Comparativa RA-SGE.'
+            ),
+            'elapsed_seconds': _comparativa_elapsed_seconds(state),
+        })
+        cache.set(
+            _comparativa_job_cache_key(job_id),
+            state,
+            COMPARATIVA_SGE_RA_REFRESH_JOB_TIMEOUT,
+        )
+        return state
+
+    # Si el proceso Python se corta antes de que PostgreSQL publique éxito o
+    # error, no dejar el job eternamente en progreso. El PID pertenece a la
+    # conexión exclusiva del thread y debe existir mientras el job siga vivo.
+    backend_pid = state.get('backend_pid')
+    if backend_pid:
+        backend_exists = True
+        try:
+            with connections[COMPARATIVA_SGE_RA_REFRESH_DB].cursor() as cursor:
+                cursor.execute(
+                    'SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE pid = %s);',
+                    [backend_pid],
+                )
+                backend_exists = bool(cursor.fetchone()[0])
+        except Exception:
+            # Un fallo del chequeo auxiliar no debe convertir un refresh válido
+            # en error. Se mantiene el estado y el próximo polling reintentará.
+            backend_exists = True
+
+        if not backend_exists:
+            state.update({
+                'status': 'error',
+                'message': (
+                    'El proceso de actualización se interrumpió antes de '
+                    'completar todas las etapas. Podés volver a intentarlo.'
+                ),
+                'elapsed_seconds': _comparativa_elapsed_seconds(state),
+            })
+            cache.set(
+                _comparativa_job_cache_key(job_id),
+                state,
+                COMPARATIVA_SGE_RA_REFRESH_JOB_TIMEOUT,
+            )
+
+    return state
+
+
 def _comparativa_estado_job_para_respuesta(state):
     response = {
         key: value for key, value in state.items()
-        if key != 'started_monotonic'
+        if key not in {'started_monotonic', 'requested_fecha', 'backend_pid'}
     }
     if 'elapsed_seconds' not in response:
-        response['elapsed_seconds'] = round(
-            time.monotonic() - state['started_monotonic'], 2
-        )
+        response['elapsed_seconds'] = _comparativa_elapsed_seconds(state)
     return response
 
 
@@ -1591,23 +1787,26 @@ def _comparativa_mensaje_error_refresh(exc):
 
 
 def _monitorear_progreso_comparativa_sge_ra(job_id, backend_pid, stop_event):
+    # Trayectoria se refresca antes del procedimiento coordinado. De ese modo,
+    # cuando auditoria_sge_ra_estado publica OK ya finalizaron las cuatro etapas
+    # y la reconciliacion del polling puede tratar ese estado como terminal.
     etapas_por_lock = (
         (
             'auditoria_sge_ra',
-            1,
-            33,
+            2,
+            50,
             'Auditoría RA-SGE',
             'Actualizando auditoría RA-SGE...',
         ),
         (
             'resumen_sge_ra',
-            2,
-            67,
+            3,
+            75,
             'Resumen RA-SGE',
             'Actualizando resumen RA-SGE...',
         ),
     )
-    last_step = 0
+    last_step = 1
 
     close_old_connections()
     try:
@@ -1646,13 +1845,13 @@ def _monitorear_progreso_comparativa_sge_ra(job_id, backend_pid, stop_event):
                         job_id,
                         status='running',
                         step=step,
-                        total=3,
+                        total=4,
                         percent=percent,
                         current_view=label,
                         message=message,
                     )
                     last_step = step
-                    if step == 2:
+                    if step == 3:
                         return
 
                 if stop_event.wait(0.25):
@@ -1720,9 +1919,29 @@ def _ejecutar_refresh_comparativa_sge_ra_job(job_id, nueva_fecha):
             _comparativa_actualizar_estado_job(
                 job_id,
                 status='running',
+                backend_pid=refresh_backend_pid,
                 step=0,
-                total=3,
+                total=4,
                 percent=0,
+                current_view='Trayectoria SGE',
+                message='Actualizando trayectoria de alumnos SGE...',
+            )
+
+            # Trayectoria debe terminar antes del CALL coordinado. Así, el OK
+            # persistente de auditoria_sge_ra_estado sólo puede corresponder a
+            # un job cuya cuarta materializada ya se reconstruyó correctamente.
+            cursor.execute(
+                'REFRESH MATERIALIZED VIEW CONCURRENTLY '
+                'public.trayectoria_alumnos_sge;'
+            )
+            cursor.execute('ANALYZE public.trayectoria_alumnos_sge;')
+
+            _comparativa_actualizar_estado_job(
+                job_id,
+                status='running',
+                step=1,
+                total=4,
+                percent=25,
                 current_view='Análisis RA-SGE',
                 message='Actualizando análisis RA-SGE...',
             )
@@ -1734,7 +1953,9 @@ def _ejecutar_refresh_comparativa_sge_ra_job(job_id, nueva_fecha):
             )
             monitor_thread.start()
             try:
-                # El CALL conserva validaciones, rollback y publicación atómica V3.3.
+                # A/B/F mantienen intacto su refresh coordinado V3.3. Como la
+                # trayectoria ya terminó, su estado persistente OK representa
+                # el éxito del proceso completo y es seguro para reconciliar.
                 cursor.execute('CALL public.refrescar_auditoria_sge_ra();')
             finally:
                 monitor_stop.set()
@@ -1743,9 +1964,9 @@ def _ejecutar_refresh_comparativa_sge_ra_job(job_id, nueva_fecha):
             _comparativa_actualizar_estado_job(
                 job_id,
                 status='running',
-                step=2,
-                total=3,
-                percent=67,
+                step=3,
+                total=4,
+                percent=75,
                 current_view='Finalización',
                 message='Actualizando fecha de Comparativa...',
             )
@@ -1757,7 +1978,8 @@ def _ejecutar_refresh_comparativa_sge_ra_job(job_id, nueva_fecha):
             _comparativa_actualizar_estado_job(
                 job_id,
                 status='success',
-                step=3,
+                step=4,
+                total=4,
                 percent=100,
                 current_view='',
                 message='Actualización completada correctamente.',
@@ -1809,7 +2031,11 @@ def actualizar_fecha_comparativa_sge_ra(request):
         job_started_at = timezone.now()
         cache.set(
             _comparativa_job_cache_key(job_id),
-            _comparativa_estado_base_job(job_id, job_started_at),
+            _comparativa_estado_base_job(
+                job_id,
+                job_started_at,
+                requested_fecha=nueva_fecha,
+            ),
             COMPARATIVA_SGE_RA_REFRESH_JOB_TIMEOUT,
         )
         thread = threading.Thread(
@@ -1845,6 +2071,7 @@ def progreso_actualizar_fecha_comparativa_sge_ra(request, job_id):
     state = cache.get(_comparativa_job_cache_key(job_id))
     if not state:
         return JsonResponse({'status': 'error', 'message': 'Job no encontrado.'}, status=404)
+    state = _comparativa_reconciliar_estado_job(job_id, state)
     return JsonResponse(_comparativa_estado_job_para_respuesta(state))
 
 

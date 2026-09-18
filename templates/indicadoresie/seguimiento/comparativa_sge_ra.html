@@ -367,7 +367,7 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <span class="badge rounded-pill" id="comparativaSgeRaRefreshFloatingStep" style="background: #dbeafe; color: #1e40af; font-weight: 800; padding: 0.45rem 0.7rem;">0 / 3</span>
+            <span class="badge rounded-pill" id="comparativaSgeRaRefreshFloatingStep" style="background: #dbeafe; color: #1e40af; font-weight: 800; padding: 0.45rem 0.7rem;">0 / 4</span>
             <button id="comparativaSgeRaRefreshReloadBtn" type="button" class="btn btn-sm btn-primary d-none" style="font-weight: 800; box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);">Recargar ahora</button>
             <button id="comparativaSgeRaRefreshClearBtn" type="button" class="btn btn-sm btn-outline-secondary d-none" style="font-weight: 700;">Cerrar</button>
         </div>
@@ -4143,7 +4143,7 @@ $(function () {
 
     function actualizarFloating(data) {
         lastProgressData = Object.assign({}, lastProgressData || {}, data || {});
-        var total = data.total || 3;
+        var total = data.total || 4;
         var step = data.step || 0;
         var percent = Math.max(0, Math.min(100, parseInt(data.percent || 0, 10)));
         mostrarFloating();
@@ -4234,7 +4234,7 @@ $(function () {
             floatingBar.style.background = 'linear-gradient(90deg, #2563eb 0%, #06b6d4 55%, #22c55e 100%)';
             floatingBar.classList.remove('progress-bar-striped', 'progress-bar-animated', 'bg-danger');
         }
-        if (floatingStep) floatingStep.textContent = (data.step || 3) + ' / ' + (data.total || 3);
+        if (floatingStep) floatingStep.textContent = (data.step || 4) + ' / ' + (data.total || 4);
         if (floatingCurrent) floatingCurrent.textContent = '';
         if (floatingElapsed) floatingElapsed.textContent = formatearTiempoTranscurrido(data.elapsed_seconds);
         if (reloadBtn) reloadBtn.classList.remove('d-none');
@@ -4318,8 +4318,8 @@ $(function () {
     function datosTerminalesRecuperados(result) {
         var data = Object.assign({}, lastProgressData || {}, result);
         if (result.status === 'success') {
-            data.step = 3;
-            data.total = 3;
+            data.step = 4;
+            data.total = 4;
             data.percent = 100;
             data.current_view = '';
         }
@@ -4481,7 +4481,7 @@ $(function () {
                         });
                         if (fechaModalBS) fechaModalBS.hide();
                         resetBotonGuardar();
-                        actualizarFloating({ status: 'running', step: 0, total: 3, percent: 0, current_view: 'Análisis RA-SGE', message: 'Actualizando análisis RA-SGE...', started_at: data.started_at || '' });
+                        actualizarFloating({ status: 'running', step: 0, total: 4, percent: 0, current_view: 'Trayectoria SGE', message: 'Actualizando trayectoria de alumnos SGE...', started_at: data.started_at || '' });
                         consultarProgreso(data.job_id);
                         return;
                     }
@@ -4511,7 +4511,7 @@ $(function () {
             job_id: jobIdActivo,
             started_at: startedAtActivo || ''
         });
-        actualizarFloating({ status: 'running', step: 0, total: 3, percent: 0, current_view: '', message: 'Recuperando progreso del refresh...' });
+        actualizarFloating({ status: 'running', step: 0, total: 4, percent: 0, current_view: '', message: 'Recuperando progreso del refresh...' });
         consultarProgreso(jobIdActivo);
     }
 });

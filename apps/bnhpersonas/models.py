@@ -821,6 +821,7 @@ class RegistroActividades(AuditoriaModel):
 
     def clean(self):
         errors = {}
+        categoria_normalizada = str(self.categoria or "").strip().upper()
         if not re.fullmatch(r"[0-9]{9}", str(self.cueanexo or "")):
             errors["cueanexo"] = "Ingrese los nueve dígitos del CUEANEXO."
         for start, end in (("f_desde", "f_hasta"), ("f_desde_funciones", "f_hasta_funciones")):
@@ -838,17 +839,75 @@ class RegistroActividades(AuditoriaModel):
             errors["carga_horaria"] = "La carga horaria debe ser positiva."
         if self.estado == "INACTIVO" and not self.f_hasta:
             errors["f_hasta"] = "Indique la fecha de finalización."
-        if self.categoria == "NO DOCENTE" and any((self.grado_anio_id, self.secciones_id, self.espacios_id)):
-            errors["categoria"] = "Para personal no docente deje vacíos grado, sección y espacio curricular."
+        if (
+            categoria_normalizada == "NO DOCENTE"
+            and self.ceic_id
+            and not (
+                1023
+                <= self.ceic.c_niv
+                <= 1025
+            )
+        ):
+            errors["ceic"] = (
+                "Para personal no docente el Cargo / CEIC "
+                "debe corresponder a c_niv 1023, 1024 o 1025."
+            )
         if self.modalidad_id and self.niveles_id:
-            from .domain.catalogs import available_levels, activity_catalogs
-            if not available_levels(self.modalidad_id).filter(pk=self.niveles_id).exists():
-                errors["niveles"] = "El nivel no pertenece a la modalidad seleccionada."
-            _, grados, secciones = activity_catalogs(self.modalidad_id, self.niveles_id, self.grado_anio_id)
-            if self.grado_anio_id and not grados.filter(pk=self.grado_anio_id).exists():
-                errors["grado_anio"] = "El grado no pertenece a esta modalidad y nivel, o está inactivo."
-            if self.secciones_id and not secciones.filter(pk=self.secciones_id).exists():
-                errors["secciones"] = "Seleccione un grado válido y una sección de la misma modalidad y nivel."
+
+            from .domain.catalogs import (
+                available_levels,
+                activity_catalogs,
+            )
+
+            if not (
+                available_levels(
+                    self.modalidad_id
+                )
+                .filter(
+                    pk=self.niveles_id
+                )
+                .exists()
+            ):
+
+                errors["niveles"] = (
+                    "El nivel no pertenece "
+                    "a la modalidad seleccionada."
+                )
+
+            _, grados, secciones = (
+                activity_catalogs(
+                    self.modalidad_id,
+                    self.niveles_id,
+                    self.grado_anio_id,
+                    categoria=categoria_normalizada,
+                )
+            )
+
+            if (
+                categoria_normalizada != "NO DOCENTE"
+                and self.grado_anio_id
+                and not grados
+                .filter(pk=self.grado_anio_id)
+                .exists()
+            ):
+
+                errors["grado_anio"] = (
+                    "El grado no pertenece a esta "
+                    "modalidad y nivel, o está inactivo."
+                )
+
+            if (
+                categoria_normalizada != "NO DOCENTE"
+                and self.secciones_id
+                and not secciones
+                .filter(pk=self.secciones_id)
+                .exists()
+            ):
+
+                errors["secciones"] = (
+                    "Seleccione un grado válido y una "
+                    "sección de la misma modalidad y nivel."
+                )
         if errors:
             raise ValidationError(errors)
 
@@ -934,3 +993,59 @@ class EventoAuditoria(models.Model):
 
     class Meta:
         ordering = ["-fecha", "-pk"]
+
+
+class PofTipo(models.Model):
+    c_pof=models.SmallIntegerField(null=False, blank=False)
+    descrip_pof=models.CharField(max_length=255)
+    
+    class Meta:
+        verbose_name='Tipo Pof'
+        verbose_plural_name='Tipos Pof'
+        db_table='tipo_pof'
+
+class NivelServicioTipo(models.Model):
+    c_nivel=models.SmallIntegerField(primary_key=True, null=False, blank=False)
+    descripcion=models.CharField(max_length=255)
+    c_modalidad1=models.SmallIntegerField(null=False, blank=False)
+    
+    class Meta:
+        verbose_name='Nivel Servicio Tipo'
+        verbose_plural_name='Niveles Servicio Tipo'
+        db_table='nivel_servicio_tipo'
+
+class ModalidadTipo(models.Model):
+    c_modalidad1=models.SmallIntegerField(null=False, blank=False)
+    descripcion=models.CharField(max_length=255)
+    orden=models.SmallIntegerField(null=False, blank=False)
+    
+    
+    class Meta:
+        verbose_name='Modalidad Tipo'
+        verbose_plural_name='Modalidades Tipo'
+        db_table='modalidad_tipo'
+
+
+class TitulacionNombre(models.Model):
+    id_nombre_titulacion=models.IntegerField(null=False, blank=False)
+    id_titulacion=models.IntegerField(null=False, blank=False)
+    descripcion_adicional=models.CharField(max_length=255)
+    nombre=models.CharField(max_length=255)
+    c_nivel_servicio=models.SmallIntegerField(null=False, blank=False)
+    c_modalidad1=models.SmallIntegerField(null=False, blank=False)
+    class Meta:
+        verbose_name='Titulacion Nombre'
+        verbose_plural_name='Titulaciones Nombre'
+        db_table='titulacion_nombre'
+    
+
+class EspacioCurricularNombre(models.Model):
+    id_espacio_curricular=models.BigIntegerField(null=False, blank=False)
+    id_titulacion=models.IntegerField(null=False, blank=False)
+    id_nombre_espacio_curricular=models.IntegerField(null=False, blank=False)
+    nombre=models.CharField(max_length=255)
+    class Meta:
+        verbose_name='Espacio Curricular Nombre'
+        verbose_plural_name='Espacios Curriculares Nombres'
+        db_table='espacio_curricular_nombre'
+

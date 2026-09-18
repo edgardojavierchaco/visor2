@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views.generic import ListView, TemplateView
 from django.db.models import Count, F, Value, Q
-from django.db.models.functions import Concat, Coalesce
+from django.db.models.functions import Concat, Coalesce, Trim
 from django.shortcuts import render
 from django.utils import timezone
 
@@ -21,6 +21,48 @@ from .views_dash import (
     obtener_cargo_usuario,
     resolver_contexto_sge,
 )
+
+TIPOS_OFERTA_LISTADO_SGE = {
+    "Inicial - Común",
+    "Primario - Común",
+    "Secundario - Común",
+    "Primario - Adultos",
+    "Secundario - Adultos",
+    "Inicial - Especial",
+    "Primario - Especial",
+}
+
+
+def _tipo_oferta_listado_desde_oferta_supervisor(oferta):
+    texto = " ".join(str(oferta or "").strip().split()).casefold()
+    if not texto:
+        return ""
+
+    if texto.startswith("común -"):
+        modalidad = "Común"
+    elif texto.startswith("adultos -"):
+        modalidad = "Adultos"
+    elif texto.startswith("especial -"):
+        modalidad = "Especial"
+    else:
+        return ""
+
+    if (
+        "jardín de infantes" in texto
+        or "jardín maternal" in texto
+        or "nivel inicial" in texto
+    ):
+        nivel = "Inicial"
+    elif "primaria" in texto or "nivel primario" in texto:
+        nivel = "Primario"
+    elif "secundaria" in texto:
+        nivel = "Secundario"
+    else:
+        return ""
+
+    tipo_oferta = f"{nivel} - {modalidad}"
+    return tipo_oferta if tipo_oferta in TIPOS_OFERTA_LISTADO_SGE else ""
+
 
 # =====================================================================
 # VISTAS DE SEGUIMIENTO
@@ -85,12 +127,42 @@ class InformeSGEListView(ListView):
 
     def get_queryset(self):
         contexto_sge = resolver_contexto_sge(self.request)
-        return filtrar_queryset_sge(
+        queryset = filtrar_queryset_sge(
             InformeSGE.objects.all(),
             contexto_sge,
             campo_region="regional",
             campo_cueanexo="cueanexo",
         )
+
+        if contexto_sge["cargo"] != "Supervisor":
+            return queryset
+
+        filtro_ofertas = Q()
+        tiene_ofertas_permitidas = False
+        for opcion in contexto_sge.get("cueanexo_opciones") or []:
+            cueanexo = str(opcion.get("cueanexo") or "").strip()
+            tipos_oferta = sorted({
+                tipo_oferta
+                for tipo_oferta in (
+                    _tipo_oferta_listado_desde_oferta_supervisor(oferta)
+                    for oferta in opcion.get("ofertas", [])
+                )
+                if tipo_oferta
+            })
+            if not cueanexo or not tipos_oferta:
+                continue
+            tiene_ofertas_permitidas = True
+            filtro_ofertas |= Q(
+                cueanexo=cueanexo,
+                tipo_oferta_normalizada__in=tipos_oferta,
+            )
+
+        if not tiene_ofertas_permitidas:
+            return queryset.none()
+
+        return queryset.annotate(
+            tipo_oferta_normalizada=Trim("tipo_oferta")
+        ).filter(filtro_ofertas)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
