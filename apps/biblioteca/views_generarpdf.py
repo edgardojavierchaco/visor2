@@ -11,6 +11,7 @@ from collections import defaultdict
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, F, Value, Func
+from django.views.decorators.http import require_POST
 
 from reportlab.platypus import (
     BaseDocTemplate, PageTemplate, Frame,
@@ -44,6 +45,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
 from django.utils import timezone
 from qrcode.constants import ERROR_CORRECT_L
+
+from .mixins import PERIODO_ACTIVO_SESSION_KEY, resolver_periodo_activo
 
 
 # =========================================================
@@ -151,31 +154,19 @@ def footer(canvas, doc):
 # VIEW
 # =========================================================
 @login_required
+@require_POST
 def generar_pdf_material_bibliografico(request):
-    
-    # =========================================
-    # 🔥 CUEANEXO ACTIVO (CLAVE)
-    # =========================================
-    cueanexo_activo = request.session.get("cueanexo_activo")
+    periodo = resolver_periodo_activo(request)
+    if periodo is None:
+        return HttpResponse(
+            "El período solicitado no está disponible para finalizar.",
+            status=409,
+        )
 
-    if not cueanexo_activo:
-        return HttpResponse("No hay cueanexo activo en sesión", status=400)
-
-    cueanexos = str(cueanexo_activo)
-    cueanexo_activo = str(cueanexo_activo)
-    
-    # =========================================
-    # 🔥 ÚLTIMO INFORME SOLO DE ESE CUE
-    # =========================================
-    ultimo = GenerarInforme.objects.filter(
-        cueanexo=cueanexo_activo
-    ).order_by('-id').first()
-
-    if not ultimo:
-        return HttpResponse("No hay informes para el cue activo", status=400)
-
-    mes = ultimo.meses
-    anio = ultimo.annos    
+    cueanexo_activo = str(periodo.cueanexo)
+    cueanexos = cueanexo_activo
+    mes = periodo.meses
+    anio = periodo.annos
 
     # =========================================================
     # DB
@@ -186,18 +177,19 @@ def generar_pdf_material_bibliografico(request):
         password=os.getenv('POSTGRES_PASSWORD'),
         database=os.getenv('DB_NAME1')
     )
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT categoria, jornada, oferta, nom_est,
-               calle, numero, apellido_resp, nombre_resp,
-               resploc_telefono, resploc_email,
-               cuof_loc, region_loc, localidad
-        FROM public.padron_ofertas
-        WHERE cueanexo = %s
-    """, (cueanexo_activo,))
-    
-    row = cursor.fetchone()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT categoria, jornada, oferta, nom_est,
+                       calle, numero, apellido_resp, nombre_resp,
+                       resploc_telefono, resploc_email,
+                       cuof_loc, region_loc, localidad
+                FROM public.padron_ofertas
+                WHERE cueanexo = %s
+            """, (cueanexo_activo,))
+            row = cursor.fetchone()
+    finally:
+        conn.close()
     
     if not row:
         return HttpResponse("No se encontraron datos del padron", status=400)
@@ -221,11 +213,10 @@ def generar_pdf_material_bibliografico(request):
     # =========================================================
     # PDF
     # =========================================================
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    pdf_buffer = BytesIO()
 
     doc = BaseDocTemplate(
-        response,
+        pdf_buffer,
         pagesize=landscape(legal),
         leftMargin=30,
         rightMargin=30,
@@ -576,16 +567,26 @@ def generar_pdf_material_bibliografico(request):
 
     doc.build(story, canvasmaker=canvasmaker)
     
-    GenerarInforme.objects.filter(
-        cueanexo=cueanexo_activo,
-        meses=mes,
-        annos=anio,
+    actualizados = GenerarInforme.objects.filter(
+        pk=periodo.pk,
         estado="GENERADO"
     ).update(
         estado="ENVIADO",
         f_envio=timezone.now()
     )
 
+    if actualizados != 1:
+        return HttpResponse(
+            "El período ya no está disponible para finalizar.",
+            status=409,
+        )
+
+    if request.session.get(PERIODO_ACTIVO_SESSION_KEY) == periodo.pk:
+        request.session.pop(PERIODO_ACTIVO_SESSION_KEY, None)
+        request.session.pop("cueanexo_activo", None)
+
+    response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     return response
 

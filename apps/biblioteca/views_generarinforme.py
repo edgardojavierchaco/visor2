@@ -1,4 +1,3 @@
-import re
 import traceback
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -6,32 +5,37 @@ from django.views.generic.edit import FormView
 from django.views import View
 from django.urls import reverse
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import F, Func, Value
 
 from .models import GenerarInforme
 from .forms import GenerarInformeForm
-from apps.consultasge.models_padron import CapaUnicaOfertas
+from .mixins import get_cueanexos_usuario
 
 
-# =========================
-# UTIL
-# =========================
-def get_cueanexos_usuario(user):
-    usuario_limpio = re.sub(r'\D', '', user.username)
-
-    return list(
-        CapaUnicaOfertas.objects.annotate(
-            cuit_limpio=Func(
-                F('resploc_cuitcuil'),
-                Value('-'),
-                Value(''),
-                function='REPLACE'
-            )
-        ).filter(
-            cuit_limpio=usuario_limpio,
-            oferta='Común - Servicios complementarios ',
-            acronimo__startswith='BI'
+def _estado_cueanexos_usuario(user):
+    cueanexos_autorizados = list(dict.fromkeys(
+        str(cueanexo) for cueanexo in get_cueanexos_usuario(user)
+    ))
+    cueanexos_ocupados = {
+        str(cueanexo)
+        for cueanexo in GenerarInforme.objects.filter(
+            cueanexo__in=cueanexos_autorizados,
+            estado="GENERADO",
         ).values_list('cueanexo', flat=True)
+    }
+    cueanexos_con_generado = [
+        cueanexo
+        for cueanexo in cueanexos_autorizados
+        if cueanexo in cueanexos_ocupados
+    ]
+    cueanexos_disponibles = [
+        cueanexo
+        for cueanexo in cueanexos_autorizados
+        if cueanexo not in cueanexos_ocupados
+    ]
+    return (
+        cueanexos_autorizados,
+        cueanexos_con_generado,
+        cueanexos_disponibles,
     )
 
 
@@ -44,13 +48,42 @@ class GenerarInformeView(LoginRequiredMixin, FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['cueanexos_usuario'] = get_cueanexos_usuario(self.request.user)
+        context['title'] = 'Biblioteca | Nuevo período'
+        (
+            cueanexos_usuario,
+            cueanexos_con_generado,
+            cueanexos_disponibles,
+        ) = _estado_cueanexos_usuario(self.request.user)
+        context.update({
+            'cueanexos_usuario': cueanexos_usuario,
+            'cueanexos_con_generado': cueanexos_con_generado,
+            'cueanexos_disponibles': cueanexos_disponibles,
+            'cueanexo_unico': (
+                cueanexos_usuario[0] if len(cueanexos_usuario) == 1 else None
+            ),
+            'sin_cueanexos_disponibles': not cueanexos_disponibles,
+        })
         return context
 
     def form_valid(self, form):
         try:
-            cueanexos_usuario = [str(c) for c in get_cueanexos_usuario(self.request.user)]
-            cueanexo = str(self.request.POST.get("cueanexo"))
+            (
+                cueanexos_usuario,
+                cueanexos_con_generado,
+                _cueanexos_disponibles,
+            ) = _estado_cueanexos_usuario(self.request.user)
+
+            if not cueanexos_usuario:
+                return JsonResponse({
+                    "success": False,
+                    "message": "No tenés CUE-Anexos autorizados para crear un período.",
+                })
+
+            if len(cueanexos_usuario) == 1:
+                cueanexo = cueanexos_usuario[0]
+            else:
+                cueanexo_post = self.request.POST.get("cueanexo")
+                cueanexo = str(cueanexo_post).strip() if cueanexo_post else ""
 
             meses = form.cleaned_data['meses']
             annos = form.cleaned_data['annos']
@@ -63,21 +96,6 @@ class GenerarInformeView(LoginRequiredMixin, FormView):
 
             if cueanexo not in cueanexos_usuario:
                 return JsonResponse({"success": False, "message": "Cueanexo inválido"})
-            
-            # =========================
-            # 🔒 REGLA DE NO PENDIENTE
-            # =========================
-            if len(cueanexos_usuario) > 1:
-                tiene_pendiente = GenerarInforme.objects.filter(
-                    cueanexo__in=cueanexos_usuario,
-                    estado="GENERADO"
-                ).exists()
-
-                if tiene_pendiente:
-                    return JsonResponse({
-                        "success": False,
-                        "message": "Ya tenés un informe generado pendiente de envío. Debés enviarlo antes de crear otro."
-                    })
 
             # =========================
             # VALIDAR DUPLICADO
@@ -92,6 +110,15 @@ class GenerarInformeView(LoginRequiredMixin, FormView):
                 return JsonResponse({"success": False, "message": "Ya existe informe para ese período"})
 
             # =========================
+            # VALIDAR PENDIENTE DEL CUE
+            # =========================
+            if cueanexo in cueanexos_con_generado:
+                return JsonResponse({
+                    "success": False,
+                    "message": "Ese CUE-Anexo ya tiene un período pendiente de envío. Debés enviarlo antes de crear otro.",
+                })
+
+            # =========================
             # GUARDAR
             # =========================
             obj = form.save(commit=False)
@@ -100,11 +127,15 @@ class GenerarInformeView(LoginRequiredMixin, FormView):
             obj.save()
             
             self.request.session["cueanexo_activo"] = cueanexo
+            self.request.session["biblioteca_periodo_activo_id"] = obj.pk
 
             return JsonResponse({
                 "success": True,
                 "message": "Informe generado correctamente",
-                "redirect_url": reverse("bibliotecas:materialbibliografico_create")
+                "redirect_url": (
+                    f'{reverse("bibliotecas:materialbibliografico_create")}'
+                    f'?periodo={obj.pk}'
+                ),
             })
 
         except Exception as e:
@@ -125,7 +156,9 @@ class GenerarInformeView(LoginRequiredMixin, FormView):
 class VerificarInformeAjax(View):
 
     def get(self, request):
-        cueanexos_usuario = [str(c) for c in get_cueanexos_usuario(request.user)]
+        cueanexos_usuario = list(dict.fromkeys(
+            str(cueanexo) for cueanexo in get_cueanexos_usuario(request.user)
+        ))
 
         cueanexo = str(request.GET.get('cueanexo'))
         meses = request.GET.get('meses')
