@@ -1,0 +1,14 @@
+[console_scripts]
+automap = pyrocko.apps.automap:main
+cake = pyrocko.apps.cake:main
+colosseo = pyrocko.apps.colosseo:main
+fomosto = pyrocko.apps.fomosto:main
+hamster = pyrocko.apps.hamster:main
+jackseis = pyrocko.apps.jackseis:main
+pyrocko = pyrocko.apps.pyrocko:main
+squirrel = pyrocko.apps.squirrel:main
+
+[gui_scripts]
+drum = pyrocko.apps.drum:main
+snuffler = pyrocko.apps.snuffler:main
+sparrow = pyrocko.apps.sparrow:main
