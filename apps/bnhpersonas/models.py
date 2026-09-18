@@ -1001,7 +1001,7 @@ class PofTipo(models.Model):
     
     class Meta:
         verbose_name='Tipo Pof'
-        verbose_plural_name='Tipos Pof'
+        verbose_name_plural='Tipos Pof'
         db_table='tipo_pof'
 
 class NivelServicioTipo(models.Model):
@@ -1011,7 +1011,7 @@ class NivelServicioTipo(models.Model):
     
     class Meta:
         verbose_name='Nivel Servicio Tipo'
-        verbose_plural_name='Niveles Servicio Tipo'
+        verbose_name_plural='Niveles Servicio Tipo'
         db_table='nivel_servicio_tipo'
 
 class ModalidadTipo(models.Model):
@@ -1022,7 +1022,7 @@ class ModalidadTipo(models.Model):
     
     class Meta:
         verbose_name='Modalidad Tipo'
-        verbose_plural_name='Modalidades Tipo'
+        verbose_name_plural='Modalidades Tipo'
         db_table='modalidad_tipo'
 
 
@@ -1035,7 +1035,7 @@ class TitulacionNombre(models.Model):
     c_modalidad1=models.SmallIntegerField(null=False, blank=False)
     class Meta:
         verbose_name='Titulacion Nombre'
-        verbose_plural_name='Titulaciones Nombre'
+        verbose_name_plural='Titulaciones Nombre'
         db_table='titulacion_nombre'
     
 
@@ -1046,6 +1046,6 @@ class EspacioCurricularNombre(models.Model):
     nombre=models.CharField(max_length=255)
     class Meta:
         verbose_name='Espacio Curricular Nombre'
-        verbose_plural_name='Espacios Curriculares Nombres'
+        verbose_name_plural='Espacios Curriculares Nombres'
         db_table='espacio_curricular_nombre'
 
