@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from . import views, views_ayudas
 from .views_list import PersonasListView, PersonaDetailView, exportar_personal
 app_name = "bnhpersonas"
@@ -30,4 +30,8 @@ urlpatterns = [
     path("filtrar-localidades/", views.filtrar_localidades, name="filtrar_localidades"),
     path("buscar-codigos-area/", views.buscar_codigos_area, name="buscar_codigos_area"),
     path("ayuda-renpe/", views_ayudas.obtener_ayuda_renpe, name="obtener_ayuda_renpe"),
+    path(
+    "monitoreo/",
+    include("apps.bnhpersonas.monitoring.urls"),
+),
 ]

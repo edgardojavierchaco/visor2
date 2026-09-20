@@ -25,6 +25,7 @@ from ..models import (
     NivelServicio,
     NivelServicioTipo,
     RegistroActividades,
+    RevisionCatalogos,
     Secciones,
     TitulacionFP,
     TitulacionNombre,
@@ -33,6 +34,7 @@ from ..models import (
     CondicionActividadNombre,
 )
 from .crud import audit, snapshot
+from .concurrency import advisory_xact_lock, configure_transaction
 
 
 LEGACY_SPECS = (
@@ -208,6 +210,14 @@ def import_catalogs(directory, *, apply=False, actor=None):
             "Para aplicar la importación se requiere un administrador activo."
         )
 
+    revision = None
+    if apply:
+        configure_transaction()
+        advisory_xact_lock("bnh:catalogos", "global")
+        revision, _ = RevisionCatalogos.objects.select_for_update().get_or_create(
+            pk=1, defaults={"version": 1, "actualizado_por": actor}
+        )
+
     data = load_catalogs(directory)
     stats = {}
     conflicts = []
@@ -298,5 +308,22 @@ def import_catalogs(directory, *, apply=False, actor=None):
         for sql in connection.ops.sequence_reset_sql(no_style(), reset_models):
             cursor.execute(sql)
 
-    result.update(aplicado=True, relaciones_creadas=created_pairs)
+    if updates or created_pairs:
+        before_revision = snapshot(revision)
+        revision.version += 1
+        revision.actualizado_por = actor
+        revision.save(update_fields=["version", "actualizado_por", "actualizado_en"])
+        audit(
+            actor,
+            revision,
+            "ACTUALIZAR_VERSION_CATALOGOS",
+            before_revision,
+            reason="Aplicación de catálogos BNH.",
+        )
+
+    result.update(
+        aplicado=True,
+        relaciones_creadas=created_pairs,
+        version_catalogos=revision.version,
+    )
     return result

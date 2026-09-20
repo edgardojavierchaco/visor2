@@ -1,8 +1,8 @@
-/* BNH Personal — 20260918.2 */
+/* BNH Personal — 20260919.1 */
 "use strict";
 
 (() => {
-    const VERSION = "20260918.2";
+    const VERSION = "20260919.1";
     const jq = () => window.jQuery;
     const hasSelect2 = () => Boolean(jq() && jq().fn && jq().fn.select2);
 
@@ -957,7 +957,13 @@
                 }
                 form.dataset.submitting = "1";
                 form.querySelectorAll('button[type="submit"],button:not([type])').forEach(button => {
+                    if (!button.dataset.originalText) {
+                        button.dataset.originalText = button.textContent;
+                    }
                     button.disabled = true;
+                    if (button.type === "submit" || !button.getAttribute("type")) {
+                        button.textContent = "Guardando…";
+                    }
                 });
             });
         });
@@ -974,6 +980,10 @@
             delete form.dataset.submitting;
             form.querySelectorAll('button[type="submit"],button:not([type])').forEach(button => {
                 button.disabled = false;
+                if (button.dataset.originalText) {
+                    button.textContent = button.dataset.originalText;
+                    delete button.dataset.originalText;
+                }
             });
         });
     });

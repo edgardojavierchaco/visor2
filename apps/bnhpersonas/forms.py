@@ -25,6 +25,7 @@ from .models import (
     NomencladorCeic,
     Personas,
     RegistroActividades,
+    RevisionCatalogos,
     Secciones,
     TipoPersonal,
     CondicionActividadNombre,
@@ -129,6 +130,15 @@ class ActividadDirectorForm(StyledForm):
 
     cueanexo = forms.ChoiceField(label="Institución / CUEANEXO")
     operation_id = forms.UUIDField(widget=forms.HiddenInput, required=False)
+    catalog_version = forms.IntegerField(widget=forms.HiddenInput, required=False)
+    confirmar_posible_duplicado = forms.BooleanField(
+        required=False,
+        label=(
+            "Confirmo que revisé el cargo existente y que esta designación debe registrarse "
+            "como un cargo distinto."
+        ),
+        widget=forms.HiddenInput(),
+    )
 
     titulacion = forms.TypedChoiceField(
         label="Titulación",
@@ -194,6 +204,15 @@ class ActividadDirectorForm(StyledForm):
 
         self.fields["operation_id"].required = not bool(self.instance.pk)
         self.initial["operation_id"] = self.instance.uuid
+        self.initial["catalog_version"] = RevisionCatalogos.current_version()
+
+        # La confirmación de posible duplicado se muestra sólo cuando el backend
+        # encuentra una coincidencia con la clave funcional. No se usa UNIQUE
+        # porque dos designaciones legítimas pueden compartir esos valores.
+        self.fields["confirmar_posible_duplicado"].help_text = (
+            "Clave revisada: persona + CUEANEXO + tipo de personal + CEIC + "
+            "situación de revista + tipo de designación + fecha desde."
+        )
 
         # ----------------------------------------------------
         # CUEANEXOS autorizados
@@ -322,6 +341,13 @@ class ActividadDirectorForm(StyledForm):
         self.fields["grado_anio"].help_text = "Se filtra por modalidad y nivel curricular."
         self.fields["secciones"].help_text = "Se filtra por modalidad y nivel curricular."
 
+    def expose_duplicate_warning(self, message=None):
+        """Hace visible la confirmación sólo después de una detección real."""
+        field = self.fields["confirmar_posible_duplicado"]
+        field.widget = forms.CheckboxInput(attrs={"class": "form-check-input"})
+        if message:
+            field.help_text = message + " " + field.help_text
+
     def clean_cueanexo(self):
         value = self.cleaned_data["cueanexo"]
         if not user_has_cueanexo_access(self.user, value):
@@ -330,6 +356,16 @@ class ActividadDirectorForm(StyledForm):
 
     def clean(self):
         data = super().clean()
+
+        submitted_catalog_version = data.get("catalog_version")
+        if submitted_catalog_version is not None:
+            current_catalog_version = RevisionCatalogos.current_version()
+            if submitted_catalog_version != current_catalog_version:
+                raise forms.ValidationError(
+                    "Los catálogos BNH fueron actualizados mientras el formulario estaba abierto. "
+                    "Recargue la página y vuelva a seleccionar las opciones antes de guardar."
+                )
+
         tipo_personal = data.get("tipo_personal")
         tipo_personal_codigo = (
             tipo_personal.c_tpersonal
