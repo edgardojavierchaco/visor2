@@ -409,39 +409,59 @@ class Grado_anio(models.Model):
 
 
 class Secciones(models.Model):
-    c_seccion=models.BigAutoField(primary_key=True)
-    nombre_seccion=models.CharField(max_length=100, null=True, blank=True, db_index=True)
-    estado=models.BooleanField(default=True)
-    c_niv_seccion=models.IntegerField()
-    t_niv_seccion=models.CharField(max_length=100,null=True, blank=True)
-    
-    c_modalidad1 = models.IntegerField(null=True, blank=True)
+    c_seccion = models.BigAutoField(primary_key=True)
 
-    class Meta:
-        indexes = [models.Index(fields=["c_modalidad1", "c_niv_seccion", "estado"], name="bnh_seccion_parent1_idx")]
-        verbose_name="Seccion"
-        verbose_name_plural="Secciones"
-        db_table="Secciones"
-    
-    def __str__(self):
-        return self.nombre_seccion
+    nombre_seccion = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
+    estado = models.BooleanField(
+        default=True,
+    )
+
+    c_niv_seccion = models.IntegerField()
+
+    t_niv_seccion = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+    )
+
+    c_modalidad1 = models.IntegerField(
+        null=True,
+        blank=True,
+    )
 
     class Meta:
         verbose_name = "Seccion"
         verbose_name_plural = "Secciones"
         db_table = "Secciones"
 
+        indexes = [
+            models.Index(
+                fields=[
+                    "c_modalidad1",
+                    "c_niv_seccion",
+                    "estado",
+                ],
+                name="bnh_seccion_parent1_idx",
+            ),
+        ]
+
     def __str__(self):
         return self.nombre_seccion or ""
-
-
+    
+    
 ##########################
 # PERSONAS
 ##########################
 class Personas(AuditoriaModel):
     id = models.BigAutoField(primary_key=True)
 
-    cuil = models.CharField(max_length=11, null=True, blank=True, db_index=True)
+    cuil = models.CharField(max_length=11, null=True, blank=True)
     version = models.PositiveIntegerField(default=1)
     archivada = models.BooleanField(default=False, db_index=True)
     dni = models.CharField(max_length=8, null=True, blank=True, db_index=True)
@@ -482,15 +502,26 @@ class Personas(AuditoriaModel):
         choices=[('ACTIVO', 'Activo'), ('PASIVO', 'Pasivo')],
         default='ACTIVO'
     )
-    archivada = models.BooleanField(default=False)
 
     class Meta:
         db_table = "personas"
-        constraints = [models.UniqueConstraint(fields=["cuil"], condition=models.Q(cuil__isnull=False) & ~models.Q(cuil=""), name="bnh_persona_cuil_unico")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cuil"],
+                condition=models.Q(cuil__isnull=False) & ~models.Q(cuil=""),
+                name="bnh_persona_cuil_unico",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(estado__in=["ACTIVO", "PASIVO"]),
+                name="bnh_persona_estado_valido",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(version__gte=1),
+                name="bnh_persona_version_positiva",
+            ),
+        ]
         indexes = [
-            models.Index(fields=['dni']), 
-            models.Index(fields=['cuil']),
-            models.Index(fields=['telefono_normalizado']),
+            models.Index(fields=["archivada", "apellido", "nombre"], name="bnh_persona_lista_idx"),
         ]
 
     # =========================
@@ -871,12 +902,35 @@ class RegistroActividades(AuditoriaModel):
         db_table = "registro_actividades"
         indexes = [
             models.Index(fields=["cueanexo", "eliminado", "estado"], name="bnh_cue_estado_idx"),
+            models.Index(fields=["persona", "cueanexo", "eliminado"], name="bnh_persona_cue_del_idx"),
+            models.Index(fields=["persona", "eliminado"], name="bnh_persona_del_idx"),
             models.Index(fields=["modalidad_curricular", "nivel_curricular"], name="bnh_curricular_idx"),
+            # Índice de apoyo para la detección de posible duplicado.
+            # Deliberadamente NO es UNIQUE: pueden existir designaciones legítimas iguales.
+            models.Index(
+                fields=[
+                    "persona", "cueanexo", "tipo_personal", "ceic",
+                    "sit_revista", "t_designacion", "f_desde",
+                ],
+                name="bnh_posible_dup_idx",
+            ),
         ]
         constraints = [
             models.CheckConstraint(condition=models.Q(carga_horaria__gt=0), name="bnh_carga_positiva"),
             models.CheckConstraint(condition=models.Q(f_hasta__isnull=True) | models.Q(f_hasta__gte=models.F("f_desde")), name="bnh_cargo_fechas"),
             models.CheckConstraint(condition=models.Q(f_hasta_funciones__isnull=True) | models.Q(f_hasta_funciones__gte=models.F("f_desde_funciones")), name="bnh_funcion_fechas"),
+            models.CheckConstraint(
+                condition=models.Q(estado__in=["ACTIVO", "INACTIVO"]),
+                name="bnh_actividad_estado_valido",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(validacion__in=["BORRADOR", "VALIDADO", "OBSERVADO"]),
+                name="bnh_validacion_valida",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(version__gte=1),
+                name="bnh_actividad_version_positiva",
+            ),
         ]
 
     def clean(self):
@@ -1056,7 +1110,12 @@ class ActividadSede(models.Model):
     cueanexo = models.CharField(max_length=9, db_index=True)
 
     class Meta:
-        unique_together = ("actividad", "cueanexo")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["actividad", "cueanexo"],
+                name="bnh_actividad_sede_unica",
+            )
+        ]
     
     def __str__(self):
         return f"{self.actividad_id} - {self.cueanexo}"
@@ -1093,9 +1152,17 @@ class HorarioActividad(models.Model):
     hora_hasta = models.TimeField()
 
     class Meta:
-        db_table="horarios_actividad"
-        constraints = [models.CheckConstraint(condition=models.Q(hora_hasta__gt=models.F("hora_desde")), name="bnh_horario_orden")]
-        unique_together = ("actividad_sede", "dia", "hora_desde", "hora_hasta")
+        db_table = "horarios_actividad"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(hora_hasta__gt=models.F("hora_desde")),
+                name="bnh_horario_orden",
+            ),
+            models.UniqueConstraint(
+                fields=["actividad_sede", "dia", "hora_desde", "hora_hasta"],
+                name="bnh_horario_unico",
+            ),
+        ]
 
 
     def __str__(self):
@@ -1115,6 +1182,7 @@ class AccesoRegional(AuditoriaModel):
 
 class EventoAuditoria(models.Model):
     fecha = models.DateTimeField(auto_now_add=True, db_index=True)
+    operacion_id = models.UUIDField(null=True, blank=True, db_index=True)
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     entidad = models.CharField(max_length=40)
     objeto_id = models.PositiveBigIntegerField()
@@ -1126,6 +1194,10 @@ class EventoAuditoria(models.Model):
 
     class Meta:
         ordering = ["-fecha", "-pk"]
+        indexes = [
+            models.Index(fields=["entidad", "objeto_id", "-fecha"], name="bnh_audit_obj_idx"),
+            models.Index(fields=["cueanexo", "-fecha"], name="bnh_audit_cue_idx"),
+        ]
 
 
 class PofTipo(models.Model):
@@ -1265,3 +1337,35 @@ class TipoPersonal(models.Model):
     @property
     def es_no_docente(self):
         return self.c_tpersonal == 2
+
+class RevisionCatalogos(models.Model):
+    """Versión global de catálogos usados por formularios operativos BNH."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    version = models.PositiveBigIntegerField(default=1)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    actualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        db_table = "bnh_revision_catalogos"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(version__gte=1),
+                name="bnh_catalog_version_positiva",
+            )
+        ]
+
+    @classmethod
+    def current_version(cls):
+        # Lectura pura: nunca se escribe durante un GET/formulario.
+        obj = cls.objects.filter(pk=1).only("version").first()
+        return obj.version if obj else 1
+
+    def __str__(self):
+        return f"Catálogos BNH v{self.version}"

@@ -3,7 +3,7 @@ from .models import (
     Personas, RegistroActividades, AccesoRegional, EventoAuditoria,
     ModalidadNivel, ModalidadNivelCeic, ModalidadTipo, NivelServicioTipo,
     TitulacionNombre, TitulacionSuperior, TitulacionFP, EspacioCurricularNombre,
-    TipoPersonal, CondicionActividadNombre,
+    TipoPersonal, CondicionActividadNombre, RevisionCatalogos,
 )
 
 class SuperuserAdmin(admin.ModelAdmin):
@@ -53,7 +53,7 @@ class AccesoRegionalAdmin(SuperuserAdmin):
 
 @admin.register(EventoAuditoria)
 class AuditoriaAdmin(ReadOnlyAdmin):
-    list_display = ("fecha", "usuario", "entidad", "objeto_id", "cueanexo", "accion")
+    list_display = ("fecha", "operacion_id", "usuario", "entidad", "objeto_id", "cueanexo", "accion")
     list_filter = ("entidad", "accion")
     search_fields = ("cueanexo", "motivo")
     list_select_related = ("usuario",)
@@ -72,3 +72,9 @@ admin.site.register(EspacioCurricularNombre, ReadOnlyAdmin)
 
 admin.site.register(TipoPersonal, ReadOnlyAdmin)
 admin.site.register(CondicionActividadNombre, ReadOnlyAdmin)
+
+
+@admin.register(RevisionCatalogos)
+class RevisionCatalogosAdmin(ReadOnlyAdmin):
+    list_display = ("version", "actualizado_en", "actualizado_por")
+    list_select_related = ("actualizado_por",)
