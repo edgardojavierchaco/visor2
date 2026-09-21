@@ -95,6 +95,9 @@ CONSTRAINT_MESSAGES = {
     "bnh_validacion_valida": "El estado de validación no es válido.",
     "bnh_persona_version_positiva": "La versión de la persona es inválida.",
     "bnh_actividad_version_positiva": "La versión del cargo es inválida.",
+    "bnh_puesto_consecutivo_positivo": "El consecutivo del ID Puesto es inválido.",
+    "bnh_id_puesto_unico": "El ID Puesto ya existe. Recargue y vuelva a guardar.",
+    "bnh_puesto_base_consecutivo_unico": "La combinación base/consecutivo del puesto ya existe.",
 }
 
 
@@ -274,6 +277,7 @@ def _save_activity_impl(user, form, persona, *, operation_id=None):
         raise PermissionDenied
 
     before = {}
+    current = None
     if obj.pk:
         current = get_object_or_404(
             RegistroActividades.objects.select_for_update().order_by("pk"),
@@ -324,6 +328,11 @@ def _save_activity_impl(user, form, persona, *, operation_id=None):
         obj.usuario_creacion = user
     obj.usuario_modificacion = user
     obj.normalize()
+
+    # El ID Puesto se genera automáticamente. No forma parte del formulario.
+    from .id_puesto import asignar_id_puesto
+    asignar_id_puesto(obj, anterior=current)
+
     obj.full_clean()
 
     duplicates = possible_activity_duplicates(obj, exclude_pk=obj.pk or None)

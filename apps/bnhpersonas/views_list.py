@@ -66,9 +66,9 @@ def exportar_personal(request):
     qs = filtered_activities(request).select_related("persona", "tipo_personal", "ceic", "modalidad_curricular", "nivel_curricular", "espacio_curricular", "grado_anio", "secciones").order_by("cueanexo", "persona__apellido", "pk")
     writer = csv.writer(Echo(), delimiter=";")
     def rows():
-        yield "\ufeff" + writer.writerow(["CUEANEXO", "Apellido", "Nombre", "CUIL", "DNI", "Tipo de personal", "Cargo", "Modalidad curricular", "Nivel curricular", "Titulación", "Espacio curricular", "Grado/Año", "Sección", "Estado", "Validación"])
+        yield "\ufeff" + writer.writerow(["ID Puesto", "CUEANEXO", "Apellido", "Nombre", "CUIL", "DNI", "Tipo de personal", "Cargo", "Modalidad curricular", "Nivel curricular", "Titulación", "Espacio curricular", "Grado/Año", "Sección", "Estado", "Validación"])
         for obj in qs.iterator(chunk_size=1000):
-            yield writer.writerow([csv_cell(x) for x in (obj.cueanexo, obj.persona.apellido, obj.persona.nombre, obj.persona.cuil, obj.persona.dni, obj.tipo_personal, obj.ceic, obj.modalidad_curricular, obj.nivel_curricular, obj.titulacion_descripcion, obj.espacio_curricular, obj.grado_anio, obj.secciones, obj.estado, obj.validacion)])
+            yield writer.writerow([csv_cell(x) for x in (obj.id_puesto, obj.cueanexo, obj.persona.apellido, obj.persona.nombre, obj.persona.cuil, obj.persona.dni, obj.tipo_personal, obj.ceic, obj.modalidad_curricular, obj.nivel_curricular, obj.titulacion_descripcion, obj.espacio_curricular, obj.grado_anio, obj.secciones, obj.estado, obj.validacion)])
     response = StreamingHttpResponse(rows(), content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = 'attachment; filename="personal_educativo.csv"'
     response["Cache-Control"] = "private, no-store"
