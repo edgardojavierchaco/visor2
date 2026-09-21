@@ -31,8 +31,9 @@ class PersonasAdmin(ReadOnlyAdmin):
 
 @admin.register(RegistroActividades)
 class RegistroAdmin(ReadOnlyAdmin):
-    list_display = ("persona", "cueanexo", "tipo_personal", "eliminado", "validacion")
+    list_display = ("id_puesto", "persona", "cueanexo", "tipo_personal", "eliminado", "validacion")
     list_filter = ("tipo_personal", "eliminado", "validacion")
+    search_fields = ("id_puesto", "cueanexo", "persona__apellido", "persona__nombre", "persona__dni", "persona__cuil")
     list_select_related = ("persona",)
 
 @admin.register(AccesoRegional)
