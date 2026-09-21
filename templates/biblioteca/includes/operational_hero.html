@@ -1,0 +1,20 @@
+<section class="biblioteca-hero" aria-labelledby="{{ hero_id }}">
+    <div class="biblioteca-hero__identidad">
+        <span class="biblioteca-hero__icono" aria-hidden="true">
+            <span class="biblioteca-symbol">{{ hero_icon }}</span>
+        </span>
+        <div>
+            <h1 id="{{ hero_id }}">{{ hero_title }}</h1>
+            <p class="biblioteca-hero__subtitulo">{{ hero_subtitle }}</p>
+        </div>
+    </div>
+
+    {% if hero_period %}
+        <div class="biblioteca-hero__contexto">
+            <span class="biblioteca-symbol" aria-hidden="true">calendar_month</span>
+            <span class="biblioteca-hero__contexto-label">Período pendiente</span>
+            <strong>{{ hero_period.meses|capfirst }} {{ hero_period.annos }}</strong>
+            <span class="biblioteca-hero__contexto-cue">CUE-Anexo {{ hero_period.cueanexo }}</span>
+        </div>
+    {% endif %}
+</section>

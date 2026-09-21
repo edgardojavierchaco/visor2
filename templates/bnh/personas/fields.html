@@ -1,7 +1,25 @@
 {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
 {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
-<div class="row g-3">{% for field in form.visible_fields %}
-<div class="col-md-6" data-field="{{ field.name }}"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-label="obligatorio">*</span>{% endif %}</label>{{ field }}
-{% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-{% for error in field.errors %}<div class="text-danger" role="alert">{{ error }}</div>{% endfor %}</div>
-{% endfor %}</div>
+<div class="row g-3">
+{% for field in form.visible_fields %}
+
+{% if field.name == 'modalidad' %}
+<div class="col-12 mt-4"><hr><h3 class="h5 mb-0">Cargo / CEIC</h3><p class="text-muted mb-0">Datos concernientes al Cargo / CEIC.</p></div>
+{% endif %}
+
+{% if field.name == 'modalidad_curricular' %}
+<div class="col-12 mt-4" data-curricular-section><hr><h3 class="h5 mb-0">Ubicación curricular</h3><p class="text-muted mb-0">Circuito independiente: Modalidad → Nivel → Titulación → Espacio Curricular → Grado/año y Sección.</p></div>
+{% endif %}
+
+{% if field.name == 'f_desde' %}
+<div class="col-12 mt-4"><hr><h3 class="h5 mb-0">Vigencia y funciones</h3></div>
+{% endif %}
+
+<div class="col-md-6" data-field="{{ field.name }}">
+  <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-label="obligatorio">*</span>{% endif %}</label>
+  {{ field }}
+  {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+  {% for error in field.errors %}<div class="text-danger" role="alert">{{ error }}</div>{% endfor %}
+</div>
+{% endfor %}
+</div>

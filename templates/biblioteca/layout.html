@@ -1,1 +1,78 @@
-{% extends 'vtc/body_biblio.html' %}
+{% extends 'biblioteca/home.html' %}
+{% load biblioteca_nav %}
+
+{% block body %}
+<body class="hold-transition sidebar-mini layout-fixed biblioteca-shell">
+<div class="wrapper">
+    {% include 'vtc/header_archivos.html' %}
+    {% include 'vtc/sidebar_archivos.html' %}
+
+    <div class="content-wrapper">
+        {% block content_header %}
+            <div class="content-header">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-sm-6">
+                            <h1 class="m-0 text-dark">
+                                Bienvenido/a <small>{{ request.user.nombres }} {{ request.user.apellido }}</small>
+                            </h1>
+                        </div>
+                        <div class="col-sm-6">
+                            <ol class="breadcrumb float-sm-right">
+                                <li class="breadcrumb-item">
+                                    <a href="{% url 'bibliotecas:dashboard' %}">Inicio</a>
+                                </li>
+                                {% if entity %}
+                                    <li class="breadcrumb-item">
+                                        {% if list_url %}<a href="{{ list_url }}">{{ entity }}</a>{% else %}{{ entity }}{% endif %}
+                                    </li>
+                                {% endif %}
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endblock %}
+
+        <div class="content">
+            <div class="container-fluid">
+                {% biblioteca_establecimiento_identidad as biblioteca_establecimiento %}
+                {% include 'biblioteca/includes/module_nav.html' %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+
+    {% include 'biblioteca/footer.html' %}
+</div>
+
+{% include 'biblioteca/includes/guia_modal.html' %}
+
+{% block javascript %}{% endblock %}
+
+{% if messages %}
+<script>
+    var html = '<p>';
+    {% for message in messages %}
+        html += '{{ message|escapejs }}<br>';
+    {% endfor %}
+    html += '</p>';
+    var messageType = 'info';
+    {% for message in messages %}
+        var tags = '{{ message.tags|escapejs }}'.split(' ');
+        if (tags.indexOf('error') !== -1) {
+            messageType = 'error';
+        } else if (messageType !== 'error' && tags.indexOf('success') !== -1) {
+            messageType = 'success';
+        }
+    {% endfor %}
+    Swal.fire({
+        title: messageType === 'error' ? 'Error' : (messageType === 'success' ? 'Listo' : 'Aviso'),
+        html: html,
+        icon: messageType
+    });
+</script>
+{% endif %}
+</body>
+{% endblock %}

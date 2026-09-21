@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-import unicodedata
 from collections import OrderedDict
 
 from django.contrib.auth import REDIRECT_FIELD_NAME, get_user_model
 from django.contrib.auth.base_user import AbstractBaseUser
 from django.db import models
-from django.db.models import Q
 from django.http import HttpRequest
 from django.utils.http import base36_to_int, int_to_base36
 
 from allauth.account import app_settings
 from allauth.account.adapter import get_adapter
-from allauth.account.internal import flows
+from allauth.account.internal import flows, userkit
 from allauth.account.internal.emailkit import valid_email_or_none
 from allauth.account.internal.userkit import default_user_display  # noqa
 from allauth.account.internal.userkit import user_display  # noqa
@@ -22,17 +20,6 @@ from allauth.account.internal.userkit import user_username  # noqa
 from allauth.account.models import Login
 from allauth.core.internal import httpkit
 from allauth.utils import get_request_param
-
-
-def _unicode_ci_compare(s1: str, s2: str) -> bool:
-    """
-    Perform case-insensitive comparison of two identifiers, using the
-    recommended algorithm from Unicode Technical Report 36, section
-    2.11.2(B)(2).
-    """
-    norm_s1 = unicodedata.normalize("NFKC", s1).casefold()
-    norm_s2 = unicodedata.normalize("NFKC", s2).casefold()
-    return norm_s1 == norm_s2
 
 
 def get_next_redirect_url(
@@ -242,66 +229,20 @@ def setup_user_email(request: HttpRequest, user: AbstractBaseUser, addresses):
 
 
 def filter_users_by_username(*username) -> models.QuerySet[AbstractBaseUser]:
-    if app_settings.PRESERVE_USERNAME_CASING:
-        qlist = [
-            Q(**{f"{app_settings.USER_MODEL_USERNAME_FIELD}__iexact": u})
-            for u in username
-        ]
-        q = qlist[0]
-        for q2 in qlist[1:]:
-            q = q | q2
-        ret = get_user_model()._default_manager.filter(q)
-    else:
-        ret = get_user_model()._default_manager.filter(
-            **{
-                f"{app_settings.USER_MODEL_USERNAME_FIELD}__in": [
-                    u.lower() for u in username
-                ]
-            }
-        )
-    return ret
+    """Return username candidates according to the database collation."""
+    # TODO: We need to deprecate this method.
+    return userkit.filter_users_by_username(*username)
 
 
 def filter_users_by_email(
     email: str, is_active: bool | None = None, prefer_verified: bool = False
 ) -> list:
-    """Return list of users by email address
-
-    Typically one, at most just a few in length.  First we look through
-    EmailAddress table, than customisable User model table. Add results
-    together avoiding SQL joins and deduplicate.
-
-    `prefer_verified`: When looking up users by email, there can be cases where
-    users with verified email addresses are preferable above users who did not
-    verify their email address. The password reset is such a use case -- if
-    there is a user with a verified email than that user should be returned, not
-    one of the other users.
-    """
-    from .models import EmailAddress
-
-    User = get_user_model()
-    email = email.lower()
-    mails = list(EmailAddress.objects.filter(email=email).select_related("user"))
-    is_verified = False
-    if prefer_verified:
-        verified_mails = list(filter(lambda e: e.verified, mails))
-        if verified_mails:
-            mails = verified_mails
-            is_verified = True
-    users = []
-    for e in mails:
-        if _unicode_ci_compare(e.email, email):
-            users.append(e.user)
-    if app_settings.USER_MODEL_EMAIL_FIELD and not is_verified:
-        q_dict = {app_settings.USER_MODEL_EMAIL_FIELD: email}
-        user_qs = User.objects.filter(**q_dict)
-        for user in user_qs.iterator(2000):
-            user_email = getattr(user, app_settings.USER_MODEL_EMAIL_FIELD)
-            if _unicode_ci_compare(user_email, email):
-                users.append(user)
-    if is_active is not None:
-        users = [u for u in set(users) if u.is_active == is_active]
-    return list(set(users))
+    # TODO: We need to deprecate this method.
+    return userkit.filter_users_by_email(
+        email,
+        is_active=is_active,
+        prefer_verified=prefer_verified,
+    )
 
 
 def passthrough_next_redirect_url(

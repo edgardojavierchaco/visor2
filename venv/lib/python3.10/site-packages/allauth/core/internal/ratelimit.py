@@ -1,21 +1,16 @@
 """
-from __future__ import annotations
-
-Rate limiting in this implementation relies on a cache and uses non-atomic
-operations, making it vulnerable to race conditions. As a result, users may
-occasionally bypass the intended rate limit due to concurrent access. However,
-such race conditions are rare in practice. For example, if the limit is set to
-10 requests per minute and a large number of parallel processes attempt to test
-that limit, you may occasionally observe slight overruns—such as 11 or 12
-requests slipping through. Nevertheless, exceeding the limit by a large margin
-is highly unlikely due to the low probability of many processes entering the
-critical non-atomic code section simultaneously.
+See the "Deployment Requirements" over at ``docs/common/rate_limits.rst``
+for certain trade-offs made in this implementation.
 """
+
+from __future__ import annotations
 
 import hashlib
 import ipaddress
 import time
 from collections import namedtuple
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from http import HTTPStatus
 
@@ -30,6 +25,33 @@ from allauth.core.exceptions import RateLimited
 
 Rate = namedtuple("Rate", "amount duration per")
 
+CACHE_LOCK_TIMEOUT = 10
+CACHE_LOCK_WAIT_TIMEOUT = 1
+CACHE_LOCK_RETRY_INTERVAL = 0.01
+CACHE_LOCK_MAX_RETRY_INTERVAL = 0.1
+
+
+@contextmanager
+def cache_lock(cache_key: str) -> Iterator[bool]:
+    lock_key = f"{cache_key}:lock"
+    deadline = time.monotonic() + CACHE_LOCK_WAIT_TIMEOUT
+    retry_interval = CACHE_LOCK_RETRY_INTERVAL
+    while not cache.add(lock_key, True, timeout=CACHE_LOCK_TIMEOUT):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            yield False
+            return
+        time.sleep(min(retry_interval, remaining))
+        retry_interval = min(retry_interval * 2, CACHE_LOCK_MAX_RETRY_INTERVAL)
+    try:
+        yield True
+    finally:
+        # Note that there is no guarantee that the following statement actually
+        # deletes the lock that was acquired by this process. Given that the
+        # critical section performs very few actions, and, given a sufficiently
+        # large `CACHE_LOCK_TIMEOUT`, that should normally not happen.
+        cache.delete(lock_key)
+
 
 @dataclass
 class SingleRateLimitUsage:
@@ -38,9 +60,15 @@ class SingleRateLimitUsage:
     timestamp: float
 
     def rollback(self) -> None:
-        history = cache.get(self.cache_key, [])
-        history = [ts for ts in history if ts != self.timestamp]
-        cache.set(self.cache_key, history, self.cache_duration)
+        with cache_lock(self.cache_key) as locked:
+            if locked:
+                history = cache.get(self.cache_key, [])
+                history = [ts for ts in history if ts != self.timestamp]
+                cache.set(self.cache_key, history, self.cache_duration)
+            else:
+                # Unable to rollback. That is nothing to worry about, skipping
+                # only makes the limit more restrictive.
+                pass
 
 
 @dataclass
@@ -167,20 +195,25 @@ def _consume_single_rate(
     raise_exception: bool = False,
 ) -> SingleRateLimitUsage | None:
     cache_key = get_cache_key(request, action=action, rate=rate, key=key, user=user)
-    history = cache.get(cache_key, [])
-    now = time.time()
-    allowed, history = apply_rate(history, now, rate, dry_run=dry_run)
-    if allowed:
-        usage = SingleRateLimitUsage(
-            cache_key=cache_key, timestamp=now, cache_duration=rate.duration
-        )
-        if not dry_run:
-            cache.set(cache_key, history, rate.duration)
-    else:
-        usage = None
-        if raise_exception:
-            raise RateLimited
-    return usage
+    with cache_lock(cache_key) as locked:
+        if not locked:
+            if raise_exception:
+                raise RateLimited
+            return None
+        history = cache.get(cache_key, [])
+        now = time.time()
+        allowed, history = apply_rate(history, now, rate, dry_run=dry_run)
+        if allowed:
+            usage = SingleRateLimitUsage(
+                cache_key=cache_key, timestamp=now, cache_duration=rate.duration
+            )
+            if not dry_run:
+                cache.set(cache_key, history, rate.duration)
+        else:
+            usage = None
+            if raise_exception:
+                raise RateLimited
+        return usage
 
 
 def consume(
@@ -248,4 +281,6 @@ def clear(
     rates = parse_rates(config.get(action))
     for rate in rates:
         cache_key = get_cache_key(request, action=action, rate=rate, key=key, user=user)
-        cache.delete(cache_key)
+        with cache_lock(cache_key) as locked:
+            if locked:
+                cache.delete(cache_key)

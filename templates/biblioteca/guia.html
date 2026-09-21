@@ -1,0 +1,136 @@
+{% extends 'biblioteca/layout.html' %}
+{% load static %}
+
+{% block head %}
+<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260910-1">
+<link rel="stylesheet" href="{% static 'biblioteca/css/guia.css' %}?v=20260910-1">
+{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+{% block content %}
+<main class="biblioteca-screen biblioteca-operativa biblioteca-guia" aria-labelledby="biblioteca-guia-titulo">
+    {% include 'biblioteca/includes/operational_hero.html' with hero_id='biblioteca-guia-titulo' hero_icon='help' hero_title='GUÍA DE USO' hero_subtitle='Cómo cargar, revisar y enviar el relevamiento de Biblioteca' only %}
+
+    <nav class="biblioteca-guia__indice" aria-label="Contenido de la guía">
+        <strong>En esta guía</strong>
+        <a href="#flujo">Flujo de trabajo</a>
+        <a href="#periodos">Períodos</a>
+        <a href="#secciones">Las 11 secciones</a>
+        <a href="#revision">Revisión y envío</a>
+        <a href="#ejemplos">Ejemplos</a>
+    </nav>
+
+    <section id="flujo" class="biblioteca-bloque biblioteca-guia__seccion" aria-labelledby="guia-flujo-titulo">
+        <div class="biblioteca-bloque__encabezado">
+            <div>
+                <p class="biblioteca-operativa__rotulo">RECORRIDO PRINCIPAL</p>
+                <h2 id="guia-flujo-titulo">Del período al envío</h2>
+            </div>
+        </div>
+        <ol class="biblioteca-guia__pasos">
+            <li>
+                <span class="biblioteca-guia__paso-numero">1</span>
+                <div><strong>Inicio</strong><p>Muestra los períodos pendientes y permite continuar con uno. Si hay más de uno disponible, elegís cuál usar.</p></div>
+            </li>
+            <li>
+                <span class="biblioteca-guia__paso-numero">2</span>
+                <div><strong>Períodos</strong><p>Reúne los pendientes, el historial de enviados y la acción para iniciar un período nuevo cuando corresponde.</p></div>
+            </li>
+            <li>
+                <span class="biblioteca-guia__paso-numero">3</span>
+                <div><strong>Carga</strong><p>Da acceso a las 11 secciones del relevamiento para registrar o corregir información.</p></div>
+            </li>
+            <li>
+                <span class="biblioteca-guia__paso-numero">4</span>
+                <div><strong>Informe</strong><p>Permite revisar lo cargado por sección antes de realizar el envío.</p></div>
+            </li>
+            <li>
+                <span class="biblioteca-guia__paso-numero">5</span>
+                <div><strong>Finalizar y generar PDF</strong><p>Genera el documento y marca ese período como Enviado.</p></div>
+            </li>
+        </ol>
+    </section>
+
+    <section id="periodos" class="biblioteca-bloque biblioteca-guia__seccion" aria-labelledby="guia-periodos-titulo">
+        <div class="biblioteca-bloque__encabezado">
+            <div>
+                <p class="biblioteca-operativa__rotulo">CUE-ANEXO + MES/AÑO</p>
+                <h2 id="guia-periodos-titulo">Cómo funcionan los períodos</h2>
+            </div>
+        </div>
+        <div class="biblioteca-guia__contenido biblioteca-guia__dos-columnas">
+            <div>
+                <h3>Un pendiente por cada CUE-Anexo</h3>
+                <p>Cada CUE-Anexo autorizado puede tener un solo período pendiente de envío. Mientras esté pendiente, no se puede iniciar otro para ese mismo CUE-Anexo.</p>
+                <p>Si tenés más de un CUE-Anexo autorizado, cada uno puede mantener su propio período pendiente. Cuando hay varios disponibles, Biblioteca te pide elegir cuál querés continuar.</p>
+            </div>
+            <div>
+                <h3>Historial y nuevos períodos</h3>
+                <p>Períodos muestra también los relevamientos enviados. Al enviar un período, deja de ocupar el lugar pendiente y ya no queda disponible para edición.</p>
+                <p>Si otro CUE-Anexo está libre, podés iniciar un período para ese CUE aunque exista un pendiente en otro establecimiento.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="secciones" class="biblioteca-bloque biblioteca-guia__seccion" aria-labelledby="guia-secciones-titulo">
+        <div class="biblioteca-bloque__encabezado">
+            <div>
+                <p class="biblioteca-operativa__rotulo">CARGA DEL RELEVAMIENTO</p>
+                <h2 id="guia-secciones-titulo">Las 11 secciones</h2>
+            </div>
+        </div>
+        <div class="biblioteca-guia__contenido">
+            <p>Cada sección se administra de manera independiente: podés agregar, editar o eliminar sus registros. Carga e Informe muestran solamente <strong>Con registros</strong> o <strong>Sin registros</strong>; esos estados no indican completitud.</p>
+            <ol class="biblioteca-guia__secciones-lista">
+                <li><span>01</span>Material bibliográfico</li>
+                <li><span>02</span>Referencia</li>
+                <li><span>03</span>Referencia virtual</li>
+                <li><span>04</span>Préstamos</li>
+                <li><span>05</span>Informe pedagógico</li>
+                <li><span>06</span>Asistencia</li>
+                <li><span>07</span>Instituciones</li>
+                <li><span>08</span>Procesos técnicos</li>
+                <li><span>09</span>Aguapey</li>
+                <li><span>10</span>Destino de fondos</li>
+                <li><span>11</span>Personal bibliotecario</li>
+            </ol>
+        </div>
+    </section>
+
+    <section id="revision" class="biblioteca-bloque biblioteca-guia__seccion" aria-labelledby="guia-revision-titulo">
+        <div class="biblioteca-bloque__encabezado">
+            <div>
+                <p class="biblioteca-operativa__rotulo">INFORME</p>
+                <h2 id="guia-revision-titulo">Revisar antes de enviar</h2>
+            </div>
+        </div>
+        <div class="biblioteca-guia__contenido">
+            <p>Informe presenta las mismas 11 secciones. Los detalles se abren solo cuando los necesitás y desde cada bloque podés volver a la sección correspondiente para corregir datos.</p>
+            <p>Verificá siempre que el CUE-Anexo, el mes y el año correspondan al período que estás revisando.</p>
+            <div class="biblioteca-guia__finalizacion" role="note">
+                <span class="biblioteca-symbol" aria-hidden="true">picture_as_pdf</span>
+                <div>
+                    <h3>“Finalizar y generar PDF” es una acción de envío</h3>
+                    <p>Genera el PDF, marca ese período como Enviado y lo deja fuera de edición. No es una descarga pasiva. Si tenés otro período pendiente para otro CUE-Anexo, ese otro período permanece intacto.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="ejemplos" class="biblioteca-bloque biblioteca-guia__seccion" aria-labelledby="guia-ejemplos-titulo">
+        <div class="biblioteca-bloque__encabezado">
+            <div>
+                <p class="biblioteca-operativa__rotulo">SITUACIONES FRECUENTES</p>
+                <h2 id="guia-ejemplos-titulo">Ejemplos simples</h2>
+            </div>
+        </div>
+        <div class="biblioteca-guia__ejemplos">
+            <article><span class="biblioteca-symbol" aria-hidden="true">looks_one</span><div><h3>Tenés un CUE-Anexo</h3><p>Si hay un período pendiente, Biblioteca permite continuarlo. Para iniciar otro del mismo CUE, primero debe enviarse el actual.</p></div></article>
+            <article><span class="biblioteca-symbol" aria-hidden="true">account_tree</span><div><h3>Tenés dos CUE-Anexos</h3><p>Puede haber un pendiente válido en cada uno. Elegís cuál continuar y trabajás únicamente sobre ese período.</p></div></article>
+            <article><span class="biblioteca-symbol" aria-hidden="true">folder_open</span><div><h3>Todavía no hay registros</h3><p>Las secciones aparecen como Sin registros. Podés entrar a cada una y comenzar la carga de forma independiente.</p></div></article>
+            <article><span class="biblioteca-symbol" aria-hidden="true">task_alt</span><div><h3>Después de enviar</h3><p>El período pasa al historial, deja de estar disponible para edición y el CUE-Anexo puede iniciar un nuevo período.</p></div></article>
+        </div>
+    </section>
+</main>
+{% endblock %}

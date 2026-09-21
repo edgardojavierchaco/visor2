@@ -158,7 +158,7 @@ WHITESPACES_AS_BYTES = b"".join(WHITESPACES)
 WHITESPACES_AS_REGEXP = b"[" + WHITESPACES_AS_BYTES + b"]"
 
 
-def read_until_whitespace(stream: StreamType, max_bytes: Optional[int] = None) -> bytes:
+def read_until_whitespace(stream: StreamType, max_bytes: Optional[int] = None, strict: bool = False) -> bytes:
     """
     Read non-whitespace characters and return them.
 
@@ -166,7 +166,10 @@ def read_until_whitespace(stream: StreamType, max_bytes: Optional[int] = None) -
 
     Args:
         stream: The data stream from which was read.
-        max_bytes: The maximum number of bytes returned; by default unlimited.
+        max_bytes: The maximum number of bytes which are considered valid. One more byte
+            will always be read from the stream.
+        strict: Whether to raise an exception if the token exceeds max_bytes.
+            If False, a warning is logged and only the first max_bytes are returned.
 
     Returns:
         The data which was read.
@@ -175,11 +178,16 @@ def read_until_whitespace(stream: StreamType, max_bytes: Optional[int] = None) -
     txt = bytearray()
     while True:
         tok = stream.read(1)
-        if tok.isspace() or not tok:
+        if tok.isspace() or tok in WHITESPACES or not tok:
+            break
+        if max_bytes is not None and len(txt) >= max_bytes:
+            if strict:
+                raise LimitReachedError(f"Token exceeds maximum length of {max_bytes} bytes.")
+            logger_warning(
+                "Token exceeds maximum length of %(max_bytes)d bytes.", source=__name__, max_bytes=max_bytes
+            )
             break
         txt += tok
-        if len(txt) == max_bytes:
-            break
     return bytes(txt)
 
 
@@ -237,6 +245,8 @@ def check_if_whitespace_only(value: bytes) -> bool:
 NEUTRAL_CHARACTER_RANGES = (
     ("\x00", "\x2F"),      # ASCII control codes, space, and early punctuation (!"#$%)
     ("\x3A", "\x40"),      # ASCII operators and punctuation between digits & A (:;<=>?@)
+    ("\u0660", "\u066D"),  # Arabic-Indic digits and Arabic numeric separators
+    ("\u06F0", "\u06F9"),  # Extended Arabic-Indic (Persian) digits
     ("\u2000", "\u206F"),  # General punctuation
     ("\u20A0", "\u21FF"),  # Currency symbols, diacritical marks, letter-like symbols, number forms, arrows
 )

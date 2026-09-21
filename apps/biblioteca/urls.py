@@ -80,10 +80,19 @@ from .views_generarpdf import generar_pdf_material_bibliografico
 from .views_instituciones import ObtenerEscuelaView
 from .views_generarinforme import GenerarInformeView, VerificarInformeAjax
 from .views_planillasanexas import PlanillasAnexasView, PlanillasAnexasListView, PlanillasAnexasUpdateView, PlanillasAnexasDeleteView
-from .views_dashboard import DashboardView, DashboardDirView
+from .views_dashboard import (
+    CargaView,
+    DashboardDirView,
+    DashboardView,
+    GuiaUsoView,
+    InformeDetalleView,
+    InformeView,
+    PeriodoHistoricoDetalleView,
+    PeriodoHistoricoResumenView,
+    PeriodoPendienteDeleteView,
+    PeriodosView,
+)
 from .views_reporteinformes import generar_informe_list, generar_informe
-from .views_cuemesanio import generar_pdf_cuemesanio, modal_generar_pdf_cuemesanio
-from .views_cuemesanio_uno import generar_pdf_cuemesanio_uno, modal_generar_pdf_cuemesanio_uno
 from .views_registrofondos import RegistroDestinoFondosCreateView, RegistroDestinoFondosUpdateView, RegistroDestinoFondosDeleteView, RegistroDestinoFondosListView
 from .views import (
     servicio_prestamo_view, 
@@ -114,8 +123,6 @@ from .views_bibliotecarios import (
     BibliotecariosCueUpdateView,
     BibliotecariosCueDeleteView
 )
-
-from .views_continuidad import ContinuarCargaView
 
 app_name = 'bibliotecas'
 
@@ -194,17 +201,37 @@ urlpatterns = [
     path('generar_pdf/', generar_pdf_material_bibliografico, name='generar_pdf'),
     path('obtener_escuela/', ObtenerEscuelaView.as_view(), name='obtener_escuela'),
     path('generar_info/', GenerarInformeView.as_view(), name='generar_info'),
+    path('guia/', GuiaUsoView.as_view(), name='guia'),
     path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('periodos/', PeriodosView.as_view(), name='periodos'),
+    path(
+        'periodos/<int:periodo_id>/eliminar/',
+        PeriodoPendienteDeleteView.as_view(),
+        name='periodo_pendiente_eliminar',
+    ),
+    path(
+        'periodos/<int:periodo_id>/relevamiento/resumen/',
+        PeriodoHistoricoResumenView.as_view(),
+        name='periodo_relevamiento_resumen',
+    ),
+    path(
+        'periodos/<int:periodo_id>/relevamiento/<slug:seccion>/',
+        PeriodoHistoricoDetalleView.as_view(),
+        name='periodo_relevamiento_detalle',
+    ),
+    path('carga/', CargaView.as_view(), name='carga'),
+    path('informe/', InformeView.as_view(), name='informe'),
+    path(
+        'informe/detalle/<slug:seccion>/',
+        InformeDetalleView.as_view(),
+        name='informe_detalle',
+    ),
     path('dashboard_dir/', DashboardDirView.as_view(), name='dashboard_dir'),
     path('generar_informe_list/', generar_informe_list, name='generar_informe_list'),
     # =========================
     # 📄 GENERAR INFORME (FORM + MODAL)
     # =========================
     path('generar_informe/', GenerarInformeView.as_view(), name='generar_informe'),
-    path('generar_pdf_cue/', generar_pdf_cuemesanio, name='generar_pdf_cue'),
-    path('modal_generar_pdf_cue/', modal_generar_pdf_cuemesanio, name='modal_generar_pdf_cue'),
-    path('generar_pdf_uno/', generar_pdf_cuemesanio_uno, name='generar_pdf_uno'),
-    path('modal_generar_pdf_uno/', modal_generar_pdf_cuemesanio_uno, name='modal_generar_pdf_uno'),
     # =========================
     # 🔎 AJAX: VERIFICAR DUPLICADOS EN TIEMPO REAL
     # =========================
@@ -247,8 +274,6 @@ urlpatterns = [
     path('bibliotecarios/update/<int:pk>/', BibliotecariosCueUpdateView.as_view(), name='bibliotecario_update'),
     path('bibliotecarios/delete/<int:pk>/', BibliotecariosCueDeleteView.as_view(), name='bibliotecario_delete'),
 
-    path('continuar/', ContinuarCargaView.as_view(), name='continuar_carga'),
-    
     # 🏛️ DASHBOARD HTML
     path(
         "dashboard-informes/",

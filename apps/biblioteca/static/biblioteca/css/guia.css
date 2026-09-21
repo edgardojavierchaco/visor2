@@ -1,0 +1,201 @@
+.biblioteca-guia__indice {
+    align-items: center;
+    background: var(--biblioteca-superficie);
+    border: 1px solid var(--biblioteca-borde);
+    border-radius: var(--biblioteca-radius-md);
+    box-shadow: var(--biblioteca-shadow-soft);
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-bottom: 1.5rem;
+    padding: .75rem 1rem;
+}
+
+.biblioteca-guia__indice strong {
+    color: var(--biblioteca-tinta);
+    margin-right: .25rem;
+}
+
+.biblioteca-guia__indice a {
+    align-items: center;
+    border-radius: var(--biblioteca-radius-sm);
+    color: var(--biblioteca-azul-oscuro);
+    display: inline-flex;
+    font-weight: 600;
+    min-height: 2.75rem;
+    padding: .55rem .7rem;
+}
+
+.biblioteca-guia__indice a:hover {
+    background: var(--biblioteca-azul-suave);
+    text-decoration: none;
+}
+
+.biblioteca-guia__indice a:focus-visible {
+    box-shadow: var(--biblioteca-shadow-focus);
+    outline: 2px solid transparent;
+}
+
+.biblioteca-guia__seccion {
+    scroll-margin-top: 1rem;
+}
+
+.biblioteca-guia__contenido {
+    color: var(--biblioteca-texto);
+    line-height: 1.6;
+    padding: 1.5rem;
+}
+
+.biblioteca-guia__contenido p:last-child,
+.biblioteca-guia__pasos p,
+.biblioteca-guia__ejemplos p {
+    margin-bottom: 0;
+}
+
+.biblioteca-guia__contenido h3,
+.biblioteca-guia__ejemplos h3 {
+    color: var(--biblioteca-tinta);
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 .4rem;
+}
+
+.biblioteca-guia__dos-columnas {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.biblioteca-guia__pasos {
+    display: grid;
+    gap: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0 1.5rem 1.5rem;
+}
+
+.biblioteca-guia__pasos li {
+    align-items: flex-start;
+    border-bottom: 1px solid var(--biblioteca-borde);
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 1rem 0;
+}
+
+.biblioteca-guia__pasos li:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.biblioteca-guia__pasos strong {
+    color: var(--biblioteca-tinta);
+    display: block;
+    margin-bottom: .2rem;
+}
+
+.biblioteca-guia__pasos p,
+.biblioteca-guia__ejemplos p {
+    color: var(--biblioteca-texto);
+    line-height: 1.5;
+}
+
+.biblioteca-guia__paso-numero,
+.biblioteca-guia__secciones-lista span {
+    align-items: center;
+    background: var(--biblioteca-azul-suave);
+    border-radius: var(--biblioteca-radius-sm);
+    color: var(--biblioteca-azul-oscuro);
+    display: inline-flex;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    justify-content: center;
+}
+
+.biblioteca-guia__paso-numero {
+    height: 2rem;
+    width: 2rem;
+}
+
+.biblioteca-guia__secciones-lista {
+    display: grid;
+    gap: .65rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    list-style: none;
+    margin: 1.25rem 0 0;
+    padding: 0;
+}
+
+.biblioteca-guia__secciones-lista li {
+    align-items: center;
+    background: var(--biblioteca-superficie-suave);
+    border-radius: var(--biblioteca-radius-sm);
+    color: var(--biblioteca-tinta);
+    display: flex;
+    font-weight: 600;
+    gap: .75rem;
+    min-height: 3rem;
+    padding: .6rem .75rem;
+}
+
+.biblioteca-guia__secciones-lista span {
+    flex: 0 0 2rem;
+    height: 2rem;
+}
+
+.biblioteca-guia__finalizacion {
+    align-items: flex-start;
+    background: var(--biblioteca-advertencia-fondo);
+    border-radius: var(--biblioteca-radius-md);
+    color: var(--biblioteca-advertencia-texto);
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.25rem;
+    padding: 1.25rem;
+}
+
+.biblioteca-guia__finalizacion > .biblioteca-symbol {
+    flex: 0 0 auto;
+    font-size: 1.6rem;
+}
+
+.biblioteca-guia__finalizacion h3,
+.biblioteca-guia__finalizacion p {
+    color: inherit;
+}
+
+.biblioteca-guia__ejemplos {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 1.5rem;
+}
+
+.biblioteca-guia__ejemplos article {
+    align-items: flex-start;
+    background: var(--biblioteca-superficie-suave);
+    border-radius: var(--biblioteca-radius-md);
+    display: flex;
+    gap: .85rem;
+    padding: 1rem;
+}
+
+.biblioteca-guia__ejemplos article > .biblioteca-symbol {
+    color: var(--biblioteca-azul);
+    flex: 0 0 auto;
+}
+
+@media (max-width: 767.98px) {
+    .biblioteca-guia__dos-columnas,
+    .biblioteca-guia__secciones-lista,
+    .biblioteca-guia__ejemplos {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .biblioteca-guia__indice {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
