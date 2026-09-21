@@ -898,6 +898,26 @@ class RegistroActividades(AuditoriaModel):
     validacion = models.CharField(max_length=12, default="BORRADOR", choices=[
         ("BORRADOR", "Pendiente de validación"), ("VALIDADO", "Validado"), ("OBSERVADO", "Observado")])
 
+    # ========================================================
+    # IDENTIFICACIÓN ÚNICA DEL PUESTO
+    # Formato:
+    # CUEANEXO_NIVEL_TITULACION_ESPACIO_GRADO_SECCION_CEIC_CONSECUTIVO
+    # Los componentes curriculares que no correspondan se expresan como -2.
+    # ========================================================
+    puesto_base = models.CharField(
+        max_length=160,
+        editable=False,
+        db_index=True,
+    )
+    puesto_consecutivo = models.PositiveIntegerField(
+        editable=False,
+    )
+    id_puesto = models.CharField(
+        max_length=180,
+        editable=False,
+        db_index=True,
+    )
+
     class Meta:
         db_table = "registro_actividades"
         indexes = [
@@ -930,6 +950,18 @@ class RegistroActividades(AuditoriaModel):
             models.CheckConstraint(
                 condition=models.Q(version__gte=1),
                 name="bnh_actividad_version_positiva",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(puesto_consecutivo__gte=1),
+                name="bnh_puesto_consecutivo_positivo",
+            ),
+            models.UniqueConstraint(
+                fields=["id_puesto"],
+                name="bnh_id_puesto_unico",
+            ),
+            models.UniqueConstraint(
+                fields=["puesto_base", "puesto_consecutivo"],
+                name="bnh_puesto_base_consecutivo_unico",
             ),
         ]
 
@@ -1100,6 +1132,23 @@ class RegistroActividades(AuditoriaModel):
 
     def normalize(self):
         self.cueanexo = str(self.cueanexo or "").strip()
+
+
+################################
+# SECUENCIA DE ID_PUESTO
+################################
+class PuestoSecuencia(models.Model):
+    puesto_base = models.CharField(max_length=160, primary_key=True)
+    ultimo_consecutivo = models.PositiveIntegerField(default=0)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "puesto_secuencia"
+        verbose_name = "Secuencia de puesto"
+        verbose_name_plural = "Secuencias de puestos"
+
+    def __str__(self):
+        return f"{self.puesto_base} -> {self.ultimo_consecutivo}"
 
 
 ################################

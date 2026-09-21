@@ -32,6 +32,6 @@ urlpatterns = [
     path("ayuda-renpe/", views_ayudas.obtener_ayuda_renpe, name="obtener_ayuda_renpe"),
     path(
     "monitoreo/",
-    include("apps.bnhpersonas.monitoring.urls"),
+    include("apps.bnhpersonas.monitoring.urls", namespace="monitoring"),
 ),
 ]
