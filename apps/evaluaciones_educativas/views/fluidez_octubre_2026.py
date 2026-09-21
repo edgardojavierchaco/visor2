@@ -692,14 +692,14 @@ def gestion_tabuladores(request):
 
     cuil = str(request.user.username)
     regiones = obtener_regional(cuil)
-    print(regiones)
-    if 'R.E. 2' in regiones:
-        regiones = ['R.E. 2','SUB. R.E. 2-B']
 
     # Si el usuario no tiene ninguna región asignada
     if not regiones:
         messages.error(request, 'No se encontró una región asignada a tu usuario.')
         return redirect(reverse('evaluaciones_educativas:dashboard'))
+    #print(regiones)
+    if 'R.E. 2' in regiones:
+        regiones = ['R.E. 2','SUB. R.E. 2-B']
 
     # ── Selector de región ──────────────────────────────────────────
     # Si viene ?region=X en la URL y es una región válida del usuario → guardar en sesión
@@ -748,11 +748,13 @@ def carga_tabulador(request):
     cuil = str(request.user.username)
     regiones = obtener_regional(cuil)
     #print(regiones)
-    
 
     if not regiones:
         messages.error(request, 'No se encontró una región asignada a tu usuario.')
         return redirect(reverse('evaluaciones_educativas:fluidez_octubre_2026:gestion_tabuladores'))
+    
+    if 'R.E. 2' in regiones:
+        regiones = ['R.E. 2','SUB. R.E. 2-B']
 
     # Leer la región activa desde sesión (coherente con gestion_tabuladores)
     region = request.session.get('tab_fluidez_oct26_region')
@@ -799,17 +801,20 @@ def eliminar_tabulador(request, cuil_tabulador):
     if nivel_acceso != "Regional":
         messages.error(request, 'No tienes permiso para acceder a esta página.')
         return redirect(reverse('evaluaciones_educativas:dashboard'))
-
+    #--- ES REDUNDANDTE PORQUE YA ESTAMOS CON UN USUARIO EL CUAL TIENE UNA REGION   
     cuil_usuario = str(request.user.username)
     regiones = obtener_regional(cuil_usuario)
     if not regiones:
         messages.error(request, 'No se encontró una región asignada a tu usuario.')
         return redirect(reverse('evaluaciones_educativas:dashboard'))
-
+    if 'R.E. 2' in regiones:
+        regiones = ['R.E. 2','SUB. R.E. 2-B']
     region = request.session.get('tab_fluidez_oct26_region')
     if not region or region not in regiones:
         region = regiones[0]
         request.session['tab_fluidez_oct26_region'] = region
+
+     #--- ES REDUNDANDTE PORQUE YA ESTAMOS CON UN USUARIO EL CUAL TIENE UNA REGION----FIN---  
 
     if request.method == 'POST':
         tabulador = TabuladoresFluidezOctubre2026.objects.filter(cuil=cuil_tabulador, region=region).first()
@@ -838,7 +843,8 @@ def asignacion_tabulador(request, cuil_tabulador):
         messages.error(request, 'No se encontró una región asignada a tu usuario.')
         return redirect(reverse('evaluaciones_educativas:dashboard'))
     
-
+    if 'R.E. 2' in regiones:
+        regiones = ['R.E. 2','SUB. R.E. 2-B']
     region = request.session.get('tab_fluidez_oct26_region')
     if not region or region not in regiones:
         region = regiones[0]
