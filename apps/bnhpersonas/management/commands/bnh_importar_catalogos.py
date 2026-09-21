@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from apps.bnhpersonas.services.catalog_import import import_catalogs
 
 class Command(BaseCommand):
-    help='Valida/simula los cinco CSV normalizados; --aplicar realiza una importación atómica y auditada.'
+    help='Valida/simula catálogos legacy Cargo/CEIC y curriculares; --aplicar realiza una importación atómica y auditada.'
     def add_arguments(self, parser):
         parser.add_argument('directorio')
         parser.add_argument('--aplicar',action='store_true')

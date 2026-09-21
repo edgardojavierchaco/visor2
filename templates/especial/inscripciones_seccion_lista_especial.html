@@ -1,0 +1,109 @@
+{% if not inscripciones_activas %}
+    <div class="alert alert-danger gestionar-seccion-table-alert mb-3" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>
+        La sección no cuenta con alumnos en alta.
+    </div>
+{% endif %}
+
+<div class="cef-tools">
+    <div class="cef-tools-left">
+        <span class="cef-tools-label">Mostrar</span>
+        <select data-cef-page-size>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+        </select>
+        <span class="cef-tools-label">registros</span>
+    </div>
+    <div class="cef-tools-right">
+        <div class="cef-search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input id="searchInscripcion" type="search" placeholder="Buscar…" data-cef-table-search>
+            <button type="button" class="cef-search-clear" data-cef-search-clear aria-label="Limpiar búsqueda">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+{% if inscripciones %}
+    <div class="cef-table-wrap">
+        <table class="cef-dt gestionar-seccion-data-table gestionar-seccion-alumnos-table" data-cef-table>
+            <thead>
+                <tr>
+                    <th class="gestionar-col-persona">Apellido y Nombre</th>
+                    <th class="gestionar-col-centered">Documento</th>
+                    <th class="gestionar-col-centered">CUIL</th>
+                    <th class="gestionar-col-centered">Sexo</th>
+                    {% if mostrar_cueanexo_matricula %}<th class="gestionar-col-centered">CUE-Anexo educación común</th><th class="gestionar-col-centered">Tipo de inclusión</th>{% endif %}
+                    <th class="gestionar-col-centered">Fecha inscripción</th>
+                    <th class="gestionar-col-centered">Estado</th>
+                    <th class="gestionar-col-centered gestionar-col-actions">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inscripcion in inscripciones %}
+                    <tr>
+                        <td class="gestionar-col-persona"><strong>{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}</strong></td>
+                        <td class="gestionar-col-centered">{{ inscripcion.alumno.nro_doc }}</td>
+                        <td class="gestionar-col-centered">{{ inscripcion.alumno.cuil|default:"—" }}</td>
+                        <td class="gestionar-col-centered">{{ inscripcion.alumno.sexo|default:"—" }}</td>
+                        {% if mostrar_cueanexo_matricula %}<td class="gestionar-col-centered">{{ inscripcion.cueanexo_matricula_compartida|default:"—" }}</td><td class="gestionar-col-centered">{{ inscripcion.get_tipo_inclusion_display|default:"—" }}</td>{% endif %}
+                        <td class="gestionar-col-centered">{{ inscripcion.fecha_inscripcion|date:"d/m/Y" }}</td>
+                        <td class="gestionar-col-centered">
+                            <span class="badge text-bg-{% if inscripcion.get_estado_display == 'Activo' %}success{% elif inscripcion.get_estado_display == 'Baja' %}danger{% else %}secondary{% endif %}">
+                                {{ inscripcion.get_estado_display }}
+                            </span>
+                        </td>
+                        {% if especial_context.puede_operar %}
+                        <td class="cef-act-cell gestionar-col-centered gestionar-col-actions">
+                            <div class="d-flex flex-wrap gap-1 align-items-center gestionar-seccion-row-actions">
+                                <a class="btn btn-outline-secondary btn-sm gestionar-seccion-row-action gestionar-seccion-row-action-edit" href="{% url 'especial:editar_inscripcion_seccion' seccion.pk inscripcion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% if gestionar_seccion_modo %}&volver=gestionar{% endif %}{% elif gestionar_seccion_modo %}?volver=gestionar{% endif %}" title="Editar inscripción">
+                                    <i class="fa-solid fa-pen-to-square"></i> Editar
+                                </a>
+                                 {% if inscripcion.estado == 'activo' %}
+                                     <form method="post" action="{% if gestionar_seccion_modo %}{{ gestionar_seccion_url }}{% else %}{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Dar de baja alumno" data-cef-confirm-message="La inscripción quedará registrada como baja, no se eliminará." data-cef-confirm-entity="{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}">
+                                         {% csrf_token %}
+                                         <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                                         {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
+                                        <input type="hidden" name="accion" value="baja_alumno">
+                                        <input type="hidden" name="inscripcion_id" value="{{ inscripcion.pk }}">
+                                        <button class="btn btn-outline-secondary btn-sm gestionar-seccion-row-action gestionar-seccion-row-action-danger" type="submit">
+                                             <i class="fa-solid fa-user-minus"></i> Dar de baja
+                                         </button>
+                                     </form>
+                                {% elif inscripcion.estado == 'baja' and seccion.es_oferta_integracion %}
+                                    <a class="btn btn-outline-success btn-sm" href="{{ inscripcion.reinscripcion_url }}">
+                                        <i class="fa-solid fa-user-plus"></i> Reinscribir desde búsqueda
+                                    </a>
+                                {% elif inscripcion.estado == 'baja' %}
+                                    <form method="post" action="{% if gestionar_seccion_modo %}{{ gestionar_seccion_url }}{% else %}{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-ajax-post data-cef-confirm-title="Reinscribir alumno" data-cef-confirm-message="Se creará una inscripción activa nueva para este alumno si no existe otra activa." data-cef-confirm-entity="{{ inscripcion.alumno.apellidos }}, {{ inscripcion.alumno.nombres }}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                                        {% if especial_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">{% endif %}
+                                        <input type="hidden" name="accion" value="alta_alumno">
+                                        <input type="hidden" name="inscripcion_id" value="{{ inscripcion.pk }}">
+                                        <button class="btn btn-outline-success btn-sm" type="submit">
+                                            <i class="fa-solid fa-user-check"></i> Reinscribir
+                                        </button>
+                                    </form>
+                                 {% endif %}
+                             </div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="cef-empty-state">
+        <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
+        Todavía no hay alumnos inscriptos en esta sección.
+    </div>
+{% endif %}
+
+<div class="cef-tfoot">
+    <span class="cef-tfoot-count" data-cef-table-count{% if gestionar_seccion_modo %} data-cef-count-singular="registro" data-cef-count-plural="registros"{% endif %}>{% if gestionar_seccion_modo %}{{ inscripciones|length }} registro{{ inscripciones|length|pluralize }}{% else %}{{ inscripciones|length }} registros{% endif %}</span>
+    <div class="cef-tfoot-pagination" data-cef-table-pagination></div>
+</div>

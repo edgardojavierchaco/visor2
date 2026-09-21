@@ -1,0 +1,106 @@
+<div id="bibliotecaGuiaUsoModal"
+     class="biblioteca-guia-modal"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="bibliotecaGuiaUsoTitulo"
+     aria-describedby="bibliotecaGuiaUsoSubtitulo"
+     aria-hidden="true"
+     data-biblioteca-guia-modal
+     hidden>
+    <div class="biblioteca-guia-modal__dialog" data-biblioteca-guia-dialog>
+        <header class="biblioteca-guia-modal__encabezado">
+            <span class="biblioteca-guia-modal__icono-principal" aria-hidden="true">
+                <span class="biblioteca-symbol">help</span>
+            </span>
+            <div class="biblioteca-guia-modal__titulo-bloque">
+                <p class="biblioteca-guia-modal__rotulo">BIBLIOTECA</p>
+                <h2 id="bibliotecaGuiaUsoTitulo">Guía de uso</h2>
+                <p id="bibliotecaGuiaUsoSubtitulo" class="biblioteca-guia-modal__subtitulo">
+                    Recorrido breve para completar y enviar el relevamiento.
+                </p>
+            </div>
+            <button type="button"
+                    class="biblioteca-guia-modal__cerrar-icono"
+                    aria-label="Cerrar guía de uso"
+                    data-biblioteca-guia-cerrar>
+                <span class="biblioteca-symbol" aria-hidden="true">close</span>
+            </button>
+        </header>
+
+        <div class="biblioteca-guia-modal__contenido">
+            <div class="biblioteca-guia-modal__contexto" role="note">
+                <span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">info</span>
+                <p>
+                    Trabajás siempre sobre un <strong>CUE-Anexo</strong> y un <strong>período</strong> determinados.
+                    Verificá esos datos antes de continuar.
+                </p>
+            </div>
+
+            <section class="biblioteca-guia-modal__recorrido" aria-labelledby="bibliotecaGuiaUsoRecorridoTitulo">
+                <p class="biblioteca-guia-modal__rotulo">RECORRIDO PRINCIPAL</p>
+                <h3 id="bibliotecaGuiaUsoRecorridoTitulo">Cómo completar el relevamiento</h3>
+
+                <ol class="biblioteca-guia-modal__pasos">
+                    <li class="biblioteca-guia-modal__paso">
+                        <span class="biblioteca-guia-modal__paso-numero">01</span>
+                        <span class="biblioteca-guia-modal__paso-icono" aria-hidden="true">
+                            <span class="biblioteca-symbol">home</span>
+                        </span>
+                        <div>
+                            <h4>Inicio</h4>
+                            <p>Consultá si existe un período pendiente y continuá desde allí.</p>
+                        </div>
+                    </li>
+                    <li class="biblioteca-guia-modal__paso">
+                        <span class="biblioteca-guia-modal__paso-numero">02</span>
+                        <span class="biblioteca-guia-modal__paso-icono" aria-hidden="true">
+                            <span class="biblioteca-symbol">calendar_month</span>
+                        </span>
+                        <div>
+                            <h4>Períodos</h4>
+                            <p>Revisá el historial o iniciá un nuevo período cuando corresponda.</p>
+                        </div>
+                    </li>
+                    <li class="biblioteca-guia-modal__paso">
+                        <span class="biblioteca-guia-modal__paso-numero">03</span>
+                        <span class="biblioteca-guia-modal__paso-icono" aria-hidden="true">
+                            <span class="biblioteca-symbol">edit_note</span>
+                        </span>
+                        <div>
+                            <h4>Carga</h4>
+                            <p>Ingresá a las 11 secciones y registrá la información del relevamiento.</p>
+                        </div>
+                    </li>
+                    <li class="biblioteca-guia-modal__paso">
+                        <span class="biblioteca-guia-modal__paso-numero">04</span>
+                        <span class="biblioteca-guia-modal__paso-icono" aria-hidden="true">
+                            <span class="biblioteca-symbol">description</span>
+                        </span>
+                        <div>
+                            <h4>Informe</h4>
+                            <p>Revisá lo cargado por sección y corregí lo necesario antes del envío.</p>
+                        </div>
+                    </li>
+                </ol>
+            </section>
+
+            <div class="biblioteca-guia-modal__advertencia" role="note">
+                <span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">picture_as_pdf</span>
+                <div>
+                    <h3>Finalizar y generar PDF</h3>
+                    <p>
+                        Esta acción envía y cierra el relevamiento. No funciona como una descarga pasiva:
+                        revisá la información antes de confirmar.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <footer class="biblioteca-guia-modal__pie">
+            <button type="button" class="biblioteca-guia-modal__cerrar" data-biblioteca-guia-cerrar>
+                <span class="biblioteca-symbol" aria-hidden="true">close</span>
+                <span>Cerrar</span>
+            </button>
+        </footer>
+    </div>
+</div>
