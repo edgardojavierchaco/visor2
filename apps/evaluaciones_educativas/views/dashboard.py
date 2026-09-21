@@ -42,6 +42,19 @@ def dashboard(request):
                     'anio': '2026',
                     'meses': [
                         {
+                            'mes':         'Octubre',
+                            'descripcion': 'Evaluación — Octubre 2026',
+                            'icono':       'bi-calendar-event',
+                            'links': [
+                                {
+                                    'titulo': 'Gestión de Tabuladores',
+                                    'icono':  'bi-people-fill',
+                                    'url':    'evaluaciones_educativas:fluidez_octubre_2026:gestion_tabuladores',
+                                    'roles':  ['Regional'],
+                                },
+                            ],
+                        },
+                        {
                             'mes':         'Junio',
                             'descripcion': 'Evaluación — Junio 2026',
                             'icono':       'bi-calendar-event',
@@ -193,8 +206,7 @@ def dashboard(request):
         #         },
         #     ],
         # },
-
-    ]
+    ] 
 
     # ── Filtrar por rol y resolver URLs ──────────────────────────────
     operativos_visibles = []
