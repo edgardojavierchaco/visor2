@@ -20,3 +20,9 @@ python manage.py migrate --settings=config.settings.local
 sudo docker compose -f local.yml down -v --remove-orphans
 sudo docker compose -f local.yml build --no-cache
 sudo docker compose -f local.yml up
+
+REFRESH MATERIALIZED VIEW CONCURRENTLY
+    bnh.mv_total_cargos_ra_2026;
+
+REFRESH MATERIALIZED VIEW CONCURRENTLY
+    bnh.mv_total_horas_ra_2026;

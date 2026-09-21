@@ -997,3 +997,335 @@
 .executive-card-footer{position:relative;z-index:2;display:flex;align-items:center;gap:.42rem;padding:.62rem 1rem;color:#7a8792;background:rgba(247,249,251,.78);border-top:1px solid #edf1f4;font-size:.67rem;font-weight:650}.executive-card-footer i{color:var(--accent)}
 .executive-card-primary{--accent:#14547e;--rgb:20,84,126}.executive-card-success{--accent:#21835e;--rgb:33,131,94}.executive-card-warning{--accent:#bd7b18;--rgb:189,123,24}.executive-card-info{--accent:#2f75a7;--rgb:47,117,167}.executive-card-neutral{--accent:#526b7e;--rgb:82,107,126}.executive-card-pending{--accent:#96751e;--rgb:150,117,30}.executive-card-danger{--accent:#b14a42;--rgb:177,74,66}.executive-card-validated{--accent:#247656;--rgb:36,118,86}
 @media(max-width:767.98px){.executive-heading{align-items:flex-start;flex-direction:column}.executive-update{width:100%}.executive-card{min-height:195px}}
+
+/* ============================================================
+   COBERTURA RA 2026
+============================================================ */
+
+.ra-coverage-section {
+    position: relative;
+}
+
+.ra-coverage-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+}
+
+.ra-coverage-card {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    padding: 1.25rem;
+    background: linear-gradient(145deg, #ffffff 0%, #f8fbfd 100%);
+    border: 1px solid #dce5ec;
+    border-radius: 18px;
+    box-shadow: 0 10px 28px rgba(27, 51, 72, 0.055);
+}
+
+.ra-coverage-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #14547e, #2f75a7);
+    border-radius: 18px 18px 0 0;
+}
+
+.ra-coverage-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.ra-coverage-kicker {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #557084;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.ra-coverage-card h3 {
+    margin: 0;
+    color: #29465d;
+    font-size: 1rem;
+    font-weight: 800;
+}
+
+.ra-state {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 0.35rem 0.65rem;
+    color: #31546d;
+    background: #edf5fa;
+    border: 1px solid #d1e2ee;
+    border-radius: 999px;
+    font-size: 0.62rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.ra-state-completo {
+    color: #1f6d50;
+    background: #eaf6f0;
+    border-color: #c6e7d7;
+}
+
+.ra-state-incompleto {
+    color: #8a6511;
+    background: #fff7df;
+    border-color: #f1dfa4;
+}
+
+.ra-state-sincarga {
+    color: #6b7480;
+    background: #f2f4f6;
+    border-color: #dfe4e8;
+}
+
+.ra-state-excedera,
+.ra-state-excedera,
+.ra-state-excede-ra {
+    color: #a4423c;
+    background: #fbeeed;
+    border-color: #efcbc8;
+}
+
+.ra-state-sinuniverso,
+.ra-state-sin-base-ra {
+    color: #526b7e;
+    background: #edf2f5;
+    border-color: #d8e1e7;
+}
+
+.ra-coverage-main {
+    display: grid;
+    grid-template-columns: minmax(130px, 0.75fr) minmax(0, 1.25fr);
+    gap: 1.25rem;
+    align-items: end;
+    margin-top: 1.25rem;
+}
+
+.ra-coverage-main > div:first-child strong {
+    display: block;
+    color: #173954;
+    font-size: clamp(2rem, 3vw, 2.7rem);
+    font-weight: 850;
+    line-height: 1;
+    letter-spacing: -0.04em;
+}
+
+.ra-coverage-main > div:first-child span {
+    display: block;
+    margin-top: 0.3rem;
+    color: #7b8792;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+}
+
+.ra-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.55rem;
+}
+
+.ra-stat-grid > div {
+    min-width: 0;
+    padding: 0.7rem;
+    background: #f6f8fa;
+    border: 1px solid #e5ebf0;
+    border-radius: 11px;
+}
+
+.ra-stat-grid small,
+.ra-stat-grid b {
+    display: block;
+}
+
+.ra-stat-grid small {
+    color: #7a8792;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.ra-stat-grid b {
+    margin-top: 0.15rem;
+    overflow-wrap: anywhere;
+    color: #324d62;
+    font-size: 0.92rem;
+    font-weight: 800;
+}
+
+.ra-progress {
+    height: 8px;
+    overflow: hidden;
+    background: #e8edf1;
+    border-radius: 999px;
+}
+
+.ra-progress .progress-bar {
+    background: linear-gradient(90deg, #2f75a7, #14547e);
+    border-radius: 999px;
+    transition: width 0.25s ease;
+}
+
+.ra-coverage-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 1rem;
+    margin-top: 0.8rem;
+    color: #73818d;
+    font-size: 0.68rem;
+    font-weight: 650;
+}
+
+.ra-coverage-footer span {
+    display: inline-flex;
+    align-items: center;
+}
+
+/* ============================================================
+   COBERTURA RA - RESUMEN REGIONAL
+============================================================ */
+
+.ra-mini {
+    min-width: 170px;
+}
+
+.ra-mini > div:first-child {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    color: #596b79;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+.ra-mini-progress {
+    height: 5px;
+    margin: 0.35rem 0;
+    overflow: hidden;
+    background: #e8edf1;
+    border-radius: 999px;
+}
+
+.ra-mini-progress .progress-bar {
+    background: #2f75a7;
+    border-radius: 999px;
+}
+
+.ra-mini small {
+    display: block;
+    color: #7a8792;
+    font-size: 0.64rem;
+    font-weight: 650;
+    line-height: 1.25;
+}
+
+/* ============================================================
+   COBERTURA RA - TABLA DE CUEANEXO
+============================================================ */
+
+.ra-table-coverage {
+    min-width: 145px;
+}
+
+.ra-table-coverage strong,
+.ra-table-coverage small {
+    display: block;
+}
+
+.ra-table-coverage strong {
+    color: #244b67;
+    font-size: 0.86rem;
+    font-weight: 800;
+}
+
+.ra-table-coverage small {
+    margin-top: 0.12rem;
+    color: #76838e;
+    font-size: 0.65rem;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+
+/* ============================================================
+   MEJORAS DE TABLAS PARA LAS NUEVAS COLUMNAS
+============================================================ */
+
+.monitoring-table th {
+    vertical-align: middle;
+}
+
+.monitoring-table-institutions td,
+.monitoring-table-institutions th {
+    white-space: nowrap;
+}
+
+.monitoring-table-institutions td:nth-child(2),
+.monitoring-table-institutions th:nth-child(2),
+.monitoring-table-institutions td:nth-child(4),
+.monitoring-table-institutions th:nth-child(4),
+.monitoring-table-institutions td:nth-child(9),
+.monitoring-table-institutions th:nth-child(9) {
+    white-space: normal;
+}
+
+/* ============================================================
+   RESPONSIVE COBERTURA RA
+============================================================ */
+
+@media (max-width: 1199.98px) {
+    .ra-coverage-main {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .ra-coverage-heading,
+    .ra-coverage-top {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .ra-coverage-card {
+        padding: 1rem;
+    }
+
+    .ra-stat-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .ra-stat-grid > div {
+        padding: 0.6rem;
+    }
+
+    .ra-coverage-footer {
+        flex-direction: column;
+        gap: 0.35rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .ra-stat-grid {
+        grid-template-columns: 1fr;
+    }
+}
