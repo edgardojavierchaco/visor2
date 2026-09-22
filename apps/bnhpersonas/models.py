@@ -191,7 +191,7 @@ class NomencladorCeic(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.descripcion}'
+        return f'{self.descripcion} - {self.c_niv}'
 
 
 ##########
@@ -383,15 +383,12 @@ class TipoOS(models.Model):
         managed=False
         verbose_name='Tipo OS'
         verbose_name_plural='Tipos OS'
-        db_table='tipo_obra_social'
+        db_table='tipo_obra_social_bnh'
     
     def __str__(self):
         return self.descrip_os
 
 
-##########################
-# GRADO / AÑO
-##########################
 class Grado_anio(models.Model):
     c_grado_anio=models.BigAutoField(primary_key=True)
     nombre_grado_anio=models.CharField(max_length=100, null=True, blank=True, db_index=True)
@@ -399,48 +396,72 @@ class Grado_anio(models.Model):
     c_niv_grado=models.IntegerField()
     t_niv_grado=models.CharField(max_length=100,null=True, blank=True)
     
-    c_modalidad = models.IntegerField(null=True, blank=True)
+    c_modalidad1 = models.IntegerField(null=True, blank=True)
 
     class Meta:
-        indexes = [models.Index(fields=["c_modalidad", "c_niv_grado", "estado"], name="bnh_grado_parent_idx")]
+        indexes = [models.Index(fields=["c_modalidad1", "c_niv_grado", "estado"], name="bnh_grado_parent1_idx")]
         verbose_name="Grado_Anio"
         verbose_name_plural="Grados_Anios"
         db_table="grado_anio"
         
     def __str__(self):
-        return self.nombre_grado_anio
+        return self.nombre_grado_anio or ""
 
 
-##########################
-# SECCION
-##########################
 class Secciones(models.Model):
-    c_seccion=models.BigAutoField(primary_key=True)
-    nombre_seccion=models.CharField(max_length=100, null=True, blank=True, db_index=True)
-    estado=models.BooleanField(default=True)
-    c_niv_seccion=models.IntegerField()
-    t_niv_seccion=models.CharField(max_length=100,null=True, blank=True)
-    
-    c_modalidad = models.IntegerField(null=True, blank=True)
+    c_seccion = models.BigAutoField(primary_key=True)
+
+    nombre_seccion = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
+    estado = models.BooleanField(
+        default=True,
+    )
+
+    c_niv_seccion = models.IntegerField()
+
+    t_niv_seccion = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+    )
+
+    c_modalidad1 = models.IntegerField(
+        null=True,
+        blank=True,
+    )
 
     class Meta:
-        indexes = [models.Index(fields=["c_modalidad", "c_niv_seccion", "estado"], name="bnh_seccion_parent_idx")]
-        verbose_name="Seccion"
-        verbose_name_plural="Secciones"
-        db_table="Secciones"
-    
+        verbose_name = "Seccion"
+        verbose_name_plural = "Secciones"
+        db_table = "Secciones"
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "c_modalidad1",
+                    "c_niv_seccion",
+                    "estado",
+                ],
+                name="bnh_seccion_parent1_idx",
+            ),
+        ]
+
     def __str__(self):
-        return self.nombre_seccion
-
-
-
+        return self.nombre_seccion or ""
+    
+    
 ##########################
 # PERSONAS
 ##########################
 class Personas(AuditoriaModel):
     id = models.BigAutoField(primary_key=True)
 
-    cuil = models.CharField(max_length=11, null=True, blank=True, db_index=True)
+    cuil = models.CharField(max_length=11, null=True, blank=True)
     version = models.PositiveIntegerField(default=1)
     archivada = models.BooleanField(default=False, db_index=True)
     dni = models.CharField(max_length=8, null=True, blank=True, db_index=True)
@@ -484,11 +505,23 @@ class Personas(AuditoriaModel):
 
     class Meta:
         db_table = "personas"
-        constraints = [models.UniqueConstraint(fields=["cuil"], condition=models.Q(cuil__isnull=False) & ~models.Q(cuil=""), name="bnh_persona_cuil_unico")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cuil"],
+                condition=models.Q(cuil__isnull=False) & ~models.Q(cuil=""),
+                name="bnh_persona_cuil_unico",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(estado__in=["ACTIVO", "PASIVO"]),
+                name="bnh_persona_estado_valido",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(version__gte=1),
+                name="bnh_persona_version_positiva",
+            ),
+        ]
         indexes = [
-            models.Index(fields=['dni']), 
-            models.Index(fields=['cuil']),
-            models.Index(fields=['telefono_normalizado']),
+            models.Index(fields=["archivada", "apellido", "nombre"], name="bnh_persona_lista_idx"),
         ]
 
     # =========================
@@ -746,33 +779,90 @@ class RegistroActividades(AuditoriaModel):
     cueanexo = models.CharField(max_length=9, db_index=True)
     persona = models.ForeignKey(Personas, on_delete=models.CASCADE, related_name='actividades')
 
-    categoria = models.CharField(max_length=10, choices=[
-        ('DOCENTE', 'Docente'),
-        ('NO DOCENTE', 'No Docente'),
-    ])
+    tipo_personal = models.ForeignKey(
+        'TipoPersonal',
+        on_delete=models.PROTECT,
+        to_field='c_tpersonal',
+        db_column='c_tpersonal',
+        related_name='actividades',
+    )
 
     modalidad = models.ForeignKey('Modalidades', on_delete=models.PROTECT)
     niveles = models.ForeignKey('NivelServicio', on_delete=models.PROTECT)
 
     sit_revista = models.ForeignKey('SituacionServicio', on_delete=models.PROTECT)
-    cond_actividad = models.ForeignKey('CondicionActividad', on_delete=models.PROTECT)
-    
-    designacion=models.CharField(max_length=20, choices=[
-        ('CARGO', 'CARGO'),
-        ('HORAS CATEDRAS', 'HORAS CATEDRAS'),
-    ], default='CARGO')
-    
-    t_designacion=models.ForeignKey('TipoDesigFunc', on_delete=models.PROTECT)
+
+    # Catálogo nuevo. Se filtra por Tipo de personal + Situación de revista.
+    cond_actividad = models.ForeignKey(
+        'CondicionActividadNombre',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='actividades',
+    )
+
+    # Valor histórico de la condición anterior. Se conserva únicamente
+    # para trazabilidad y no se expone en formularios.
+    cond_actividad_legacy = models.ForeignKey(
+        'CondicionActividad',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='+',
+    )
+
+    # Designación fue eliminada. Sólo queda Tipo de designación.
+    t_designacion = models.ForeignKey('TipoDesigFunc', on_delete=models.PROTECT)
 
     ceic = models.ForeignKey('NomencladorCeic', on_delete=models.PROTECT)
-    
+
+    # ========================================================
+    # CIRCUITO CURRICULAR (INDEPENDIENTE DEL CEIC)
+    # ========================================================
+    modalidad_curricular = models.ForeignKey(
+        'ModalidadTipo',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='+',
+    )
+    nivel_curricular = models.ForeignKey(
+        'NivelServicioTipo',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='+',
+    )
+    titulacion = models.BigIntegerField(null=True, blank=True, db_index=True)
+    titulacion_fuente = models.CharField(
+        max_length=12,
+        blank=True,
+        default='',
+        choices=[
+            ('NOMBRE', 'Titulación nombre'),
+            ('SUPERIOR', 'Titulación superior'),
+            ('FP', 'Titulación formación profesional'),
+        ],
+    )
+    espacio_curricular = models.ForeignKey(
+        'EspacioCurricularNombre',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='+',
+    )
+
     grado_anio = models.ForeignKey('Grado_anio', on_delete=models.PROTECT, null=True, blank=True)
     
     turno=models.CharField(max_length=20, choices=[
         ('MAÑANA', 'MAÑANA'),
+        ('MAÑANA EXTENDIDA', 'MAÑANA EXTENDIDA'),
         ('TARDE', 'TARDE'),
+        ('TARDE EXTENDIDA', 'TARDE EXTENDIDA'),
         ('NOCHE', 'NOCHE'),
         ('VESPERTINO', 'VESPERTINO'),
+        ('DOBLE','DOBLE'),
+        ('DOBLE EXTENDIDA','DOBLE EXTENDIDA'),
     ],
         default='MAÑANA'
     )
@@ -808,50 +898,257 @@ class RegistroActividades(AuditoriaModel):
     validacion = models.CharField(max_length=12, default="BORRADOR", choices=[
         ("BORRADOR", "Pendiente de validación"), ("VALIDADO", "Validado"), ("OBSERVADO", "Observado")])
 
+    # ========================================================
+    # IDENTIFICACIÓN ÚNICA DEL PUESTO
+    # Formato:
+    # CUEANEXO_NIVEL_TITULACION_ESPACIO_GRADO_SECCION_CEIC_CONSECUTIVO
+    # Los componentes curriculares que no correspondan se expresan como -2.
+    # ========================================================
+    puesto_base = models.CharField(
+        max_length=160,
+        editable=False,
+        db_index=True,
+    )
+    puesto_consecutivo = models.PositiveIntegerField(
+        editable=False,
+    )
+    id_puesto = models.CharField(
+        max_length=180,
+        editable=False,
+        db_index=True,
+    )
+
     class Meta:
         db_table = "registro_actividades"
-        indexes = [models.Index(fields=["cueanexo", "eliminado", "estado"], name="bnh_cue_estado_idx")]
+        indexes = [
+            models.Index(fields=["cueanexo", "eliminado", "estado"], name="bnh_cue_estado_idx"),
+            models.Index(fields=["persona", "cueanexo", "eliminado"], name="bnh_persona_cue_del_idx"),
+            models.Index(fields=["persona", "eliminado"], name="bnh_persona_del_idx"),
+            models.Index(fields=["modalidad_curricular", "nivel_curricular"], name="bnh_curricular_idx"),
+            # Índice de apoyo para la detección de posible duplicado.
+            # Deliberadamente NO es UNIQUE: pueden existir designaciones legítimas iguales.
+            models.Index(
+                fields=[
+                    "persona", "cueanexo", "tipo_personal", "ceic",
+                    "sit_revista", "t_designacion", "f_desde",
+                ],
+                name="bnh_posible_dup_idx",
+            ),
+        ]
         constraints = [
             models.CheckConstraint(condition=models.Q(carga_horaria__gt=0), name="bnh_carga_positiva"),
             models.CheckConstraint(condition=models.Q(f_hasta__isnull=True) | models.Q(f_hasta__gte=models.F("f_desde")), name="bnh_cargo_fechas"),
             models.CheckConstraint(condition=models.Q(f_hasta_funciones__isnull=True) | models.Q(f_hasta_funciones__gte=models.F("f_desde_funciones")), name="bnh_funcion_fechas"),
+            models.CheckConstraint(
+                condition=models.Q(estado__in=["ACTIVO", "INACTIVO"]),
+                name="bnh_actividad_estado_valido",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(validacion__in=["BORRADOR", "VALIDADO", "OBSERVADO"]),
+                name="bnh_validacion_valida",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(version__gte=1),
+                name="bnh_actividad_version_positiva",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(puesto_consecutivo__gte=1),
+                name="bnh_puesto_consecutivo_positivo",
+            ),
+            models.UniqueConstraint(
+                fields=["id_puesto"],
+                name="bnh_id_puesto_unico",
+            ),
+            models.UniqueConstraint(
+                fields=["puesto_base", "puesto_consecutivo"],
+                name="bnh_puesto_base_consecutivo_unico",
+            ),
         ]
 
     def clean(self):
         errors = {}
+        tipo_personal_codigo = self.tipo_personal_id
+        es_no_docente = tipo_personal_codigo == 2
+
         if not re.fullmatch(r"[0-9]{9}", str(self.cueanexo or "")):
             errors["cueanexo"] = "Ingrese los nueve dígitos del CUEANEXO."
+
         for start, end in (("f_desde", "f_hasta"), ("f_desde_funciones", "f_hasta_funciones")):
             desde, hasta = getattr(self, start), getattr(self, end)
             if desde and hasta and hasta < desde:
                 errors[end] = "La fecha hasta debe ser igual o posterior a desde."
+
         if self.f_desde and self.f_desde_funciones and self.f_desde_funciones < self.f_desde:
             errors["f_desde_funciones"] = "Las funciones deben comenzar dentro del período del cargo."
+
         if self.f_hasta:
             if self.f_desde_funciones and self.f_desde_funciones > self.f_hasta:
                 errors["f_desde_funciones"] = "Las funciones deben comenzar dentro del período del cargo."
             if not self.f_hasta_funciones or self.f_hasta_funciones > self.f_hasta:
                 errors["f_hasta_funciones"] = "Indique un fin de funciones dentro del período del cargo."
+
         if self.carga_horaria is not None and self.carga_horaria <= 0:
             errors["carga_horaria"] = "La carga horaria debe ser positiva."
+
+        # ----------------------------------------------------
+        # CONDICIÓN DE ACTIVIDAD
+        # ----------------------------------------------------
+        if not self.cond_actividad_id:
+            errors["cond_actividad"] = "Seleccione la condición de actividad."
+        elif self.tipo_personal_id and self.sit_revista_id:
+            if not CondicionActividadNombre.objects.filter(
+                pk=self.cond_actividad_id,
+                t_personal=self.tipo_personal_id,
+                sit_rev=self.sit_revista_id,
+            ).exists():
+                errors["cond_actividad"] = (
+                    "La condición de actividad no corresponde al tipo de personal "
+                    "y situación de revista seleccionados."
+                )
+
         if self.estado == "INACTIVO" and not self.f_hasta:
             errors["f_hasta"] = "Indique la fecha de finalización."
-        if self.categoria == "NO DOCENTE" and any((self.grado_anio_id, self.secciones_id, self.espacios_id)):
-            errors["categoria"] = "Para personal no docente deje vacíos grado, sección y espacio curricular."
+
+        # ----------------------------------------------------
+        # CIRCUITO CARGO / CEIC: LÓGICA ANTERIOR INTACTA
+        # ----------------------------------------------------
+        from .domain.catalogs import (
+            activity_catalogs,
+            available_levels,
+            curricular_catalogs,
+            titulacion_source,
+            valid_titulacion,
+        )
+
+        if (
+            es_no_docente
+            and self.ceic_id
+            and not (1023 <= self.ceic.c_niv <= 1025)
+        ):
+            errors["ceic"] = (
+                "Para personal no docente el Cargo / CEIC debe corresponder "
+                "a c_niv 1023, 1024 o 1025."
+            )
+
         if self.modalidad_id and self.niveles_id:
-            from .domain.catalogs import available_levels, activity_catalogs
             if not available_levels(self.modalidad_id).filter(pk=self.niveles_id).exists():
-                errors["niveles"] = "El nivel no pertenece a la modalidad seleccionada."
-            _, grados, secciones = activity_catalogs(self.modalidad_id, self.niveles_id, self.grado_anio_id)
-            if self.grado_anio_id and not grados.filter(pk=self.grado_anio_id).exists():
-                errors["grado_anio"] = "El grado no pertenece a esta modalidad y nivel, o está inactivo."
-            if self.secciones_id and not secciones.filter(pk=self.secciones_id).exists():
-                errors["secciones"] = "Seleccione un grado válido y una sección de la misma modalidad y nivel."
+                errors["niveles"] = "El nivel no pertenece a la modalidad del cargo seleccionada."
+
+            ceic, _, _ = activity_catalogs(
+                self.modalidad_id,
+                self.niveles_id,
+                tipo_personal=tipo_personal_codigo,
+            )
+            if self.ceic_id and not ceic.filter(pk=self.ceic_id).exists():
+                errors["ceic"] = "El Cargo / CEIC no corresponde a la modalidad y nivel del cargo."
+
+        # ----------------------------------------------------
+        # CIRCUITO CURRICULAR NUEVO
+        # ----------------------------------------------------
+        if es_no_docente:
+            if any((
+                self.modalidad_curricular_id,
+                self.nivel_curricular_id,
+                self.titulacion,
+                self.espacio_curricular_id,
+                self.grado_anio_id,
+                self.secciones_id,
+            )):
+                errors["tipo_personal"] = (
+                    "Para personal no docente no corresponden modalidad/nivel curricular, "
+                    "titulación, espacio curricular, grado/año ni sección."
+                )
+        else:
+            if not self.modalidad_curricular_id:
+                errors["modalidad_curricular"] = "Seleccione la modalidad curricular."
+            if not self.nivel_curricular_id:
+                errors["nivel_curricular"] = "Seleccione el nivel curricular."
+
+            if self.modalidad_curricular_id and self.nivel_curricular_id:
+                catalogs = curricular_catalogs(
+                    self.modalidad_curricular_id,
+                    self.nivel_curricular_id,
+                    self.titulacion,
+                    tipo_personal=tipo_personal_codigo,
+                )
+                if not catalogs["niveles"].filter(pk=self.nivel_curricular_id).exists():
+                    errors["nivel_curricular"] = (
+                        "El nivel curricular no pertenece a la modalidad curricular seleccionada."
+                    )
+
+                expected_source = titulacion_source(
+                    self.modalidad_curricular_id, self.nivel_curricular_id
+                )
+                if expected_source:
+                    if not self.titulacion:
+                        errors["titulacion"] = "Seleccione una titulación."
+                    elif not valid_titulacion(
+                        self.modalidad_curricular_id,
+                        self.nivel_curricular_id,
+                        self.titulacion,
+                        self.titulacion_fuente or expected_source,
+                    ):
+                        errors["titulacion"] = (
+                            "La titulación no corresponde a la modalidad y nivel curricular seleccionados."
+                        )
+                    if self.titulacion_fuente and self.titulacion_fuente != expected_source:
+                        errors["titulacion"] = "La fuente de la titulación no corresponde al catálogo seleccionado."
+                elif self.titulacion:
+                    errors["titulacion"] = "El nivel seleccionado no tiene catálogo de titulaciones configurado."
+
+                if self.espacio_curricular_id:
+                    if not self.titulacion:
+                        errors["espacio_curricular"] = "Seleccione primero una titulación."
+                    elif not catalogs["espacios"].filter(pk=self.espacio_curricular_id).exists():
+                        errors["espacio_curricular"] = (
+                            "El espacio curricular no corresponde a la titulación seleccionada."
+                        )
+
+                if self.grado_anio_id and not catalogs["grados"].filter(pk=self.grado_anio_id).exists():
+                    errors["grado_anio"] = (
+                        "El grado/año no corresponde a la modalidad y nivel curricular seleccionados."
+                    )
+
+                if self.secciones_id and not catalogs["secciones"].filter(pk=self.secciones_id).exists():
+                    errors["secciones"] = (
+                        "La sección no corresponde a la modalidad y nivel curricular seleccionados."
+                    )
+
         if errors:
             raise ValidationError(errors)
 
+    @property
+    def es_no_docente(self):
+        return self.tipo_personal_id == 2
+
+    @property
+    def tipo_personal_descripcion(self):
+        return str(self.tipo_personal) if self.tipo_personal_id else ""
+
+    @property
+    def titulacion_descripcion(self):
+        from .domain.catalogs import titulacion_label
+        return titulacion_label(self.titulacion_fuente, self.titulacion)
+
     def normalize(self):
         self.cueanexo = str(self.cueanexo or "").strip()
+
+
+################################
+# SECUENCIA DE ID_PUESTO
+################################
+class PuestoSecuencia(models.Model):
+    puesto_base = models.CharField(max_length=160, primary_key=True)
+    ultimo_consecutivo = models.PositiveIntegerField(default=0)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "puesto_secuencia"
+        verbose_name = "Secuencia de puesto"
+        verbose_name_plural = "Secuencias de puestos"
+
+    def __str__(self):
+        return f"{self.puesto_base} -> {self.ultimo_consecutivo}"
 
 
 ################################
@@ -862,7 +1159,12 @@ class ActividadSede(models.Model):
     cueanexo = models.CharField(max_length=9, db_index=True)
 
     class Meta:
-        unique_together = ("actividad", "cueanexo")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["actividad", "cueanexo"],
+                name="bnh_actividad_sede_unica",
+            )
+        ]
     
     def __str__(self):
         return f"{self.actividad_id} - {self.cueanexo}"
@@ -899,9 +1201,17 @@ class HorarioActividad(models.Model):
     hora_hasta = models.TimeField()
 
     class Meta:
-        db_table="horarios_actividad"
-        constraints = [models.CheckConstraint(condition=models.Q(hora_hasta__gt=models.F("hora_desde")), name="bnh_horario_orden")]
-        unique_together = ("actividad_sede", "dia", "hora_desde", "hora_hasta")
+        db_table = "horarios_actividad"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(hora_hasta__gt=models.F("hora_desde")),
+                name="bnh_horario_orden",
+            ),
+            models.UniqueConstraint(
+                fields=["actividad_sede", "dia", "hora_desde", "hora_hasta"],
+                name="bnh_horario_unico",
+            ),
+        ]
 
 
     def __str__(self):
@@ -921,6 +1231,7 @@ class AccesoRegional(AuditoriaModel):
 
 class EventoAuditoria(models.Model):
     fecha = models.DateTimeField(auto_now_add=True, db_index=True)
+    operacion_id = models.UUIDField(null=True, blank=True, db_index=True)
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     entidad = models.CharField(max_length=40)
     objeto_id = models.PositiveBigIntegerField()
@@ -932,3 +1243,178 @@ class EventoAuditoria(models.Model):
 
     class Meta:
         ordering = ["-fecha", "-pk"]
+        indexes = [
+            models.Index(fields=["entidad", "objeto_id", "-fecha"], name="bnh_audit_obj_idx"),
+            models.Index(fields=["cueanexo", "-fecha"], name="bnh_audit_cue_idx"),
+        ]
+
+
+class PofTipo(models.Model):
+    c_pof=models.SmallIntegerField(null=False, blank=False)
+    descrip_pof=models.CharField(max_length=255)
+    
+    class Meta:
+        verbose_name='Tipo Pof'
+        verbose_name_plural='Tipos Pof'
+        db_table='tipo_pof'
+
+class NivelServicioTipo(models.Model):
+    c_nivel=models.SmallIntegerField(primary_key=True, null=False, blank=False)
+    descripcion=models.CharField(max_length=255)
+    c_modalidad1=models.SmallIntegerField(null=False, blank=False)
+
+    class Meta:
+        verbose_name='Nivel Servicio Tipo'
+        verbose_name_plural='Niveles Servicio Tipo'
+        db_table='nivel_servicio_tipo'
+        ordering=['c_modalidad1', 'c_nivel']
+
+    def __str__(self):
+        return self.descripcion
+
+class ModalidadTipo(models.Model):
+    c_modalidad1=models.SmallIntegerField(null=False, blank=False)
+    descripcion=models.CharField(max_length=255)
+    orden=models.SmallIntegerField(null=False, blank=False)
+    
+    
+    class Meta:
+        verbose_name='Modalidad Tipo'
+        verbose_name_plural='Modalidades Tipo'
+        db_table='modalidad1_tipo'
+        ordering=['orden', 'descripcion']
+
+    def __str__(self):
+        return self.descripcion
+
+
+
+class TitulacionNombre(models.Model):
+    id_nombre_titulacion=models.IntegerField(null=False, blank=False)
+    id_titulacion=models.IntegerField(null=False, blank=False)
+    descripcion_adicional=models.CharField(max_length=255)
+    nombre=models.CharField(max_length=255)
+    c_nivel_servicio=models.SmallIntegerField(null=False, blank=False)
+    c_modalidad1=models.SmallIntegerField(null=False, blank=False)
+    class Meta:
+        verbose_name='Titulacion Nombre'
+        verbose_name_plural='Titulaciones Nombre'
+        db_table='titulacion_nombre'
+
+    def __str__(self):
+        return self.nombre
+
+
+class EspacioCurricularNombre(models.Model):
+    id_espacio_curricular=models.BigIntegerField(null=False, blank=False)
+    id_titulacion=models.IntegerField(null=False, blank=False)
+    id_nombre_espacio_curricular=models.IntegerField(null=False, blank=False)
+    nombre=models.CharField(max_length=255)
+    class Meta:
+        verbose_name='Espacio Curricular Nombre'
+        verbose_name_plural='Espacios Curriculares Nombres'
+        db_table='espacio_curricular_nombre'
+
+    def __str__(self):
+        return self.nombre
+
+
+class TitulacionSuperior(models.Model):
+    id_titulacion=models.IntegerField(null=False, blank=False)
+    c_nivel_servicio=models.SmallIntegerField(null=False, blank=False)
+    c_modalidad1=models.SmallIntegerField(null=False, blank=False)
+    descripcion=models.CharField(max_length=255, unique=True)
+    class Meta:
+        verbose_name='Titulacion Superior'
+        verbose_name_plural='Titulaciones Superior'
+        db_table='titulacion_superior'
+
+    def __str__(self):
+        return self.descripcion
+
+
+class TitulacionFP(models.Model):
+    id_titulacion=models.IntegerField(null=False, blank=False)
+    c_nivel_servicio=models.SmallIntegerField(null=False, blank=False)
+    c_modalidad1=models.SmallIntegerField(null=False, blank=False)
+    descripcion=models.CharField(max_length=255, unique=True)
+    class Meta:
+        verbose_name='Titulacion FP'
+        verbose_name_plural='Titulaciones FP'
+        db_table='titulacion_fp'
+
+
+class CondicionActividadNombre(models.Model):
+    c_nomen = models.CharField(max_length=10, null=False, blank=False)
+    encuadre = models.CharField(max_length=50, null=False, blank=False)
+    sit_rev = models.SmallIntegerField(null=False, blank=False)
+    c_homo_sit_rev = models.SmallIntegerField(null=False, blank=False)
+    c_homo_c_act = models.SmallIntegerField(null=False, blank=False)
+    denominacion = models.CharField(max_length=255)
+    t_personal = models.SmallIntegerField(null=False, blank=False)
+
+    class Meta:
+        verbose_name = 'Condicion Actividad Nombre'
+        verbose_name_plural = 'Condiciones Actividad Nombres'
+        db_table = 'condicion_actividad_nombre'
+        ordering = ('denominacion', 'c_nomen', 'pk')
+        indexes = [
+            models.Index(
+                fields=['t_personal', 'sit_rev'],
+                name='bnh_cond_tipo_sit_idx',
+            ),
+        ]
+
+    def __str__(self):
+        return self.denominacion
+        
+
+
+class TipoPersonal(models.Model):
+    c_tpersonal = models.SmallIntegerField(null=False, blank=False, unique=True)
+    descripcion = models.CharField(max_length=50)
+
+    class Meta:
+        verbose_name = 'Tipo Personal'
+        verbose_name_plural = 'Tipos Personales'
+        db_table = 'tipo_personal'
+        ordering = ('c_tpersonal',)
+
+    def __str__(self):
+        return self.descripcion
+
+    @property
+    def es_no_docente(self):
+        return self.c_tpersonal == 2
+
+class RevisionCatalogos(models.Model):
+    """Versión global de catálogos usados por formularios operativos BNH."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    version = models.PositiveBigIntegerField(default=1)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    actualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        db_table = "bnh_revision_catalogos"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(version__gte=1),
+                name="bnh_catalog_version_positiva",
+            )
+        ]
+
+    @classmethod
+    def current_version(cls):
+        # Lectura pura: nunca se escribe durante un GET/formulario.
+        obj = cls.objects.filter(pk=1).only("version").first()
+        return obj.version if obj else 1
+
+    def __str__(self):
+        return f"Catálogos BNH v{self.version}"

@@ -21,12 +21,8 @@ from django.utils.module_loading import import_string
 
 from allauth.account.adapter import get_adapter as get_account_adapter
 from allauth.account.internal.emailkit import valid_email_or_none
-from allauth.account.utils import (
-    filter_users_by_email,
-    user_email,
-    user_field,
-    user_username,
-)
+from allauth.account.internal.userkit import filter_users_by_email
+from allauth.account.utils import user_email, user_field, user_username
 from allauth.core.internal.adapter import BaseAdapter
 from allauth.core.internal.modelkit import deserialize_instance, serialize_instance
 
@@ -412,7 +408,7 @@ class DefaultSocialAccountAdapter(BaseAdapter):
         for email in emails:
             if not self.can_authenticate_by_email(sociallogin, email):
                 continue
-            users = filter_users_by_email(email, prefer_verified=True)
+            users = filter_users_by_email(email, prefer_verified=True, for_login=True)
             if users:
                 return users[0], email
         return None

@@ -39,6 +39,10 @@ def validate_access_token(token: str) -> tuple[Any, dict[str, Any]] | None:
         session = get_token_session(payload)
         if session is None:
             return None
+        user = validate_token_user(payload, session)
+        if user is None:
+            return None
+        return user, payload
     sub = payload["sub"]
     pk = str_to_user_id(sub)
     lazy_user = SimpleLazyObject(lambda: get_user_model().objects.get(pk=pk))
@@ -118,6 +122,8 @@ def validate_refresh_token(
     if exp is None or exp <= now:
         return None
     user = validate_token_user(payload, session)
+    if user is None:
+        return None
     return user, session, payload
 
 

@@ -100,7 +100,7 @@ def generate_username_candidates(basename) -> list:
 
 
 def generate_unique_username(txts: list[str | None], regex=None) -> str:
-    from allauth.account.utils import filter_users_by_username
+    from allauth.account.internal.userkit import filter_users_by_username
 
     from .account.adapter import get_adapter
     from .account.app_settings import USER_MODEL_USERNAME_FIELD

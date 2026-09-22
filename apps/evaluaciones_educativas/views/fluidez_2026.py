@@ -49,6 +49,9 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 # 		   'grado':grado
 # 		   }
 # 	return render(request, "fluidez_2026/inicio.html",contexto)
+
+
+#MODIFICACION PARA QUE ESTO FUNCIONE SOLO CON RURALES
 @login_required
 def lista(request,fid_actual=None):
 	

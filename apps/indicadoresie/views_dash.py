@@ -229,7 +229,7 @@ def _opciones_cueanexo_supervisor_sge(user):
         return []
 
     opciones = []
-    cueanexos_vistos = set()
+    opciones_por_cueanexo = {}
     connection = None
     try:
         connection = psycopg2.connect(
@@ -243,7 +243,8 @@ def _opciones_cueanexo_supervisor_sge(user):
             r"""
             SELECT DISTINCT
                 o.cueanexo,
-                o.nom_est
+                o.nom_est,
+                o.oferta
             FROM supervisores.supervisor_registro_supervisor AS s
             JOIN supervisores.supervisor_registro_supervisor_regional AS sr
                 ON sr.supervisor_id = s.id
@@ -255,21 +256,36 @@ def _opciones_cueanexo_supervisor_sge(user):
               AND s.activo = TRUE
               AND o.cueanexo IS NOT NULL
               AND TRIM(CAST(o.cueanexo AS TEXT)) <> ''
-            ORDER BY o.cueanexo, o.nom_est
+            ORDER BY o.cueanexo, o.nom_est, o.oferta
             """,
             [cuil],
         )
         for fila in cursor.fetchall():
             cueanexo = _normalizar_cueanexo_sge(fila[0])
-            if not cueanexo or cueanexo in cueanexos_vistos:
+            if not cueanexo:
                 continue
-            cueanexos_vistos.add(cueanexo)
+
             nombre = str(fila[1] or "").strip() or "Establecimiento sin nombre"
-            opciones.append({
-                "cueanexo": cueanexo,
-                "nombre": nombre,
-                "region": "",
-            })
+            oferta = str(fila[2] or "").strip()
+            opcion = opciones_por_cueanexo.get(cueanexo)
+
+            if opcion is None:
+                opcion = {
+                    "cueanexo": cueanexo,
+                    "nombre": nombre,
+                    "region": "",
+                    "ofertas": [],
+                }
+                opciones_por_cueanexo[cueanexo] = opcion
+                opciones.append(opcion)
+            elif (
+                opcion["nombre"] == "Establecimiento sin nombre"
+                and nombre != "Establecimiento sin nombre"
+            ):
+                opcion["nombre"] = nombre
+
+            if oferta and oferta not in opcion["ofertas"]:
+                opcion["ofertas"].append(oferta)
     except Exception:
         return []
     finally:

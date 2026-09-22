@@ -14,6 +14,7 @@ from . import models, permisos, views
 from .models import (
     ROL_POF_DIRECTOR,
     ROL_POF_REGIONAL,
+    ROLES_AUTORIZADOS_POF,
     ROLES_POF_ACCESO_COMPLETO,
     ROLES_POF_SOLO_VISUALIZACION_COMPLETA,
     VCapaUnicaOfertasAnt,
@@ -29,9 +30,19 @@ from .services import visualizacion_cargos_localizacion_service as visualizacion
 class RolesPofTests(SimpleTestCase):
     def test_roles_centralizados_coinciden_con_la_matriz(self):
         self.assertEqual(ROLES_POF_ACCESO_COMPLETO, {"Pof", "Administrador"})
-        self.assertIn("Director de Nivel Inicial", ROLES_POF_SOLO_VISUALIZACION_COMPLETA)
-        self.assertNotIn(ROL_POF_REGIONAL, ROLES_POF_SOLO_VISUALIZACION_COMPLETA)
-        self.assertNotIn(ROL_POF_DIRECTOR, ROLES_POF_SOLO_VISUALIZACION_COMPLETA)
+        self.assertEqual(
+            ROLES_POF_SOLO_VISUALIZACION_COMPLETA,
+            {"Director General", "Subsecretario", "Gestor"},
+        )
+        self.assertEqual(
+            ROLES_AUTORIZADOS_POF,
+            {"Pof", "Administrador", "Director General", "Subsecretario", "Gestor"},
+        )
+        self.assertNotIn(ROL_POF_REGIONAL, ROLES_AUTORIZADOS_POF)
+        self.assertNotIn(ROL_POF_DIRECTOR, ROLES_AUTORIZADOS_POF)
+        self.assertNotIn("Director de Nivel Inicial", ROLES_AUTORIZADOS_POF)
+        self.assertNotIn("Ministro", ROLES_AUTORIZADOS_POF)
+        self.assertNotIn("Supervisor", ROLES_AUTORIZADOS_POF)
 
 
 class ExportacionReunidaExcelTests(SimpleTestCase):

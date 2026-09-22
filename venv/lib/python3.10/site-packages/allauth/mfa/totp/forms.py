@@ -6,6 +6,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 
 from allauth.mfa.adapter import get_adapter
+from allauth.mfa.base.internal.flows import check_rate_limit
 from allauth.mfa.internal.flows.add import validate_can_add_authenticator
 from allauth.mfa.totp.internal import auth
 
@@ -25,9 +26,11 @@ class ActivateTOTPForm(forms.Form):
 
     def clean_code(self) -> str:
         validate_can_add_authenticator(self.user)
+        clear_rl = check_rate_limit(self.user, error_key="rate_limited")
         code = self.cleaned_data["code"]
         if not auth.validate_totp_code(self.secret, code):
             raise get_adapter().validation_error("incorrect_code")
+        clear_rl()
         return code
 
 
