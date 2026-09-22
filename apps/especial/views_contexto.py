@@ -376,11 +376,10 @@ def render_especial(request, full_template, context, partial_template):
 def construir_accesos_rapidos_especial(especial_context):
     """Arma los accesos rápidos de Inicio reutilizando la metadata centralizada."""
     querystring = especial_context.get("querystring", "")
-    es_admin = bool(especial_context.get("es_admin_especial"))
     accesos = []
 
     for acceso in ESPECIAL_ACCESOS_RAPIDOS:
-        if acceso["requires_admin"] and not es_admin:
+        if acceso["requires_admin"] and not especial_context.get("puede_ver_ciclos"):
             continue
 
         metadata = metadata_menu_especial(acceso["menu"])
@@ -433,9 +432,19 @@ def resolver_contexto_operativo(request, scope="cargables"):
         "querystring": _context_querystring(cueanexo, ciclo),
         "alumnos_url": _alumnos_url(),
         "es_admin_especial": permisos["es_admin"],
+        "rol_especial": permisos["rol"],
+        "puede_cargar": permisos["puede_cargar"],
+        "puede_ver_ciclos": permisos["puede_ver_ciclos"],
+        "puede_ver_visualizador_directores": permisos[
+            "puede_ver_visualizador_directores"
+        ],
+        "cueanexos_visualizacion": permisos["cueanexos_visualizacion"],
+        "cueanexos_cargables": permisos["cueanexos_cargables"],
         "ciclo_cerrado": bool(ciclo and ciclo.cerrado),
         "puede_consultar": bool(cueanexo and ciclo),
-        "puede_operar": bool(cueanexo and ciclo and not ciclo.cerrado),
+        "puede_operar": bool(
+            permisos["puede_cargar"] and cueanexo and ciclo and not ciclo.cerrado
+        ),
         "sin_cueanexo": not bool(cueanexo),
         "sin_ciclo": not bool(ciclo),
     }
@@ -447,7 +456,13 @@ def resolver_contexto_operativo(request, scope="cargables"):
 def contexto_base(request, active_menu, title=None, subtitle=None):
     """Contexto base para todas las vistas de Especial."""
     with perf_phase(request, "context"):
-        scope = "visualizacion" if active_menu in {"localizaciones", "cueanexo"} else "cargables"
+        permisos = get_permisos_especial_request(request)
+        scope = (
+            "visualizacion"
+            if active_menu in {"localizaciones", "cueanexo"}
+            or not permisos["puede_cargar"]
+            else "cargables"
+        )
         especial_context = resolver_contexto_operativo(request, scope=scope)
         metadata = metadata_menu_especial(active_menu)
         if title is not None:
