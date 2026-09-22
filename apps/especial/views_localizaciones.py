@@ -109,7 +109,7 @@ DEFAULT_ORDER_LOCALIZACIONES_ESPECIAL = (
     "cueanexo",
 )
 CACHE_TTL_LOCALIZACIONES_ESPECIAL = 60 * 5
-CACHE_VERSION_LOCALIZACIONES_ESPECIAL = "v2_cache_admin_all_20260810"
+CACHE_VERSION_LOCALIZACIONES_ESPECIAL = "v3_cache_incluye_ofertas_especiales_20260922"
 _CACHE_MISS = object()
 
 def _log_perf(label, started):

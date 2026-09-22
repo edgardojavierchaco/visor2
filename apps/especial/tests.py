@@ -14,6 +14,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import DatabaseError, IntegrityError, close_old_connections, connection
 from django.db.utils import OperationalError, ProgrammingError
 from django.db.models import CharField
+from django import forms
 from django.http import Http404, HttpResponse
 from django.template import Context, Engine
 from django.template.loader import render_to_string
@@ -96,6 +97,7 @@ from .views_localizaciones import (
     _apply_filters_items,
     _apply_order_items,
     _cache_key_localizaciones_especial,
+    _iter_serialized_items,
     _get_items_base_cached,
     _get_items_base_authorized,
     visualizacion_localizaciones,
@@ -948,7 +950,7 @@ class VisualizadorDirectoresTests(SimpleTestCase):
                 "20123456789",
                 "220082800",
                 "E.E.E. N.º 8",
-                "Especial - Integración",
+                "Especial - Integración ",
                 "Villa Ángela",
                 "Mayor Luis J. Fontana",
             ),
@@ -986,7 +988,7 @@ class VisualizadorDirectoresTests(SimpleTestCase):
             "/especial/visualizador/directores/",
             {
                 "filtro_cueanexo": "22 0",
-                "oferta": "Especial - Integración",
+                "oferta": "Especial - Integración ",
             },
         )
 
@@ -1019,7 +1021,7 @@ class VisualizadorDirectoresTests(SimpleTestCase):
             {
                 "cuil": "",
                 "cueanexo": "220",
-                "oferta": "Especial - Integración",
+                "oferta": "Especial - Integración ",
                 "establecimiento": "",
                 "localidad": "",
                 "departamento": "",
@@ -1027,7 +1029,9 @@ class VisualizadorDirectoresTests(SimpleTestCase):
         )
 
         queryset.filter.assert_any_call(cueanexo__icontains="220")
-        queryset.filter.assert_any_call(oferta="Especial - Integración")
+        queryset.filter.assert_any_call(
+            oferta_normalizada="Especial - Integración"
+        )
 
     def test_template_limita_a_uno_y_genera_expansion_independiente(self):
         filas = [
@@ -1043,7 +1047,7 @@ class VisualizadorDirectoresTests(SimpleTestCase):
                 "20123456789",
                 "220082800",
                 "E.E.E. N.º 8",
-                "Especial - Integración",
+                "Especial - Integración ",
                 "Villa Ángela",
                 "Mayor Luis J. Fontana",
             ),
@@ -1070,7 +1074,7 @@ class VisualizadorDirectoresTests(SimpleTestCase):
             "filtros_directores": {
                 "cuil": "",
                 "cueanexo": "",
-                "oferta": "Especial - Integración",
+                "oferta": "Especial - Integración ",
                 "establecimiento": "",
                 "localidad": "",
                 "departamento": "",
@@ -1078,7 +1082,7 @@ class VisualizadorDirectoresTests(SimpleTestCase):
             "filtros_directores_errores": {},
             "filtros_directores_querystring": "",
             "cueanexos_directores_filtro": ["220172800"],
-            "ofertas_directores_filtro": ["Especial - Integración"],
+            "ofertas_directores_filtro": ["Especial - Integración "],
             "establecimientos_directores_filtro": [],
             "localidades_directores_filtro": [],
             "departamentos_directores_filtro": [],
@@ -1101,7 +1105,7 @@ class VisualizadorDirectoresTests(SimpleTestCase):
         self.assertIn('data-director-cue-suggestion hidden', rendered)
         self.assertIn('aria-controls="visualizador-directores-cue-sugerencias"', rendered)
         self.assertIn('name="oferta"', rendered)
-        self.assertIn("Especial - Integración", rendered)
+        self.assertIn("Especial - Integración ", rendered)
         self.assertIn('colspan="2" class="director-asignaciones-cell"', rendered)
         self.assertIn('class="director-asignaciones-list"', rendered)
         self.assertIn('class="director-asignacion-row"', rendered)
@@ -1207,6 +1211,44 @@ class AlcanceLocalizacionesTests(SimpleTestCase):
 
         self.assertIs(queryset, permisos["escuelas_visualizacion"])
         self.assertIn("cueanexo", queryset.only_fields)
+
+    def test_localizaciones_incluye_integracion_con_y_sin_espacio_final(self):
+        ofertas_base = [
+            "Especial - Jardín de infantes",
+            "Especial - Primaria de 7 años",
+        ]
+
+        for integracion in ("Especial - Integración ", "Especial - Integración"):
+            with self.subTest(oferta=repr(integracion)):
+                source = _FakeSchoolQuerySet(
+                    ("220097100",),
+                    [
+                        SimpleNamespace(cueanexo="220097100", oferta=oferta)
+                        for oferta in ofertas_base + [integracion]
+                    ],
+                )
+                snapshot = list(
+                    _iter_serialized_items(
+                        _get_items_base_authorized(
+                            {"escuelas_visualizacion": source}
+                        )
+                    )
+                )
+                resultado = _apply_filters_items(
+                    snapshot,
+                    RequestFactory().get(
+                        "/especial/visualizacion/localizaciones/?cueanexo=220097100"
+                    ),
+                )
+
+                self.assertEqual(
+                    [item["oferta"] for item in resultado],
+                    [
+                        "Especial - Jardín de infantes",
+                        "Especial - Primaria de 7 años",
+                        "Especial - Integración",
+                    ],
+                )
 
     def test_fragmento_no_construye_opciones_ni_contexto_completo(self):
         request = RequestFactory().get(
@@ -1872,7 +1914,14 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
         self.assertEqual(manager.alias, "default")
         self.assertEqual(
             manager.filter_kwargs,
-            [{"acronimo__iexact": "EEE"}, {"cueanexo": cueanexo}],
+            [
+                {"acronimo__iexact": "EEE"},
+                {"cueanexo": cueanexo},
+                {
+                    "est_oferta__iexact": "Activo",
+                    "estado_est__iexact": "Activo",
+                },
+            ],
         )
         self.assertEqual(manager.values_list_args, (("oferta",), True))
         return habilitada
@@ -1908,7 +1957,7 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
 
     def test_cue_sin_oferta_comun_no_es_elegible(self):
         for oferta in (
-            "Especial - Integración",
+            "Especial - Integración ",
             "Adultos - Primaria",
         ):
             with self.subTest(oferta=oferta):
@@ -1950,23 +1999,23 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
         self.assertEqual(_normalizar_oferta_matricula_compartida(None), "")
         objetivo = "especial integracion"
         ofertas = (
-            "Especial - Integración",
+            "Especial - Integración ",
             "  Especial - Integración  ",
-            "Especial  -  Integración",
-            "Especial\u00a0-\u00a0Integración",
-            "Especial\u200b - Integración",
-            "Especial\u200c-\u200dIntegración",
-            "Especial\u2060 - Integración",
-            "Especial\ufeff - Integración",
-            "Especial - Integracio\u0301n",
-            "Especial – Integración",
-            "Especial — Integración",
-            "ESPECIAL - INTEGRACIÓN",
-            "Especial - integracion",
-            "Especial-Integración",
-            "Especial Integración",
-            "ESPECIAL INTEGRACIÓN",
-            "Especial Integracion",
+            "Especial  -  Integración ",
+            "Especial\u00a0-\u00a0Integración" ,
+            "Especial\u200b - Integración ",
+            "Especial\u200c-\u200dIntegración ",
+            "Especial\u2060 - Integración ",
+            "Especial\ufeff - Integración ",
+            "Especial - Integracio\u0301n ",
+            "Especial – Integración ",
+            "Especial — Integración ",
+            "ESPECIAL - INTEGRACIÓN ",
+            "Especial - integracion ",
+            "Especial-Integración ",
+            "Especial Integración ",
+            "ESPECIAL INTEGRACIÓN ",
+            "Especial Integracion ",
         )
         for oferta in ofertas:
             with self.subTest(oferta=repr(oferta)):
@@ -2084,7 +2133,7 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
                     {
                         "cueanexo": "220015500",
                         "acronimo": "OTRA_MODALIDAD",
-                        "oferta": "Especial - Integración",
+                        "oferta": "Especial - Integración ",
                     },
                 ]
             )
@@ -2599,7 +2648,7 @@ class AutocompleteMatriculaCompartidaEspecialTests(SimpleTestCase):
                 "id": 9,
                 "cueanexo": "100000007",
                 "nom_est": "Solo Especial",
-                "oferta": "Especial - Integración",
+                "oferta": "Especial - Integración ",
             },
             {
                 "id": 10,
@@ -2804,7 +2853,7 @@ class AutocompleteMatriculaCompartidaEspecialTests(SimpleTestCase):
                 "id": 40,
                 "cueanexo": "100000020",
                 "nom_est": "Sede Especial",
-                "oferta": "Especial - Integración",
+                "oferta": "Especial - Integración ",
                 "acronimo": "EEE",
             },
             {
@@ -3067,6 +3116,9 @@ class EspecialSeccionOfertaFormTests(SimpleTestCase):
         with patch(
             "apps.especial.forms.get_ofertas_educativas_especiales",
             return_value=self.OFERTAS,
+        ), patch(
+            "apps.especial.forms.cueanexo_tiene_oferta_matricula_compartida",
+            return_value=True,
         ):
             form = EspecialSeccionForm(
                 instance=SeccionEspecial(cueanexo=self.CUEANEXO),
@@ -3075,7 +3127,7 @@ class EspecialSeccionOfertaFormTests(SimpleTestCase):
             )
 
         html = str(form["oferta"])
-        self.assertEqual(form.fields["oferta"].__class__.__name__, "ChoiceField")
+        self.assertIsInstance(form.fields["oferta"], forms.ChoiceField)
         self.assertEqual(form["oferta"].name, "oferta")
         self.assertEqual(form["oferta"].id_for_label, "id_oferta")
         self.assertEqual(html.count("<option"), 3)
@@ -3109,16 +3161,20 @@ class EspecialSeccionOfertaViewTests(SimpleTestCase):
 
     def _form(self, *, cueanexo=None, data=None, oferta_guardada=""):
         cueanexo = cueanexo or self.CUEANEXO
-        return EspecialSeccionForm(
-            data,
-            instance=SeccionEspecial(
+        with patch(
+            "apps.especial.forms.cueanexo_tiene_oferta_matricula_compartida",
+            return_value=True,
+        ):
+            return EspecialSeccionForm(
+                data,
+                instance=SeccionEspecial(
+                    cueanexo=cueanexo,
+                    ciclo=self.ciclo,
+                    oferta=oferta_guardada,
+                ),
                 cueanexo=cueanexo,
                 ciclo=self.ciclo,
-                oferta=oferta_guardada,
-            ),
-            cueanexo=cueanexo,
-            ciclo=self.ciclo,
-        )
+            )
 
     def test_get_creacion_carga_ofertas_y_muestra_titulo_agregar(self):
         request = RequestFactory().get(
@@ -3137,6 +3193,9 @@ class EspecialSeccionOfertaViewTests(SimpleTestCase):
         ) as render_mock, patch(
             "apps.especial.forms.get_ofertas_educativas_especiales",
             return_value=[self.OFERTA, self.OFERTA_ALTERNATIVA],
+        ), patch(
+            "apps.especial.forms.cueanexo_tiene_oferta_matricula_compartida",
+            return_value=True,
         ):
             response = self._vista_sin_decoradores()(request)
 
@@ -3164,6 +3223,22 @@ class EspecialSeccionOfertaViewTests(SimpleTestCase):
 
         obtener_ofertas.assert_called_once_with(self.CUEANEXO)
         self.assertEqual(form.ciclo.anio, 2026)
+
+    def test_post_con_espacio_final_acepta_oferta_del_padron(self):
+        with patch(
+            "apps.especial.forms.get_ofertas_educativas_especiales",
+            return_value=[self.OFERTA, self.OFERTA_ALTERNATIVA],
+        ):
+            form = self._form(
+                data={
+                    "oferta": f"{self.OFERTA} ",
+                    "nombre_seccion": "Sección oferta",
+                    "capacidad_total": "15",
+                }
+            )
+
+        self.assertNotIn("oferta", form.errors)
+        self.assertEqual(form.cleaned_data["oferta"], self.OFERTA)
 
     def test_error_en_otro_campo_conserva_oferta_visible_y_seleccionada(self):
         with patch(
@@ -3582,7 +3657,7 @@ class MatriculaCompartidaSeccionInterfaceTests(SimpleTestCase):
     def test_oferta_real_integracion_habilita_seccion(self):
         seccion = SeccionEspecial(
             nombre_seccion="Integración - B",
-            oferta="Especial - Integración",
+            oferta="Especial - Integración ",
             cueanexo="220269100",
         )
 
@@ -3764,7 +3839,7 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
 
     def _convertir_en_integracion(self, seccion=None):
         seccion = seccion or self.seccion_ajena
-        seccion.oferta = "Especial - Integración"
+        seccion.oferta = "Especial - Integración "
         seccion.save()
         return seccion
 
