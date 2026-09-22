@@ -81,13 +81,23 @@ def _alumno_model():
     return apps.get_model("bnhalumnos", "Alumno")
 
 
-def _es_administrador(request):
-    return bool(get_permisos_especial_request(request).get("es_admin"))
+def _puede_usar_visualizador(request):
+    return bool(get_permisos_especial_request(request).get("puede_ver"))
 
 
-def _exigir_administrador(request):
-    if not _es_administrador(request):
-        raise PermissionDenied("El Visualizador Global es exclusivo para administradores.")
+def _exigir_visualizador(request):
+    if not _puede_usar_visualizador(request):
+        raise PermissionDenied("No tenés permisos para usar el Visualizador Global.")
+
+
+def _exigir_visualizador_directores(request):
+    _exigir_visualizador(request)
+    if not get_permisos_especial_request(request).get(
+        "puede_ver_visualizador_directores"
+    ):
+        raise PermissionDenied(
+            "No tenés permisos para consultar el Visualizador de directores."
+        )
 
 
 def _texto(valor):
@@ -235,6 +245,9 @@ def _bancos_alumnos_visualizador(filtros, especial_context=None):
         if usa_contexto_operativo
         else EspecialAlumnoBanco.objects.all()
     )
+    cues_autorizados = _cues_autorizados_visualizacion(especial_context)
+    if cues_autorizados is not None:
+        queryset = queryset.filter(cueanexo__in=cues_autorizados)
 
     if filtros["estado"] == "activo":
         queryset = queryset.filter(estado=EspecialAlumnoBanco.Estado.ACTIVO)
@@ -626,7 +639,13 @@ def _matriculas_compartidas_validas(bancos):
     return bancos_validos, cues_asociados
 
 
-def _inscripciones_visualizador(alumno_ids, filtros=None, *, detalle=False):
+def _inscripciones_visualizador(
+    alumno_ids,
+    filtros=None,
+    *,
+    detalle=False,
+    cueanexos_autorizados=None,
+):
     queryset = (
         AlumnoSeccion.objects.filter(alumno_id__in=alumno_ids)
         .select_related(
@@ -646,6 +665,8 @@ def _inscripciones_visualizador(alumno_ids, filtros=None, *, detalle=False):
             "-fecha_inscripcion",
         )
     )
+    if cueanexos_autorizados is not None:
+        queryset = queryset.filter(seccion__cueanexo__in=cueanexos_autorizados)
     if filtros is not None:
         padron_cues = _padron_cues_para_filtros(filtros)
         section_kwargs = _section_filter_kwargs(
@@ -742,6 +763,12 @@ def _error_busqueda(mensaje):
 def _buscar_personas(request, tipo):
     valor = (request.GET.get("q") or request.GET.get("cuil") or request.GET.get("dni") or "").strip()
     documento = _solo_digitos(valor)
+    permisos = get_permisos_especial_request(request)
+    cues_autorizados = (
+        None
+        if permisos["es_admin"]
+        else set(permisos["cueanexos_visualizacion"])
+    )
     if len(documento) < 7:
         return _error_busqueda("Ingresá un CUIL o DNI válido para buscar.")
 
@@ -749,6 +776,8 @@ def _buscar_personas(request, tipo):
         bancos = EspecialAlumnoBanco.objects.filter(
             estado=EspecialAlumnoBanco.Estado.ACTIVO,
         )
+        if cues_autorizados is not None:
+            bancos = bancos.filter(cueanexo__in=cues_autorizados)
         if len(documento) == 11:
             bancos = bancos.filter(
                 Q(alumno__cuil=documento) | Q(alumno_cuil_snapshot=documento)
@@ -780,7 +809,14 @@ def _buscar_personas(request, tipo):
     elif tipo == "docente":
         docentes = EspecialDocenteBnh.objects.using(PADRON_DB_ALIAS).filter(
             Q(cuil=documento) | Q(dni=documento)
-        ).order_by("apellido", "nombre")[:20]
+        ).order_by("apellido", "nombre")
+        if cues_autorizados is not None:
+            docentes = docentes.filter(
+                cuil__in=DocenteSeccion.objects.filter(
+                    seccion__cueanexo__in=cues_autorizados
+                ).values("docente_cuil")
+            )
+        docentes = docentes[:20]
         resultados = [
             {
                 "nombre": docente.nombre_completo,
@@ -791,24 +827,27 @@ def _buscar_personas(request, tipo):
             for docente in docentes
         ]
     else:
-        resultados = _buscar_directores(documento)
+        resultados = _buscar_directores(documento, cues_autorizados)
 
     return JsonResponse({"ok": True, "resultados": resultados})
 
 
-def _buscar_directores(cuil):
+def _buscar_directores(cuil, cueanexos_autorizados=None):
     sql = """
         SELECT cueanexo, nom_est, oferta, localidad, departamento,
                estado_est, apellido_resp, nombre_resp, resploc_cuitcuil,
                resploc_email, resploc_telefono
           FROM v_capa_unica_ofertas_ant
          WHERE regexp_replace(COALESCE(resploc_cuitcuil, ''), '\\D', '', 'g') = %s
-         ORDER BY cueanexo, nom_est, oferta
-         LIMIT 50
     """
+    params = [cuil]
+    if cueanexos_autorizados is not None:
+        sql += " AND cueanexo = ANY(%s)\n"
+        params.append(list(cueanexos_autorizados))
+    sql += " ORDER BY cueanexo, nom_est, oferta LIMIT 50"
     try:
         with connections[PADRON_DB_ALIAS].cursor() as cursor:
-            cursor.execute(sql, [cuil])
+            cursor.execute(sql, params)
             columnas = [columna[0] for columna in cursor.description]
             filas = [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
     except (OperationalError, ProgrammingError):
@@ -827,30 +866,45 @@ def _buscar_directores(cuil):
     ]
 
 
-def _datos_director(cuil):
+def _datos_director(cuil, cueanexos_autorizados=None):
     sql = """
         SELECT cueanexo, nom_est, oferta, localidad, departamento,
                estado_est, apellido_resp, nombre_resp, resploc_cuitcuil,
                resploc_email, resploc_telefono
           FROM v_capa_unica_ofertas_ant
          WHERE regexp_replace(COALESCE(resploc_cuitcuil, ''), '\\D', '', 'g') = %s
-         ORDER BY cueanexo, nom_est, oferta
     """
+    params = [cuil]
+    if cueanexos_autorizados is not None:
+        sql += " AND cueanexo = ANY(%s)"
+        params.append(list(cueanexos_autorizados))
+    sql += " ORDER BY cueanexo, nom_est, oferta"
     with connections[PADRON_DB_ALIAS].cursor() as cursor:
-        cursor.execute(sql, [cuil])
+        cursor.execute(sql, params)
         columnas = [columna[0] for columna in cursor.description]
         return [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
 
 
 def _persona_context(request, titulo, subtitulo="Consulta global exclusiva para administradores."):
     context = contexto_base(request, "visualizador", titulo, subtitulo)
-    context["visualizador_es_admin"] = True
+    permisos = get_permisos_especial_request(request)
+    context["visualizador_es_admin"] = permisos["es_admin"]
+    context["visualizador_puede_ver_directores"] = permisos[
+        "puede_ver_visualizador_directores"
+    ]
     return context
+
+
+def _cues_autorizados_visualizacion(especial_context):
+    """Devuelve el alcance de CUE o None cuando el usuario ve todo."""
+    if not especial_context or especial_context.get("es_admin_especial"):
+        return None
+    return set(especial_context.get("cueanexos_visualizacion") or ())
 
 
 @especial_required
 def visualizador_inicio(request):
-    _exigir_administrador(request)
+    _exigir_visualizador(request)
     tipo = (request.GET.get("tipo") or "").lower()
     if request.headers.get("x-requested-with") == "XMLHttpRequest" and tipo in TIPOS_BUSQUEDA:
         try:
@@ -863,11 +917,13 @@ def visualizador_inicio(request):
         "Visualizador",
         "Consultá alumnos, docentes y directores de la escuela seleccionada.",
     )
-    context["opciones_visualizador"] = (
+    opciones = [
         ("alumno", "Buscar alumno", "fa-user-graduate"),
         ("docente", "Buscar docente", "fa-chalkboard-user"),
-        ("director", "Buscar director", "fa-user-tie"),
-    )
+    ]
+    if context["visualizador_puede_ver_directores"]:
+        opciones.append(("director", "Buscar director", "fa-user-tie"))
+    context["opciones_visualizador"] = tuple(opciones)
     return render(request, "especial/visualizador_inicio.html", context)
 
 
@@ -962,7 +1018,7 @@ def _filtros_directores(request):
     return filtros, errores
 
 
-def _directores_queryset(filtros):
+def _directores_queryset(filtros, cueanexos_autorizados=None):
     queryset = (
         _padron_especial_queryset()
         .annotate(
@@ -978,6 +1034,8 @@ def _directores_queryset(filtros):
         .exclude(cuil_limpio__isnull=True)
         .exclude(cuil_limpio="")
     )
+    if cueanexos_autorizados is not None:
+        queryset = queryset.filter(cueanexo__in=cueanexos_autorizados)
     if filtros["cuil"]:
         queryset = queryset.filter(cuil_limpio=filtros["cuil"])
     if filtros["cueanexo"]:
@@ -1015,7 +1073,7 @@ def _filtros_directores_querystring(request):
     return urlencode(parametros)
 
 
-def _catalogos_filtros_directores():
+def _catalogos_filtros_directores(cueanexos_autorizados=None):
     padron = (
         _padron_especial_queryset()
         .annotate(
@@ -1031,6 +1089,8 @@ def _catalogos_filtros_directores():
         .exclude(cuil_limpio__isnull=True)
         .exclude(cuil_limpio="")
     )
+    if cueanexos_autorizados is not None:
+        padron = padron.filter(cueanexo__in=cueanexos_autorizados)
     return {
         "cueanexos_directores_filtro": (
             padron.exclude(cueanexo__isnull=True)
@@ -1146,7 +1206,12 @@ def _agrupar_directores(filas):
     return directores
 
 
-def _asignaciones_docentes_scope(filtros, *, incluir_estado=False):
+def _asignaciones_docentes_scope(
+    filtros,
+    *,
+    incluir_estado=False,
+    cueanexos_autorizados=None,
+):
     """Construye el alcance real de DocenteSeccion para filtrar CUILes."""
     padron_cues = _padron_cues_para_filtros(filtros)
     section_kwargs = _section_filter_kwargs(
@@ -1156,6 +1221,8 @@ def _asignaciones_docentes_scope(filtros, *, incluir_estado=False):
         include_ciclo=True,
     )
     queryset = DocenteSeccion.objects.all()
+    if cueanexos_autorizados is not None:
+        queryset = queryset.filter(seccion__cueanexo__in=cueanexos_autorizados)
     if section_kwargs:
         queryset = queryset.filter(
             **{
@@ -1178,6 +1245,9 @@ def _bancos_docentes_visualizador(filtros, especial_context=None):
         if usa_contexto_operativo
         else EspecialDocenteBanco.objects.all()
     )
+    cues_autorizados = _cues_autorizados_visualizacion(especial_context)
+    if cues_autorizados is not None:
+        queryset = queryset.filter(cueanexo__in=cues_autorizados)
     filtros_sobre_asignacion = bool(
         filtros["establecimiento"]
         or filtros["localidad"]
@@ -1196,6 +1266,7 @@ def _bancos_docentes_visualizador(filtros, especial_context=None):
         asignaciones, _ = _asignaciones_docentes_scope(
             filtros,
             incluir_estado=filtros["estado"] != "todos",
+            cueanexos_autorizados=cues_autorizados,
         )
         queryset = queryset.filter(
             docente_cuil__in=asignaciones.values("docente_cuil")
@@ -1215,13 +1286,15 @@ def _bancos_docentes_visualizador(filtros, especial_context=None):
     return queryset.distinct()
 
 
-def _catalogos_filtros_docentes():
+def _catalogos_filtros_docentes(cueanexos_autorizados=None):
     secciones = (
         SeccionEspecial.objects.filter(docentes__isnull=False)
         .select_related("ciclo")
         .distinct()
         .order_by("cueanexo", "ciclo__anio", "nombre_seccion")
     )
+    if cueanexos_autorizados is not None:
+        secciones = secciones.filter(cueanexo__in=cueanexos_autorizados)
     return {
         "estados_docentes_filtro": EspecialDocenteBanco.Estado.choices,
         "ciclos_docentes_filtro": EspecialCiclo.objects.order_by("-anio"),
@@ -1373,7 +1446,7 @@ def _enriquecer_docentes_visualizador(docentes, bancos, asignaciones, personas):
 @especial_required
 def visualizador_docentes(request):
     """Listado global de docentes de Especial, sólo de consulta."""
-    _exigir_administrador(request)
+    _exigir_visualizador(request)
     permisos = get_permisos_especial_request(request)
     logger.info(
         "Visualizador docentes: url=%s metodo=%s usuario_id=%s usuario=%s "
@@ -1393,7 +1466,11 @@ def visualizador_docentes(request):
         "Visualizador de docentes",
         "Consulta de docentes, asignaciones y secciones de Educación Especial.",
     )
-    context.update(_catalogos_filtros_docentes())
+    context.update(
+        _catalogos_filtros_docentes(
+            _cues_autorizados_visualizacion(context["especial_context"])
+        )
+    )
     context.update(
         {
             "filtros_docentes": filtros,
@@ -1432,6 +1509,9 @@ def visualizador_docentes(request):
         asignaciones_queryset, _ = _asignaciones_docentes_scope(
             filtros,
             incluir_estado=filtros["estado"] != "todos",
+            cueanexos_autorizados=_cues_autorizados_visualizacion(
+                context["especial_context"]
+            ),
         )
         asignaciones = list(
             asignaciones_queryset.filter(docente_cuil__in=cuiles)
@@ -1482,14 +1562,17 @@ def visualizador_docentes(request):
 @especial_required
 def visualizador_directores(request):
     """Listado global de directores/responsables de establecimientos Especial."""
-    _exigir_administrador(request)
+    _exigir_visualizador_directores(request)
     filtros, errores = _filtros_directores(request)
     context = _persona_context(
         request,
         "Visualizador de directores",
         "Consulta global de directores, establecimientos y CUE-Anexos de Educación Especial.",
     )
-    context.update(_catalogos_filtros_directores())
+    cues_autorizados = _cues_autorizados_visualizacion(
+        context["especial_context"]
+    )
+    context.update(_catalogos_filtros_directores(cues_autorizados))
     context.update(
         {
             "filtros_directores": filtros,
@@ -1505,7 +1588,7 @@ def visualizador_directores(request):
         return render(request, "especial/visualizador_directores.html", context)
 
     try:
-        filas = list(_directores_queryset(filtros))
+        filas = list(_directores_queryset(filtros, cues_autorizados))
         directores_agrupados = _agrupar_directores(filas)
         paginator = Paginator(directores_agrupados, VISUALIZADOR_ALUMNOS_PAGE_SIZE)
         page_obj = paginator.get_page(request.GET.get("page") or 1)
@@ -1527,7 +1610,7 @@ def visualizador_directores(request):
 @especial_required
 def visualizador_alumnos(request):
     """Lista operativa del banco Especial o vista explícita de prueba BNH."""
-    _exigir_administrador(request)
+    _exigir_visualizador(request)
     permisos = get_permisos_especial_request(request)
     logger.info(
         "Visualizador alumnos: url=%s metodo=%s usuario_id=%s usuario=%s "
@@ -1541,8 +1624,10 @@ def visualizador_alumnos(request):
         permisos.get("es_admin", False),
         request.GET.urlencode(),
     )
-    cargar_alumnos_prueba = _solicita_alumnos_prueba(request)
-    modo_prueba = _es_modo_prueba(request) or cargar_alumnos_prueba
+    cargar_alumnos_prueba = permisos["es_admin"] and _solicita_alumnos_prueba(request)
+    modo_prueba = permisos["es_admin"] and (
+        _es_modo_prueba(request) or cargar_alumnos_prueba
+    )
     filtros, errores = _filtros_alumnos(request)
     context = _persona_context(
         request,
@@ -1632,6 +1717,9 @@ def visualizador_alumnos(request):
                 alumno_ids,
                 filtros=filtros,
                 detalle=True,
+                cueanexos_autorizados=_cues_autorizados_visualizacion(
+                    context["especial_context"]
+                ),
             )
         )
         _enriquecer_inscripciones(inscripciones, incluir_docentes=True)
@@ -1705,8 +1793,14 @@ def visualizador_alumnos(request):
 
 @especial_required
 def visualizador_detalle_alumno(request):
-    _exigir_administrador(request)
-    modo_prueba = _es_modo_prueba(request)
+    _exigir_visualizador(request)
+    permisos = get_permisos_especial_request(request)
+    modo_prueba = permisos["es_admin"] and _es_modo_prueba(request)
+    cues_autorizados = (
+        None
+        if permisos["es_admin"]
+        else set(permisos["cueanexos_visualizacion"])
+    )
     cuil = _solo_digitos(request.GET.get("cuil"))
     alumno_id_param = (request.GET.get("alumno_id") or "").strip()
     alumno = None
@@ -1730,6 +1824,11 @@ def visualizador_detalle_alumno(request):
                 alumno_en_prueba = EspecialAlumnoBanco.objects.filter(
                     alumno_id=alumno_id
                 ).exists()
+                if alumno_en_prueba and cues_autorizados is not None:
+                    alumno_en_prueba = EspecialAlumnoBanco.objects.filter(
+                        alumno_id=alumno_id,
+                        cueanexo__in=cues_autorizados,
+                    ).exists()
             if not alumno_en_prueba:
                 consulta_error = (
                     "No se encontró el alumno en la fuente seleccionada."
@@ -1754,10 +1853,13 @@ def visualizador_detalle_alumno(request):
                         .distinct()
                     )
                 else:
-                    alumno_ids = list(
-                        EspecialAlumnoBanco.objects.filter(
+                    bancos = EspecialAlumnoBanco.objects.filter(
                             Q(alumno__cuil=cuil) | Q(alumno_cuil_snapshot=cuil)
                         )
+                    if cues_autorizados is not None:
+                        bancos = bancos.filter(cueanexo__in=cues_autorizados)
+                    alumno_ids = list(
+                        bancos
                         .values_list("alumno_id", flat=True)
                         .distinct()
                     )
@@ -1822,6 +1924,9 @@ def visualizador_detalle_alumno(request):
             context["cuil_buscado"] = context["persona_datos"]["cuil"]
         context["bancos"] = list(
             EspecialAlumnoBanco.objects.filter(alumno_id=alumno.pk)
+            .filter(
+                **({"cueanexo__in": cues_autorizados} if cues_autorizados is not None else {})
+            )
             .select_related("ciclo")
             .order_by("-ciclo__anio", "-pk")
         )
@@ -1840,7 +1945,13 @@ def visualizador_detalle_alumno(request):
             }
         )
         context["inscripciones"] = list(
-            _inscripciones_visualizador([alumno.pk], detalle=True)
+            _inscripciones_visualizador(
+                [alumno.pk],
+                detalle=True,
+                cueanexos_autorizados=_cues_autorizados_visualizacion(
+                    context["especial_context"]
+                ),
+            )
         )
         _enriquecer_inscripciones(
             context["inscripciones"],
@@ -1851,7 +1962,13 @@ def visualizador_detalle_alumno(request):
 
 @especial_required
 def visualizador_detalle_docente(request):
-    _exigir_administrador(request)
+    _exigir_visualizador(request)
+    permisos = get_permisos_especial_request(request)
+    cues_autorizados = (
+        None
+        if permisos["es_admin"]
+        else set(permisos["cueanexos_visualizacion"])
+    )
     cuil = _solo_digitos(request.GET.get("cuil"))
     docente = EspecialDocenteBnh.objects.using(PADRON_DB_ALIAS).filter(cuil=cuil).first() if len(cuil) == 11 else None
     context = _persona_context(request, "Detalle de docente")
@@ -1873,9 +1990,13 @@ def visualizador_detalle_docente(request):
         "filtro_rol": request.GET.get("rol", ""),
     })
     if docente:
-        asignaciones_base = DocenteSeccion.objects.filter(docente_cuil=cuil).select_related(
-            "seccion", "seccion__ciclo"
-        )
+        asignaciones_base = DocenteSeccion.objects.filter(
+            docente_cuil=cuil
+        ).select_related("seccion", "seccion__ciclo")
+        if cues_autorizados is not None:
+            asignaciones_base = asignaciones_base.filter(
+                seccion__cueanexo__in=cues_autorizados
+            )
         context["secciones_filtro"] = [
             {"id": seccion_id, "nombre": nombre, "cueanexo": cueanexo}
             for seccion_id, nombre, cueanexo in asignaciones_base.values_list(
@@ -1929,14 +2050,17 @@ def visualizador_detalle_docente(request):
 
 @especial_required
 def visualizador_detalle_director(request):
-    _exigir_administrador(request)
+    _exigir_visualizador_directores(request)
     cuil = _solo_digitos(request.GET.get("cuil"))
     context = _persona_context(request, "Detalle de director")
+    cues_autorizados = _cues_autorizados_visualizacion(
+        context["especial_context"]
+    )
     filas = []
     error = ""
     if len(cuil) == 11:
         try:
-            filas = _datos_director(cuil)
+            filas = _datos_director(cuil, cues_autorizados)
         except (OperationalError, ProgrammingError):
             error = "No se pudo consultar la información del Padrón."
     context.update({"director": filas[0] if filas else None, "escuelas": filas, "cuil_buscado": cuil, "consulta_error": error})
