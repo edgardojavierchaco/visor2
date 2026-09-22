@@ -304,7 +304,21 @@ def get_escuelas_especiales_base_queryset():
 
 
 def get_todas_las_escuelas_especiales():
-    return get_escuelas_especiales_base_queryset().order_by("cueanexo")
+    """Devuelve todas las filas de Especial reconocibles desde Padrón.
+
+    Algunas filas de la oferta de Integración llegan sin acrónimo, aunque la
+    oferta conserva el prefijo ``Especial -``. Esas filas también pertenecen
+    al catálogo de Localizaciones y no deben desaparecer por el acrónimo
+    incompleto del origen.
+    """
+    return (
+        EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
+        .filter(
+            Q(acronimo__iexact=ACRONIMO_ESPECIAL)
+            | Q(oferta__istartswith=PREFIJO_OFERTA_ESPECIAL)
+        )
+        .order_by("cueanexo")
+    )
 
 
 def get_escuelas_especiales_por_cuil_responsable(user):

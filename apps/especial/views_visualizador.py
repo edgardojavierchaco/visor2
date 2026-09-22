@@ -11,6 +11,7 @@ from django.core.paginator import Paginator
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import connections
 from django.db.models import CharField, F, Func, Prefetch, Q, Subquery, Value
+from django.db.models.functions import Trim
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -1029,7 +1030,8 @@ def _directores_queryset(filtros, cueanexos_autorizados=None):
                 Value("g"),
                 function="REGEXP_REPLACE",
                 output_field=CharField(),
-            )
+            ),
+            oferta_normalizada=Trim("oferta"),
         )
         .exclude(cuil_limpio__isnull=True)
         .exclude(cuil_limpio="")
@@ -1040,8 +1042,9 @@ def _directores_queryset(filtros, cueanexos_autorizados=None):
         queryset = queryset.filter(cuil_limpio=filtros["cuil"])
     if filtros["cueanexo"]:
         queryset = queryset.filter(cueanexo__icontains=filtros["cueanexo"])
-    if filtros["oferta"]:
-        queryset = queryset.filter(oferta=filtros["oferta"])
+    oferta_filtro = (filtros["oferta"] or "").strip()
+    if oferta_filtro:
+        queryset = queryset.filter(oferta_normalizada=oferta_filtro)
     if filtros["establecimiento"]:
         queryset = queryset.filter(nom_est__icontains=filtros["establecimiento"])
     if filtros["localidad"]:

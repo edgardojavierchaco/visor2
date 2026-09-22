@@ -55,6 +55,15 @@ def _aplicar_clases_bootstrap(field):
     widget.attrs["class"] = f"{clases} {nueva}".strip()
 
 
+class OfertaEducativaChoiceField(forms.ChoiceField):
+    """ChoiceField que tolera espacios laterales del padrón en el POST."""
+
+    def valid_value(self, value):
+        if super().valid_value(value):
+            return True
+        return super().valid_value(str(value or "").strip())
+
+
 class EspecialDatosCUEAnexoForm(forms.ModelForm):
     """Carga los datos institucionales usados por el registro BNH de Especial."""
 
@@ -346,7 +355,7 @@ class EspecialBajaDocenteForm(forms.Form):
 class EspecialSeccionForm(forms.ModelForm):
     """Formulario de creación/edición de sección de Educación Especial."""
 
-    oferta = forms.ChoiceField(
+    oferta = OfertaEducativaChoiceField(
         label="Oferta educativa",
         choices=(),
         required=True,
