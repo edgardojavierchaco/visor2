@@ -1,0 +1,24 @@
+<div class="col-12 col-md-6 col-xl-3">
+  <article class="executive-card executive-card-{{ cls }} h-100">
+    <div class="executive-card-top">
+      <div class="executive-icon"><i class="bi {{ icon }}"></i></div>
+      <span class="executive-pill">{{ pill }}</span>
+    </div>
+    <div class="executive-card-body">
+      <div class="d-flex align-items-end justify-content-between gap-2">
+        <div class="executive-number">{{ value }}</div>
+        {% if percent != None %}
+        <div class="executive-percentage">{{ percent }}%</div>
+        {% endif %}
+      </div>
+      <h3>{{ title }}</h3>
+      <p>{{ text }}</p>
+      {% if percent != None %}
+      <div class="progress executive-progress mt-3">
+        <div class="progress-bar" style="width: {{ percent }}%;" role="progressbar" aria-valuenow="{{ percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="executive-card-footer"><i class="bi {{ foot_icon }}"></i>{{ foot }}</div>
+  </article>
+</div>

@@ -146,7 +146,7 @@ def assess_unique_email(
     False -- email is already in use
     None -- email is in use, but we should hide that using email verification.
     """
-    from allauth.account.utils import filter_users_by_email
+    from allauth.account.internal.userkit import filter_users_by_email
 
     if not app_settings.UNIQUE_EMAIL:
         return True

@@ -1,0 +1,28 @@
+<div id="modalBajaDocenteEspecial" class="cef-overlay{% if modal_baja_docente_abierto and baja_modal_docente %} is-open{% endif %}" aria-hidden="{% if modal_baja_docente_abierto and baja_modal_docente %}false{% else %}true{% endif %}" data-volver-url="{{ modal_volver_url }}">
+    <div class="cef-modal" role="dialog" aria-modal="true" aria-labelledby="bajaDocenteEspecialTitulo">
+        <div class="cef-modal-head">
+            <h2 id="bajaDocenteEspecialTitulo" class="cef-modal-title"><i class="fa-solid fa-user-slash me-2"></i>Docentes <span>» Baja de Especial</span></h2>
+            <button class="cef-modal-close" type="button" aria-label="Cerrar" data-docente-baja-modal-close><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="cef-modal-body" data-docente-baja-content>
+            {% if baja_modal_docente %}
+                {% include "especial/docente_baja_especial_contenido.html" %}
+            {% else %}
+                <div class="alert alert-danger mb-0" role="alert">No se pudieron cargar los datos del docente.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% if baja_error %}
+    <div id="modalBajaDocenteEspecialError" class="cef-overlay cef-docente-baja-error-overlay is-open" aria-hidden="false" data-docente-baja-error-modal>
+        <div class="cef-modal cef-docente-baja-error-modal" role="alertdialog" aria-modal="true" aria-labelledby="bajaDocenteEspecialErrorTitulo" aria-describedby="bajaDocenteEspecialErrorMensaje">
+            <div class="cef-modal-head">
+                <h2 id="bajaDocenteEspecialErrorTitulo" class="cef-modal-title"><i class="fa-solid fa-circle-exclamation me-2"></i>No se pudo continuar</h2>
+                <button class="cef-modal-close" type="button" aria-label="Cerrar" data-docente-baja-error-close><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="cef-modal-body text-center">
+                <p id="bajaDocenteEspecialErrorMensaje" class="mb-0">{{ baja_error }}</p>
+            </div>
+        </div>
+    </div>
+{% endif %}

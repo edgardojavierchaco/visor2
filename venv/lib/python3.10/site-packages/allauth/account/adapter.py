@@ -405,7 +405,7 @@ class DefaultAccountAdapter(BaseAdapter):
         # Skipping database lookups when shallow is True, needed for unique
         # username generation.
         if not shallow:
-            from .utils import filter_users_by_username
+            from .internal.userkit import filter_users_by_username
 
             if filter_users_by_username(username).exists():
                 raise self.validation_error("username_taken")

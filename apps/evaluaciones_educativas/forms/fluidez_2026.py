@@ -20,7 +20,8 @@ class CueanexoFluidez2026ViewForm(forms.Form):
 		super().__init__(*args, **kwargs)
 		if cuil:
 			#cuil_con_caracter = f"{cuil[:2]}-{cuil[2:10]}-{cuil[10:]}"
-			qs =TablaTemporalAplicadores.objects.filter(cuil=cuil).values_list('cueanexo','escuela').distinct()
+			#MODIFICACION PARA QUE ESTO FUNCIONE SOLO CON RURALES
+			qs =TablaTemporalAplicadores.objects.filter(cuil=cuil,ambito__contains='Rural').values_list('cueanexo','escuela').distinct()
 			#print(qs)
 			choices_cueanexo = [
 					('', '---SELECCIONE UN CUEANEXO-----'),

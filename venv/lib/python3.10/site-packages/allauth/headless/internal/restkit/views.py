@@ -59,6 +59,9 @@ class RESTView(View):
         if request.method == "GET" or not request.body:
             return
         try:
-            return json.loads(request.body.decode("utf8"))
+            data = json.loads(request.body.decode("utf8"))
         except (UnicodeDecodeError, json.JSONDecodeError):
             raise ImmediateHttpResponse(response=HttpResponseBadRequest())
+        if not isinstance(data, dict):
+            raise ImmediateHttpResponse(response=HttpResponseBadRequest())
+        return data

@@ -17,6 +17,7 @@ from allauth.account.internal.flows.manage_email import (
 )
 from allauth.account.internal.flows.phone_verification import phone_already_exists
 from allauth.account.internal.flows.signup import base_signup_form_class
+from allauth.account.internal.userkit import filter_users_by_email
 from allauth.core import context, ratelimit
 from allauth.core.internal.cryptokit import compare_user_code
 from allauth.core.internal.httpkit import headed_redirect_response
@@ -25,13 +26,7 @@ from allauth.utils import get_username_max_length, set_form_field_order
 from . import app_settings
 from .adapter import get_adapter
 from .models import EmailAddress, Login
-from .utils import (
-    filter_users_by_email,
-    setup_user_email,
-    url_str_to_user_pk,
-    user_email,
-    user_username,
-)
+from .utils import setup_user_email, url_str_to_user_pk, user_email, user_username
 
 
 class EmailAwarePasswordResetTokenGenerator(PasswordResetTokenGenerator):
@@ -622,7 +617,9 @@ class ResetPasswordForm(forms.Form):
     def clean_email(self) -> str:
         email = self.cleaned_data["email"].lower()
         email = get_adapter().clean_email(email)
-        self.users = filter_users_by_email(email, is_active=True, prefer_verified=True)
+        self.users = filter_users_by_email(
+            email, is_active=True, prefer_verified=True, for_login=True
+        )
         if not self.users and not app_settings.PREVENT_ENUMERATION:
             raise get_adapter().validation_error("unknown_email")
         return self.cleaned_data["email"]
@@ -753,7 +750,9 @@ class RequestLoginCodeForm(forms.Form):
         adapter = get_adapter()
         email = self.cleaned_data["email"]
         if email:
-            users = filter_users_by_email(email, is_active=True, prefer_verified=True)
+            users = filter_users_by_email(
+                email, is_active=True, prefer_verified=True, for_login=True
+            )
             if not app_settings.PREVENT_ENUMERATION:
                 if not users:
                     raise adapter.validation_error("unknown_email")
