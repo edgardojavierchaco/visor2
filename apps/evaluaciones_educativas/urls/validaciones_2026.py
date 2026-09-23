@@ -106,4 +106,66 @@ urlpatterns = [
         validaciones_2026.editar_seccion,
         name='editar_seccion',
     ),
+
+    # ══════════════════════════════════════════════════════════════════
+    # PERSONAS (aplicadores y veedores)
+    # ══════════════════════════════════════════════════════════════════
+
+    # Landing: seleccionar región para gestionar personas
+    path('personas/', validaciones_2026.seleccionar_region_personas, name='personas_lista'),
+
+    # Lista de establecimientos de una región (cards con botones de personas)
+    path(
+        'personas/region/<str:region>/establecimientos/',
+        validaciones_2026.lista_establecimientos_personas,
+        name='personas_establecimientos',
+    ),
+
+    # API: Obtener secciones de un establecimiento (JSON)
+    path(
+        'personas/establecimiento/<str:cueanexo>/secciones_json/',
+        validaciones_2026.secciones_establecimiento_json,
+        name='personas_secciones_json',
+    ),
+
+    # CRUD Veedor
+    path(
+        'personas/establecimiento/<str:cueanexo>/veedor/crear/',
+        validaciones_2026.crear_veedor,
+        name='crear_veedor',
+    ),
+    path(
+        'personas/veedor/<int:veedor_id>/editar/',
+        validaciones_2026.editar_veedor,
+        name='editar_veedor',
+    ),
+    path(
+        'personas/veedor/<int:veedor_id>/eliminar/',
+        validaciones_2026.eliminar_veedor,
+        name='eliminar_veedor',
+    ),
+
+    # CRUD Aplicador
+    path(
+        'personas/establecimiento/<str:cueanexo>/aplicador/crear/',
+        validaciones_2026.crear_aplicador,
+        name='crear_aplicador',
+    ),
+    path(
+        'personas/aplicador/<int:aplicador_id>/editar/',
+        validaciones_2026.editar_aplicador,
+        name='editar_aplicador',
+    ),
+    path(
+        'personas/aplicador/<int:aplicador_id>/eliminar/',
+        validaciones_2026.eliminar_aplicador,
+        name='eliminar_aplicador',
+    ),
+
+    # Listar personas asignadas a un establecimiento (JSON)
+    path(
+        'personas/establecimiento/<str:cueanexo>/listar/',
+        validaciones_2026.listar_personas_establecimiento,
+        name='listar_personas',
+    ),
 ]
