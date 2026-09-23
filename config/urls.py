@@ -81,6 +81,13 @@ urlpatterns = [
     path('sirtee/', include('apps.sirtee.urls', namespace='sirtee')),
     path('bnhalumnos/', include('apps.bnhalumnos.urls', namespace='bnhalumnos')),
     path("pof/", include("apps.reunidas_pof.urls")),
+    path(
+    "asistencia/",
+    include(
+        "apps.asistencia_dashboard.urls",
+        namespace="asistencia_dashboard",
+    ),
+),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

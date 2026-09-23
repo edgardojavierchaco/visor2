@@ -1,0 +1,597 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Monitoreo Ministerial de Asistencia</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="{% static 'asistencia_dashboard/css/dashboard.css' %}?v=20260923.8">
+</head>
+<body>
+
+<div class="ministerial-dashboard">
+
+    <header class="dashboard-header">
+
+        <a
+            href="{{ url_volver }}"
+            id="btnVolverDashboard"
+            class="btn btn-light dashboard-back-btn"
+            title="Volver"
+        >
+            <i class="bi bi-arrow-left"></i>
+            <span>Volver</span>
+        </a>
+
+
+        <div>
+            <div class="dashboard-eyebrow">MINISTERIO DE EDUCACIÓN</div>
+            <h1>Seguimiento y Monitoreo de Asistencia</h1>
+            <p>Indicadores mensuales y alertas nominales semanales</p>
+        </div>
+
+        <div class="dashboard-header-badge">
+            <i class="bi bi-bar-chart-fill"></i>
+            <div>
+                <span>Período de análisis</span>
+                <strong id="periodoActual">—</strong>
+            </div>
+        </div>
+    </header>
+
+    <section class="dashboard-panel filter-panel">
+        <div class="panel-title-row">
+            <div>
+                <span class="panel-eyebrow">SEGMENTACIÓN</span>
+                <h2>Filtros de análisis</h2>
+            </div>
+
+            <button type="button" class="btn btn-light btn-sm btn-reset" id="btnLimpiar">
+                <i class="bi bi-arrow-counterclockwise"></i>
+                Limpiar filtros
+            </button>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-6 col-lg-2">
+                <label class="form-label">Año</label>
+                <select id="filtroAnio" class="form-select">
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-lg-2">
+                <label class="form-label">Mes</label>
+                <select id="filtroMes" class="form-select">
+                    <option value="1">Enero</option>
+                    <option value="2">Febrero</option>
+                    <option value="3">Marzo</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Mayo</option>
+                    <option value="6">Junio</option>
+                    <option value="7">Julio</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Septiembre</option>
+                    <option value="10">Octubre</option>
+                    <option value="11">Noviembre</option>
+                    <option value="12">Diciembre</option>
+                </select>
+            </div>
+
+            <div class="col-6 col-lg-2">
+                <label class="form-label">Año alerta</label>
+                <select id="filtroAnioSemana" class="form-select">
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                    <option value="2027">2027</option>
+                    <option value="2028">2028</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-lg-4">
+                <label class="form-label">Semana de alerta</label>
+                <select id="filtroSemana" class="form-select"></select>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <label class="form-label">Establecimiento</label>
+                <select id="filtroCue" class="form-select"></select>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <label class="form-label">Regional Educativa</label>
+                <select id="filtroRegion" class="form-select">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-4 col-lg-3">
+                <label class="form-label">Departamento</label>
+                <select id="filtroDepartamento" class="form-select">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-4 col-lg-3">
+                <label class="form-label">Localidad</label>
+                <select id="filtroLocalidad" class="form-select">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-4 col-lg-2">
+                <label class="form-label">Nivel</label>
+                <select id="filtroNivel" class="form-select">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-4 col-lg-2">
+                <label class="form-label">Ámbito</label>
+                <select id="filtroAmbito" class="form-select">
+                    <option value="">Todos</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-4 col-lg-2">
+                <label class="form-label">Oferta</label>
+                <select id="filtroOferta" class="form-select">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <section class="kpi-grid">
+        <article class="kpi-card">
+            <div class="kpi-icon"><i class="bi bi-building"></i></div>
+            <div>
+                <span class="kpi-label">Establecimientos</span>
+                <strong class="kpi-value" id="kpiEstablecimientos">—</strong>
+                <small>Con registros en el período</small>
+            </div>
+        </article>
+
+        <article class="kpi-card">
+            <div class="kpi-icon"><i class="bi bi-calendar-check"></i></div>
+            <div>
+                <span class="kpi-label">Días registrados</span>
+                <strong class="kpi-value" id="kpiDias">—</strong>
+                <small>Fechas con asistencia cargada</small>
+            </div>
+        </article>
+
+        <article class="kpi-card kpi-primary">
+            <div class="kpi-icon"><i class="bi bi-person-check-fill"></i></div>
+            <div>
+                <span class="kpi-label">Asistencia</span>
+                <strong class="kpi-value" id="kpiAsistencia">—</strong>
+                <small id="kpiPresentes">—</small>
+            </div>
+        </article>
+
+        <article class="kpi-card kpi-danger">
+            <div class="kpi-icon"><i class="bi bi-person-x-fill"></i></div>
+            <div>
+                <span class="kpi-label">Ausentismo</span>
+                <strong class="kpi-value" id="kpiAusentismo">—</strong>
+                <small id="kpiAusentes">—</small>
+            </div>
+        </article>
+
+        <article class="kpi-card">
+            <div class="kpi-icon"><i class="bi bi-diagram-3"></i></div>
+            <div>
+                <span class="kpi-label">Secciones</span>
+                <strong class="kpi-value" id="kpiSecciones">—</strong>
+                <small>Con información registrada</small>
+            </div>
+        </article>
+    </section>
+
+    <section class="alert-summary">
+        <article class="alert-card alert-normal">
+            <div class="alert-icon"><i class="bi bi-check-circle-fill"></i></div>
+            <div>
+                <span>Normal</span>
+                <strong id="alertaNormal">0</strong>
+                <small>≥ 90% asistencia</small>
+            </div>
+        </article>
+
+        <article class="alert-card alert-atencion">
+            <div class="alert-icon"><i class="bi bi-exclamation-circle-fill"></i></div>
+            <div>
+                <span>Atención</span>
+                <strong id="alertaAtencion">0</strong>
+                <small>80% a 89,99%</small>
+            </div>
+        </article>
+
+        <article class="alert-card alert-alto">
+            <div class="alert-icon"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <div>
+                <span>Alto</span>
+                <strong id="alertaAlto">0</strong>
+                <small>70% a 79,99%</small>
+            </div>
+        </article>
+
+        <article class="alert-card alert-critico">
+            <div class="alert-icon"><i class="bi bi-shield-fill-exclamation"></i></div>
+            <div>
+                <span>Crítico</span>
+                <strong id="alertaCritico">0</strong>
+                <small>Menos de 70%</small>
+            </div>
+        </article>
+    </section>
+
+    <section class="row g-4 dashboard-row">
+        <div class="col-12 col-xl-8">
+            <article class="dashboard-panel chart-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <span class="panel-eyebrow">EVOLUCIÓN</span>
+                        <h2>Asistencia diaria</h2>
+                    </div>
+                    <span class="panel-badge">%</span>
+                </div>
+
+                <div class="chart-container chart-lg">
+                    <canvas id="chartEvolucion"></canvas>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-12 col-xl-4">
+            <article class="dashboard-panel chart-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <span class="panel-eyebrow">DISTRIBUCIÓN</span>
+                        <h2>Asistencia por nivel</h2>
+                    </div>
+                </div>
+
+                <div class="chart-container chart-lg">
+                    <canvas id="chartNivel"></canvas>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="row g-4 dashboard-row">
+        <div class="col-12 col-xl-5">
+            <article class="dashboard-panel chart-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <span class="panel-eyebrow">ALERTAS</span>
+                        <h2>Mayor ausentismo</h2>
+                    </div>
+                </div>
+
+                <div class="chart-container chart-ranking">
+                    <canvas id="chartRanking"></canvas>
+                </div>
+            </article>
+        </div>
+
+        <div class="col-12 col-xl-7">
+            <article class="dashboard-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <span class="panel-eyebrow">SEGUIMIENTO</span>
+                        <h2>Establecimientos con mayor ausentismo</h2>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table ministerial-table">
+                        <thead>
+                            <tr>
+                                <th>CUEANEXO</th>
+                                <th>Establecimiento</th>
+                                <th class="text-center">Días</th>
+                                <th class="text-end">Asistencia</th>
+                                <th class="text-end">Ausentismo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaRanking"></tbody>
+                    </table>
+                </div>
+                <div class="table-pagination" id="pagerRanking">
+                    <div class="pagination-info">Página <strong class="pager-current">1</strong> de <strong class="pager-pages">1</strong> · <span class="pager-total">0</span> establecimientos</div>
+                    <div class="pagination-actions">
+                        <button type="button" class="btn btn-sm btn-light pager-prev" disabled><i class="bi bi-chevron-left"></i> Anterior</button>
+                        <button type="button" class="btn btn-sm btn-light pager-next" disabled>Siguiente <i class="bi bi-chevron-right"></i></button>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="dashboard-panel alert-detail-panel">
+        <div class="panel-title-row">
+            <div>
+                <span class="panel-eyebrow">SISTEMA DE ALERTAS</span>
+                <h2>Seguimiento institucional prioritario</h2>
+            </div>
+
+            <div class="alert-legend">
+                <span class="legend-normal">Normal</span>
+                <span class="legend-atencion">Atención</span>
+                <span class="legend-alto">Alto</span>
+                <span class="legend-critico">Crítico</span>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table ministerial-table">
+                <thead>
+                    <tr>
+                        <th>Nivel</th>
+                        <th>CUEANEXO</th>
+                        <th>Establecimiento</th>
+                        <th>Departamento</th>
+                        <th class="text-center">Días</th>
+                        <th class="text-center">Secciones</th>
+                        <th class="text-end">Asistencia</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaAlertas"></tbody>
+            </table>
+        </div>
+        <div class="table-pagination" id="pagerAlertas">
+            <div class="pagination-info">Página <strong class="pager-current">1</strong> de <strong class="pager-pages">1</strong> · <span class="pager-total">0</span> establecimientos</div>
+            <div class="pagination-actions">
+                <button type="button" class="btn btn-sm btn-light pager-prev" disabled><i class="bi bi-chevron-left"></i> Anterior</button>
+                <button type="button" class="btn btn-sm btn-light pager-next" disabled>Siguiente <i class="bi bi-chevron-right"></i></button>
+            </div>
+        </div>
+    </section>
+
+
+
+    <section class="dashboard-panel monthly-detail-panel">
+        <div class="panel-title-row">
+            <div>
+                <span class="panel-eyebrow">CONSULTA MENSUAL · NO NOMINAL</span>
+                <h2>Presentes, ausentes y ausencias justificadas</h2>
+                <small class="text-muted">Los totales corresponden a alumno-días del período seleccionado.</small>
+            </div>
+            <div class="table-counter"><span id="contadorMensual">0</span> registros</div>
+        </div>
+        <div class="table-responsive">
+            <table class="table ministerial-table">
+                <thead>
+                    <tr>
+                        <th>CUE / Establecimiento</th>
+                        <th>Nivel / Grado / Sección</th>
+                        <th class="text-end">Presentes</th>
+                        <th class="text-end">Ausentes</th>
+                        <th class="text-end">Justificadas</th>
+                        <th class="text-end">Otras faltas</th>
+                        <th class="text-end">Asistencia</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaMensual">
+                    <tr><td colspan="7" class="text-center py-5 text-muted">Cargando resumen mensual...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="table-pagination" id="pagerMensual">
+            <div class="pagination-info">Página <strong class="pager-current">1</strong> de <strong class="pager-pages">1</strong> · <span class="pager-total">0</span> registros</div>
+            <div class="pagination-actions">
+                <button type="button" class="btn btn-sm btn-light pager-prev" disabled><i class="bi bi-chevron-left"></i> Anterior</button>
+                <button type="button" class="btn btn-sm btn-light pager-next" disabled>Siguiente <i class="bi bi-chevron-right"></i></button>
+            </div>
+        </div>
+    </section>
+
+    <section class="dashboard-panel quality-panel">
+        <div class="panel-title-row">
+            <div>
+                <span class="panel-eyebrow">CALIDAD DE REGISTRACIÓN</span>
+                <h2>Cumplimiento del calendario efectivo</h2>
+                <small class="text-muted">No computa feriados, fines de semana, excepciones ni eventos excluyentes.</small>
+            </div>
+            <div class="quality-summary-inline">
+                <span class="quality-chip complete">Completos <strong id="calidadCompleto">0</strong></span>
+                <span class="quality-chip partial">Parciales <strong id="calidadParcial">0</strong></span>
+                <span class="quality-chip missing">Sin carga <strong id="calidadSinCarga">0</strong></span>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table ministerial-table">
+                <thead>
+                    <tr>
+                        <th>CUE</th>
+                        <th>Establecimiento</th>
+                        <th>SECCIONES</th>
+                        <th>DÍAS HÁBILES</th>
+                        <th>JORNADAS ESPERADAS</th>
+                        <th>JORNADAS REGISTRADAS</th>
+                        <th class="text-center">Sin registro</th>
+                        <th class="text-end">Cumplimiento</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaCalidad">
+                    <tr><td colspan="9" class="text-center py-5 text-muted">Cargando calidad de registración...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-pagination" id="pagerCalidad">
+            <div class="pagination-info">
+                Página <strong class="pager-current">1</strong> de
+                <strong class="pager-pages">1</strong> ·
+                <span class="pager-total">0</span> registros
+            </div>
+            <div class="pagination-actions">
+                <button type="button" class="btn btn-sm btn-light pager-prev" disabled>
+                    <i class="bi bi-chevron-left"></i> Anterior
+                </button>
+                <button type="button" class="btn btn-sm btn-light pager-next" disabled>
+                    Siguiente <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="dashboard-panel alert-detail-panel">
+        <div class="panel-title-row">
+            <div>
+                <span class="panel-eyebrow">ALERTA NOMINAL</span>
+                <h2>Estudiantes que requieren seguimiento semanal</h2>
+                <small class="text-muted">
+                    La continuidad considera ausencias completas consecutivas.
+                    Las faltas parciales impactan en el porcentaje equivalente.
+                </small>
+            </div>
+
+            <div class="table-counter">
+                <span id="contadorAlertasAlumnos">0</span>
+                estudiantes
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table ministerial-table">
+                <thead>
+                    <tr>
+                        <th>Alerta</th>
+                        <th>Estudiante</th>
+                        <th>CUE</th>
+                        <th>Escuela</th>
+                        <th>Grado / Sección</th>
+                        <th class="text-end">Asistencia</th>
+                        <th class="text-end">Inasist. equiv.</th>
+                        <th class="text-center">Racha actual</th>
+                        <th class="text-center">Racha máxima</th>
+                    </tr>
+                </thead>
+
+                <tbody id="tablaAlertasAlumnos">
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            Cargando alertas nominales...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="table-pagination" id="pagerAlertasAlumnos">
+            <div class="pagination-info">Página <strong class="pager-current">1</strong> de <strong class="pager-pages">1</strong> · <span class="pager-total">0</span> registros</div>
+            <div class="pagination-actions">
+                <button type="button" class="btn btn-sm btn-light pager-prev" disabled><i class="bi bi-chevron-left"></i> Anterior</button>
+                <button type="button" class="btn btn-sm btn-light pager-next" disabled>Siguiente <i class="bi bi-chevron-right"></i></button>
+            </div>
+        </div>
+    </section>
+
+
+    <section class="dashboard-panel detail-panel">
+        <div class="panel-title-row">
+            <div>
+                <span class="panel-eyebrow">DETALLE INSTITUCIONAL</span>
+                <h2>Asistencia por grado y sección</h2>
+            </div>
+
+            <div class="table-counter">
+                <span id="contadorSecciones">0</span>
+                registros
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table ministerial-table detail-table">
+                <thead>
+                    <tr>
+                        <th>Escuela</th>
+                        <th>Nivel</th>
+                        <th>Grado</th>
+                        <th>Sección</th>
+                        <th>Turno</th>
+                        <th class="text-center">Días</th>
+                        <th class="text-end">Alumno-días</th>
+                        <th class="text-end">Presentes</th>
+                        <th class="text-end">Ausentes</th>
+                        <th class="text-end">Asistencia</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaSecciones"></tbody>
+            </table>
+        </div>
+        <div class="table-pagination" id="pagerSecciones">
+            <div class="pagination-info">Página <strong class="pager-current">1</strong> de <strong class="pager-pages">1</strong> · <span class="pager-total">0</span> registros</div>
+            <div class="pagination-actions">
+                <button type="button" class="btn btn-sm btn-light pager-prev" disabled><i class="bi bi-chevron-left"></i> Anterior</button>
+                <button type="button" class="btn btn-sm btn-light pager-next" disabled>Siguiente <i class="bi bi-chevron-right"></i></button>
+            </div>
+        </div>
+    </section>
+
+    <footer class="dashboard-footer">
+        <div>
+            <strong>Sistema de Gestión Educativa</strong>
+            <span>Seguimiento Ministerial de Asistencia Escolar</span>
+        </div>
+
+        <div>
+            Departamento de Estadística Educativa · 2026
+        </div>
+    </footer>
+
+</div>
+
+<div class="dashboard-loader d-none" id="dashboardLoader">
+    <div class="loader-box">
+        <div class="spinner-border" role="status"></div>
+        <span>Procesando información...</span>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
+
+<script>
+window.ASISTENCIA_DASHBOARD = {
+    urls: {
+        filtros: "{% url 'asistencia_dashboard:api_filtros' %}",
+        semanas: "{% url 'asistencia_dashboard:api_semanas' %}",
+        resumen: "{% url 'asistencia_dashboard:api_resumen' %}",
+        evolucion: "{% url 'asistencia_dashboard:api_evolucion' %}",
+        niveles: "{% url 'asistencia_dashboard:api_niveles' %}",
+        ranking: "{% url 'asistencia_dashboard:api_ranking' %}",
+        secciones: "{% url 'asistencia_dashboard:api_secciones' %}",
+        establecimientos: "{% url 'asistencia_dashboard:api_establecimientos' %}",
+        alertas: "{% url 'asistencia_dashboard:api_alertas' %}",
+        mensual: "{% url 'asistencia_dashboard:api_mensual' %}",
+        calidadRegistro: "{% url 'asistencia_dashboard:api_calidad_registro' %}",
+        alertasAlumnos: "{% url 'asistencia_dashboard:api_alertas_alumnos' %}"
+    },
+
+    anioActual: {{ anio_actual }},
+    mesActual: {{ mes_actual }},
+    anioSemanaActual: {{ anio_semana_actual }},
+    semanaActual: {{ semana_actual }},
+    semanaDesde: "{{ semana_desde|date:'Y-m-d' }}",
+    semanaHasta: "{{ semana_hasta|date:'Y-m-d' }}"
+};
+</script>
+
+<script src="{% static 'asistencia_dashboard/js/dashboard.js' %}?v=20260923.8"></script>
+
+</body>
+</html>
