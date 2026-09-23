@@ -317,3 +317,29 @@ class ValHistorialCambiosEstablecimiento(models.Model):
 
 	def __str__(self):
 		return f"Establecimiento {self.establecimiento} validado — {self.fecha}"
+
+
+# ---------------------------------------------------------------------------
+# MODELOS DE PERSONAS (aplicadores, veedores y responsables de carga)
+# ---------------------------------------------------------------------------
+
+class ValPersona(models.Model):
+	nombre = models.CharField(max_length=100)
+	apellido = models.CharField(max_length=100)
+	cuil = models.CharField(max_length=20)
+	correo = models.EmailField()
+	telefono = models.CharField(max_length=20)
+	class Meta:
+		db_table = '"validaciones_2026"."personas"'
+
+class ValAplicador(ValPersona):
+	seccion = models.OneToOneField(ValSeccion, on_delete=models.CASCADE, related_name='aplicadores')
+	
+	class Meta:
+		db_table = '"validaciones_2026"."aplicadores"'
+	
+class ValVeedor(ValPersona):	
+	establecimiento = models.ForeignKey(ValEstablecimiento, on_delete=models.CASCADE, related_name='veedores')
+	
+	class Meta:
+		db_table = '"validaciones_2026"."veedores"'

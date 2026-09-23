@@ -1,0 +1,1203 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestión de Aplicadores y Veedores — Aprender 2026</title>
+    <meta name="description" content="Gestión de aplicadores y veedores por establecimiento para Aprender 2026." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <style>
+      :root {
+        --primary:    #2d77e6;
+        --primary-dk: #1a5abf;
+        --primary-lt: #5899f0;
+        --green:      #22c55e;
+        --green-dk:   #16a34a;
+        --red:        #f43f5e;
+        --red-dk:     #be123c;
+        --amber:      #e9ec0f;
+        --amber-dk:   #e9ec0f;
+        --purple:     #6366f1;
+        --teal:       #14b8a6;
+        --teal-dk:    #0d9488;
+        --orange:     #f97316;
+        --gray-50:    #f8fafc;
+        --gray-100:   #f1f5f9;
+        --gray-200:   #e2e8f0;
+        --gray-400:   #94a3b8;
+        --gray-600:   #475569;
+        --gray-800:   #1e293b;
+        --radius-lg:  18px;
+        --radius-md:  12px;
+        --shadow-card: 0 3px 16px rgba(0,0,0,0.09);
+        --shadow-hover: 0 10px 36px rgba(45,119,230,0.18);
+      }
+      * { box-sizing: border-box; }
+      body {
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg, #eef4ff 0%, #f8faff 60%, #fff 100%);
+        min-height: 100vh; margin: 0; padding: 0;
+      }
+
+      /* ── TOPBAR ── */
+      .topbar {
+        background: linear-gradient(90deg, #2d77e6, #1a5abf);
+        color: #fff; padding: 14px 28px;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 14px; flex-wrap: wrap;
+        box-shadow: 0 4px 24px rgba(10,30,64,0.28);
+        position: sticky; top: 0; z-index: 100;
+      }
+      .topbar-left { display: flex; align-items: center; gap: 14px; }
+      .topbar-logo { width: 200px; height: auto; display: flex; align-items: center; flex-shrink: 0; }
+      .topbar-logo img { width: 100%; height: auto; object-fit: contain; }
+      .topbar h1 { font-size: 1rem; font-weight: 800; margin: 0; letter-spacing: -0.2px; }
+      .topbar small { font-size: 0.72rem; opacity: 0.7; display: block; }
+      .topbar-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .badge-top {
+        background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+        color: #fff; font-size: 0.7rem; border-radius: 20px; padding: 4px 12px; font-weight: 600;
+      }
+      .btn-back {
+        background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+        color: #fff; border-radius: 8px; font-size: 0.78rem; font-weight: 600;
+        padding: 7px 13px; display: inline-flex; align-items: center; gap: 5px;
+        text-decoration: none; transition: background 0.2s;
+      }
+      .btn-back:hover { background: rgba(255,255,255,0.22); color: #fff; }
+
+      /* ── STEPPER ── */
+      .stepper {
+        background: #fff; border-bottom: 1px solid var(--gray-200);
+        padding: 12px 28px; display: flex; align-items: center; gap: 0;
+      }
+      .step { display: flex; align-items: center; gap: 7px; font-size: 0.8rem; font-weight: 600; color: var(--gray-400); }
+      .step.active { color: var(--primary); }
+      .step.done   { color: var(--green); }
+      .step-num {
+        width: 26px; height: 26px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.72rem; font-weight: 700;
+        background: var(--gray-200); color: var(--gray-400); flex-shrink: 0; transition: all 0.3s;
+      }
+      .step.active .step-num { background: var(--primary); color: #fff; box-shadow: 0 0 0 4px rgba(45,119,230,0.2); }
+      .step.done   .step-num { background: var(--green); color: #fff; }
+      .step-connector { flex: 1; height: 2px; background: var(--gray-200); margin: 0 8px; min-width: 24px; }
+      .step-connector.done { background: var(--green); }
+
+      /* ── CONTENIDO ── */
+      .page-content { max-width: 1300px; margin: 0 auto; padding: 24px 20px 60px; }
+
+      /* ── STATS BAR ── */
+      .stats-bar {
+        background: #fff; border-radius: var(--radius-md); padding: 16px 22px;
+        display: flex; align-items: center; justify-content: space-between;
+        flex-wrap: wrap; gap: 14px; box-shadow: var(--shadow-card); margin-bottom: 20px;
+      }
+      .stat-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+      .stat-value { font-size: 1.5rem; font-weight: 800; line-height: 1; color: var(--gray-800); }
+      .stat-label { font-size: 0.68rem; color: var(--gray-600); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+      .stat-divider { width: 1px; height: 36px; background: var(--gray-200); }
+
+      /* ── BUSCADOR ── */
+      .search-wrap { position: relative; margin-bottom: 18px; }
+      .search-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--gray-400); font-size: 0.95rem; }
+      .search-input {
+        width: 100%; border: 1.5px solid var(--gray-200); border-radius: 10px;
+        padding: 10px 14px 10px 38px; font-size: 0.88rem; font-family: 'Inter', sans-serif;
+        outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+        background: #fff;
+      }
+      .search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(45,119,230,0.12); }
+
+      /* ── GRID ── */
+      .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
+
+      /* ── TARJETA ── */
+      .est-card {
+        background: #fff; border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-card); overflow: hidden;
+        transition: transform 0.22s ease, box-shadow 0.22s ease;
+        border: 2px solid transparent;
+      }
+      .est-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
+      .est-card { border-color: var(--primary-lt); }
+
+      .card-status-bar { height: 5px; width: 100%; background: linear-gradient(90deg, var(--purple), var(--teal)); }
+
+      .card-body-inner { padding: 16px 18px 14px; }
+      .card-header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+      .card-name { font-size: 0.88rem; font-weight: 700; color: var(--gray-800); line-height: 1.35; flex: 1; }
+      .card-cue {
+        font-size: 0.68rem; color: var(--gray-600); font-weight: 600;
+        font-family: 'Courier New', monospace; background: var(--gray-100);
+        border-radius: 6px; padding: 3px 7px; flex-shrink: 0; margin-top: 2px;
+      }
+      .card-meta { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+      .card-meta-item { display: flex; align-items: center; gap: 6px; font-size: 0.76rem; color: var(--gray-600); }
+      .card-meta-item i { color: var(--gray-400); font-size: 0.8rem; }
+
+      /* Badges personas */
+      .badge-personas {
+        display: inline-flex; align-items: center; gap: 5px;
+        font-size: 0.7rem; font-weight: 700; border-radius: 20px; padding: 4px 11px;
+        letter-spacing: 0.3px;
+      }
+      .badge-veedores  { background: #ede9fe; color: #5b21b6; }
+      .badge-aplicadores { background: #ccfbf1; color: #115e59; }
+      .badge-sin-personas { background: #fef3c7; color: #92400e; }
+
+      /* Footer de tarjeta */
+      .card-footer-row {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--gray-100);
+        gap: 7px; flex-wrap: wrap;
+      }
+      .btn-cargar-persona {
+        background: linear-gradient(135deg, var(--green), var(--green-dk));
+        color: #fff; border: none; border-radius: 7px; font-size: 0.74rem; font-weight: 600;
+        padding: 7px 13px; cursor: pointer; transition: all 0.2s;
+        display: inline-flex; align-items: center; gap: 5px;
+      }
+      .btn-cargar-persona:hover { transform: scale(1.04); opacity: 0.9; }
+      .btn-modificar-persona {
+        background: linear-gradient(135deg, var(--orange), #ea580c);
+        color: #fff; border: none; border-radius: 7px; font-size: 0.74rem; font-weight: 600;
+        padding: 7px 13px; cursor: pointer; transition: all 0.2s;
+        display: inline-flex; align-items: center; gap: 5px;
+      }
+      .btn-modificar-persona:hover { transform: scale(1.04); opacity: 0.9; }
+
+      /* ── MODALES ── */
+      .modal-content { border-radius: 16px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.2); overflow: hidden; }
+      .modal-header { border-bottom: none; padding: 18px 22px; color: #fff; }
+      .mh-personas  { background: linear-gradient(135deg, var(--purple), var(--teal)); }
+      .mh-veedor    { background: linear-gradient(135deg, #7c3aed, var(--purple)); }
+      .mh-aplicador { background: linear-gradient(135deg, var(--teal-dk), var(--teal)); }
+      .mh-lista     { background: linear-gradient(135deg, var(--orange), #ea580c); }
+      .mh-danger    { background: linear-gradient(135deg, var(--red-dk), var(--red)); }
+      .modal-header .btn-close { filter: invert(1); }
+      .modal-title { font-weight: 700; font-size: 1rem; }
+
+      /* Opciones de rol */
+      .rol-options { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; }
+      .rol-btn {
+        border: 2px solid var(--gray-200); border-radius: 14px; padding: 24px 16px;
+        cursor: pointer; transition: all 0.25s; text-align: center; background: #fff;
+        display: flex; flex-direction: column; align-items: center; gap: 10px;
+      }
+      .rol-btn:hover { transform: scale(1.03); }
+      .rol-btn.veedor:hover  { border-color: var(--purple); background: #f5f3ff; }
+      .rol-btn.aplicador:hover { border-color: var(--teal); background: #f0fdfa; }
+      .rol-icon { font-size: 2.2rem; }
+      .rol-title { font-weight: 700; font-size: 0.95rem; }
+      .rol-sub   { font-size: 0.73rem; color: var(--gray-600); }
+
+      /* Form persona */
+      .form-persona .form-label { font-size: 0.82rem; font-weight: 600; color: var(--gray-600); }
+      .form-persona .form-control {
+        border-radius: 8px; font-size: 0.88rem; border: 1.5px solid var(--gray-200);
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+      .form-persona .form-control:focus {
+        border-color: var(--primary); box-shadow: 0 0 0 3px rgba(45,119,230,0.12);
+      }
+
+      /* Secciones seleccionables */
+      .seccion-list { max-height: 300px; overflow-y: auto; }
+      .seccion-item {
+        border: 1.5px solid var(--gray-200); border-radius: 10px; padding: 12px 16px;
+        cursor: pointer; transition: all 0.2s; margin-bottom: 8px;
+        display: flex; align-items: center; justify-content: space-between;
+      }
+      .seccion-item:hover { border-color: var(--teal); background: #f0fdfa; }
+      .seccion-item.selected { border-color: var(--teal); background: #ccfbf1; }
+      .seccion-item.disabled {
+        opacity: 0.5; cursor: not-allowed; background: var(--gray-100);
+      }
+      .seccion-item.disabled:hover { border-color: var(--gray-200); background: var(--gray-100); }
+      .seccion-item-label { font-weight: 600; font-size: 0.85rem; color: var(--gray-800); }
+      .seccion-item-badge { font-size: 0.68rem; font-weight: 600; border-radius: 12px; padding: 2px 8px; }
+      .seccion-ocupada { background: #ffe4e6; color: #9f1239; }
+      .seccion-libre { background: #dcfce7; color: #14532d; }
+
+      /* Lista de personas */
+      .persona-row {
+        border: 1.5px solid var(--gray-200); border-radius: 10px; padding: 12px 16px;
+        margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;
+        transition: all 0.2s; flex-wrap: wrap; gap: 8px;
+      }
+      .persona-row:hover { border-color: var(--primary-lt); background: #f8fafc; }
+      .persona-info { flex: 1; min-width: 200px; }
+      .persona-nombre { font-weight: 700; font-size: 0.88rem; color: var(--gray-800); }
+      .persona-detalle { font-size: 0.75rem; color: var(--gray-600); margin-top: 2px; }
+      .persona-tipo-badge {
+        font-size: 0.65rem; font-weight: 700; border-radius: 12px; padding: 3px 8px;
+        text-transform: uppercase; letter-spacing: 0.5px;
+      }
+      .tipo-veedor { background: #ede9fe; color: #5b21b6; }
+      .tipo-aplicador { background: #ccfbf1; color: #115e59; }
+      .persona-actions { display: flex; gap: 6px; }
+      .persona-actions button {
+        border: none; border-radius: 6px; padding: 5px 10px; font-size: 0.72rem;
+        font-weight: 600; cursor: pointer; transition: all 0.2s;
+        display: inline-flex; align-items: center; gap: 4px;
+      }
+      .btn-edit-persona {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dk));
+        color: #fff;
+      }
+      .btn-edit-persona:hover { opacity: 0.85; transform: scale(1.04); }
+      .btn-del-persona {
+        background: linear-gradient(135deg, var(--red), var(--red-dk));
+        color: #fff;
+      }
+      .btn-del-persona:hover { opacity: 0.85; transform: scale(1.04); }
+
+      /* ── SPINNER ── */
+      .spinner-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(10,30,64,0.45); z-index: 9999;
+        align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+      }
+      .spinner-overlay.active { display: flex; }
+      .spinner-overlay p { color: #fff; font-weight: 600; font-size: 0.88rem; }
+
+      /* ── TOAST ── */
+      .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9998; }
+
+      /* ── SIN ACCESO ── */
+      .sin-acceso-box {
+        background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+        border-radius: 14px; padding: 40px; text-align: center;
+        color: #9f1239; box-shadow: 0 4px 20px rgba(244,63,94,0.15);
+      }
+      .sin-acceso-box i { font-size: 3rem; display: block; margin-bottom: 14px; }
+
+      /* ── EMPTY ── */
+      .empty-state { text-align: center; padding: 60px 20px; color: var(--gray-400); }
+      .empty-state i { font-size: 3rem; display: block; margin-bottom: 14px; }
+
+      /* Hidden card for search */
+      .est-card.hidden-search { display: none; }
+
+      /* Persona vacía en lista */
+      .personas-empty {
+        text-align: center; padding: 30px; color: var(--gray-400);
+        font-size: 0.88rem;
+      }
+      .personas-empty i { font-size: 2rem; display: block; margin-bottom: 8px; }
+    </style>
+  </head>
+  <body>
+    {% csrf_token %}
+
+    <!-- Spinner global -->
+    <div class="spinner-overlay" id="spinnerOverlay">
+      <div class="spinner-border text-light" style="width:3rem;height:3rem;" role="status"></div>
+      <p>Procesando...</p>
+    </div>
+
+    <!-- ── TOPBAR ── -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-logo">
+          <img src="{% static 'evaluaciones_educativas/img/logo_evaluaciones_educativas.png' %}" alt="Logo" />
+        </div>
+        <div>
+          <h1>Gestión de Aplicadores y Veedores</h1>
+          <small>Referente: <strong>{{ cuil }}</strong>{% if region_actual %} — Región: <strong>{{ region_actual }}</strong>{% endif %}</small>
+        </div>
+      </div>
+      <div class="topbar-meta">
+        <a href="{% url 'evaluaciones_educativas:validaciones_2026:personas_lista' %}" class="btn-back">
+          <i class="bi bi-arrow-left"></i>Cambiar región
+        </a>
+        {% if not sin_acceso %}
+        <span class="badge-top"><i class="bi bi-buildings me-1"></i>{{ total_est }} establecimiento{{ total_est|pluralize:"s" }}</span>
+        {% endif %}
+        <a href="https://visoreducativochaco.com.ar/" class="btn-back" style="border: 1px solid rgba(255,255,255,0.4);">
+          <i class="bi bi-display"></i> Volver al visor educativo
+        </a>
+      </div>
+    </div>
+
+    <!-- ── STEPPER ── -->
+    <div class="stepper">
+      <div class="step done">
+        <div class="step-num"><i class="bi bi-check-lg" style="font-size:0.65rem;"></i></div>
+        <span>Región</span>
+      </div>
+      <div class="step-connector done"></div>
+      <div class="step active">
+        <div class="step-num">1</div>
+        <span>Establecimientos</span>
+      </div>
+      <div class="step-connector"></div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <span>Personas</span>
+      </div>
+    </div>
+
+    <!-- ── CONTENIDO ── -->
+    <div class="page-content">
+
+      {% if sin_acceso %}
+      <div class="sin-acceso-box">
+        <i class="bi bi-shield-lock-fill"></i>
+        <h4 class="fw-bold mb-2">Acceso no autorizado</h4>
+        <p class="mb-0">El CUIL <strong>{{ cuil }}</strong> no está registrado como referente de carga.<br>Comunicate con el administrador del sistema.</p>
+      </div>
+
+      {% else %}
+
+      <!-- Stats Bar -->
+      <div class="stats-bar">
+        <div class="stat-item">
+          <div class="stat-value">{{ total_est }}</div>
+          <div class="stat-label">Establecimientos</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <div class="stat-value" style="color:var(--purple);" id="statVeedores">0</div>
+          <div class="stat-label">Veedores</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <div class="stat-value" style="color:var(--teal);" id="statAplicadores">0</div>
+          <div class="stat-label">Aplicadores</div>
+        </div>
+      </div>
+
+      <!-- Buscador -->
+      <div class="search-wrap">
+        <i class="bi bi-search"></i>
+        <input type="text" class="search-input" id="buscadorEscuelas"
+               placeholder="Buscar establecimiento por nombre o CUE..."
+               oninput="filtrarCards(this.value)" autocomplete="off" />
+      </div>
+
+      <!-- Grid de tarjetas -->
+      {% if establecimientos %}
+      <div class="cards-grid" id="cardsGrid">
+        {% for est in establecimientos %}
+        <div class="est-card"
+             id="card-{{ est.cueanexo }}"
+             data-search="{{ est.escuela|lower }} {{ est.cueanexo }}"
+             data-veedores="{{ est.cant_veedores }}"
+             data-aplicadores="{{ est.cant_aplicadores }}">
+
+          <!-- Barra de estado superior -->
+          <div class="card-status-bar"></div>
+
+          <div class="card-body-inner">
+            <div class="card-header-row">
+              <div class="card-name" title="{{ est.escuela }}">{{ est.escuela }}</div>
+              <div class="card-cue">{{ est.cueanexo }}</div>
+            </div>
+
+            <div class="card-meta">
+              <div class="card-meta-item"><i class="bi bi-geo-alt"></i><span>{% if est.localidad|upper == 'S/N' or est.localidad == '#¡REF!' %}-{% else %}{{ est.localidad }}{% endif %}</span></div>
+              <div class="card-meta-item"><i class="bi bi-building"></i><span>{% if est.sector|upper == 'S/N' or est.sector == '#¡REF!' %}-{% else %}{{ est.sector }}{% endif %} | {% if est.ambito|upper == 'S/N' or est.ambito == '#¡REF!' %}-{% else %}{{ est.ambito }}{% endif %}</span></div>
+              <div class="card-meta-item"><i class="bi bi-map"></i><span>{% if est.departamento|upper == 'S/N' or est.departamento == '#¡REF!' %}-{% else %}{{ est.departamento }}{% endif %}</span></div>
+            </div>
+
+            <!-- Badges personas -->
+            <div class="d-flex flex-wrap gap-2 mb-2" id="badges-{{ est.cueanexo }}">
+              {% if est.cant_veedores > 0 %}
+                <span class="badge-personas badge-veedores"><i class="bi bi-eye-fill me-1"></i>{{ est.cant_veedores }} veedor{{ est.cant_veedores|pluralize:"es" }}</span>
+              {% endif %}
+              {% if est.cant_aplicadores > 0 %}
+                <span class="badge-personas badge-aplicadores"><i class="bi bi-person-check-fill me-1"></i>{{ est.cant_aplicadores }} aplicador{{ est.cant_aplicadores|pluralize:"es" }}</span>
+              {% endif %}
+              {% if est.cant_personas == 0 %}
+                <span class="badge-personas badge-sin-personas"><i class="bi bi-clock me-1"></i>Sin personas asignadas</span>
+              {% endif %}
+            </div>
+
+            <!-- Footer -->
+            <div class="card-footer-row">
+              <button class="btn-cargar-persona"
+                      onclick="abrirModalSeleccionRol('{{ est.cueanexo }}', '{{ est.escuela|escapejs }}')"
+                      id="btn-cargar-{{ est.cueanexo }}">
+                <i class="bi bi-person-plus-fill"></i>Cargar Aplicador y Veedor
+              </button>
+              <button class="btn-modificar-persona"
+                      onclick="abrirModalListaPersonas('{{ est.cueanexo }}', '{{ est.escuela|escapejs }}')"
+                      id="btn-modificar-{{ est.cueanexo }}">
+                <i class="bi bi-pencil-square"></i>Modificar Aplicador y Veedor
+              </button>
+            </div>
+
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <div class="empty-state">
+        <i class="bi bi-inbox"></i>
+        <h5 class="fw-bold">Sin establecimientos</h5>
+        <p>No hay establecimientos registrados para esta región.</p>
+      </div>
+      {% endif %}
+
+      {% endif %}<!-- /sin_acceso -->
+    </div><!-- /page-content -->
+
+
+    <!-- ================================================================
+         MODAL 1: Seleccionar Rol (Veedor o Aplicador)
+    ================================================================ -->
+    <div class="modal fade" id="modalSeleccionRol" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header mh-personas">
+            <h5 class="modal-title">
+              <i class="bi bi-person-plus me-2"></i>Cargar persona — <span id="rolEscuelaNombre"></span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <p class="text-muted mb-3" style="font-size:0.88rem;">
+              ¿Qué tipo de persona querés cargar?
+            </p>
+            <div class="rol-options">
+              <div class="rol-btn veedor" onclick="abrirFormVeedor()">
+                <div class="rol-icon">👁️</div>
+                <div class="rol-title" style="color:var(--purple);">Veedor</div>
+                <div class="rol-sub">Asignado al establecimiento</div>
+              </div>
+              <div class="rol-btn aplicador" onclick="abrirSeleccionSeccion()">
+                <div class="rol-icon">📋</div>
+                <div class="rol-title" style="color:var(--teal);">Aplicador</div>
+                <div class="rol-sub">Asignado a una sección</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================================================================
+         MODAL 2: Formulario Veedor
+    ================================================================ -->
+    <div class="modal fade" id="modalFormVeedor" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header mh-veedor">
+            <h5 class="modal-title">
+              <i class="bi bi-eye-fill me-2"></i>Cargar Veedor — <span id="veedorEscuelaNombre"></span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <form class="form-persona" id="formVeedor" onsubmit="return false;">
+              <div class="row g-3">
+                <div class="col-6">
+                  <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="vNombre" required />
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Apellido <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="vApellido" required />
+                </div>
+                <div class="col-12">
+                  <label class="form-label">CUIL <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="vCuil" placeholder="20-12345678-9" required />
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Correo electrónico <span class="text-danger">*</span></label>
+                  <input type="email" class="form-control" id="vCorreo" required />
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Teléfono <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="vTelefono" required />
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer border-0 pt-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn fw-bold text-white" id="btnGuardarVeedor"
+                    style="background:linear-gradient(135deg,#7c3aed,var(--purple));" onclick="guardarVeedor()">
+              <i class="bi bi-save me-1"></i>Guardar veedor
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================================================================
+         MODAL 3: Seleccionar Sección (para Aplicador)
+    ================================================================ -->
+    <div class="modal fade" id="modalSeleccionSeccion" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header mh-aplicador">
+            <h5 class="modal-title">
+              <i class="bi bi-list-check me-2"></i>Seleccionar sección — <span id="seccionEscuelaNombre"></span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <p class="text-muted mb-3" style="font-size:0.86rem;">
+              Seleccioná la sección a la que se asignará el aplicador:
+            </p>
+            <div class="seccion-list" id="seccionList">
+              <!-- Cargado dinámicamente -->
+              <div class="text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm me-2"></div>Cargando secciones...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================================================================
+         MODAL 4: Formulario Aplicador
+    ================================================================ -->
+    <div class="modal fade" id="modalFormAplicador" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header mh-aplicador">
+            <h5 class="modal-title">
+              <i class="bi bi-person-check-fill me-2"></i>Cargar Aplicador — <span id="aplicadorEscuelaNombre"></span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <div class="alert alert-info py-2 px-3" style="font-size:0.82rem; border-radius:8px;">
+              <i class="bi bi-info-circle me-1"></i>Sección: <strong id="aplicadorSeccionLabel"></strong>
+            </div>
+            <form class="form-persona" id="formAplicador" onsubmit="return false;">
+              <input type="hidden" id="aSecccionId" />
+              <div class="row g-3">
+                <div class="col-6">
+                  <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="aNombre" required />
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Apellido <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="aApellido" required />
+                </div>
+                <div class="col-12">
+                  <label class="form-label">CUIL <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="aCuil" placeholder="20-12345678-9" required />
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Correo electrónico <span class="text-danger">*</span></label>
+                  <input type="email" class="form-control" id="aCorreo" required />
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Teléfono <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="aTelefono" required />
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer border-0 pt-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn fw-bold text-white" id="btnGuardarAplicador"
+                    style="background:linear-gradient(135deg,var(--teal-dk),var(--teal));" onclick="guardarAplicador()">
+              <i class="bi bi-save me-1"></i>Guardar aplicador
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================================================================
+         MODAL 5: Lista de Personas (Modificar/Eliminar)
+    ================================================================ -->
+    <div class="modal fade" id="modalListaPersonas" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header mh-lista">
+            <h5 class="modal-title">
+              <i class="bi bi-people-fill me-2"></i>Personas asignadas — <span id="listaEscuelaNombre"></span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <div id="listaPersonasContenido">
+              <div class="text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm me-2"></div>Cargando personas...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================================================================
+         MODAL 6: Editar Persona
+    ================================================================ -->
+    <div class="modal fade" id="modalEditarPersona" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header mh-personas">
+            <h5 class="modal-title">
+              <i class="bi bi-pencil-fill me-2"></i>Editar <span id="editarTipoLabel"></span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4">
+            <form class="form-persona" id="formEditar" onsubmit="return false;">
+              <input type="hidden" id="editId" />
+              <input type="hidden" id="editTipo" />
+              <div class="row g-3">
+                <div class="col-6">
+                  <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="editNombre" required />
+                </div>
+                <div class="col-6">
+                  <label class="form-label">Apellido <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="editApellido" required />
+                </div>
+                <div class="col-12">
+                  <label class="form-label">CUIL <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="editCuil" required />
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Correo electrónico <span class="text-danger">*</span></label>
+                  <input type="email" class="form-control" id="editCorreo" required />
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Teléfono <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="editTelefono" required />
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer border-0 pt-0">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary fw-bold" id="btnGuardarEdicion" onclick="guardarEdicion()"
+                    style="background:var(--primary);border-color:var(--primary);">
+              <i class="bi bi-save me-1"></i>Guardar cambios
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================================================================
+         MODAL 7: Confirmar Eliminación
+    ================================================================ -->
+    <div class="modal fade" id="modalConfirmarEliminar" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+          <div class="modal-header mh-danger">
+            <h5 class="modal-title">
+              <i class="bi bi-trash3-fill me-2"></i>Confirmar eliminación
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body p-4 text-center">
+            <p style="font-size:0.9rem;">¿Estás seguro de que querés eliminar a <strong id="eliminarNombre"></strong>?</p>
+            <p class="text-muted" style="font-size:0.78rem;">Esta acción no se puede deshacer.</p>
+          </div>
+          <div class="modal-footer border-0 pt-0 justify-content-center">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-danger btn-sm fw-bold" id="btnConfirmarEliminar" onclick="confirmarEliminacion()">
+              <i class="bi bi-trash3 me-1"></i>Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ── TOAST CONTAINER ── -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // ── CSRF ──────────────────────────────────────────────────────────
+      function getCsrf() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+      }
+
+      // ── SPINNER ──────────────────────────────────────────────────────
+      const spinner = document.getElementById('spinnerOverlay');
+      const showSpinner = () => spinner.classList.add('active');
+      const hideSpinner = () => spinner.classList.remove('active');
+
+      // ── TOAST ────────────────────────────────────────────────────────
+      function showToast(msg, type = 'success') {
+        const id = 'toast-' + Date.now();
+        const icons = {
+          success: 'bi-check-circle-fill text-success',
+          danger:  'bi-x-circle-fill text-danger',
+          info:    'bi-info-circle-fill text-primary',
+          warning: 'bi-exclamation-triangle-fill text-warning',
+        };
+        const html = `
+          <div id="${id}" class="toast align-items-center border-0 shadow-lg" role="alert" style="min-width:280px;">
+            <div class="d-flex">
+              <div class="toast-body fw-semibold" style="font-size:0.86rem;">
+                <i class="bi ${icons[type]||icons.success} me-2"></i>${msg}
+              </div>
+              <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+          </div>`;
+        document.getElementById('toastContainer').insertAdjacentHTML('beforeend', html);
+        const toastEl = document.getElementById(id);
+        new bootstrap.Toast(toastEl, { delay: 4000 }).show();
+        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+      }
+
+      // ── ESTADO LOCAL ─────────────────────────────────────────────────
+      let cueActual = null;
+      let nombreEscuelaActual = '';
+      let seccionSeleccionadaId = null;
+      let seccionSeleccionadaLabel = '';
+      let eliminarId = null;
+      let eliminarTipo = null;
+
+      // ── MODALES ──────────────────────────────────────────────────────
+      const modalSeleccionRolBS = new bootstrap.Modal(document.getElementById('modalSeleccionRol'));
+      const modalFormVeedorBS = new bootstrap.Modal(document.getElementById('modalFormVeedor'));
+      const modalSeleccionSeccionBS = new bootstrap.Modal(document.getElementById('modalSeleccionSeccion'));
+      const modalFormAplicadorBS = new bootstrap.Modal(document.getElementById('modalFormAplicador'));
+      const modalListaPersonasBS = new bootstrap.Modal(document.getElementById('modalListaPersonas'));
+      const modalEditarPersonaBS = new bootstrap.Modal(document.getElementById('modalEditarPersona'));
+      const modalConfirmarEliminarBS = new bootstrap.Modal(document.getElementById('modalConfirmarEliminar'));
+
+      // ── BUSCADOR DE CARDS ─────────────────────────────────────────────
+      function filtrarCards(q) {
+        q = q.toLowerCase().trim();
+        document.querySelectorAll('.est-card').forEach(card => {
+          const txt = card.dataset.search || '';
+          card.classList.toggle('hidden-search', q !== '' && !txt.includes(q));
+        });
+      }
+
+      // ── STATS GLOBALES ────────────────────────────────────────────────
+      function actualizarStats() {
+        let totalV = 0, totalA = 0;
+        document.querySelectorAll('.est-card').forEach(card => {
+          totalV += parseInt(card.dataset.veedores || 0);
+          totalA += parseInt(card.dataset.aplicadores || 0);
+        });
+        document.getElementById('statVeedores').textContent = totalV;
+        document.getElementById('statAplicadores').textContent = totalA;
+      }
+      // Calcular al cargar
+      actualizarStats();
+
+
+      // ══════════════════════════════════════════════════════════════════
+      // FLUJO 1: CARGAR APLICADOR Y VEEDOR
+      // ══════════════════════════════════════════════════════════════════
+
+      // ── Abrir modal de selección de rol ──
+      function abrirModalSeleccionRol(cueanexo, nombre) {
+        cueActual = cueanexo;
+        nombreEscuelaActual = nombre;
+        document.getElementById('rolEscuelaNombre').textContent = nombre;
+        modalSeleccionRolBS.show();
+      }
+
+      // ── Abrir form veedor ──
+      function abrirFormVeedor() {
+        modalSeleccionRolBS.hide();
+        document.getElementById('veedorEscuelaNombre').textContent = nombreEscuelaActual;
+        // Limpiar form
+        document.getElementById('vNombre').value = '';
+        document.getElementById('vApellido').value = '';
+        document.getElementById('vCuil').value = '';
+        document.getElementById('vCorreo').value = '';
+        document.getElementById('vTelefono').value = '';
+        setTimeout(() => modalFormVeedorBS.show(), 300);
+      }
+
+      // ── Guardar veedor ──
+      async function guardarVeedor() {
+        const nombre = document.getElementById('vNombre').value.trim();
+        const apellido = document.getElementById('vApellido').value.trim();
+        const cuil = document.getElementById('vCuil').value.trim();
+        const correo = document.getElementById('vCorreo').value.trim();
+        const telefono = document.getElementById('vTelefono').value.trim();
+
+        if (!nombre || !apellido || !cuil || !correo || !telefono) {
+          showToast('Todos los campos son obligatorios.', 'warning');
+          return;
+        }
+
+        const btn = document.getElementById('btnGuardarVeedor');
+        btn.disabled = true;
+        showSpinner();
+
+        const body = new FormData();
+        body.append('nombre', nombre);
+        body.append('apellido', apellido);
+        body.append('cuil', cuil);
+        body.append('correo', correo);
+        body.append('telefono', telefono);
+        body.append('csrfmiddlewaretoken', getCsrf());
+
+        try {
+          const resp = await fetch(
+            `{% url 'evaluaciones_educativas:validaciones_2026:crear_veedor' '___CUE___' %}`.replace('___CUE___', cueActual),
+            { method: 'POST', body }
+          );
+          const data = await resp.json();
+          if (data.ok) {
+            modalFormVeedorBS.hide();
+            showToast(data.mensaje);
+            actualizarCardPersonas(cueActual);
+          } else {
+            showToast('Error: ' + (data.error || 'Ocurrió un problema.'), 'danger');
+          }
+        } catch(e) {
+          showToast('Error de conexión.', 'danger');
+        } finally {
+          hideSpinner();
+          btn.disabled = false;
+        }
+      }
+
+      // ── Abrir selección de sección ──
+      async function abrirSeleccionSeccion() {
+        modalSeleccionRolBS.hide();
+        document.getElementById('seccionEscuelaNombre').textContent = nombreEscuelaActual;
+        document.getElementById('seccionList').innerHTML = '<div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando secciones...</div>';
+        setTimeout(() => modalSeleccionSeccionBS.show(), 300);
+
+        try {
+          const resp = await fetch(
+            `{% url 'evaluaciones_educativas:validaciones_2026:personas_secciones_json' '___CUE___' %}`.replace('___CUE___', cueActual)
+          );
+          const data = await resp.json();
+          if (data.ok) {
+            renderSecciones(data.secciones);
+          } else {
+            document.getElementById('seccionList').innerHTML = '<p class="text-danger text-center">Error al cargar secciones.</p>';
+          }
+        } catch(e) {
+          document.getElementById('seccionList').innerHTML = '<p class="text-danger text-center">Error de conexión.</p>';
+        }
+      }
+
+      function renderSecciones(secciones) {
+        const container = document.getElementById('seccionList');
+        if (secciones.length === 0) {
+          container.innerHTML = '<div class="personas-empty"><i class="bi bi-inbox"></i>No hay secciones registradas.</div>';
+          return;
+        }
+        let html = '';
+        secciones.forEach(sec => {
+          const disabled = sec.tiene_aplicador ? 'disabled' : '';
+          const badgeClass = sec.tiene_aplicador ? 'seccion-ocupada' : 'seccion-libre';
+          const badgeText = sec.tiene_aplicador ? 'Ocupada' : 'Libre';
+          html += `
+            <div class="seccion-item ${disabled}" ${!sec.tiene_aplicador ? `onclick="seleccionarSeccion(${sec.id}, '${sec.label.replace(/'/g, "\\'")}')"` : ''}>
+              <span class="seccion-item-label">${sec.label}</span>
+              <span class="seccion-item-badge ${badgeClass}">${badgeText}</span>
+            </div>`;
+        });
+        container.innerHTML = html;
+      }
+
+      function seleccionarSeccion(secId, label) {
+        seccionSeleccionadaId = secId;
+        seccionSeleccionadaLabel = label;
+        modalSeleccionSeccionBS.hide();
+        // Abrir form aplicador
+        document.getElementById('aplicadorEscuelaNombre').textContent = nombreEscuelaActual;
+        document.getElementById('aplicadorSeccionLabel').textContent = label;
+        document.getElementById('aSecccionId').value = secId;
+        document.getElementById('aNombre').value = '';
+        document.getElementById('aApellido').value = '';
+        document.getElementById('aCuil').value = '';
+        document.getElementById('aCorreo').value = '';
+        document.getElementById('aTelefono').value = '';
+        setTimeout(() => modalFormAplicadorBS.show(), 300);
+      }
+
+      // ── Guardar aplicador ──
+      async function guardarAplicador() {
+        const nombre = document.getElementById('aNombre').value.trim();
+        const apellido = document.getElementById('aApellido').value.trim();
+        const cuil = document.getElementById('aCuil').value.trim();
+        const correo = document.getElementById('aCorreo').value.trim();
+        const telefono = document.getElementById('aTelefono').value.trim();
+        const seccionId = document.getElementById('aSecccionId').value;
+
+        if (!nombre || !apellido || !cuil || !correo || !telefono) {
+          showToast('Todos los campos son obligatorios.', 'warning');
+          return;
+        }
+
+        const btn = document.getElementById('btnGuardarAplicador');
+        btn.disabled = true;
+        showSpinner();
+
+        const body = new FormData();
+        body.append('nombre', nombre);
+        body.append('apellido', apellido);
+        body.append('cuil', cuil);
+        body.append('correo', correo);
+        body.append('telefono', telefono);
+        body.append('seccion_id', seccionId);
+        body.append('csrfmiddlewaretoken', getCsrf());
+
+        try {
+          const resp = await fetch(
+            `{% url 'evaluaciones_educativas:validaciones_2026:crear_aplicador' '___CUE___' %}`.replace('___CUE___', cueActual),
+            { method: 'POST', body }
+          );
+          const data = await resp.json();
+          if (data.ok) {
+            modalFormAplicadorBS.hide();
+            showToast(data.mensaje);
+            actualizarCardPersonas(cueActual);
+          } else {
+            showToast('Error: ' + (data.error || 'Ocurrió un problema.'), 'danger');
+          }
+        } catch(e) {
+          showToast('Error de conexión.', 'danger');
+        } finally {
+          hideSpinner();
+          btn.disabled = false;
+        }
+      }
+
+
+      // ══════════════════════════════════════════════════════════════════
+      // FLUJO 2: MODIFICAR / ELIMINAR APLICADOR Y VEEDOR
+      // ══════════════════════════════════════════════════════════════════
+
+      async function abrirModalListaPersonas(cueanexo, nombre) {
+        cueActual = cueanexo;
+        nombreEscuelaActual = nombre;
+        document.getElementById('listaEscuelaNombre').textContent = nombre;
+        document.getElementById('listaPersonasContenido').innerHTML = '<div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Cargando personas...</div>';
+        modalListaPersonasBS.show();
+
+        try {
+          const resp = await fetch(
+            `{% url 'evaluaciones_educativas:validaciones_2026:listar_personas' '___CUE___' %}`.replace('___CUE___', cueanexo)
+          );
+          const data = await resp.json();
+          if (data.ok) {
+            renderListaPersonas(data.veedores, data.aplicadores);
+          } else {
+            document.getElementById('listaPersonasContenido').innerHTML = '<p class="text-danger text-center">Error al cargar personas.</p>';
+          }
+        } catch(e) {
+          document.getElementById('listaPersonasContenido').innerHTML = '<p class="text-danger text-center">Error de conexión.</p>';
+        }
+      }
+
+      function renderListaPersonas(veedores, aplicadores) {
+        const container = document.getElementById('listaPersonasContenido');
+        if (veedores.length === 0 && aplicadores.length === 0) {
+          container.innerHTML = '<div class="personas-empty"><i class="bi bi-person-x"></i>No hay personas asignadas a este establecimiento.</div>';
+          return;
+        }
+
+        let html = '';
+
+        if (veedores.length > 0) {
+          html += '<h6 class="fw-bold mb-3" style="color:var(--purple);font-size:0.85rem;"><i class="bi bi-eye-fill me-1"></i>Veedores</h6>';
+          veedores.forEach(v => {
+            html += renderPersonaRow(v);
+          });
+        }
+
+        if (aplicadores.length > 0) {
+          html += '<h6 class="fw-bold mb-3 mt-3" style="color:var(--teal);font-size:0.85rem;"><i class="bi bi-person-check-fill me-1"></i>Aplicadores</h6>';
+          aplicadores.forEach(a => {
+            html += renderPersonaRow(a);
+          });
+        }
+
+        container.innerHTML = html;
+      }
+
+      function renderPersonaRow(persona) {
+        const tipoClass = persona.tipo === 'veedor' ? 'tipo-veedor' : 'tipo-aplicador';
+        const tipoLabel = persona.tipo === 'veedor' ? 'Veedor' : 'Aplicador';
+        const secInfo = persona.seccion_label ? `<br><span style="font-size:0.7rem;color:var(--teal);">📋 ${persona.seccion_label}</span>` : '';
+        return `
+          <div class="persona-row">
+            <div class="persona-info">
+              <div class="persona-nombre">
+                ${persona.apellido}, ${persona.nombre}
+                <span class="persona-tipo-badge ${tipoClass} ms-2">${tipoLabel}</span>
+              </div>
+              <div class="persona-detalle">
+                CUIL: ${persona.cuil} · ${persona.correo} · Tel: ${persona.telefono}${secInfo}
+              </div>
+            </div>
+            <div class="persona-actions">
+              <button class="btn-edit-persona" onclick="abrirEditar('${persona.tipo}', ${persona.id}, '${persona.nombre.replace(/'/g, "\\'")}', '${persona.apellido.replace(/'/g, "\\'")}', '${persona.cuil}', '${persona.correo.replace(/'/g, "\\'")}', '${persona.telefono}')">
+                <i class="bi bi-pencil-fill"></i>Editar
+              </button>
+              <button class="btn-del-persona" onclick="abrirEliminar('${persona.tipo}', ${persona.id}, '${persona.apellido.replace(/'/g, "\\'")}, ${persona.nombre.replace(/'/g, "\\'")}')">
+                <i class="bi bi-trash3-fill"></i>Eliminar
+              </button>
+            </div>
+          </div>`;
+      }
+
+      // ── Editar persona ──
+      function abrirEditar(tipo, id, nombre, apellido, cuil, correo, telefono) {
+        modalListaPersonasBS.hide();
+        document.getElementById('editarTipoLabel').textContent = tipo === 'veedor' ? 'Veedor' : 'Aplicador';
+        document.getElementById('editId').value = id;
+        document.getElementById('editTipo').value = tipo;
+        document.getElementById('editNombre').value = nombre;
+        document.getElementById('editApellido').value = apellido;
+        document.getElementById('editCuil').value = cuil;
+        document.getElementById('editCorreo').value = correo;
+        document.getElementById('editTelefono').value = telefono;
+        setTimeout(() => modalEditarPersonaBS.show(), 300);
+      }
+
+      async function guardarEdicion() {
+        const id = document.getElementById('editId').value;
+        const tipo = document.getElementById('editTipo').value;
+        const nombre = document.getElementById('editNombre').value.trim();
+        const apellido = document.getElementById('editApellido').value.trim();
+        const cuil = document.getElementById('editCuil').value.trim();
+        const correo = document.getElementById('editCorreo').value.trim();
+        const telefono = document.getElementById('editTelefono').value.trim();
+
+        if (!nombre || !apellido || !cuil || !correo || !telefono) {
+          showToast('Todos los campos son obligatorios.', 'warning');
+          return;
+        }
+
+        const btn = document.getElementById('btnGuardarEdicion');
+        btn.disabled = true;
+        showSpinner();
+
+        const body = new FormData();
+        body.append('nombre', nombre);
+        body.append('apellido', apellido);
+        body.append('cuil', cuil);
+        body.append('correo', correo);
+        body.append('telefono', telefono);
+        body.append('csrfmiddlewaretoken', getCsrf());
+
+        const urlBase = tipo === 'veedor'
+          ? `{% url 'evaluaciones_educativas:validaciones_2026:editar_veedor' 99999 %}`.replace('99999', id)
+          : `{% url 'evaluaciones_educativas:validaciones_2026:editar_aplicador' 99999 %}`.replace('99999', id);
+
+        try {
+          const resp = await fetch(urlBase, { method: 'POST', body });
+          const data = await resp.json();
+          if (data.ok) {
+            modalEditarPersonaBS.hide();
+            showToast(data.mensaje);
+            actualizarCardPersonas(cueActual);
+            // Recargar lista
+            setTimeout(() => abrirModalListaPersonas(cueActual, nombreEscuelaActual), 400);
+          } else {
+            showToast('Error: ' + (data.error || 'Ocurrió un problema.'), 'danger');
+          }
+        } catch(e) {
+          showToast('Error de conexión.', 'danger');
+        } finally {
+          hideSpinner();
+          btn.disabled = false;
+        }
+      }
+
+      // ── Eliminar persona ──
+      function abrirEliminar(tipo, id, nombre) {
+        eliminarId = id;
+        eliminarTipo = tipo;
+        document.getElementById('eliminarNombre').textContent = nombre;
+        modalListaPersonasBS.hide();
+        setTimeout(() => modalConfirmarEliminarBS.show(), 300);
+      }
+
+      async function confirmarEliminacion() {
+        const btn = document.getElementById('btnConfirmarEliminar');
+        btn.disabled = true;
+        showSpinner();
+
+        const body = new FormData();
+        body.append('csrfmiddlewaretoken', getCsrf());
+
+        const urlBase = eliminarTipo === 'veedor'
+          ? `{% url 'evaluaciones_educativas:validaciones_2026:eliminar_veedor' 99999 %}`.replace('99999', eliminarId)
+          : `{% url 'evaluaciones_educativas:validaciones_2026:eliminar_aplicador' 99999 %}`.replace('99999', eliminarId);
+
+        try {
+          const resp = await fetch(urlBase, { method: 'POST', body });
+          const data = await resp.json();
+          if (data.ok) {
+            modalConfirmarEliminarBS.hide();
+            showToast(data.mensaje);
+            actualizarCardPersonas(cueActual);
+            // Recargar lista
+            setTimeout(() => abrirModalListaPersonas(cueActual, nombreEscuelaActual), 400);
+          } else {
+            showToast('Error: ' + (data.error || 'Ocurrió un problema.'), 'danger');
+          }
+        } catch(e) {
+          showToast('Error de conexión.', 'danger');
+        } finally {
+          hideSpinner();
+          btn.disabled = false;
+        }
+      }
+
+
+      // ══════════════════════════════════════════════════════════════════
+      // UTILIDADES
+      // ══════════════════════════════════════════════════════════════════
+
+      // Actualizar card y badges tras CRUD
+      async function actualizarCardPersonas(cueanexo) {
+        try {
+          const resp = await fetch(
+            `{% url 'evaluaciones_educativas:validaciones_2026:listar_personas' '___CUE___' %}`.replace('___CUE___', cueanexo)
+          );
+          const data = await resp.json();
+          if (data.ok) {
+            const card = document.getElementById('card-' + cueanexo);
+            const cantV = data.veedores.length;
+            const cantA = data.aplicadores.length;
+            card.dataset.veedores = cantV;
+            card.dataset.aplicadores = cantA;
+
+            const badgesDiv = document.getElementById('badges-' + cueanexo);
+            let html = '';
+            if (cantV > 0) {
+              html += `<span class="badge-personas badge-veedores"><i class="bi bi-eye-fill me-1"></i>${cantV} veedor${cantV > 1 ? 'es' : ''}</span>`;
+            }
+            if (cantA > 0) {
+              html += `<span class="badge-personas badge-aplicadores"><i class="bi bi-person-check-fill me-1"></i>${cantA} aplicador${cantA > 1 ? 'es' : ''}</span>`;
+            }
+            if (cantV === 0 && cantA === 0) {
+              html += `<span class="badge-personas badge-sin-personas"><i class="bi bi-clock me-1"></i>Sin personas asignadas</span>`;
+            }
+            badgesDiv.innerHTML = html;
+            actualizarStats();
+          }
+        } catch(e) {
+          // silenciar
+        }
+      }
+    </script>
+  </body>
+</html>

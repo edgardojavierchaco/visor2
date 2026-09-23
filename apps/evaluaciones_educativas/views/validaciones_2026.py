@@ -14,6 +14,8 @@ from apps.evaluaciones_educativas.models.validaciones_2026 import (
     ValCabecera,
     ValHistorialMatriculas,
     ValHistorialCambiosEstablecimiento,
+    ValAplicador,
+    ValVeedor,
 )
 
 
@@ -803,3 +805,423 @@ def validar_establecimiento_completo(request, cueanexo):
         )
 
     return JsonResponse({'ok': True, 'carga_completa': est.carga_completa})
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PERSONAS — Aplicadores y Veedores
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ---------------------------------------------------------------------------
+# PASO 0-P: Seleccionar región (personas)
+# ---------------------------------------------------------------------------
+@login_required
+def seleccionar_region_personas(request):
+    """
+    Landing de personas: muestra las regiones disponibles para el referente.
+    Reutiliza la misma lógica que seleccionar_region pero redirige al flujo
+    de personas.
+    """
+    cuil = _get_cuil(request)
+
+    regiones = list(
+        ValReferenteCargaTemporal.objects
+        .filter(cuil=cuil)
+        .values_list('region', flat=True)
+        .distinct()
+        .order_by('region')
+    )
+
+    if not regiones:
+        return render(request, 'validaciones_2026/seleccionar_region.html', {
+            'sin_acceso': True,
+            'cuil': cuil,
+            'modo_personas': True,
+        })
+
+    regiones_info = []
+    for region in regiones:
+        ests = ValEstablecimiento.objects.filter(region=region, participa_aprender="participa")
+        total_r = ests.count()
+        # Contar personas asignadas en la región
+        total_veedores = ValVeedor.objects.filter(establecimiento__region=region).count()
+        total_aplicadores = ValAplicador.objects.filter(seccion__grado__establecimiento__region=region).count()
+        regiones_info.append({
+            'nombre': region,
+            'total': total_r,
+            'veedores': total_veedores,
+            'aplicadores': total_aplicadores,
+            'total_personas': total_veedores + total_aplicadores,
+        })
+
+    return render(request, 'validaciones_2026/seleccionar_region.html', {
+        'sin_acceso': False,
+        'cuil': cuil,
+        'regiones_info': regiones_info,
+        'modo_personas': True,
+    })
+
+
+# ---------------------------------------------------------------------------
+# PASO 1-P: Lista de establecimientos de una región (personas)
+# ---------------------------------------------------------------------------
+@login_required
+def lista_establecimientos_personas(request, region):
+    """
+    Muestra los establecimientos de la región con botones de gestión
+    de aplicadores y veedores.
+    """
+    cuil = _get_cuil(request)
+
+    regiones_autorizadas = list(
+        ValReferenteCargaTemporal.objects
+        .filter(cuil=cuil)
+        .values_list('region', flat=True)
+        .distinct()
+    )
+    if not regiones_autorizadas:
+        return render(request, 'validaciones_2026/establecimientos_personas.html', {
+            'sin_acceso': True,
+            'cuil': cuil,
+        })
+    if region not in regiones_autorizadas:
+        return redirect('evaluaciones_educativas:validaciones_2026:personas_lista')
+
+    establecimientos = (
+        ValEstablecimiento.objects
+        .filter(region=region, participa_aprender="participa")
+        .order_by('escuela')
+    )
+
+    total_est = establecimientos.count()
+
+    establecimientos_list = list(establecimientos)
+    for est in establecimientos_list:
+        est.cant_veedores = ValVeedor.objects.filter(establecimiento=est).count()
+        est.cant_aplicadores = ValAplicador.objects.filter(
+            seccion__grado__establecimiento=est
+        ).count()
+        est.cant_personas = est.cant_veedores + est.cant_aplicadores
+
+    contexto = {
+        'sin_acceso': False,
+        'cuil': cuil,
+        'region_actual': region,
+        'regiones_autorizadas': regiones_autorizadas,
+        'establecimientos': establecimientos_list,
+        'total_est': total_est,
+    }
+    return render(request, 'validaciones_2026/establecimientos_personas.html', contexto)
+
+
+# ---------------------------------------------------------------------------
+# API: Secciones de un establecimiento (JSON)
+# ---------------------------------------------------------------------------
+@login_required
+def secciones_establecimiento_json(request, cueanexo):
+    """
+    Devuelve las secciones del establecimiento en JSON para el select
+    dinámico al crear un aplicador.
+    """
+    cuil = _get_cuil(request)
+    est = ValEstablecimiento.objects.for_referente(cuil, cueanexo)
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    secciones = (
+        ValSeccion.objects
+        .filter(grado__establecimiento=est)
+        .exclude(estado_validacion="DESHABILITADO")
+        .select_related('grado')
+        .order_by('grado__nombre_grado', 'seccion', 'turno')
+    )
+
+    # Marcar cuáles ya tienen aplicador asignado
+    data = []
+    for sec in secciones:
+        tiene_aplicador = ValAplicador.objects.filter(seccion=sec).exists()
+        data.append({
+            'id': sec.pk,
+            'public_id': str(sec.public_id),
+            'grado': sec.grado.nombre_grado,
+            'seccion': sec.seccion,
+            'turno': sec.turno,
+            'tiene_aplicador': tiene_aplicador,
+            'label': f"{sec.grado.nombre_grado} — Sección {sec.seccion} — {sec.turno}",
+        })
+
+    return JsonResponse({'ok': True, 'secciones': data})
+
+
+# ---------------------------------------------------------------------------
+# API: Listar personas de un establecimiento (JSON)
+# ---------------------------------------------------------------------------
+@login_required
+def listar_personas_establecimiento(request, cueanexo):
+    """
+    Devuelve JSON con los veedores y aplicadores asignados al establecimiento.
+    """
+    cuil = _get_cuil(request)
+    est = ValEstablecimiento.objects.for_referente(cuil, cueanexo)
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    veedores = ValVeedor.objects.filter(establecimiento=est)
+    aplicadores = ValAplicador.objects.filter(
+        seccion__grado__establecimiento=est
+    ).select_related('seccion', 'seccion__grado')
+
+    data_veedores = [
+        {
+            'id': v.pk,
+            'nombre': v.nombre,
+            'apellido': v.apellido,
+            'cuil': v.cuil,
+            'correo': v.correo,
+            'telefono': v.telefono,
+            'tipo': 'veedor',
+        }
+        for v in veedores
+    ]
+
+    data_aplicadores = [
+        {
+            'id': a.pk,
+            'nombre': a.nombre,
+            'apellido': a.apellido,
+            'cuil': a.cuil,
+            'correo': a.correo,
+            'telefono': a.telefono,
+            'tipo': 'aplicador',
+            'seccion_id': a.seccion.pk,
+            'seccion_label': f"{a.seccion.grado.nombre_grado} — Sección {a.seccion.seccion} — {a.seccion.turno}",
+        }
+        for a in aplicadores
+    ]
+
+    return JsonResponse({
+        'ok': True,
+        'veedores': data_veedores,
+        'aplicadores': data_aplicadores,
+    })
+
+
+# ---------------------------------------------------------------------------
+# CRUD: Crear Veedor
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def crear_veedor(request, cueanexo):
+    cuil = _get_cuil(request)
+    est = ValEstablecimiento.objects.for_referente(cuil, cueanexo)
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    nombre = request.POST.get('nombre', '').strip()
+    apellido = request.POST.get('apellido', '').strip()
+    cuil_persona = request.POST.get('cuil', '').strip()
+    correo = request.POST.get('correo', '').strip()
+    telefono = request.POST.get('telefono', '').strip()
+
+    if not all([nombre, apellido, cuil_persona, correo, telefono]):
+        return JsonResponse({'ok': False, 'error': 'Todos los campos son obligatorios.'}, status=400)
+
+    veedor = ValVeedor.objects.create(
+        nombre=nombre,
+        apellido=apellido,
+        cuil=cuil_persona,
+        correo=correo,
+        telefono=telefono,
+        establecimiento=est,
+    )
+
+    return JsonResponse({
+        'ok': True,
+        'id': veedor.pk,
+        'nombre': veedor.nombre,
+        'apellido': veedor.apellido,
+        'mensaje': f'Veedor {veedor.apellido}, {veedor.nombre} creado correctamente.',
+    })
+
+
+# ---------------------------------------------------------------------------
+# CRUD: Editar Veedor
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def editar_veedor(request, veedor_id):
+    cuil = _get_cuil(request)
+    try:
+        veedor = ValVeedor.objects.select_related('establecimiento').get(pk=veedor_id)
+    except ValVeedor.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Veedor no encontrado.'}, status=404)
+
+    est = ValEstablecimiento.objects.for_referente(cuil, veedor.establecimiento.cueanexo)
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    nombre = request.POST.get('nombre', '').strip()
+    apellido = request.POST.get('apellido', '').strip()
+    cuil_persona = request.POST.get('cuil', '').strip()
+    correo = request.POST.get('correo', '').strip()
+    telefono = request.POST.get('telefono', '').strip()
+
+    if not all([nombre, apellido, cuil_persona, correo, telefono]):
+        return JsonResponse({'ok': False, 'error': 'Todos los campos son obligatorios.'}, status=400)
+
+    veedor.nombre = nombre
+    veedor.apellido = apellido
+    veedor.cuil = cuil_persona
+    veedor.correo = correo
+    veedor.telefono = telefono
+    veedor.save()
+
+    return JsonResponse({
+        'ok': True,
+        'mensaje': f'Veedor {veedor.apellido}, {veedor.nombre} actualizado.',
+    })
+
+
+# ---------------------------------------------------------------------------
+# CRUD: Eliminar Veedor
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def eliminar_veedor(request, veedor_id):
+    cuil = _get_cuil(request)
+    try:
+        veedor = ValVeedor.objects.select_related('establecimiento').get(pk=veedor_id)
+    except ValVeedor.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Veedor no encontrado.'}, status=404)
+
+    est = ValEstablecimiento.objects.for_referente(cuil, veedor.establecimiento.cueanexo)
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    nombre_completo = f'{veedor.apellido}, {veedor.nombre}'
+    veedor.delete()
+
+    return JsonResponse({
+        'ok': True,
+        'mensaje': f'Veedor {nombre_completo} eliminado.',
+    })
+
+
+# ---------------------------------------------------------------------------
+# CRUD: Crear Aplicador
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def crear_aplicador(request, cueanexo):
+    cuil = _get_cuil(request)
+    est = ValEstablecimiento.objects.for_referente(cuil, cueanexo)
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    nombre = request.POST.get('nombre', '').strip()
+    apellido = request.POST.get('apellido', '').strip()
+    cuil_persona = request.POST.get('cuil', '').strip()
+    correo = request.POST.get('correo', '').strip()
+    telefono = request.POST.get('telefono', '').strip()
+    seccion_id = request.POST.get('seccion_id', '').strip()
+
+    if not all([nombre, apellido, cuil_persona, correo, telefono, seccion_id]):
+        return JsonResponse({'ok': False, 'error': 'Todos los campos son obligatorios.'}, status=400)
+
+    try:
+        seccion = ValSeccion.objects.get(pk=seccion_id, grado__establecimiento=est).exclude(estado_validacion="DESHABILITADO")
+    except ValSeccion.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Sección no encontrada.'}, status=404)
+
+    # Verificar que la sección no tenga ya un aplicador
+    if ValAplicador.objects.filter(seccion=seccion).exists():
+        return JsonResponse({'ok': False, 'error': 'Esta sección ya tiene un aplicador asignado.'}, status=400)
+
+    aplicador = ValAplicador.objects.create(
+        nombre=nombre,
+        apellido=apellido,
+        cuil=cuil_persona,
+        correo=correo,
+        telefono=telefono,
+        seccion=seccion,
+    )
+
+    return JsonResponse({
+        'ok': True,
+        'id': aplicador.pk,
+        'nombre': aplicador.nombre,
+        'apellido': aplicador.apellido,
+        'seccion_label': f"{seccion.grado.nombre_grado} — Sección {seccion.seccion} — {seccion.turno}",
+        'mensaje': f'Aplicador {aplicador.apellido}, {aplicador.nombre} creado correctamente.',
+    })
+
+
+# ---------------------------------------------------------------------------
+# CRUD: Editar Aplicador
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def editar_aplicador(request, aplicador_id):
+    cuil = _get_cuil(request)
+    try:
+        aplicador = ValAplicador.objects.select_related(
+            'seccion', 'seccion__grado', 'seccion__grado__establecimiento'
+        ).get(pk=aplicador_id)
+    except ValAplicador.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Aplicador no encontrado.'}, status=404)
+
+    est = ValEstablecimiento.objects.for_referente(
+        cuil, aplicador.seccion.grado.establecimiento.cueanexo
+    )
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    nombre = request.POST.get('nombre', '').strip()
+    apellido = request.POST.get('apellido', '').strip()
+    cuil_persona = request.POST.get('cuil', '').strip()
+    correo = request.POST.get('correo', '').strip()
+    telefono = request.POST.get('telefono', '').strip()
+
+    if not all([nombre, apellido, cuil_persona, correo, telefono]):
+        return JsonResponse({'ok': False, 'error': 'Todos los campos son obligatorios.'}, status=400)
+
+    aplicador.nombre = nombre
+    aplicador.apellido = apellido
+    aplicador.cuil = cuil_persona
+    aplicador.correo = correo
+    aplicador.telefono = telefono
+    aplicador.save()
+
+    return JsonResponse({
+        'ok': True,
+        'mensaje': f'Aplicador {aplicador.apellido}, {aplicador.nombre} actualizado.',
+    })
+
+
+# ---------------------------------------------------------------------------
+# CRUD: Eliminar Aplicador
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def eliminar_aplicador(request, aplicador_id):
+    cuil = _get_cuil(request)
+    try:
+        aplicador = ValAplicador.objects.select_related(
+            'seccion', 'seccion__grado', 'seccion__grado__establecimiento'
+        ).get(pk=aplicador_id)
+    except ValAplicador.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Aplicador no encontrado.'}, status=404)
+
+    est = ValEstablecimiento.objects.for_referente(
+        cuil, aplicador.seccion.grado.establecimiento.cueanexo
+    )
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    nombre_completo = f'{aplicador.apellido}, {aplicador.nombre}'
+    aplicador.delete()
+
+    return JsonResponse({
+        'ok': True,
+        'mensaje': f'Aplicador {nombre_completo} eliminado.',
+    })
+
