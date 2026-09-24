@@ -340,7 +340,12 @@ def _actualizar_matricula_compartida(request, especial_context, habilitada):
         request.POST.get("alumno_banco_id"),
         especial_context,
     )
-    form = _matricula_compartida_form(request.POST, especial_context, habilitada)
+    form = _matricula_compartida_form(
+        request.POST,
+        especial_context,
+        habilitada,
+        requerida=bool(habilitada),
+    )
     formulario_valido, formulario_error = _validar_matricula_compartida_form(form)
     if not formulario_valido:
         return False, formulario_error, alumno_banco
@@ -617,9 +622,14 @@ def _inscribir_alumno_desde_banco(request, especial_context):
 def _alumnos_banco_queryset(especial_context):
     if not especial_context["puede_operar"]:
         return EspecialAlumnoBanco.objects.none()
+    ciclo = especial_context["ciclo"]
+    # En producción el contexto contiene la instancia de Ciclo; algunos
+    # consumidores internos pueden aportar solamente un objeto con ``pk``.
+    # Usar explícitamente el id mantiene ambos contratos compatibles.
+    ciclo_id = getattr(ciclo, "pk", ciclo)
     return EspecialAlumnoBanco.objects.filter(
         cueanexo=especial_context["cueanexo"],
-        ciclo=especial_context["ciclo"],
+        ciclo_id=ciclo_id,
     )
 
 
@@ -989,6 +999,50 @@ def _orden_texto(valor):
         for caracter in texto
         if unicodedata.category(caracter) != "Mn"
     ).casefold()
+
+
+def _ordenar_alumnos_por_seccion(alumnos_banco, inscripciones_por_alumno):
+    """Prepara el listado agrupando visualmente los alumnos por sección."""
+    for item in alumnos_banco:
+        inscripciones = sorted(
+            inscripciones_por_alumno.get(item.alumno_id, []),
+            key=lambda inscripcion: (
+                _orden_texto(inscripcion.seccion.nombre_seccion),
+                _orden_texto(inscripcion.seccion.cd_tipo_seccion.descripcion),
+                inscripcion.seccion_id,
+            ),
+        )
+        item.inscripciones_seccion = inscripciones
+        principal = inscripciones[0].seccion if inscripciones else None
+        item.seccion_principal_label = (
+            principal.nombre_seccion if principal else "Sin sección asignada"
+        )
+        item.seccion_principal_key = (
+            _orden_texto(principal.nombre_seccion)
+            if principal
+            else "sin-seccion-asignada"
+        )
+
+    return sorted(
+        alumnos_banco,
+        key=lambda item: (
+            0 if not item.inscripciones_seccion else 1,
+            item.seccion_principal_key,
+            _orden_texto(getattr(item.alumno, "apellidos", "")),
+            _orden_texto(getattr(item.alumno, "nombres", "")),
+            item.alumno_id,
+        ),
+    )
+
+
+def _marcar_grupos_seccion(alumnos_banco):
+    """Marca el primer alumno de cada grupo visual de sección."""
+    grupo_anterior = object()
+    for item in alumnos_banco:
+        item.muestra_grupo_seccion = (
+            item.seccion_principal_key != grupo_anterior
+        )
+        grupo_anterior = item.seccion_principal_key
 
 
 def _preparar_alumnos_actuales(alumnos_banco, inscripciones_por_alumno):
