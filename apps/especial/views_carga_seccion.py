@@ -919,6 +919,17 @@ def _alta_docente_nuevo_gestionar(request, seccion):
     cuil = request.POST.get("cuil")
     if not cuil:
         return False, "CUIL del docente no proporcionado."
+
+    asignacion = DocenteSeccion(
+        docente_cuil=cuil,
+    )
+    form = EspecialDocenteSeccionForm(request.POST, instance=asignacion)
+    if not form.is_valid():
+        return False, _errores_form(form)
+
+    # Validamos el formulario antes de consultar la asignación existente:
+    # además de evitar una consulta innecesaria, esto permite devolver los
+    # errores de entrada sin exigir una sección completamente materializada.
     asignacion_existente = (
         DocenteSeccion.objects
         .filter(seccion=seccion, docente_cuil=cuil)
@@ -930,35 +941,27 @@ def _alta_docente_nuevo_gestionar(request, seccion):
 
     # Una baja es un período histórico cerrado. La nueva alta debe crear
     # otra fila para conservar las fechas del período anterior.
-    asignacion = DocenteSeccion(
-        seccion=seccion,
-        docente_cuil=cuil,
+    asignacion = form.save(commit=False)
+    asignacion.seccion = seccion
+    asignacion.docente_banco = (
+        EspecialDocenteBanco.objects.filter(
+            cueanexo=seccion.cueanexo,
+            ciclo=seccion.ciclo,
+            docente_cuil=cuil,
+            estado=EspecialDocenteBanco.Estado.ACTIVO,
+        ).order_by("-pk").first()
     )
-    form = EspecialDocenteSeccionForm(request.POST, instance=asignacion)
-    if form.is_valid():
-        asignacion = form.save(commit=False)
-        asignacion.seccion = seccion
-        asignacion.docente_banco = (
-            EspecialDocenteBanco.objects.filter(
-                cueanexo=seccion.cueanexo,
-                ciclo=seccion.ciclo,
-                docente_cuil=cuil,
-                estado=EspecialDocenteBanco.Estado.ACTIVO,
-            ).order_by("-pk").first()
-        )
-        if not asignacion.pk:
-            asignacion.creado_por = request.user
-        asignacion.actualizado_por = request.user
-        try:
-            with transaction.atomic():
-                asignacion.save()
-            return True, "Profesor asignado a la sección correctamente."
-        except ValidationError as exc:
-            return False, "; ".join(exc.messages)
-        except IntegrityError:
-            return False, "No se pudo asignar el profesor porque ya existe una asignación compatible."
-    else:
-        return False, _errores_form(form)
+    if not asignacion.pk:
+        asignacion.creado_por = request.user
+    asignacion.actualizado_por = request.user
+    try:
+        with transaction.atomic():
+            asignacion.save()
+        return True, "Profesor asignado a la sección correctamente."
+    except ValidationError as exc:
+        return False, "; ".join(exc.messages)
+    except IntegrityError:
+        return False, "No se pudo asignar el profesor porque ya existe una asignación compatible."
 
 
 @especial_required

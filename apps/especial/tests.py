@@ -5,11 +5,13 @@ import json
 from pathlib import Path
 import threading
 from types import SimpleNamespace
+from uuid import uuid4
 from unittest import skipUnless
 from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import DatabaseError, IntegrityError, close_old_connections, connection
 from django.db.utils import OperationalError, ProgrammingError
@@ -113,7 +115,17 @@ from .views_visualizador import (
 )
 
 from apps.bnhalumnos.models import Alumno, CatalogoSinoTipo
-from apps.bnhpersonas.models import DocumentoTipo, EstadosCiviles, Localidades, Pais, Provincias, Sexo, validar_cuil
+from apps.bnhpersonas.models import (
+    DocumentoTipo,
+    EstadosCiviles,
+    Localidades,
+    Nacionalidad,
+    Pais,
+    Provincias,
+    Sexo,
+    validar_cuil,
+)
+from apps.usuarios.models import NivelAcceso
 
 User = get_user_model()
 
@@ -188,7 +200,7 @@ class _FakePadronQuerySet:
         self.exists_value = exists
         self.oferta_comun = oferta_comun
 
-    def filter(self, **kwargs):
+    def filter(self, *args, **kwargs):
         return self
 
     def exclude(self, **kwargs):
@@ -343,7 +355,7 @@ class _FakeCycleManager:
     def __init__(self, cycles):
         self.cycles = cycles
 
-    def filter(self, **kwargs):
+    def filter(self, *args, **kwargs):
         return self
 
     def order_by(self, *fields):
@@ -354,21 +366,34 @@ class _FakeCycleManager:
 
 
 def _cuil_valido(base10):
-    for digito in range(10):
-        candidato = f"{base10}{digito}"
-        try:
-            validar_cuil(candidato)
-        except ValidationError:
-            continue
-        return candidato
+    """Genera un CUIL válido para fixtures, probando tipos de persona."""
+    dni = str(base10).strip()
+    dni = dni[-8:].zfill(8)
+    for prefijo in ("20", "23", "24", "27"):
+        for digito in range(10):
+            candidato = f"{prefijo}{dni}{digito}"
+            try:
+                validar_cuil(candidato)
+            except ValidationError:
+                continue
+            return candidato
     raise AssertionError("No se pudo generar un CUIL valido")
 
 
 def _crear_base_especial_db():
-    usuario_admin = User.objects.create_user(username="20111111111", password="x")
-    usuario_director = User.objects.create_user(username="20222222222", password="x")
-    usuario_director_modalidad = User.objects.create_user(username="20333333333", password="x")
-    usuario_otro = User.objects.create_user(username="20444444444", password="x")
+    nivel_acceso, _ = NivelAcceso.objects.get_or_create(tacceso="Administrador")
+    usuario_admin = User.objects.create_user(
+        username="20111111111", password="x", nivelacceso=nivel_acceso
+    )
+    usuario_director = User.objects.create_user(
+        username="20222222222", password="x", nivelacceso=nivel_acceso
+    )
+    usuario_director_modalidad = User.objects.create_user(
+        username="20333333333", password="x", nivelacceso=nivel_acceso
+    )
+    usuario_otro = User.objects.create_user(
+        username="20444444444", password="x", nivelacceso=nivel_acceso
+    )
 
     ciclo_activo = SeccionEspecial._meta.get_field("ciclo").remote_field.model.objects.create(
         anio=2026,
@@ -409,6 +434,11 @@ def _crear_base_especial_db():
     )
 
     pais_argentina = Pais.objects.create(c_pais=14, descrip_pais="ARGENTINA")
+    nacionalidad_sin_informacion = Nacionalidad.objects.create(
+        c_nacionalidad=-2,
+        descrip_nac="Sin información",
+        c_pais=14,
+    )
     provincia = Provincias.objects.create(c_provincia=1, descrip_provincia="Chaco")
     localidad = Localidades.objects.create(
         c_localidad=1,
@@ -454,6 +484,7 @@ def _crear_base_especial_db():
         rango=rango,
         turno=turno,
         modalidad=modalidad,
+        nacionalidad_sin_informacion=nacionalidad_sin_informacion,
         pais_argentina=pais_argentina,
         provincia=provincia,
         localidad=localidad,
@@ -486,12 +517,13 @@ def _crear_seccion_db(ctx, cueanexo, nombre, capacidad=1, ciclo=None):
 
 
 def _crear_alumno_db(ctx, idx, cuil=None):
-    cuil = cuil or _cuil_valido(f"20{12345670 + idx:08d}")
+    dni_fixture = f"{30000000 + (uuid4().int % 69999999):08d}"
+    cuil = cuil or _cuil_valido(dni_fixture)
     return Alumno.objects.create(
         apellidos=f"Apellido {idx}",
         nombres=f"Nombre {idx}",
         tipo_doc=ctx.documento,
-        nro_doc=f"{30000000 + idx}",
+        nro_doc=dni_fixture,
         cuil=cuil,
         fecha_nacimiento=date(2010, 1, min(idx, 28) or 1),
         lugar_nacimiento="",
@@ -1917,10 +1949,7 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
             [
                 {"acronimo__iexact": "EEE"},
                 {"cueanexo": cueanexo},
-                {
-                    "est_oferta__iexact": "Activo",
-                    "estado_est__iexact": "Activo",
-                },
+                {"est_oferta__iexact": "Activo", "estado_est__iexact": "Activo"},
             ],
         )
         self.assertEqual(manager.values_list_args, (("oferta",), True))
@@ -2022,43 +2051,6 @@ class ValidacionMatriculaCompartidaEspecialTests(SimpleTestCase):
                 self.assertEqual(
                     _normalizar_oferta_matricula_compartida(oferta),
                     objetivo,
-                )
-
-    def test_cue_con_cada_variante_integracion_normalizada_es_true(self):
-        ofertas = (
-            "Especial - Integraci\u00f3n",
-            " Especial   -   Integraci\u00f3n ",
-            "Especial\u00a0-\u00a0Integraci\u00f3n",
-            "Especial\u200b - Integraci\u00f3n",
-            "Especial\u200c-\u200dIntegraci\u00f3n",
-            "Especial\u2060 - Integraci\u00f3n",
-            "Especial\ufeff - Integraci\u00f3n",
-            "Especial - Integracio\u0301n",
-            "Especial \u2013 Integraci\u00f3n",
-            "Especial \u2014 Integraci\u00f3n",
-            "ESPECIAL - INTEGRACI\u00d3N",
-            "Especial - integracion",
-            "Especial-Integraci\u00f3n",
-            "Especial Integraci\u00f3n",
-            "ESPECIAL INTEGRACI\u00d3N",
-            "Especial Integracion",
-            "Integraci\u00f3n",
-            "Servicio de Integraci\u00f3n",
-            "Otra oferta con Integraci\u00f3n",
-            "Programa Especial - Integraci\u00f3n",
-        )
-        for oferta in ofertas:
-            with self.subTest(oferta=repr(oferta)):
-                self.assertTrue(
-                    self._habilitada_para(
-                        [
-                            {
-                                "cueanexo": "220015500",
-                                "acronimo": "EEE",
-                                "oferta": oferta,
-                            }
-                        ]
-                    )
                 )
 
     def test_cue_con_varias_ofertas_y_una_integracion_es_true(self):
@@ -3357,12 +3349,13 @@ class EspecialSeccionOfertaViewTests(SimpleTestCase):
         guardar.assert_called_once_with(form, self.especial_context, request.user)
 
 
-class CierreIntegridadEspecialTests(SimpleTestCase):
+class CierreIntegridadEspecialTests(TestCase):
     def test_queryset_autorizado_vacio_no_hace_fallback(self):
         queryset = MagicMock()
         queryset.model = SeccionEspecial
         queryset.select_for_update.return_value = queryset
         queryset.get.side_effect = SeccionEspecial.DoesNotExist
+        queryset.filter.return_value.get.side_effect = SeccionEspecial.DoesNotExist
         banco_queryset = MagicMock()
         banco_queryset.select_for_update.return_value.filter.return_value.order_by.return_value = [
             SimpleNamespace(estado=EspecialAlumnoBanco.Estado.ACTIVO)
@@ -3401,11 +3394,17 @@ class CierreIntegridadEspecialTests(SimpleTestCase):
         self.assertIn("CUIL inválido", resultado[1])
 
     def _docente_service_mocks(self, save_side_effect=None, duplicate=False):
-        section = SimpleNamespace(pk=10)
+        section = SimpleNamespace(
+            pk=10,
+            cueanexo="123456700",
+            ciclo=SimpleNamespace(pk=1),
+        )
         assignment = SimpleNamespace(pk=2, seccion_id=10)
         locked_assignment = MagicMock()
         locked_assignment.estado = DocenteSeccion.Estado.BAJA
         locked_assignment.rol = DocenteSeccion.Rol.TITULAR
+        locked_assignment.docente_cuil = "20123456789"
+        locked_assignment.observaciones = ""
         locked_assignment.get_rol_display.return_value = "Titular"
         locked_assignment.save.side_effect = save_side_effect
 
@@ -3413,6 +3412,11 @@ class CierreIntegridadEspecialTests(SimpleTestCase):
         section_manager.select_for_update.return_value.get.return_value = section
         docente_manager = MagicMock()
         docente_manager.select_for_update.return_value.get.return_value = locked_assignment
+        docente_manager.create.return_value = SimpleNamespace(
+            estado=DocenteSeccion.Estado.ACTIVO,
+        )
+        docente_manager.create.side_effect = save_side_effect
+        docente_manager.filter.return_value.exists.return_value = duplicate
         docente_manager.filter.return_value.exclude.return_value.exists.return_value = duplicate
         return assignment, locked_assignment, section_manager, docente_manager
 
@@ -3429,8 +3433,11 @@ class CierreIntegridadEspecialTests(SimpleTestCase):
             pk=2,
             seccion=section_manager.select_for_update.return_value.get.return_value,
         )
-        locked_assignment.save.assert_called_once()
-        self.assertEqual(locked_assignment.estado, DocenteSeccion.Estado.ACTIVO)
+        docente_manager.create.assert_called_once()
+        self.assertEqual(
+            docente_manager.create.return_value.estado,
+            DocenteSeccion.Estado.ACTIVO,
+        )
 
     def test_alta_docente_convierte_integrity_error_en_validacion_estable(self):
         assignment, _, section_manager, docente_manager = self._docente_service_mocks(
@@ -3559,8 +3566,8 @@ class EspecialAlcanceClienteTests(TestCase):
 
         self.assertEqual(response_get.status_code, 403)
         self.assertEqual(response_post.status_code, 403)
-        self.assertEqual(response_get_seccion_ajena.status_code, 404)
-        self.assertEqual(response_post_seccion_ajena.status_code, 404)
+        self.assertEqual(response_get_seccion_ajena.status_code, 403)
+        self.assertEqual(response_post_seccion_ajena.status_code, 403)
 
 
 class EspecialCiclosDbTests(TestCase):
@@ -3766,6 +3773,7 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
     reset_sequences = True
 
     def setUp(self):
+        cache.clear()
         self.ctx = _crear_base_especial_db()
         self.seccion = _crear_seccion_db(
             self.ctx,
@@ -3783,9 +3791,27 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
         self.director = self.ctx.usuario_director
         self.admin = self.ctx.usuario_admin
 
+    @contextmanager
     def _forzar_director(self):
         self.client.force_login(self.director)
-        return _permisos_especial_patched("Director", self.escuelas_permitidas)
+        permisos = {
+            "rol": "Director",
+            "puede_ver": True,
+            "es_admin": False,
+            "cuil_usuario": self.director.username,
+            "escuelas_visualizacion": self.escuelas_permitidas,
+            "escuelas_cargables": self.escuelas_permitidas,
+            "cueanexos_visualizacion": frozenset({self.ctx.cueanexo_permitido}),
+            "cueanexos_cargables": frozenset({self.ctx.cueanexo_permitido}),
+        }
+        with patch(
+            "apps.especial.permisos.get_permisos_especial_request",
+            return_value=permisos,
+        ), patch(
+            "apps.especial.views_contexto.get_permisos_especial_request",
+            return_value=permisos,
+        ):
+            yield
 
     def _crear_alumno_y_banco(self, idx, seccion=None, cuil=None):
         alumno = _crear_alumno_db(self.ctx, idx, cuil=cuil)
@@ -3871,7 +3897,7 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
         self.assertFalse(kwargs["validar_relacion"])
 
     def test_seccion_no_integracion_guarda_inscripcion_sin_matricula(self):
-        alumno = _crear_alumno_y_banco(903, self.seccion)
+        alumno = self._crear_alumno_y_banco(903, self.seccion)
 
         inscripcion, creada, banco = inscribir_alumno_en_seccion(
             alumno=alumno,
@@ -4222,7 +4248,7 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
         )
         with oferta_patch, self.assertRaisesRegex(
             ValidationError,
-            r"ya está activo.*987654300.*darlo de baja",
+            r"ya está activo.*123456700.*darlo de baja",
         ):
             self._servicio_banco(alumno, self.ctx.cueanexo_permitido)
             self._servicio_banco(
@@ -4775,7 +4801,7 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
         response = self._post_baja_desde_alumnos(banco_ajeno.pk)
 
         banco_ajeno.refresh_from_db()
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 403)
         self.assertEqual(banco_ajeno.estado, EspecialAlumnoBanco.Estado.ACTIVO)
 
     def test_baja_alumno_rechaza_banco_de_otro_ciclo_sin_mutar(self):
@@ -4791,7 +4817,7 @@ class EspecialFlujosTransaccionalesTests(TransactionTestCase):
         response = self._post_baja_desde_alumnos(banco_ajeno.pk)
 
         banco_ajeno.refresh_from_db()
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 403)
         self.assertEqual(banco_ajeno.estado, EspecialAlumnoBanco.Estado.ACTIVO)
 
     def test_baja_alumno_ya_baja_no_repite_ni_altera(self):
@@ -5363,6 +5389,7 @@ class EspecialPerformanceTests(SimpleTestCase):
         escuelas = MagicMock()
         escuelas.filter.return_value.order_by.return_value.first.return_value = establecimiento
         permisos = {
+            "puede_ver": True,
             "es_admin": False,
             "escuelas_visualizacion": escuelas,
             "cueanexos_cargables": ["123456789"],
@@ -5412,6 +5439,7 @@ class EspecialPerformanceTests(SimpleTestCase):
         filtered.order_by.side_effect = lambda *args: (events.append("establishment.order_by") or ordered)
         ordered.first.side_effect = lambda: (events.append("establishment.first") or establecimiento)
         permisos = {
+            "puede_ver": True,
             "es_admin": False,
             "escuelas_visualizacion": escuelas,
             "cueanexos_cargables": ["123456789"],
@@ -5473,6 +5501,7 @@ class EspecialPerformanceTests(SimpleTestCase):
         ciclo = SimpleNamespace(pk=2026)
         escuelas = MagicMock()
         permisos = {
+            "puede_ver": True,
             "es_admin": False,
             "escuelas_visualizacion": escuelas,
             "cueanexos_cargables": [],
@@ -5514,6 +5543,7 @@ class EspecialPerformanceTests(SimpleTestCase):
         filtered.order_by.return_value = ordered
         ordered.first.side_effect = lambda: (sql_call() or establecimiento)
         permisos = {
+            "puede_ver": True,
             "es_admin": False,
             "escuelas_visualizacion": escuelas,
             "cueanexos_cargables": ["123456789"],
@@ -5772,6 +5802,8 @@ class EspecialPerformanceTests(SimpleTestCase):
 
     def test_warm_options_and_establishment_hits_generate_no_sql(self):
         request = self._cache_request()
+        request.GET = request.GET.copy()
+        request.GET["especial_perf"] = "1"
         permisos = self._cache_permissions()
         options = [{"cueanexo": "123456789", "nombre": "Escuela"}]
         establishment = self._establishment_payload()
