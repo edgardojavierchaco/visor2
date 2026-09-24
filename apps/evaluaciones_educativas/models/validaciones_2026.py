@@ -328,7 +328,9 @@ class ValPersona(models.Model):
 	apellido = models.CharField(max_length=100)
 	cuil = models.CharField(max_length=20)
 	correo = models.EmailField()
-	telefono = models.CharField(max_length=20)
+	codigo_area = models.CharField(max_length=5)
+	numero_telefono = models.CharField(max_length=10)
+
 	class Meta:
 		db_table = '"validaciones_2026"."personas"'
 

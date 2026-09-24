@@ -502,24 +502,30 @@
             <form class="form-persona" id="formVeedor" onsubmit="return false;">
               <div class="row g-3">
                 <div class="col-6">
-                  <label class="form-label">Nombre <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="vNombre" required />
+                  <label class="form-label" for="id_veedor-nombre">Nombre <span class="text-danger">*</span></label>
+                  {{ form_veedor.nombre }}
                 </div>
                 <div class="col-6">
-                  <label class="form-label">Apellido <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="vApellido" required />
+                  <label class="form-label" for="id_veedor-apellido">Apellido <span class="text-danger">*</span></label>
+                  {{ form_veedor.apellido }}
                 </div>
                 <div class="col-12">
-                  <label class="form-label">CUIL <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="vCuil" placeholder="20-12345678-9" required />
+                  <label class="form-label" for="id_veedor-cuil">CUIL <span class="text-danger">*</span></label>
+                  {{ form_veedor.cuil }}
                 </div>
                 <div class="col-12">
-                  <label class="form-label">Correo electrónico <span class="text-danger">*</span></label>
-                  <input type="email" class="form-control" id="vCorreo" required />
+                  <label class="form-label" for="id_veedor-correo">Correo electrónico <span class="text-danger">*</span></label>
+                  {{ form_veedor.correo }}
                 </div>
-                <div class="col-12">
-                  <label class="form-label">Teléfono <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="vTelefono" required />
+                <div class="col-4">
+                  <label class="form-label" for="id_veedor-codigo_area">Cód. área <span class="text-danger">*</span></label>
+                  {{ form_veedor.codigo_area }}
+                  <div class="form-text" style="font-size:0.7rem;">{{ form_veedor.codigo_area.help_text }}</div>
+                </div>
+                <div class="col-8">
+                  <label class="form-label" for="id_veedor-numero_telefono">Número de teléfono <span class="text-danger">*</span></label>
+                  {{ form_veedor.numero_telefono }}
+                  <div class="form-text" style="font-size:0.7rem;">{{ form_veedor.numero_telefono.help_text }}</div>
                 </div>
               </div>
             </form>
@@ -581,27 +587,33 @@
               <i class="bi bi-info-circle me-1"></i>Sección: <strong id="aplicadorSeccionLabel"></strong>
             </div>
             <form class="form-persona" id="formAplicador" onsubmit="return false;">
-              <input type="hidden" id="aSecccionId" />
+              {{ form_aplicador.seccion_id }}
               <div class="row g-3">
                 <div class="col-6">
-                  <label class="form-label">Nombre <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="aNombre" required />
+                  <label class="form-label" for="id_aplicador-nombre">Nombre <span class="text-danger">*</span></label>
+                  {{ form_aplicador.nombre }}
                 </div>
                 <div class="col-6">
-                  <label class="form-label">Apellido <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="aApellido" required />
+                  <label class="form-label" for="id_aplicador-apellido">Apellido <span class="text-danger">*</span></label>
+                  {{ form_aplicador.apellido }}
                 </div>
                 <div class="col-12">
-                  <label class="form-label">CUIL <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="aCuil" placeholder="20-12345678-9" required />
+                  <label class="form-label" for="id_aplicador-cuil">CUIL <span class="text-danger">*</span></label>
+                  {{ form_aplicador.cuil }}
                 </div>
                 <div class="col-12">
-                  <label class="form-label">Correo electrónico <span class="text-danger">*</span></label>
-                  <input type="email" class="form-control" id="aCorreo" required />
+                  <label class="form-label" for="id_aplicador-correo">Correo electrónico <span class="text-danger">*</span></label>
+                  {{ form_aplicador.correo }}
                 </div>
-                <div class="col-12">
-                  <label class="form-label">Teléfono <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="aTelefono" required />
+                <div class="col-4">
+                  <label class="form-label" for="id_aplicador-codigo_area">Cód. área <span class="text-danger">*</span></label>
+                  {{ form_aplicador.codigo_area }}
+                  <div class="form-text" style="font-size:0.7rem;">{{ form_aplicador.codigo_area.help_text }}</div>
+                </div>
+                <div class="col-8">
+                  <label class="form-label" for="id_aplicador-numero_telefono">Número de teléfono <span class="text-danger">*</span></label>
+                  {{ form_aplicador.numero_telefono }}
+                  <div class="form-text" style="font-size:0.7rem;">{{ form_aplicador.numero_telefono.help_text }}</div>
                 </div>
               </div>
             </form>
@@ -660,24 +672,30 @@
               <input type="hidden" id="editTipo" />
               <div class="row g-3">
                 <div class="col-6">
-                  <label class="form-label">Nombre <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="editNombre" required />
+                  <label class="form-label" for="id_editar-nombre">Nombre <span class="text-danger">*</span></label>
+                  {{ form_editar.nombre }}
                 </div>
                 <div class="col-6">
-                  <label class="form-label">Apellido <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="editApellido" required />
+                  <label class="form-label" for="id_editar-apellido">Apellido <span class="text-danger">*</span></label>
+                  {{ form_editar.apellido }}
                 </div>
                 <div class="col-12">
-                  <label class="form-label">CUIL <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="editCuil" required />
+                  <label class="form-label" for="id_editar-cuil">CUIL <span class="text-danger">*</span></label>
+                  {{ form_editar.cuil }}
                 </div>
                 <div class="col-12">
-                  <label class="form-label">Correo electrónico <span class="text-danger">*</span></label>
-                  <input type="email" class="form-control" id="editCorreo" required />
+                  <label class="form-label" for="id_editar-correo">Correo electrónico <span class="text-danger">*</span></label>
+                  {{ form_editar.correo }}
                 </div>
-                <div class="col-12">
-                  <label class="form-label">Teléfono <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control" id="editTelefono" required />
+                <div class="col-4">
+                  <label class="form-label" for="id_editar-codigo_area">Cód. área <span class="text-danger">*</span></label>
+                  {{ form_editar.codigo_area }}
+                  <div class="form-text" style="font-size:0.7rem;">{{ form_editar.codigo_area.help_text }}</div>
+                </div>
+                <div class="col-8">
+                  <label class="form-label" for="id_editar-numero_telefono">Número de teléfono <span class="text-danger">*</span></label>
+                  {{ form_editar.numero_telefono }}
+                  <div class="form-text" style="font-size:0.7rem;">{{ form_editar.numero_telefono.help_text }}</div>
                 </div>
               </div>
             </form>
@@ -796,15 +814,60 @@
         document.getElementById('statVeedores').textContent = totalV;
         document.getElementById('statAplicadores').textContent = totalA;
       }
-      // Calcular al cargar
       actualizarStats();
+
+      // ── VALIDACIÓN CLIENT-SIDE DE TELÉFONO ────────────────────────────
+      function validarTelefono(codigoArea, numTel) {
+        const soloDigitos = /^\d+$/;
+        if (codigoArea && !soloDigitos.test(codigoArea)) {
+          showToast('El código de área solo puede contener números.', 'warning');
+          return false;
+        }
+        if (codigoArea && codigoArea.length > 5) {
+          showToast('El código de área no puede tener más de 5 dígitos.', 'warning');
+          return false;
+        }
+        if (numTel && !soloDigitos.test(numTel)) {
+          showToast('El número de teléfono solo puede contener números.', 'warning');
+          return false;
+        }
+        if (numTel && numTel.length > 10) {
+          showToast('El número de teléfono no puede tener más de 10 dígitos.', 'warning');
+          return false;
+        }
+        return true;
+      }
+
+      // Filtro en vivo: los campos de teléfono solo aceptan dígitos y respetan
+      // el maxlength que define el form de Django (5 y 10 respectivamente).
+      (function aplicarFiltroNumerico() {
+        const ids = [
+          'id_veedor-codigo_area', 'id_veedor-numero_telefono',
+          'id_aplicador-codigo_area', 'id_aplicador-numero_telefono',
+          'id_editar-codigo_area', 'id_editar-numero_telefono',
+        ];
+        ids.forEach(id => {
+          const input = document.getElementById(id);
+          if (!input) return;
+          const max = parseInt(input.getAttribute('maxlength') || '0', 10);
+          const limpiar = () => {
+            let v = input.value.replace(/\D+/g, '');
+            if (max > 0) v = v.slice(0, max);
+            if (v !== input.value) input.value = v;
+          };
+          input.addEventListener('input', limpiar);
+          input.addEventListener('paste', () => setTimeout(limpiar, 0));
+          input.addEventListener('keypress', e => {
+            if (e.key.length === 1 && !/\d/.test(e.key)) e.preventDefault();
+          });
+        });
+      })();
 
 
       // ══════════════════════════════════════════════════════════════════
       // FLUJO 1: CARGAR APLICADOR Y VEEDOR
       // ══════════════════════════════════════════════════════════════════
 
-      // ── Abrir modal de selección de rol ──
       function abrirModalSeleccionRol(cueanexo, nombre) {
         cueActual = cueanexo;
         nombreEscuelaActual = nombre;
@@ -812,42 +875,43 @@
         modalSeleccionRolBS.show();
       }
 
-      // ── Abrir form veedor ──
       function abrirFormVeedor() {
         modalSeleccionRolBS.hide();
         document.getElementById('veedorEscuelaNombre').textContent = nombreEscuelaActual;
-        // Limpiar form
-        document.getElementById('vNombre').value = '';
-        document.getElementById('vApellido').value = '';
-        document.getElementById('vCuil').value = '';
-        document.getElementById('vCorreo').value = '';
-        document.getElementById('vTelefono').value = '';
+        document.getElementById('id_veedor-nombre').value = '';
+        document.getElementById('id_veedor-apellido').value = '';
+        document.getElementById('id_veedor-cuil').value = '';
+        document.getElementById('id_veedor-correo').value = '';
+        document.getElementById('id_veedor-codigo_area').value = '';
+        document.getElementById('id_veedor-numero_telefono').value = '';
         setTimeout(() => modalFormVeedorBS.show(), 300);
       }
 
-      // ── Guardar veedor ──
       async function guardarVeedor() {
-        const nombre = document.getElementById('vNombre').value.trim();
-        const apellido = document.getElementById('vApellido').value.trim();
-        const cuil = document.getElementById('vCuil').value.trim();
-        const correo = document.getElementById('vCorreo').value.trim();
-        const telefono = document.getElementById('vTelefono').value.trim();
+        const nombre = document.getElementById('id_veedor-nombre').value.trim();
+        const apellido = document.getElementById('id_veedor-apellido').value.trim();
+        const cuil = document.getElementById('id_veedor-cuil').value.trim();
+        const correo = document.getElementById('id_veedor-correo').value.trim();
+        const codigoArea = document.getElementById('id_veedor-codigo_area').value.trim();
+        const numTel = document.getElementById('id_veedor-numero_telefono').value.trim();
 
-        if (!nombre || !apellido || !cuil || !correo || !telefono) {
+        if (!nombre || !apellido || !cuil || !correo || !codigoArea || !numTel) {
           showToast('Todos los campos son obligatorios.', 'warning');
           return;
         }
+        if (!validarTelefono(codigoArea, numTel)) return;
 
         const btn = document.getElementById('btnGuardarVeedor');
         btn.disabled = true;
         showSpinner();
 
         const body = new FormData();
-        body.append('nombre', nombre);
-        body.append('apellido', apellido);
-        body.append('cuil', cuil);
-        body.append('correo', correo);
-        body.append('telefono', telefono);
+        body.append('veedor-nombre', nombre);
+        body.append('veedor-apellido', apellido);
+        body.append('veedor-cuil', cuil);
+        body.append('veedor-correo', correo);
+        body.append('veedor-codigo_area', codigoArea);
+        body.append('veedor-numero_telefono', numTel);
         body.append('csrfmiddlewaretoken', getCsrf());
 
         try {
@@ -871,7 +935,6 @@
         }
       }
 
-      // ── Abrir selección de sección ──
       async function abrirSeleccionSeccion() {
         modalSeleccionRolBS.hide();
         document.getElementById('seccionEscuelaNombre').textContent = nombreEscuelaActual;
@@ -917,43 +980,45 @@
         seccionSeleccionadaId = secId;
         seccionSeleccionadaLabel = label;
         modalSeleccionSeccionBS.hide();
-        // Abrir form aplicador
         document.getElementById('aplicadorEscuelaNombre').textContent = nombreEscuelaActual;
         document.getElementById('aplicadorSeccionLabel').textContent = label;
-        document.getElementById('aSecccionId').value = secId;
-        document.getElementById('aNombre').value = '';
-        document.getElementById('aApellido').value = '';
-        document.getElementById('aCuil').value = '';
-        document.getElementById('aCorreo').value = '';
-        document.getElementById('aTelefono').value = '';
+        document.getElementById('id_aplicador-seccion_id').value = secId;
+        document.getElementById('id_aplicador-nombre').value = '';
+        document.getElementById('id_aplicador-apellido').value = '';
+        document.getElementById('id_aplicador-cuil').value = '';
+        document.getElementById('id_aplicador-correo').value = '';
+        document.getElementById('id_aplicador-codigo_area').value = '';
+        document.getElementById('id_aplicador-numero_telefono').value = '';
         setTimeout(() => modalFormAplicadorBS.show(), 300);
       }
 
-      // ── Guardar aplicador ──
       async function guardarAplicador() {
-        const nombre = document.getElementById('aNombre').value.trim();
-        const apellido = document.getElementById('aApellido').value.trim();
-        const cuil = document.getElementById('aCuil').value.trim();
-        const correo = document.getElementById('aCorreo').value.trim();
-        const telefono = document.getElementById('aTelefono').value.trim();
-        const seccionId = document.getElementById('aSecccionId').value;
+        const nombre = document.getElementById('id_aplicador-nombre').value.trim();
+        const apellido = document.getElementById('id_aplicador-apellido').value.trim();
+        const cuil = document.getElementById('id_aplicador-cuil').value.trim();
+        const correo = document.getElementById('id_aplicador-correo').value.trim();
+        const codigoArea = document.getElementById('id_aplicador-codigo_area').value.trim();
+        const numTel = document.getElementById('id_aplicador-numero_telefono').value.trim();
+        const seccionId = document.getElementById('id_aplicador-seccion_id').value;
 
-        if (!nombre || !apellido || !cuil || !correo || !telefono) {
+        if (!nombre || !apellido || !cuil || !correo || !codigoArea || !numTel) {
           showToast('Todos los campos son obligatorios.', 'warning');
           return;
         }
+        if (!validarTelefono(codigoArea, numTel)) return;
 
         const btn = document.getElementById('btnGuardarAplicador');
         btn.disabled = true;
         showSpinner();
 
         const body = new FormData();
-        body.append('nombre', nombre);
-        body.append('apellido', apellido);
-        body.append('cuil', cuil);
-        body.append('correo', correo);
-        body.append('telefono', telefono);
-        body.append('seccion_id', seccionId);
+        body.append('aplicador-nombre', nombre);
+        body.append('aplicador-apellido', apellido);
+        body.append('aplicador-cuil', cuil);
+        body.append('aplicador-correo', correo);
+        body.append('aplicador-codigo_area', codigoArea);
+        body.append('aplicador-numero_telefono', numTel);
+        body.append('aplicador-seccion_id', seccionId);
         body.append('csrfmiddlewaretoken', getCsrf());
 
         try {
@@ -1010,90 +1075,81 @@
           container.innerHTML = '<div class="personas-empty"><i class="bi bi-person-x"></i>No hay personas asignadas a este establecimiento.</div>';
           return;
         }
-
         let html = '';
-
         if (veedores.length > 0) {
           html += '<h6 class="fw-bold mb-3" style="color:var(--purple);font-size:0.85rem;"><i class="bi bi-eye-fill me-1"></i>Veedores</h6>';
-          veedores.forEach(v => {
-            html += renderPersonaRow(v);
-          });
+          veedores.forEach(v => { html += renderPersonaRow(v); });
         }
-
         if (aplicadores.length > 0) {
           html += '<h6 class="fw-bold mb-3 mt-3" style="color:var(--teal);font-size:0.85rem;"><i class="bi bi-person-check-fill me-1"></i>Aplicadores</h6>';
-          aplicadores.forEach(a => {
-            html += renderPersonaRow(a);
-          });
+          aplicadores.forEach(a => { html += renderPersonaRow(a); });
         }
-
         container.innerHTML = html;
       }
 
       function renderPersonaRow(persona) {
         const tipoClass = persona.tipo === 'veedor' ? 'tipo-veedor' : 'tipo-aplicador';
         const tipoLabel = persona.tipo === 'veedor' ? 'Veedor' : 'Aplicador';
-        const secInfo = persona.seccion_label ? `<br><span style="font-size:0.7rem;color:var(--teal);">📋 ${persona.seccion_label}</span>` : '';
-        return `
-          <div class="persona-row">
-            <div class="persona-info">
-              <div class="persona-nombre">
-                ${persona.apellido}, ${persona.nombre}
-                <span class="persona-tipo-badge ${tipoClass} ms-2">${tipoLabel}</span>
-              </div>
-              <div class="persona-detalle">
-                CUIL: ${persona.cuil} · ${persona.correo} · Tel: ${persona.telefono}${secInfo}
-              </div>
-            </div>
-            <div class="persona-actions">
-              <button class="btn-edit-persona" onclick="abrirEditar('${persona.tipo}', ${persona.id}, '${persona.nombre.replace(/'/g, "\\'")}', '${persona.apellido.replace(/'/g, "\\'")}', '${persona.cuil}', '${persona.correo.replace(/'/g, "\\'")}', '${persona.telefono}')">
-                <i class="bi bi-pencil-fill"></i>Editar
-              </button>
-              <button class="btn-del-persona" onclick="abrirEliminar('${persona.tipo}', ${persona.id}, '${persona.apellido.replace(/'/g, "\\'")}, ${persona.nombre.replace(/'/g, "\\'")}')">
-                <i class="bi bi-trash3-fill"></i>Eliminar
-              </button>
-            </div>
-          </div>`;
+        const telDisplay = persona.codigo_area ? '(' + persona.codigo_area + ') ' + persona.numero_telefono : (persona.numero_telefono || '');
+        const secInfo = persona.seccion_label ? '<br><span style="font-size:0.7rem;color:var(--teal);">📋 ' + persona.seccion_label + '</span>' : '';
+        const sN = (persona.nombre || '').replace(/'/g, "\\'");
+        const sA = (persona.apellido || '').replace(/'/g, "\\'");
+        const sC = (persona.correo || '').replace(/'/g, "\\'");
+        return '<div class="persona-row">' +
+          '<div class="persona-info">' +
+            '<div class="persona-nombre">' + persona.apellido + ', ' + persona.nombre +
+              ' <span class="persona-tipo-badge ' + tipoClass + ' ms-2">' + tipoLabel + '</span></div>' +
+            '<div class="persona-detalle">CUIL: ' + persona.cuil + ' · ' + persona.correo + ' · Tel: ' + telDisplay + secInfo + '</div>' +
+          '</div>' +
+          '<div class="persona-actions">' +
+            '<button class="btn-edit-persona" onclick="abrirEditar(\'' + persona.tipo + '\', ' + persona.id + ', \'' + sN + '\', \'' + sA + '\', \'' + persona.cuil + '\', \'' + sC + '\', \'' + (persona.codigo_area || '') + '\', \'' + (persona.numero_telefono || '') + '\')">' +
+              '<i class="bi bi-pencil-fill"></i>Editar</button>' +
+            '<button class="btn-del-persona" onclick="abrirEliminar(\'' + persona.tipo + '\', ' + persona.id + ', \'' + sA + ', ' + sN + '\')">' +
+              '<i class="bi bi-trash3-fill"></i>Eliminar</button>' +
+          '</div></div>';
       }
 
-      // ── Editar persona ──
-      function abrirEditar(tipo, id, nombre, apellido, cuil, correo, telefono) {
+      function abrirEditar(tipo, id, nombre, apellido, cuil, correo, codigoArea, numTel) {
         modalListaPersonasBS.hide();
         document.getElementById('editarTipoLabel').textContent = tipo === 'veedor' ? 'Veedor' : 'Aplicador';
         document.getElementById('editId').value = id;
         document.getElementById('editTipo').value = tipo;
-        document.getElementById('editNombre').value = nombre;
-        document.getElementById('editApellido').value = apellido;
-        document.getElementById('editCuil').value = cuil;
-        document.getElementById('editCorreo').value = correo;
-        document.getElementById('editTelefono').value = telefono;
+        document.getElementById('id_editar-nombre').value = nombre;
+        document.getElementById('id_editar-apellido').value = apellido;
+        document.getElementById('id_editar-cuil').value = cuil;
+        document.getElementById('id_editar-correo').value = correo;
+        document.getElementById('id_editar-codigo_area').value = codigoArea;
+        document.getElementById('id_editar-numero_telefono').value = numTel;
         setTimeout(() => modalEditarPersonaBS.show(), 300);
       }
 
       async function guardarEdicion() {
         const id = document.getElementById('editId').value;
         const tipo = document.getElementById('editTipo').value;
-        const nombre = document.getElementById('editNombre').value.trim();
-        const apellido = document.getElementById('editApellido').value.trim();
-        const cuil = document.getElementById('editCuil').value.trim();
-        const correo = document.getElementById('editCorreo').value.trim();
-        const telefono = document.getElementById('editTelefono').value.trim();
+        const nombre = document.getElementById('id_editar-nombre').value.trim();
+        const apellido = document.getElementById('id_editar-apellido').value.trim();
+        const cuil = document.getElementById('id_editar-cuil').value.trim();
+        const correo = document.getElementById('id_editar-correo').value.trim();
+        const codigoArea = document.getElementById('id_editar-codigo_area').value.trim();
+        const numTel = document.getElementById('id_editar-numero_telefono').value.trim();
 
-        if (!nombre || !apellido || !cuil || !correo || !telefono) {
+        if (!nombre || !apellido || !cuil || !correo || !codigoArea || !numTel) {
           showToast('Todos los campos son obligatorios.', 'warning');
           return;
         }
+        if (!validarTelefono(codigoArea, numTel)) return;
 
         const btn = document.getElementById('btnGuardarEdicion');
         btn.disabled = true;
         showSpinner();
 
         const body = new FormData();
-        body.append('nombre', nombre);
-        body.append('apellido', apellido);
-        body.append('cuil', cuil);
-        body.append('correo', correo);
-        body.append('telefono', telefono);
+        body.append('editar-nombre', nombre);
+        body.append('editar-apellido', apellido);
+        body.append('editar-cuil', cuil);
+        body.append('editar-correo', correo);
+        body.append('editar-codigo_area', codigoArea);
+        body.append('editar-numero_telefono', numTel);
         body.append('csrfmiddlewaretoken', getCsrf());
 
         const urlBase = tipo === 'veedor'
@@ -1107,7 +1163,6 @@
             modalEditarPersonaBS.hide();
             showToast(data.mensaje);
             actualizarCardPersonas(cueActual);
-            // Recargar lista
             setTimeout(() => abrirModalListaPersonas(cueActual, nombreEscuelaActual), 400);
           } else {
             showToast('Error: ' + (data.error || 'Ocurrió un problema.'), 'danger');
@@ -1120,7 +1175,6 @@
         }
       }
 
-      // ── Eliminar persona ──
       function abrirEliminar(tipo, id, nombre) {
         eliminarId = id;
         eliminarTipo = tipo;
@@ -1148,7 +1202,6 @@
             modalConfirmarEliminarBS.hide();
             showToast(data.mensaje);
             actualizarCardPersonas(cueActual);
-            // Recargar lista
             setTimeout(() => abrirModalListaPersonas(cueActual, nombreEscuelaActual), 400);
           } else {
             showToast('Error: ' + (data.error || 'Ocurrió un problema.'), 'danger');
@@ -1166,7 +1219,6 @@
       // UTILIDADES
       // ══════════════════════════════════════════════════════════════════
 
-      // Actualizar card y badges tras CRUD
       async function actualizarCardPersonas(cueanexo) {
         try {
           const resp = await fetch(
@@ -1183,13 +1235,13 @@
             const badgesDiv = document.getElementById('badges-' + cueanexo);
             let html = '';
             if (cantV > 0) {
-              html += `<span class="badge-personas badge-veedores"><i class="bi bi-eye-fill me-1"></i>${cantV} veedor${cantV > 1 ? 'es' : ''}</span>`;
+              html += '<span class="badge-personas badge-veedores"><i class="bi bi-eye-fill me-1"></i>' + cantV + ' veedor' + (cantV > 1 ? 'es' : '') + '</span>';
             }
             if (cantA > 0) {
-              html += `<span class="badge-personas badge-aplicadores"><i class="bi bi-person-check-fill me-1"></i>${cantA} aplicador${cantA > 1 ? 'es' : ''}</span>`;
+              html += '<span class="badge-personas badge-aplicadores"><i class="bi bi-person-check-fill me-1"></i>' + cantA + ' aplicador' + (cantA > 1 ? 'es' : '') + '</span>';
             }
             if (cantV === 0 && cantA === 0) {
-              html += `<span class="badge-personas badge-sin-personas"><i class="bi bi-clock me-1"></i>Sin personas asignadas</span>`;
+              html += '<span class="badge-personas badge-sin-personas"><i class="bi bi-clock me-1"></i>Sin personas asignadas</span>';
             }
             badgesDiv.innerHTML = html;
             actualizarStats();
@@ -1201,3 +1253,4 @@
     </script>
   </body>
 </html>
+
