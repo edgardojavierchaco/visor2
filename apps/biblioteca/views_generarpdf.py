@@ -5,9 +5,8 @@ import psycopg2
 import qrcode
 
 from io import BytesIO
-from datetime import date, datetime
+from datetime import datetime
 from collections import defaultdict
-from xml.sax.saxutils import escape
 
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
@@ -34,7 +33,6 @@ from .models import (
     InstitucionesPrestaServicios,
     Aguapey,
     RegistroDestinoFondos,
-    BibliotecariosCue,
     ProcesosTecnicos,
     ServicioPrestamo
 )
@@ -548,164 +546,6 @@ def generar_pdf_material_bibliografico(request):
         "10. COMPRAS REALIZADAS CON EL FONDO BIBLIOTECARIO CHAQUEÑO",
         build_table(data),
         build_qr(qr_fondos_data)
-    )
-
-
-    # =========================================================
-    # 11. BIBLIOTECARIOS
-    # =========================================================
-    bib = list(
-        BibliotecariosCue.objects.filter(
-            cueanexo=cueanexo_activo,
-            mes=mes,
-            anio=anio,
-        )
-        .select_related('turno', 'licencia_permiso', 'situacion_laboral')
-        .order_by('pk')
-    )
-
-    def personal_tiene_valor(valor):
-        if valor is None:
-            return False
-        if isinstance(valor, str):
-            return bool(valor.strip())
-        return True
-
-    def personal_texto_pdf(valor):
-        if not personal_tiene_valor(valor):
-            return '—'
-        if isinstance(valor, datetime):
-            return valor.strftime('%d/%m/%Y %H:%M')
-        if isinstance(valor, date):
-            return valor.strftime('%d/%m/%Y')
-        return str(valor)
-
-    personal_body_style = styles["BodyText"].clone("BibliotecaPersonalBody")
-    personal_body_style.fontSize = 7
-    personal_body_style.leading = 8.5
-
-    def personal_celda_pdf(valor):
-        return Paragraph(
-            escape(personal_texto_pdf(valor)),
-            personal_body_style,
-        )
-
-    data = [[
-        "CUIL",
-        "APELLIDOS",
-        "NOMBRES",
-        "CUOF",
-        "CUOF ANEXO",
-        "LICENCIA",
-        "DESDE",
-        "HASTA",
-        "SITUACIÓN LABORAL",
-    ]]
-
-    detalles_pdf = []
-    qr_bibliotecarios = []
-
-    for r in bib:
-        licencia = (
-            r.licencia_permiso.tipo_licencia
-            if r.licencia_permiso_id
-            else None
-        )
-        situacion_laboral = (
-            r.situacion_laboral.tipo_situacion
-            if r.situacion_laboral_id
-            else None
-        )
-        turno = r.turno_texto
-
-        data.append([
-            personal_texto_pdf(r.cuil),
-            personal_celda_pdf(r.apellidos),
-            personal_celda_pdf(r.nombres),
-            personal_texto_pdf(r.cuof),
-            personal_texto_pdf(r.cuof_anexo),
-            personal_celda_pdf(licencia),
-            personal_texto_pdf(r.f_desde_lic),
-            personal_texto_pdf(r.f_hasta_lic),
-            personal_celda_pdf(situacion_laboral),
-        ])
-
-        campos_adicionales = [
-            ("Observaciones", r.observaciones),
-            ("Cargo", r.cargo),
-            ("Situación de revista", r.situacion_revista),
-            ("Ingreso", r.f_ingreso),
-            ("Hasta", r.f_hasta),
-            ("Turno", turno),
-        ]
-        adicionales = [
-            (etiqueta, personal_texto_pdf(valor))
-            for etiqueta, valor in campos_adicionales
-            if personal_tiene_valor(valor)
-        ]
-
-        if adicionales:
-            detalle_html = "<br/>".join(
-                f"<b>{escape(etiqueta)}:</b> {escape(valor)}"
-                for etiqueta, valor in adicionales
-            )
-            detalles_pdf.append([
-                personal_texto_pdf(r.cuil),
-                Paragraph(detalle_html, personal_body_style),
-            ])
-
-        qr_campos = [
-            ("CUIL", r.cuil),
-            ("Apellidos", r.apellidos),
-            ("Nombres", r.nombres),
-            ("CUOF", r.cuof),
-            ("CUOF Anexo", r.cuof_anexo),
-            ("Licencia", licencia),
-            ("Desde licencia", r.f_desde_lic),
-            ("Hasta licencia", r.f_hasta_lic),
-            ("Situación laboral", situacion_laboral),
-            *campos_adicionales,
-        ]
-        qr_bibliotecarios.append(
-            " | ".join(
-                f"{etiqueta}: {personal_texto_pdf(valor)}"
-                for etiqueta, valor in qr_campos
-                if personal_tiene_valor(valor)
-            )
-        )
-
-    tabla_personal = Table(
-        data,
-        repeatRows=1,
-        colWidths=[82, 92, 104, 48, 58, 120, 62, 62, 170],
-    )
-    tabla_personal.setStyle(TABLE_STYLE_GLOBAL)
-
-    extra_flowables = []
-    if detalles_pdf:
-        detalle_style = styles["Heading4"].clone("BibliotecaPersonalDetalleTitulo")
-        detalle_style.spaceBefore = 4
-        detalle_style.spaceAfter = 4
-
-        tabla_detalles = Table(
-            [["CUIL", "DATOS ADICIONALES"], *detalles_pdf],
-            repeatRows=1,
-            colWidths=[90, doc.width - 90],
-        )
-        tabla_detalles.setStyle(TABLE_STYLE_GLOBAL)
-
-        extra_flowables = [
-            Paragraph("Datos adicionales", detalle_style),
-            tabla_detalles,
-        ]
-
-    qr_bibliotecarios_data = "\n".join(qr_bibliotecarios)
-
-    engine.add_section(
-        "11. PERSONAL BIBLIOTECARIO",
-        tabla_personal,
-        build_qr(qr_bibliotecarios_data),
-        extra_flowables=extra_flowables,
     )
 
     doc.build(story, canvasmaker=canvasmaker)
