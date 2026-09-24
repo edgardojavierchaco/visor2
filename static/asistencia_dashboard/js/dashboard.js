@@ -5,6 +5,7 @@ const CFG = window.ASISTENCIA_DASHBOARD;
 let chartEvolucion = null;
 let chartNivel = null;
 let chartRanking = null;
+let chartTendenciaAlertas = null;
 
 const paginationState = {
     ranking: 1,
@@ -12,7 +13,8 @@ const paginationState = {
     mensual: 1,
     calidad: 1,
     alertasAlumnos: 1,
-    secciones: 1
+    secciones: 1,
+    rankingAlertas: 1
 };
 
 const formatter = new Intl.NumberFormat("es-AR");
@@ -1496,3 +1498,1128 @@ function pintarCalidad(resultado) {
     });
 }
 
+
+
+// ============================================================
+// CAPA EJECUTIVA V2
+// ============================================================
+
+async function actualizarDashboard() {
+    paginationState.ranking = 1;
+    paginationState.alertas = 1;
+    paginationState.mensual = 1;
+    paginationState.calidad = 1;
+    paginationState.alertasAlumnos = 1;
+    paginationState.secciones = 1;
+    paginationState.rankingAlertas = 1;
+
+    mostrarLoader(true);
+
+    try {
+        const params = new URLSearchParams(
+            obtenerParametros()
+        );
+
+        const rankingParams = new URLSearchParams(params);
+        rankingParams.set("page", 1);
+
+        const alertasParams = new URLSearchParams(params);
+        alertasParams.set("page", 1);
+
+        const rankingAlertasParams = new URLSearchParams(params);
+        rankingAlertasParams.set("page", 1);
+
+        const [
+            resumen,
+            evolucion,
+            niveles,
+            ranking,
+            alertas,
+            resumenSemana,
+            tendenciaSemana,
+            rankingAlertas
+        ] = await Promise.all([
+            fetchJSON(`${CFG.urls.resumen}?${params}`),
+            fetchJSON(`${CFG.urls.evolucion}?${params}`),
+            fetchJSON(`${CFG.urls.niveles}?${params}`),
+            fetchJSON(`${CFG.urls.ranking}?${rankingParams}`),
+            fetchJSON(`${CFG.urls.alertas}?${alertasParams}`),
+            fetchJSON(`${CFG.urls.resumenAlertasSemana}?${params}`),
+            fetchJSON(`${CFG.urls.tendenciaAlertas}?${params}`),
+            fetchJSON(`${CFG.urls.rankingAlertas}?${rankingAlertasParams}`)
+        ]);
+
+        pintarResumen(resumen);
+        pintarEvolucion(evolucion.data || []);
+        pintarNiveles(niveles.data || []);
+
+        pintarRanking(ranking.data || []);
+        pintarTablaRanking(ranking.data || []);
+        pintarPaginacion(
+            "pagerRanking",
+            ranking.pagination,
+            "ranking"
+        );
+
+        pintarAlertas(alertas);
+        pintarPaginacion(
+            "pagerAlertas",
+            alertas.pagination,
+            "alertas"
+        );
+
+        pintarResumenAlertasSemana(
+            resumenSemana
+        );
+
+        pintarTendenciaAlertas(
+            tendenciaSemana.data || []
+        );
+
+        pintarRankingAlertas(
+            rankingAlertas.data || []
+        );
+
+        pintarPaginacion(
+            "pagerRankingAlertas",
+            rankingAlertas.pagination,
+            "rankingAlertas"
+        );
+
+        cargarPanelesComplementarios(
+            params
+        );
+    }
+    catch (error) {
+        console.error(
+            "Error actualizando dashboard:",
+            error
+        );
+    }
+    finally {
+        mostrarLoader(
+            false
+        );
+    }
+
+    await cargarDetalleCue();
+}
+
+
+async function actualizarAlertasSemanales() {
+    paginationState.rankingAlertas = 1;
+    paginationState.alertasAlumnos = 1;
+
+    const params = new URLSearchParams(
+        obtenerParametros()
+    );
+
+    const rankingParams = new URLSearchParams(
+        params
+    );
+
+    rankingParams.set(
+        "page",
+        1
+    );
+
+    try {
+        const [
+            resumenSemana,
+            tendenciaSemana,
+            rankingAlertas
+        ] = await Promise.all([
+            fetchJSON(
+                `${CFG.urls.resumenAlertasSemana}?${params}`
+            ),
+            fetchJSON(
+                `${CFG.urls.tendenciaAlertas}?${params}`
+            ),
+            fetchJSON(
+                `${CFG.urls.rankingAlertas}?${rankingParams}`
+            )
+        ]);
+
+        pintarResumenAlertasSemana(
+            resumenSemana
+        );
+
+        pintarTendenciaAlertas(
+            tendenciaSemana.data || []
+        );
+
+        pintarRankingAlertas(
+            rankingAlertas.data || []
+        );
+
+        pintarPaginacion(
+            "pagerRankingAlertas",
+            rankingAlertas.pagination,
+            "rankingAlertas"
+        );
+
+        await cargarDetalleCue();
+    }
+    catch (error) {
+        console.error(
+            "Error actualizando alertas semanales:",
+            error
+        );
+    }
+}
+
+
+function configurarEventos() {
+    [
+        "#filtroNivel",
+        "#filtroAmbito",
+        "#filtroDepartamento",
+        "#filtroLocalidad",
+        "#filtroOferta"
+    ].forEach(function (selector) {
+        $(selector).on(
+            "change",
+            async function () {
+                await actualizarDashboard();
+            }
+        );
+    });
+
+    $("#filtroAnio, #filtroMes").on(
+        "change",
+        async function () {
+            actualizarTituloPeriodo();
+            await cargarFiltros();
+            await actualizarDashboard();
+        }
+    );
+
+    $("#filtroRegion").on(
+        "change",
+        async function () {
+            $("#filtroCue")
+                .val(null)
+                .trigger("change.select2");
+
+            await actualizarDashboard();
+        }
+    );
+
+    $("#filtroCue").on(
+        "change",
+        async function () {
+            await actualizarDashboard();
+        }
+    );
+
+    $("#filtroAnioSemana").on(
+        "change",
+        async function () {
+            await cargarSemanas(false);
+            actualizarTituloPeriodo();
+            await actualizarAlertasSemanales();
+        }
+    );
+
+    $("#filtroSemana").on(
+        "change",
+        async function () {
+            actualizarTituloPeriodo();
+            await actualizarAlertasSemanales();
+        }
+    );
+
+    $("#btnLimpiar").on(
+        "click",
+        async function () {
+            [
+                "#filtroNivel",
+                "#filtroAmbito",
+                "#filtroRegion",
+                "#filtroDepartamento",
+                "#filtroLocalidad",
+                "#filtroOferta",
+                "#filtroCue"
+            ].forEach(function (selector) {
+                $(selector)
+                    .val(null)
+                    .trigger("change.select2");
+            });
+
+            await actualizarDashboard();
+        }
+    );
+}
+
+
+function configurarPaginacion() {
+    configurarPager(
+        "pagerRanking",
+        "ranking",
+        cargarPaginaRanking
+    );
+
+    configurarPager(
+        "pagerAlertas",
+        "alertas",
+        cargarPaginaAlertas
+    );
+
+    configurarPager(
+        "pagerMensual",
+        "mensual",
+        async () => {
+            const params = new URLSearchParams(
+                obtenerParametros()
+            );
+            await cargarPanelesComplementarios(
+                params
+            );
+        }
+    );
+
+    configurarPager(
+        "pagerCalidad",
+        "calidad",
+        async () => {
+            const params = new URLSearchParams(
+                obtenerParametros()
+            );
+            await cargarPanelesComplementarios(
+                params
+            );
+        }
+    );
+
+    configurarPager(
+        "pagerAlertasAlumnos",
+        "alertasAlumnos",
+        cargarDetalleCue
+    );
+
+    configurarPager(
+        "pagerSecciones",
+        "secciones",
+        cargarDetalleCue
+    );
+
+    configurarPager(
+        "pagerRankingAlertas",
+        "rankingAlertas",
+        cargarPaginaRankingAlertas
+    );
+}
+
+
+async function cargarPaginaRankingAlertas() {
+    const params = new URLSearchParams(
+        obtenerParametros()
+    );
+
+    params.set(
+        "page",
+        paginationState.rankingAlertas
+    );
+
+    try {
+        const resultado = await fetchJSON(
+            `${CFG.urls.rankingAlertas}?${params}`,
+            20000
+        );
+
+        pintarRankingAlertas(
+            resultado.data || []
+        );
+
+        pintarPaginacion(
+            "pagerRankingAlertas",
+            resultado.pagination,
+            "rankingAlertas"
+        );
+    }
+    catch (error) {
+        console.error(
+            "Error cargando ranking de incidencia:",
+            error
+        );
+    }
+}
+
+
+function pintarResumen(data) {
+    $("#kpiMatricula")
+        .text(
+            formatNumero(
+                data.matricula
+            )
+        );
+
+    $("#kpiEstablecimientos")
+        .text(
+            formatNumero(
+                data.establecimientos
+            )
+        );
+
+    $("#kpiDias")
+        .text(
+            formatNumero(
+                data.dias_con_registro
+            )
+        );
+
+    $("#kpiSecciones")
+        .text(
+            formatNumero(
+                data.secciones
+            )
+        );
+
+    $("#kpiAsistencia")
+        .text(
+            formatPorcentaje(
+                data.porcentaje_asistencia
+            )
+        );
+
+    $("#kpiAusentismo")
+        .text(
+            formatPorcentaje(
+                data.porcentaje_ausentismo
+            )
+        );
+
+    $("#kpiPresentes")
+        .text(
+            `${formatNumero(
+                data.alumno_jornadas
+            )} alumno-jornadas analizadas`
+        );
+
+    $("#kpiAusentes")
+        .text(
+            `${formatNumero(
+                Number(data.ausentes || 0)
+                +
+                Number(data.ausentes_justificados || 0)
+            )} alumno-jornadas ausentes`
+        );
+
+    $("#kpiPresentesTotal")
+        .text(
+            formatNumero(
+                data.presentes
+            )
+        );
+
+    $("#kpiAusentesTotal")
+        .text(
+            formatNumero(
+                data.ausentes
+            )
+        );
+
+    $("#kpiJustificadas")
+        .text(
+            formatNumero(
+                data.ausentes_justificados
+            )
+        );
+
+    $("#kpiCobertura")
+        .text(
+            data.porcentaje_cobertura !== null
+            && data.porcentaje_cobertura !== undefined
+            ?
+            formatPorcentaje(
+                data.porcentaje_cobertura
+            )
+            :
+            "Sin procesar"
+        );
+
+    $("#kpiCoberturaDetalle")
+        .text(
+            `${formatNumero(
+                data.secciones_completas || 0
+            )} de ${formatNumero(
+                data.secciones_calidad || 0
+            )} secciones completas`
+        );
+}
+
+
+function pintarResumenAlertasSemana(data) {
+    $("#kpiMatriculaSemana")
+        .text(
+            formatNumero(
+                data.matricula_referencia
+            )
+        );
+
+    $("#kpiAlumnosAlerta")
+        .text(
+            formatNumero(
+                data.alumnos_alerta
+            )
+        );
+
+    $("#kpiIncidenciaAlertas")
+        .text(
+            data.incidencia !== null
+            && data.incidencia !== undefined
+            ?
+            formatPorcentaje(
+                data.incidencia
+            )
+            :
+            "—"
+        );
+
+    $("#kpiAtencionSemana")
+        .text(
+            formatNumero(
+                data.atencion
+            )
+        );
+
+    $("#kpiAltoSemana")
+        .text(
+            formatNumero(
+                data.alto
+            )
+        );
+
+    $("#kpiCriticoSemana")
+        .text(
+            formatNumero(
+                data.critico
+            )
+        );
+
+    if (
+        data.fecha_desde
+        &&
+        data.fecha_hasta
+    ) {
+        $("#periodoSemanaEjecutiva")
+            .text(
+                `${formatearFechaCompleta(
+                    data.fecha_desde
+                )} al ${formatearFechaCompleta(
+                    data.fecha_hasta
+                )}`
+            );
+    }
+}
+
+
+function pintarTendenciaAlertas(data) {
+    const canvas = document.getElementById(
+        "chartTendenciaAlertas"
+    );
+
+    if (!canvas) {
+        return;
+    }
+
+    if (
+        chartTendenciaAlertas
+    ) {
+        chartTendenciaAlertas.destroy();
+    }
+
+    chartTendenciaAlertas =
+        new Chart(
+            canvas.getContext(
+                "2d"
+            ),
+            {
+                type:
+                    "line",
+
+                data: {
+                    labels:
+                        data.map(
+                            fila =>
+                                fila.label
+                        ),
+
+                    datasets: [
+                        {
+                            label:
+                                "Incidencia de alertas",
+
+                            data:
+                                data.map(
+                                    fila =>
+                                        fila.incidencia === null
+                                        ?
+                                        null
+                                        :
+                                        Number(
+                                            fila.incidencia
+                                        )
+                                ),
+
+                            borderWidth:
+                                2.5,
+
+                            tension:
+                                .3,
+
+                            pointRadius:
+                                4
+                        }
+                    ]
+                },
+
+                options: {
+                    responsive:
+                        true,
+
+                    maintainAspectRatio:
+                        false,
+
+                    plugins: {
+                        legend: {
+                            position:
+                                "bottom"
+                        }
+                    },
+
+                    scales: {
+                        y: {
+                            beginAtZero:
+                                true,
+
+                            ticks: {
+                                callback:
+                                    value =>
+                                        `${value}%`
+                            }
+                        }
+                    }
+                }
+            }
+        );
+}
+
+
+function pintarRankingAlertas(data) {
+    const tbody = document.getElementById(
+        "tablaRankingAlertas"
+    );
+
+    if (!tbody) {
+        return;
+    }
+
+    tbody.innerHTML =
+        "";
+
+    if (!data.length) {
+        tbody.innerHTML =
+            `
+            <tr>
+                <td
+                    colspan="6"
+                    class="text-center py-5 text-muted"
+                >
+                    Sin alertas para la semana seleccionada.
+                </td>
+            </tr>
+            `;
+
+        return;
+    }
+
+    data.forEach(
+        fila => {
+            tbody.insertAdjacentHTML(
+                "beforeend",
+                `
+                <tr>
+                    <td>
+                        <strong>
+                            ${escapeHtml(
+                                fila.cueanexo || ""
+                            )}
+                        </strong>
+                    </td>
+
+                    <td class="school-name">
+                        ${escapeHtml(
+                            fila.escuela || "—"
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        ${formatNumero(
+                            fila.matricula
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        ${formatNumero(
+                            fila.alumnos_alerta
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        ${formatNumero(
+                            fila.criticos
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        <strong>
+                            ${
+                                fila.incidencia_alerta !== null
+                                ?
+                                Number(
+                                    fila.incidencia_alerta
+                                ).toFixed(2)
+                                + "%"
+                                :
+                                "—"
+                            }
+                        </strong>
+                    </td>
+                </tr>
+                `
+            );
+        }
+    );
+}
+
+
+function pintarMensual(data) {
+    const tbody = document.getElementById(
+        "tablaMensual"
+    );
+
+    if (!tbody) {
+        return;
+    }
+
+    tbody.innerHTML =
+        "";
+
+    $("#contadorMensual")
+        .text(
+            formatNumero(
+                data.length
+            )
+        );
+
+    if (!data.length) {
+        tbody.innerHTML =
+            `
+            <tr>
+                <td
+                    colspan="8"
+                    class="text-center py-5 text-muted"
+                >
+                    Sin información mensual para los filtros seleccionados.
+                </td>
+            </tr>
+            `;
+
+        return;
+    }
+
+    data.forEach(
+        fila => {
+
+            const detalle = [
+                fila.nivel,
+                fila.grado,
+                fila.seccion,
+                fila.turno
+            ]
+            .filter(
+                Boolean
+            )
+            .join(
+                " · "
+            )
+            ||
+            "Resumen establecimiento";
+
+            tbody.insertAdjacentHTML(
+                "beforeend",
+                `
+                <tr>
+                    <td>
+                        <strong>
+                            ${escapeHtml(
+                                fila.cueanexo || ""
+                            )}
+                        </strong>
+                        <br>
+                        <small>
+                            ${escapeHtml(
+                                fila.escuela || ""
+                            )}
+                        </small>
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            detalle
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        <strong>
+                            ${formatNumero(
+                                fila.matricula
+                            )}
+                        </strong>
+                    </td>
+
+                    <td class="text-end">
+                        ${formatNumero(
+                            fila.presentes
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        ${formatNumero(
+                            fila.ausentes
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        ${formatNumero(
+                            fila.ausentes_justificados
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        ${formatNumero(
+                            fila.otras_faltas
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        <span
+                            class="
+                                metric-pill
+                                ${claseAsistencia(
+                                    Number(
+                                        fila.porcentaje_asistencia
+                                        || 0
+                                    )
+                                )}
+                            "
+                        >
+                            ${Number(
+                                fila.porcentaje_asistencia
+                                || 0
+                            ).toFixed(2)}%
+                        </span>
+                    </td>
+                </tr>
+                `
+            );
+        }
+    );
+}
+
+
+function pintarSecciones(data) {
+    const tbody = document.getElementById(
+        "tablaSecciones"
+    );
+
+    if (!tbody) {
+        return;
+    }
+
+    tbody.innerHTML =
+        "";
+
+    $("#contadorSecciones")
+        .text(
+            formatNumero(
+                data.length
+            )
+        );
+
+    if (!data.length) {
+        return;
+    }
+
+    data.forEach(
+        fila => {
+
+            const asistencia =
+                Number(
+                    fila.porcentaje_asistencia
+                    || 0
+                );
+
+            tbody.insertAdjacentHTML(
+                "beforeend",
+                `
+                <tr>
+                    <td>
+                        ${escapeHtml(
+                            fila.nivel || "—"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            fila.grado || "—"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            fila.seccion || "—"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            fila.turno || "—"
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        <strong>
+                            ${formatNumero(
+                                fila.matricula
+                            )}
+                        </strong>
+                    </td>
+
+                    <td class="text-center">
+                        ${formatNumero(
+                            fila.dias_registrados
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        ${formatNumero(
+                            fila.presentes
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        ${formatNumero(
+                            fila.ausentes
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        ${formatNumero(
+                            fila.ausentes_justificados
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        <span
+                            class="
+                                metric-pill
+                                ${claseAsistencia(
+                                    asistencia
+                                )}
+                            "
+                        >
+                            ${asistencia.toFixed(2)}%
+                        </span>
+                    </td>
+                </tr>
+                `
+            );
+        }
+    );
+}
+
+
+function pintarAlertasAlumnos(data) {
+    const tbody = document.getElementById(
+        "tablaAlertasAlumnos"
+    );
+
+    if (!tbody) {
+        return;
+    }
+
+    tbody.innerHTML =
+        "";
+
+    $("#contadorAlertasAlumnos")
+        .text(
+            formatNumero(
+                data.length
+            )
+        );
+
+    if (!data.length) {
+        tbody.innerHTML =
+            `
+            <tr>
+                <td
+                    colspan="11"
+                    class="text-center py-5 text-muted"
+                >
+                    No existen estudiantes con información nominal
+                    para los filtros seleccionados.
+                </td>
+            </tr>
+            `;
+
+        return;
+    }
+
+    data.forEach(
+        fila => {
+
+            const porcentaje =
+                fila.porcentaje_asistencia !== null
+                ?
+                Number(
+                    fila.porcentaje_asistencia
+                )
+                :
+                null;
+
+            const cobertura =
+                fila.porcentaje_cumplimiento_registro !== null
+                ?
+                Number(
+                    fila.porcentaje_cumplimiento_registro
+                )
+                :
+                null;
+
+            const nivel =
+                fila.nivel_alerta_final
+                ||
+                "SIN DATOS";
+
+            tbody.insertAdjacentHTML(
+                "beforeend",
+                `
+                <tr>
+                    <td>
+                        <span
+                            class="
+                                alert-badge
+                                ${claseAlerta(
+                                    nivel
+                                )}
+                            "
+                        >
+                            ${textoAlerta(
+                                nivel
+                            )}
+                        </span>
+                    </td>
+
+                    <td>
+                        <strong>
+                            ${escapeHtml(
+                                fila.nombre_apellido
+                                ||
+                                `Alumno ${fila.id_alumno}`
+                            )}
+                        </strong>
+                    </td>
+
+                    <td>
+                        <span class="reason-badge">
+                            ${escapeHtml(
+                                fila.motivo_alerta
+                                ||
+                                "—"
+                            )}
+                        </span>
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            fila.cueanexo || ""
+                        )}
+                    </td>
+
+                    <td class="school-name">
+                        ${escapeHtml(
+                            fila.escuela || "—"
+                        )}
+                    </td>
+
+                    <td>
+                        ${escapeHtml(
+                            fila.grado || "—"
+                        )}
+                        ·
+                        ${escapeHtml(
+                            fila.seccion || "—"
+                        )}
+                    </td>
+
+                    <td class="text-end">
+                        ${
+                            porcentaje !== null
+                            ?
+                            porcentaje.toFixed(2)
+                            + "%"
+                            :
+                            "—"
+                        }
+                    </td>
+
+                    <td class="text-end">
+                        ${
+                            cobertura !== null
+                            ?
+                            cobertura.toFixed(2)
+                            + "%"
+                            :
+                            "—"
+                        }
+                    </td>
+
+                    <td class="text-end">
+                        ${Number(
+                            fila.inasistencias_equivalentes
+                            || 0
+                        ).toFixed(2)}
+                    </td>
+
+                    <td class="text-center">
+                        ${formatNumero(
+                            fila.racha_actual_ausencias
+                        )}
+                    </td>
+
+                    <td class="text-center">
+                        ${formatNumero(
+                            fila.racha_maxima_ausencias
+                        )}
+                    </td>
+                </tr>
+                `
+            );
+        }
+    );
+}
+
+
+function formatearFechaCompleta(fecha) {
+    if (!fecha) {
+        return "";
+    }
+
+    const partes = fecha.split("-");
+
+    return (
+        `${partes[2]}/${partes[1]}/${partes[0]}`
+    );
+}
