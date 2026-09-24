@@ -22,7 +22,6 @@ from .models import (
     SeccionTipo,
     TurnoTipo,
     _normalizar_oferta_matricula_compartida,
-    cueanexo_tiene_oferta_matricula_compartida,
     cueanexo_tiene_oferta_no_especial,
     get_ofertas_educativas_especiales,
     normalizar_cueanexo,
@@ -400,11 +399,16 @@ class EspecialSeccionForm(forms.ModelForm):
 
         oferta_actual = (self.instance.oferta or "").strip()
         ofertas = get_ofertas_educativas_especiales(self.cueanexo)
-        self.establecimiento_tiene_integracion = (
-            cueanexo_tiene_oferta_matricula_compartida(self.cueanexo)
-        )
         oferta_integracion = _normalizar_oferta_matricula_compartida(
             "Especial - Integración"
+        )
+        # ``ofertas`` ya proviene del padrón filtrado por CUE y por estados
+        # activos. Reutilizarlo evita una segunda consulta y permite construir
+        # este formulario en contextos que no habilitan acceso a la BD (por
+        # ejemplo, SimpleTestCase).
+        self.establecimiento_tiene_integracion = any(
+            _normalizar_oferta_matricula_compartida(oferta) == oferta_integracion
+            for oferta in ofertas
         )
         if not self.establecimiento_tiene_integracion:
             ofertas = [

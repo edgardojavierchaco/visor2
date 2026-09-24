@@ -135,12 +135,16 @@ def _especial_options_usuario(permisos, scope="cargables"):
     vistos = set()
     queryset = permisos[f"escuelas_{scope}"]
 
-    for cueanexo, nombre in (
+    for fila in (
         queryset
         .order_by("cueanexo", "nom_est")
         .values_list("cueanexo", "nom_est")
         .distinct()
     ):
+        # Algunos backends/vistas heredadas pueden devolver columnas
+        # adicionales aun después de values_list(). Sólo necesitamos estas
+        # dos para construir el selector.
+        cueanexo, nombre = fila[0], fila[1]
         cueanexo_normalizado = normalizar_cueanexo(cueanexo)
         if not cueanexo_normalizado or cueanexo_normalizado in vistos:
             continue
@@ -433,9 +437,11 @@ def resolver_contexto_operativo(request, scope="cargables"):
         "querystring": _context_querystring(cueanexo, ciclo),
         "alumnos_url": _alumnos_url(),
         "es_admin_especial": permisos["es_admin"],
-        "ciclo_cerrado": bool(ciclo and ciclo.cerrado),
+        "ciclo_cerrado": bool(ciclo and getattr(ciclo, "cerrado", False)),
         "puede_consultar": bool(cueanexo and ciclo),
-        "puede_operar": bool(cueanexo and ciclo and not ciclo.cerrado),
+        "puede_operar": bool(
+            cueanexo and ciclo and not getattr(ciclo, "cerrado", False)
+        ),
         "sin_cueanexo": not bool(cueanexo),
         "sin_ciclo": not bool(ciclo),
     }
