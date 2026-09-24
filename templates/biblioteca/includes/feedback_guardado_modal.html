@@ -1,0 +1,40 @@
+<div class="modal biblioteca-action-modal biblioteca-feedback-modal"
+     id="bibliotecaFeedbackModal"
+     tabindex="-1"
+     role="dialog"
+     aria-labelledby="bibliotecaFeedbackModalTitulo"
+     aria-describedby="bibliotecaFeedbackModalMensaje"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="biblioteca-action-modal__header">
+                <span class="biblioteca-action-modal__icon biblioteca-feedback-modal__icon"
+                      aria-hidden="true">
+                    <span class="biblioteca-symbol biblioteca-symbol--filled"
+                          data-biblioteca-feedback-icon>error</span>
+                </span>
+                <h2 class="biblioteca-action-modal__title"
+                    id="bibliotecaFeedbackModalTitulo"
+                    data-biblioteca-feedback-title>
+                    No se pudo guardar
+                </h2>
+            </div>
+
+            <div class="biblioteca-action-modal__body">
+                <p id="bibliotecaFeedbackModalMensaje"
+                   class="biblioteca-feedback-modal__message"
+                   data-biblioteca-feedback-message>
+                    Revisá los datos ingresados e intentá nuevamente.
+                </p>
+            </div>
+
+            <div class="biblioteca-action-modal__footer">
+                <button type="button"
+                        class="btn btn-primary"
+                        data-dismiss="modal">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

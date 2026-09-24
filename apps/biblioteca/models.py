@@ -1482,14 +1482,12 @@ class BibliotecariosCue(models.Model):
 
     cargo = models.CharField(
         max_length=255,
-        choices=CARGO_CHOICES,
         blank=True,
         null=True,
         verbose_name='cargo'
     )
     situacion_revista = models.CharField(
         max_length=255,
-        choices=SIT_REVISTA_CHOICES,
         blank=True,
         null=True,
         verbose_name='situacion_revista'
@@ -1504,6 +1502,12 @@ class BibliotecariosCue(models.Model):
         blank=True,
         null=True,
         verbose_name='turno'
+    )
+    turno_bnh = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name='turno_bnh'
     )
 
     cuof = models.CharField(max_length=4, blank=True, null=True, verbose_name='cuof')
@@ -1552,6 +1556,13 @@ class BibliotecariosCue(models.Model):
 
     def __str__(self):
         return f"{self.n_doc} - {self.apellidos}, {self.nombres}"
+
+    @property
+    def turno_texto(self):
+        turno_bnh = (self.turno_bnh or '').strip()
+        if turno_bnh:
+            return turno_bnh
+        return self.turno.nom_turno if self.turno_id and self.turno else None
 
     # =========================
     # 🔥 VALIDACIONES
@@ -1625,7 +1636,7 @@ class BibliotecariosCue(models.Model):
         item['f_ingreso'] = self.f_ingreso or '—'
         item['f_hasta'] = self.f_hasta or '—'
 
-        item['turno'] = self.turno.nom_turno if self.turno else '—'
+        item['turno'] = self.turno_texto or '—'
 
         item['cuof'] = self.cuof
         item['cuof_anexo'] = self.cuof_anexo

@@ -5,7 +5,7 @@
 {% block head %}
     <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2.min.css' %}">
     <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2-bootstrap4.min.css' %}">
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260917-personal-12">
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260923-personal-responsive-2">
 {% endblock %}
 
 {% block content_header %}{% endblock %}
@@ -68,6 +68,9 @@
                 <input type="hidden" id="id_n_doc" name="n_doc" value="{{ form.n_doc.value|default_if_none:'' }}">
                 <input type="hidden" id="id_apellidos" name="apellidos" value="{{ form.apellidos.value|default_if_none:'' }}">
                 <input type="hidden" id="id_nombres" name="nombres" value="{{ form.nombres.value|default_if_none:'' }}">
+                {% if action == 'add' %}
+                <input type="hidden" id="id_bnh_actividad_id" name="bnh_actividad_id" value="">
+                {% endif %}
 
                 {% if action == 'add' %}
                 <section class="biblioteca-personal__block" aria-labelledby="personal-busqueda-titulo">
@@ -93,7 +96,7 @@
                                        inputmode="numeric"
                                        maxlength="11"
                                        autocomplete="off"
-                                       value="{{ form.cuil.value|default_if_none:'' }}">
+                                       value="{% if bnh_cuil_inicial %}{{ bnh_cuil_inicial }}{% else %}{{ form.cuil.value|default_if_none:'' }}{% endif %}">
                             </div>
 
                             <button type="button" class="btn biblioteca-personal__search-btn" id="biblioteca_personal_buscar" disabled>
@@ -111,6 +114,7 @@
                         </div>
                     </div>
                 </section>
+
                 {% endif %}
 
                 <section id="biblioteca_personal_resultado"
@@ -162,7 +166,7 @@
                         </div>
 
                         {% if action == 'edit' %}
-                        {% if object.cargo or object.situacion_revista or object.f_ingreso or object.f_hasta or object.turno %}
+                        {% if object.cargo or object.situacion_revista or object.f_ingreso or object.f_hasta or object.turno_bnh or object.turno %}
                         <div class="biblioteca-personal__stored-data" aria-label="Datos existentes del registro">
                             <div class="biblioteca-personal__stored-field">
                                 <span class="biblioteca-personal__data-label">Cargo</span>
@@ -182,13 +186,74 @@
                             </div>
                             <div class="biblioteca-personal__stored-field">
                                 <span class="biblioteca-personal__data-label">Turno</span>
-                                <span class="biblioteca-personal__stored-value">{{ object.turno|default:'—' }}</span>
+                                <span class="biblioteca-personal__stored-value">{{ object.turno_texto|default:'—' }}</span>
                             </div>
                         </div>
                         {% endif %}
                         {% endif %}
                     </div>
                 </section>
+
+                {% if action == 'add' %}
+                <section id="biblioteca_personal_actividad"
+                         class="biblioteca-personal__block d-none"
+                         aria-labelledby="personal-actividad-titulo">
+                    <div class="biblioteca-personal__block-head">
+                        <div class="biblioteca-personal__block-head-left">
+                            <span class="biblioteca-personal__block-icon" aria-hidden="true">
+                                <span class="biblioteca-symbol">work</span>
+                            </span>
+                            <div>
+                                <h4 class="biblioteca-personal__block-title" id="personal-actividad-titulo">Cargo en BNH</h4>
+                                <p class="biblioteca-personal__block-subtitle" id="biblioteca_personal_actividad_subtitulo"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="biblioteca-personal__block-body">
+                        <div id="biblioteca_personal_actividad_selector" class="d-none">
+                            <label for="biblioteca_personal_actividad_select">Seleccioná el cargo</label>
+                            <div class="biblioteca-personal__select-wrap">
+                                <select id="biblioteca_personal_actividad_select" class="form-control">
+                                    <option value="">Seleccioná un cargo</option>
+                                </select>
+                                <span class="biblioteca-symbol biblioteca-personal__select-icon" aria-hidden="true">expand_more</span>
+                            </div>
+                        </div>
+
+                        <div id="biblioteca_personal_actividad_detalle"
+                             class="biblioteca-personal__stored-data d-none"
+                             aria-live="polite"></div>
+                    </div>
+                </section>
+
+                <div id="biblioteca_personal_bnh_accion"
+                     class="biblioteca-personal__bnh-action d-none"
+                     role="region"
+                     aria-live="polite">
+                    <span class="biblioteca-personal__bnh-action-icon" aria-hidden="true">
+                        <span class="biblioteca-symbol" id="biblioteca_personal_bnh_accion_icono">info</span>
+                    </span>
+                    <div class="biblioteca-personal__bnh-action-copy">
+                        <strong id="biblioteca_personal_bnh_accion_titulo"></strong>
+                        <span id="biblioteca_personal_bnh_accion_texto"></span>
+                    </div>
+                    <a id="biblioteca_personal_bnh_accion_link"
+                       class="btn btn-primary"
+                       href="#"
+                       target="_blank"
+                       rel="noopener noreferrer">
+                        <span class="biblioteca-symbol" id="biblioteca_personal_bnh_accion_link_icono" aria-hidden="true">open_in_new</span>
+                        <span id="biblioteca_personal_bnh_accion_link_texto">Continuar en BNH</span>
+                    </a>
+                    <button type="button"
+                            class="btn btn-light d-none"
+                            id="biblioteca_personal_bnh_reconsultar">
+                        <span class="biblioteca-symbol" aria-hidden="true">refresh</span>
+                        Reconsultar BNH
+                    </button>
+                </div>
+                {% endif %}
 
                 <section id="biblioteca_personal_manual" class="biblioteca-personal__block mb-0 {% if action == 'add' %}d-none{% endif %}" aria-labelledby="personal-manual-titulo">
                     <div class="biblioteca-personal__block-head">
@@ -227,13 +292,6 @@
                                 <label for="id_f_hasta_lic">Hasta</label>
                                 {{ form.f_hasta_lic|add_class:"form-control" }}
                             </div>
-                            <div class="biblioteca-personal__span-2">
-                                <label for="id_situacion_laboral">Situación laboral <span class="biblioteca-personal__optional">opcional</span></label>
-                                <div class="biblioteca-personal__select-wrap">
-                                    {{ form.situacion_laboral|add_class:"form-control" }}
-                                    <span class="biblioteca-symbol biblioteca-personal__select-icon" aria-hidden="true">expand_more</span>
-                                </div>
-                            </div>
                             <div class="biblioteca-personal__span-4">
                                 <label for="id_observaciones">Observaciones <span class="biblioteca-personal__optional">opcional</span></label>
                                 {{ form.observaciones|add_class:"form-control"|attr:"placeholder:Agregar observaciones si corresponde" }}
@@ -270,6 +328,7 @@
     const btnSubmit = form ? form.querySelector('button[type="submit"]') : null;
     const accionFormulario = '{{ action }}';
     const personaLookupUrl = "{% url 'bibliotecas:bibliotecario_persona_lookup' %}?periodo={{ periodo_activo_id }}";
+    const reconsultarBnh = {{ bnh_reconsultar|yesno:"true,false" }};
 
     const identity = {
         cuil: document.getElementById('id_cuil'),
@@ -286,13 +345,29 @@
     const resultadoPersona = document.getElementById('biblioteca_personal_resultado');
     const bloqueManual = document.getElementById('biblioteca_personal_manual');
     const footerFormulario = document.getElementById('biblioteca_personal_footer');
+    const accionBnh = document.getElementById('biblioteca_personal_bnh_accion');
+    const accionBnhIcono = document.getElementById('biblioteca_personal_bnh_accion_icono');
+    const accionBnhTitulo = document.getElementById('biblioteca_personal_bnh_accion_titulo');
+    const accionBnhTexto = document.getElementById('biblioteca_personal_bnh_accion_texto');
+    const accionBnhLink = document.getElementById('biblioteca_personal_bnh_accion_link');
+    const accionBnhLinkIcono = document.getElementById('biblioteca_personal_bnh_accion_link_icono');
+    const accionBnhLinkTexto = document.getElementById('biblioteca_personal_bnh_accion_link_texto');
+    const accionBnhReconsultar = document.getElementById('biblioteca_personal_bnh_reconsultar');
     const nombreCompleto = document.getElementById('biblioteca_personal_nombre_completo');
     const cuilMostrar = document.getElementById('biblioteca_personal_cuil_mostrar');
     const documentoMostrar = document.getElementById('biblioteca_personal_documento_mostrar');
+    const actividadInput = document.getElementById('id_bnh_actividad_id');
+    const bloqueActividad = document.getElementById('biblioteca_personal_actividad');
+    const actividadSubtitulo = document.getElementById('biblioteca_personal_actividad_subtitulo');
+    const actividadSelector = document.getElementById('biblioteca_personal_actividad_selector');
+    const actividadSelect = document.getElementById('biblioteca_personal_actividad_select');
+    const actividadDetalle = document.getElementById('biblioteca_personal_actividad_detalle');
 
     let personaBnhConfirmada = accionFormulario === 'edit';
     let ultimoCuilBuscado = '';
     let busquedaEnCurso = false;
+    let bnhAccionIniciada = false;
+    let actividadesBnh = [];
 
     if (window.jQuery && $.fn.select2) {
         const licenciaSelect = $('#id_licencia_permiso');
@@ -332,9 +407,7 @@
 
     function formatearCuil(cuil) {
         const valor = (cuil || '').replace(/\D/g, '');
-        return /^\d{11}$/.test(valor)
-            ? valor.slice(0, 2) + '-' + valor.slice(2, 10) + '-' + valor.slice(10)
-            : (valor || '—');
+        return valor || '—';
     }
 
     function formatearDocumento(documento) {
@@ -343,6 +416,10 @@
     }
 
     function actualizarBotonBusqueda() {
+        if (accionBnhReconsultar) {
+            accionBnhReconsultar.disabled = busquedaEnCurso;
+        }
+
         if (!btnBuscarPersona || !cuilBusqueda || accionFormulario !== 'add') return;
 
         const cuilActual = cuilBusqueda.value.replace(/\D/g, '');
@@ -374,6 +451,151 @@
         estadoBusqueda.classList.remove('is-visible', 'is-success', 'is-error', 'is-info');
     }
 
+    function ocultarAccionBnh() {
+        if (!accionBnh) return;
+        accionBnh.classList.add('d-none');
+        if (accionBnhLink) accionBnhLink.setAttribute('href', '#');
+    }
+
+    function mostrarAccionBnh(accion, titulo, mensaje) {
+        if (!accionBnh || !accion || !accion.url) return;
+
+        if (accionBnhTitulo) accionBnhTitulo.textContent = titulo || 'Continuar en BNH';
+        if (accionBnhTexto) accionBnhTexto.textContent = mensaje || '';
+        if (accionBnhIcono) accionBnhIcono.textContent = accion.icon || 'info';
+        if (accionBnhLinkIcono) accionBnhLinkIcono.textContent = accion.icon || 'open_in_new';
+        if (accionBnhLinkTexto) accionBnhLinkTexto.textContent = accion.label || 'Continuar en BNH';
+        if (accionBnhLink) accionBnhLink.setAttribute('href', accion.url);
+        if (accionBnhReconsultar) {
+            accionBnhReconsultar.classList.toggle('d-none', !bnhAccionIniciada);
+        }
+
+        accionBnh.classList.remove('d-none');
+    }
+
+    function escaparHtml(valor) {
+        const nodo = document.createElement('div');
+        nodo.textContent = valor === null || valor === undefined ? '' : String(valor);
+        return nodo.innerHTML;
+    }
+
+    function formatearFechaBnh(valor) {
+        if (!valor) return '—';
+        const partes = String(valor).slice(0, 10).split('-');
+        return partes.length === 3
+            ? partes[2] + '/' + partes[1] + '/' + partes[0]
+            : String(valor);
+    }
+
+    function etiquetaActividadBnh(actividad) {
+        const cargo = actividad.cargo || (
+            actividad.ceic_id ? 'Cargo CEIC ' + actividad.ceic_id : 'Cargo sin descripción'
+        );
+        const partes = [cargo];
+        if (actividad.situacion_revista) partes.push(actividad.situacion_revista);
+        if (actividad.turno) partes.push(actividad.turno);
+        return partes.join(' · ');
+    }
+
+    function campoActividadBnh(etiqueta, valor) {
+        return '' +
+            '<div class="biblioteca-personal__stored-field">' +
+                '<span class="biblioteca-personal__data-label">' + escaparHtml(etiqueta) + '</span>' +
+                '<span class="biblioteca-personal__stored-value">' + escaparHtml(valor || '—') + '</span>' +
+            '</div>';
+    }
+
+    function renderizarActividadBnh(actividad) {
+        if (!actividadDetalle || !actividad) return;
+
+        actividadDetalle.innerHTML =
+            campoActividadBnh('Cargo', actividad.cargo || (
+                actividad.ceic_id ? 'CEIC ' + actividad.ceic_id : '—'
+            )) +
+            campoActividadBnh('Situación de revista', actividad.situacion_revista || '—') +
+            campoActividadBnh('Turno', actividad.turno || '—') +
+            campoActividadBnh('Desde', formatearFechaBnh(actividad.f_desde)) +
+            campoActividadBnh('Hasta', formatearFechaBnh(actividad.f_hasta));
+        actividadDetalle.classList.remove('d-none');
+    }
+
+    function limpiarActividadBnh() {
+        actividadesBnh = [];
+        if (actividadInput) actividadInput.value = '';
+        if (bloqueActividad) bloqueActividad.classList.add('d-none');
+        if (actividadSelector) actividadSelector.classList.add('d-none');
+        if (actividadSelect) {
+            actividadSelect.innerHTML = '<option value="">Seleccioná un cargo</option>';
+            actividadSelect.value = '';
+        }
+        if (actividadDetalle) {
+            actividadDetalle.innerHTML = '';
+            actividadDetalle.classList.add('d-none');
+        }
+    }
+
+    function seleccionarActividadBnh(actividadId) {
+        const id = String(actividadId || '');
+        const actividad = actividadesBnh.find(function (item) {
+            return String(item.id) === id;
+        });
+
+        if (!actividad) {
+            if (actividadInput) actividadInput.value = '';
+            if (actividadDetalle) {
+                actividadDetalle.innerHTML = '';
+                actividadDetalle.classList.add('d-none');
+            }
+            personaBnhConfirmada = false;
+            if (bloqueManual) bloqueManual.classList.add('d-none');
+            if (footerFormulario) footerFormulario.classList.add('d-none');
+            if (actividadesBnh.length > 1) {
+                mostrarEstadoBusqueda('info', 'Seleccioná el cargo de BNH que corresponde a este registro.');
+            }
+            return;
+        }
+
+        if (actividadInput) actividadInput.value = String(actividad.id);
+        renderizarActividadBnh(actividad);
+        personaBnhConfirmada = true;
+        if (bloqueManual) bloqueManual.classList.remove('d-none');
+        if (footerFormulario) footerFormulario.classList.remove('d-none');
+        mostrarEstadoBusqueda('success', 'Personal y cargo confirmados.');
+    }
+
+    function mostrarActividadesBnh(actividades) {
+        limpiarActividadBnh();
+        actividadesBnh = Array.isArray(actividades) ? actividades : [];
+        if (!actividadesBnh.length || !bloqueActividad) return;
+
+        bloqueActividad.classList.remove('d-none');
+
+        if (actividadesBnh.length === 1) {
+            if (actividadSubtitulo) {
+                actividadSubtitulo.textContent = 'Cargo informado por BNH para esta institución.';
+            }
+            seleccionarActividadBnh(actividadesBnh[0].id);
+            return;
+        }
+
+        if (actividadSubtitulo) {
+            actividadSubtitulo.textContent = 'La persona tiene varios cargos en BNH. Elegí el que corresponde a este registro.';
+        }
+        if (actividadSelector) actividadSelector.classList.remove('d-none');
+        if (actividadSelect) {
+            actividadesBnh.forEach(function (actividad) {
+                const option = document.createElement('option');
+                option.value = String(actividad.id);
+                option.textContent = etiquetaActividadBnh(actividad);
+                actividadSelect.appendChild(option);
+            });
+        }
+
+        personaBnhConfirmada = false;
+        if (bloqueManual) bloqueManual.classList.add('d-none');
+        if (footerFormulario) footerFormulario.classList.add('d-none');
+    }
+
     function limpiarPersonaBnh() {
         if (accionFormulario !== 'add') return;
 
@@ -384,13 +606,15 @@
         identity.nombres.value = '';
 
         if (resultadoPersona) resultadoPersona.classList.add('d-none');
+        limpiarActividadBnh();
         if (bloqueManual) bloqueManual.classList.add('d-none');
         if (footerFormulario) footerFormulario.classList.add('d-none');
+        ocultarAccionBnh();
         ocultarEstadoBusqueda();
         actualizarBotonBusqueda();
     }
 
-    function aplicarPersonaBnh(persona) {
+    function aplicarPersonaBnh(persona, habilitarCarga) {
         identity.cuil.value = persona.cuil || '';
         identity.dni.value = persona.dni || '';
         identity.apellidos.value = persona.apellido || '';
@@ -402,16 +626,17 @@
         if (cuilMostrar) cuilMostrar.textContent = formatearCuil(persona.cuil);
         if (documentoMostrar) documentoMostrar.textContent = formatearDocumento(persona.dni);
         if (resultadoPersona) resultadoPersona.classList.remove('d-none');
-        if (bloqueManual) bloqueManual.classList.remove('d-none');
-        if (footerFormulario) footerFormulario.classList.remove('d-none');
 
-        personaBnhConfirmada = true;
+        personaBnhConfirmada = Boolean(habilitarCarga);
+        if (bloqueManual) bloqueManual.classList.toggle('d-none', !personaBnhConfirmada);
+        if (footerFormulario) footerFormulario.classList.toggle('d-none', !personaBnhConfirmada);
+
         actualizarBotonBusqueda();
-        mostrarEstadoBusqueda('success', 'Personal encontrado');
     }
 
-    async function buscarPersonaBnh() {
-        if (!cuilBusqueda || !btnBuscarPersona || btnBuscarPersona.disabled) return;
+    async function buscarPersonaBnh(forzar) {
+        if (!cuilBusqueda || !btnBuscarPersona) return;
+        if (!forzar && btnBuscarPersona.disabled) return;
 
         const cuil = cuilBusqueda.value.replace(/\D/g, '');
         cuilBusqueda.value = cuil;
@@ -421,7 +646,7 @@
 
         if (!validarCUIL(cuil)) {
             limpiarPersonaBnh();
-            mostrarEstadoBusqueda('error', 'Ingresá un CUIL válido de 11 dígitos.');
+            mostrarEstadoBusqueda('error', 'El CUIL ingresado no es válido. Verificá los 11 dígitos.');
             cuilBusqueda.focus();
             busquedaEnCurso = false;
             actualizarBotonBusqueda();
@@ -440,11 +665,54 @@
             );
             const data = await response.json().catch(function () { return {}; });
 
-            if (!response.ok || data.error || !data.persona) {
+            if (!response.ok || data.error) {
                 throw new Error(data.message || 'No se pudo consultar BNH.');
             }
 
-            aplicarPersonaBnh(data.persona);
+            if (data.estado === 'persona_no_existe') {
+                limpiarPersonaBnh();
+                mostrarEstadoBusqueda('info', data.message || 'La persona no está registrada en BNH.');
+                mostrarAccionBnh(
+                    data.accion,
+                    'Persona no registrada en BNH',
+                    'Al finalizar el alta, volvé acá y reconsultá.'
+                );
+                return;
+            }
+
+            if (!data.persona) {
+                throw new Error('BNH no devolvió los datos de la persona.');
+            }
+
+            if (data.estado === 'persona_sin_vinculacion') {
+                limpiarActividadBnh();
+                aplicarPersonaBnh(data.persona, false);
+                mostrarEstadoBusqueda('info', data.message || 'Falta vincular la persona a esta institución.');
+                mostrarAccionBnh(
+                    data.accion,
+                    'Falta la vinculación institucional',
+                    'Vinculala a esta institución y después volvé acá para reconsultar.'
+                );
+                return;
+            }
+
+            if (data.estado === 'persona_vinculada') {
+                aplicarPersonaBnh(data.persona, false);
+                ocultarAccionBnh();
+
+                if (!Array.isArray(data.actividades) || !data.actividades.length) {
+                    throw new Error('BNH no devolvió los cargos vinculados de la persona.');
+                }
+
+                mostrarEstadoBusqueda(
+                    data.actividades.length === 1 ? 'success' : 'info',
+                    data.message || 'Personal encontrado'
+                );
+                mostrarActividadesBnh(data.actividades);
+                return;
+            }
+
+            throw new Error('BNH devolvió un estado no reconocido.');
         } catch (error) {
             limpiarPersonaBnh();
             mostrarEstadoBusqueda('error', error.message || 'No se pudo consultar BNH.');
@@ -457,6 +725,7 @@
     if (cuilBusqueda) {
         cuilBusqueda.addEventListener('input', function () {
             this.value = this.value.replace(/\D/g, '').slice(0, 11);
+            bnhAccionIniciada = false;
             limpiarPersonaBnh();
         });
 
@@ -469,10 +738,42 @@
     }
 
     if (btnBuscarPersona) {
-        btnBuscarPersona.addEventListener('click', buscarPersonaBnh);
+        btnBuscarPersona.addEventListener('click', function () {
+            buscarPersonaBnh(false);
+        });
+    }
+
+    if (actividadSelect) {
+        actividadSelect.addEventListener('change', function () {
+            seleccionarActividadBnh(this.value);
+        });
+    }
+
+    if (accionBnhLink) {
+        accionBnhLink.addEventListener('click', function () {
+            bnhAccionIniciada = true;
+            if (accionBnhReconsultar) {
+                accionBnhReconsultar.classList.remove('d-none');
+            }
+        });
+    }
+
+    if (accionBnhReconsultar) {
+        accionBnhReconsultar.addEventListener('click', function () {
+            buscarPersonaBnh(true);
+        });
     }
 
     actualizarBotonBusqueda();
+
+    if (
+        accionFormulario === 'add' &&
+        reconsultarBnh &&
+        cuilBusqueda &&
+        cuilBusqueda.value
+    ) {
+        buscarPersonaBnh();
+    }
 
     if (!form) return;
 
@@ -480,71 +781,94 @@
         event.preventDefault();
 
         if (accionFormulario === 'add' && !personaBnhConfirmada) {
-            mostrarEstadoBusqueda('error', 'Buscá y confirmá el personal por CUIL antes de guardar.');
-            if (cuilBusqueda) cuilBusqueda.focus();
+            const requiereCargo = bloqueActividad && !bloqueActividad.classList.contains('d-none');
+            mostrarEstadoBusqueda(
+                'error',
+                requiereCargo
+                    ? 'Seleccioná el cargo de BNH que corresponde a este registro.'
+                    : 'Buscá y confirmá el personal por CUIL antes de guardar.'
+            );
+            if (requiereCargo && actividadSelect && !actividadSelector.classList.contains('d-none')) {
+                actividadSelect.focus();
+            } else if (cuilBusqueda) {
+                cuilBusqueda.focus();
+            }
             return;
         }
 
-        if (btnSubmit) btnSubmit.disabled = true;
+        const parameters = new FormData(this);
 
-        $.ajax({
-            url: window.location.pathname + window.location.search,
-            type: 'POST',
-            headers: {"X-CSRFToken": getCSRFToken()},
-            data: new FormData(this),
-            processData: false,
-            contentType: false,
-            success: function (response) {
-                if (response.error) {
-                    let errors = '';
+        biblioteca_confirmar_guardado(function () {
+            if (btnSubmit) btnSubmit.disabled = true;
 
-                    if (response.errors) {
-                        for (let field in response.errors) {
-                            const input = $('#id_' + field);
-                            response.errors[field].forEach(function (error) {
-                                const message = error.message || error;
-                                errors += message + '\n';
+            return $.ajax({
+                url: window.location.pathname + window.location.search,
+                type: 'POST',
+                headers: {"X-CSRFToken": getCSRFToken()},
+                data: parameters,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    if (response.error) {
+                        let errors = '';
 
-                                if (field === 'cuil' && accionFormulario === 'add') {
-                                    personaBnhConfirmada = false;
-                                    mostrarEstadoBusqueda('error', message);
-                                    if (cuilBusqueda) cuilBusqueda.focus();
-                                } else if (input.length) {
-                                    input.addClass('is-invalid');
-                                    input.next('.invalid-feedback').remove();
-                                    input.after('<div class="invalid-feedback d-block">' + message + '</div>');
-                                }
-                            });
+                        if (response.errors) {
+                            for (let field in response.errors) {
+                                const input = $('#id_' + field);
+                                response.errors[field].forEach(function (error) {
+                                    const message = error.message || error;
+                                    errors += message + '\n';
+
+                                    if (field === 'cuil' && accionFormulario === 'add') {
+                                        personaBnhConfirmada = false;
+                                        mostrarEstadoBusqueda('error', message);
+                                        if (cuilBusqueda) cuilBusqueda.focus();
+                                    } else if (field === 'bnh_actividad_id' && accionFormulario === 'add') {
+                                        personaBnhConfirmada = false;
+                                        ultimoCuilBuscado = '';
+                                        if (bloqueManual) bloqueManual.classList.add('d-none');
+                                        if (footerFormulario) footerFormulario.classList.add('d-none');
+                                        mostrarEstadoBusqueda('error', message);
+                                        actualizarBotonBusqueda();
+                                        if (actividadSelect && !actividadSelector.classList.contains('d-none')) {
+                                            actividadSelect.focus();
+                                        } else if (cuilBusqueda) {
+                                            cuilBusqueda.focus();
+                                        }
+                                    } else if (input.length) {
+                                        input.addClass('is-invalid');
+                                        input.next('.invalid-feedback').remove();
+                                        input.after('<div class="invalid-feedback d-block">' + message + '</div>');
+                                    }
+                                });
+                            }
+                        } else {
+                            errors = response.message || 'No se pudo guardar el registro.';
                         }
-                    } else {
-                        errors = response.message || 'No se pudo guardar el registro.';
+
+                        biblioteca_mostrar_error_guardado(
+                            response.errors ? response : {message: errors}
+                        );
+                        if (btnSubmit) btnSubmit.disabled = false;
+                        return;
                     }
 
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: errors
-                    });
+                    window.location.href = '{{ list_url }}';
+                },
+                error: function (xhr) {
+                    let message = 'Error del servidor';
+                    try {
+                        const json = JSON.parse(xhr.responseText);
+                        message = json.message || message;
+                    } catch (error) {}
+
+                    biblioteca_mostrar_error_guardado({message: message});
                     if (btnSubmit) btnSubmit.disabled = false;
-                    return;
+                },
+                complete: function () {
+                    if (btnSubmit) btnSubmit.disabled = false;
                 }
-
-                window.location.href = '{{ list_url }}';
-            },
-            error: function (xhr) {
-                let message = 'Error del servidor';
-                try {
-                    const json = JSON.parse(xhr.responseText);
-                    message = json.message || message;
-                } catch (error) {}
-
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: message
-                });
-                if (btnSubmit) btnSubmit.disabled = false;
-            }
+            });
         });
     });
 }());

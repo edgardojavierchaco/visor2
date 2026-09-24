@@ -232,6 +232,68 @@ SECCIONES_CARGA_POR_CLAVE = {
     seccion.clave: seccion for seccion in SECCIONES_CARGA
 }
 
+
+PERSONAL_COLUMNAS_ACTUALES = (
+    ('cuil', 'CUIL'),
+    ('apellidos', 'Apellidos'),
+    ('nombres', 'Nombres'),
+    ('cuof', 'CUOF'),
+    ('cuof_anexo', 'CUOF Anexo'),
+    ('licencia_permiso__tipo_licencia', 'Licencia'),
+    ('f_desde_lic', 'Desde'),
+    ('f_hasta_lic', 'Hasta'),
+    ('situacion_laboral__tipo_situacion', 'Situación laboral'),
+)
+
+PERSONAL_COLUMNAS_HISTORICAS = (
+    ('cuil', 'CUIL'),
+    ('apellidos', 'Apellidos'),
+    ('nombres', 'Nombres'),
+    ('cargo', 'Cargo'),
+    ('situacion_revista', 'Situación de revista'),
+    ('f_ingreso', 'Ingreso'),
+    ('f_hasta', 'Hasta'),
+    ('turno__nom_turno', 'Turno'),
+)
+
+PERSONAL_CAMPOS_LEGACY = (
+    'cargo',
+    'situacion_revista',
+    'f_ingreso',
+    'f_hasta',
+    'turno__nom_turno',
+)
+
+PERSONAL_DETALLES_ACTUALES = (
+    ('cuof', 'CUOF'),
+    ('cuof_anexo', 'CUOF Anexo'),
+    ('licencia_permiso__tipo_licencia', 'Licencia'),
+    ('f_desde_lic', 'Desde licencia'),
+    ('f_hasta_lic', 'Hasta licencia'),
+    ('situacion_laboral__tipo_situacion', 'Situación laboral'),
+    ('observaciones', 'Observaciones'),
+)
+
+PERSONAL_DETALLES_HISTORICOS = (
+    ('cargo', 'Cargo'),
+    ('situacion_revista', 'Situación de revista'),
+    ('f_ingreso', 'Ingreso'),
+    ('f_hasta', 'Hasta'),
+    ('turno__nom_turno', 'Turno'),
+)
+
+PERSONAL_CAMPOS_CONSULTA = tuple(dict.fromkeys([
+    campo
+    for grupo in (
+        PERSONAL_COLUMNAS_ACTUALES,
+        PERSONAL_COLUMNAS_HISTORICAS,
+        PERSONAL_DETALLES_ACTUALES,
+        PERSONAL_DETALLES_HISTORICOS,
+    )
+    for campo, _etiqueta in grupo
+] + ['turno_bnh']))
+
+
 def _cueanexos_autorizados(user):
     return list(dict.fromkeys(
         str(cueanexo) for cueanexo in get_cueanexos_usuario(user)
@@ -474,6 +536,77 @@ def _valor_detalle_visible(valor):
     return valor
 
 
+def _personal_tiene_valor(valor):
+    if valor is None:
+        return False
+    if isinstance(valor, str):
+        return bool(valor.strip())
+    return True
+
+
+def _construir_detalle_personal(periodo, preferir_historico=False):
+    registros = list(
+        BibliotecariosCue.objects.filter(
+            cueanexo=str(periodo.cueanexo),
+            mes=periodo.meses,
+            anio=periodo.annos,
+        )
+        .order_by('pk')
+        .values(*PERSONAL_CAMPOS_CONSULTA)
+    )
+
+    for registro in registros:
+        turno_bnh = (registro.get('turno_bnh') or '').strip()
+        if turno_bnh:
+            registro['turno__nom_turno'] = turno_bnh
+
+    usar_formato_historico = preferir_historico and any(
+        any(_personal_tiene_valor(registro.get(campo)) for campo in PERSONAL_CAMPOS_LEGACY)
+        for registro in registros
+    )
+
+    if usar_formato_historico:
+        columnas = PERSONAL_COLUMNAS_HISTORICAS
+        campos_detalle = PERSONAL_DETALLES_ACTUALES
+        formato = 'historico'
+    else:
+        columnas = PERSONAL_COLUMNAS_ACTUALES
+        campos_detalle = (
+            ('observaciones', 'Observaciones'),
+            *PERSONAL_DETALLES_HISTORICOS,
+        )
+        formato = 'actual'
+
+    filas = [
+        [
+            _valor_detalle_visible(registro.get(campo))
+            for campo, _etiqueta in columnas
+        ]
+        for registro in registros
+    ]
+
+    detalles = []
+    for registro in registros:
+        items = []
+        for campo, etiqueta in campos_detalle:
+            valor = registro.get(campo)
+            if not _personal_tiene_valor(valor):
+                continue
+            items.append({
+                'etiqueta': etiqueta,
+                'valor': _valor_detalle_visible(valor),
+            })
+        detalles.append(items)
+
+    return {
+        'columnas': [etiqueta for _campo, etiqueta in columnas],
+        'filas': filas,
+        'detalles': detalles,
+        'formato': formato,
+        'cantidad': len(registros),
+    }
+
+
 class DashboardView(TemplateView):
     template_name = 'biblioteca/dashboard.html'
 
@@ -672,6 +805,25 @@ class PeriodoHistoricoDetalleView(LoginRequiredMixin, View):
             raise Http404('La sección solicitada no existe.')
 
         periodo = _resolver_periodo_enviado_autorizado(request, periodo_id)
+
+        if seccion == 'personal-bibliotecario':
+            detalle = _construir_detalle_personal(
+                periodo,
+                preferir_historico=True,
+            )
+            return JsonResponse({
+                'seccion': seccion_config.nombre,
+                'columnas': detalle['columnas'],
+                'filas': detalle['filas'],
+                'detalles': detalle['detalles'],
+                'formato': detalle['formato'],
+                'totales': {
+                    'tipo': 'conteo',
+                    'etiqueta': 'TOTAL DE PERSONAL',
+                    'valor': detalle['cantidad'],
+                },
+            })
+
         campos = tuple(campo for campo, _etiqueta in seccion_config.columnas)
         registros = list(
             seccion_config.modelo.objects.filter(
@@ -796,6 +948,16 @@ class InformeDetalleView(LoginRequiredMixin, View):
                 else 'Seleccioná el período que querés revisar antes de abrir una sección.'
             )
             return JsonResponse({'detail': mensaje}, status=409)
+
+        if seccion == 'personal-bibliotecario':
+            detalle = _construir_detalle_personal(periodo_pendiente)
+            return JsonResponse({
+                'seccion': seccion_config.nombre,
+                'columnas': detalle['columnas'],
+                'filas': detalle['filas'],
+                'detalles': detalle['detalles'],
+                'formato': detalle['formato'],
+            })
 
         campos = tuple(campo for campo, _etiqueta in seccion_config.columnas)
         registros = seccion_config.modelo.objects.filter(

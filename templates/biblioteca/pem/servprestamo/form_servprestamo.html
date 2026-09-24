@@ -4,7 +4,7 @@
 {% block head %}
     <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2.min.css' %}">
     <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2-bootstrap4.min.css' %}">
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260917-form-normalization-2">
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260923-responsive-crud-1">
     {% block head_form %}
     {% endblock %}
 {% endblock %}
@@ -44,7 +44,7 @@
                 {% endif %}
 
                 <section class="biblioteca-form__block" aria-labelledby="biblioteca-form-datos">
-                    {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' show_info=1 only %}
+                    {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' show_info=1 info_title='Préstamos' info_section_icon='box' info_text='Registrá los préstamos realizados durante el período.' info_item_1='Servicio' info_icon_1='category' info_item_2='Turno' info_icon_2='schedule' info_item_3='Instalación' info_icon_3='meeting_room' info_item_4='Total' info_icon_4='calculate' only %}
                     <div class="biblioteca-form__block-body">
                         <div class="biblioteca-form__grid">
                             <div>
@@ -123,10 +123,10 @@
 
             var parameters = new FormData(this);
 
-            submit_with_ajax(
+            biblioteca_submit_with_ajax(
                 window.location.pathname + window.location.search,
-                'Notificación',
-                '¿Estás seguro de realizar la siguiente acción?',
+                'Confirmar guardado',
+                '¿Querés guardar los datos cargados en este registro?',
                 parameters,
                 function () {
                     location.href = '{{ list_url }}';
@@ -137,13 +137,7 @@
         // =========================
         // INFO POPUP
         // =========================
-        $('#showPopupBtn').click(function () {
-            Swal.fire({
-                title: 'Información',
-                html: `<p>En esta sección se cargan los registros de préstamos del período.</p>`,
-                icon: 'info'
-            });
-        });
+
 
         // =========================
         // BLOQUEO (SI VIENE DEL BACKEND)

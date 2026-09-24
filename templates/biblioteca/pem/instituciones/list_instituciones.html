@@ -19,8 +19,35 @@
         <th scope="col" style="width: 20%;">DOCENTES</th>
         <th scope="col" style="width: 20%;">MATRIC C DISC</th>
         <th scope="col" style="width: 20%;">ETNIA</th>
-        <th scope="col" style="width: 20%;">Botones</th>
+        <th scope="col">ACCIÓN</th>
     </tr>
+{% endblock %}
+
+{% block section_totals %}
+<div class="biblioteca-crud__totals" data-biblioteca-section-totals>
+    <div class="biblioteca-crud__totals-title">
+        <span class="biblioteca-symbol" aria-hidden="true">receipt</span>
+        <span>Totales de la sección</span>
+    </div>
+    <div class="biblioteca-crud__totals-metrics">
+        <div class="biblioteca-crud__total-metric">
+            <span>Matrícula</span>
+            <strong data-biblioteca-total-field="matricula">0</strong>
+        </div>
+        <div class="biblioteca-crud__total-metric">
+            <span>Docentes</span>
+            <strong data-biblioteca-total-field="docentes">0</strong>
+        </div>
+        <div class="biblioteca-crud__total-metric">
+            <span>Matrícula con discapacidad</span>
+            <strong data-biblioteca-total-field="matricdisc">0</strong>
+        </div>
+        <div class="biblioteca-crud__total-metric">
+            <span>Etnia</span>
+            <strong data-biblioteca-total-field="etnia">0</strong>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block javascript %}
