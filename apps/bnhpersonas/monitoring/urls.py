@@ -22,6 +22,11 @@ urlpatterns = [
         name="export_personnel",
     ),
     path(
+        "api/institucion/<str:cueanexo>/pof-bnh/",
+        views.pof_bnh_breakdown_json,
+        name="pof_bnh_breakdown",
+    ),
+    path(
         "api/resumen/",
         views.summary_json,
         name="summary_json",
