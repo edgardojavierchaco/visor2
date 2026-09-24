@@ -1,192 +1,493 @@
 {% extends 'superv/home.html' %}
 {% load static %}
 
+
 {% block body %}
-<body class="hold-transition sidebar-mini layout-fixed">
 
 <div class="wrapper">
 
-    <!-- HEADER -->
+    <!-- =========================================================
+         HEADER
+    ========================================================== -->
+
     {% include 'vtc/header_archivos.html' %}
 
-    <!-- SIDEBAR -->
+
+    <!-- =========================================================
+         SIDEBAR
+    ========================================================== -->
+
     {% include 'vtc/sidebar_archivos.html' %}
 
-    <!-- CONTENT -->
+
+    <!-- =========================================================
+         CONTENT
+    ========================================================== -->
+
     <div class="content-wrapper">
 
+        <!-- =====================================================
+             CABECERA
+        ====================================================== -->
+
         <div class="content-header">
+
             <div class="container-fluid">
+
                 <div class="row">
 
                     <div class="col-sm-6">
+
                         <h1 class="m-0 text-dark">
-                            Bienvenido/a <small>{{ request.user.nombres }} {{ request.user.apellido }}</small>
+
+                            Bienvenido/a
+
+                            <small>
+                                {{ request.user.nombres }}
+                                {{ request.user.apellido }}
+                            </small>
+
                         </h1>
+
                     </div>
 
+
                     <div class="col-sm-6">
+
                         <ol class="breadcrumb float-sm-right">
+
                             <li class="breadcrumb-item">
-                                <a href="{% url 'archivos:portada_gestor' %}">Home</a>
+
+                                <a
+                                    href="{% url 'archivos:portada_gestor' %}"
+                                >
+                                    Home
+                                </a>
+
                             </li>
+
+
                             <li class="breadcrumb-item">
-                                <a href="{{ list_url }}">{{ entity }}</a>
+
+                                <a href="{{ list_url }}">
+
+                                    {{ entity }}
+
+                                </a>
+
                             </li>
+
                         </ol>
+
                     </div>
 
                 </div>
+
             </div>
+
         </div>
 
+
+        <!-- =====================================================
+             CONTENIDO
+        ====================================================== -->
+
         <div class="content">
+
             <div class="container-fluid">
+
 
                 {% block content %}
 
-                <!-- ========================= -->
-                <!-- 🔥 EJEMPLO LISTADO -->
-                <!-- ========================= -->
+
+                <!-- =================================================
+                     LISTADO CUEANEXOS
+                ================================================== -->
 
                 <div class="card">
+
                     <div class="card-body">
 
-                        <h5>Listado CUEANEXOS</h5>
+                        <h5>
+                            Listado CUEANEXOS
+                        </h5>
+
 
                         <ul class="list-group">
 
                             {% for a in anexos %}
-                            <li class="list-group-item">
 
-                                <a href="#"
-                                   class="cueanexo-link"
-                                   data-cueanexo="{{ a.cueanexo }}">
-                                    {{ a.cueanexo }}
-                                </a>
+                                <li class="list-group-item">
 
-                            </li>
+                                    <a
+                                        href="#"
+                                        class="cueanexo-link"
+                                        data-cueanexo="{{ a.cueanexo }}"
+                                    >
+
+                                        {{ a.cueanexo }}
+
+                                    </a>
+
+                                </li>
+
+                            {% empty %}
+
+                                <li
+                                    class="
+                                        list-group-item
+                                        text-muted
+                                    "
+                                >
+
+                                    No hay CUEANEXOS disponibles.
+
+                                </li>
+
                             {% endfor %}
 
                         </ul>
 
                     </div>
+
                 </div>
 
-                <!-- CONTENEDOR AJAX -->
-                <div id="matricula-container" class="mt-4"></div>
+
+                <!-- =================================================
+                     CONTENEDOR AJAX MATRÍCULA
+                ================================================== -->
+
+                <div
+                    id="matricula-container"
+                    class="mt-4"
+                >
+                </div>
+
 
                 {% endblock %}
 
+
             </div>
+
         </div>
 
     </div>
 
-    <!-- FOOTER -->
+
+    <!-- =========================================================
+         FOOTER
+    ========================================================== -->
+
     {% include 'superv/footer.html' %}
+
 
 </div>
 
-</body>
 {% endblock %}
+
+
 
 {% block scripts %}
 
 {{ block.super }}
 
+
+<!-- =============================================================
+     RESTAURAR ESTADO ESPECÍFICO DEL GESTOR
+============================================================== -->
+
 <script>
-const estado = {{ estado|default:"null"|safe }};
 
-/* =========================
-   🔥 RESTAURAR ESTADO
-========================= */
-if (estado) {
+(() => {
 
-    console.log("🔥 Restaurando estado gestor:", estado);
+    const estadoGestor =
+        window.estadoGlobalSistema;
 
-    if (estado.scroll) {
-        window.scrollTo(0, estado.scroll);
+    if (!estadoGestor) {
+        return;
     }
 
-    if (estado.cueanexo) {
-        setTimeout(() => {
-            const el = document.querySelector(
-                `[data-cueanexo="${estado.cueanexo}"]`
-            );
-            if (el) el.click();
-        }, 400);
+
+    console.log(
+        "🔥 Restaurando estado gestor:",
+        estadoGestor
+    );
+
+
+    // =========================================================
+    // RESTAURAR SCROLL
+    // =========================================================
+
+    if (estadoGestor.scroll) {
+
+        window.scrollTo(
+            0,
+            estadoGestor.scroll
+        );
+
     }
-}
+
+
+    // =========================================================
+    // RESTAURAR CUEANEXO SELECCIONADO
+    // =========================================================
+
+    if (estadoGestor.cueanexo) {
+
+        setTimeout(
+            () => {
+
+                const selector =
+                    `[data-cueanexo="${estadoGestor.cueanexo}"]`;
+
+                const elemento =
+                    document.querySelector(
+                        selector
+                    );
+
+                if (elemento) {
+
+                    elemento.click();
+
+                }
+
+            },
+            400
+        );
+
+    }
+
+})();
+
 </script>
 
+
+
+<!-- =============================================================
+     EVENTO CLICK CUEANEXO
+============================================================== -->
+
 <script>
-$(document).on('click', '.cueanexo-link', function(e) {
-    e.preventDefault();
 
-    const cueanexo = $(this).data('cueanexo');
+$(document).on(
+    "click",
+    ".cueanexo-link",
+    function (e) {
 
-    /* =========================
-       🔥 GUARDAR ESTADO BACKEND
-    ========================= */
-    fetch("/guardar-estado/", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken")
-        },
-        body: JSON.stringify({
-            url: window.location.pathname,
-            cueanexo: cueanexo,
-            scroll: window.scrollY
-        })
-    });
+        e.preventDefault();
 
-    /* =========================
-       🔥 AJAX MATRÍCULA
-    ========================= */
-    $.ajax({
-        url: "{% url 'directores:matricula_uegp' %}",
-        data: { cueanexo: cueanexo },
-        type: "GET",
-        success: function(data) {
 
-            $("#matricula-container").html(data);
+        const cueanexo =
+            $(this).data(
+                "cueanexo"
+            );
 
-            $("html, body").animate({
-                scrollTop: $("#matricula-container").offset().top
-            }, 500);
 
-        },
-        error: function() {
-            alert("Error al cargar matrícula");
-        }
-    });
-});
+        // =====================================================
+        // GUARDAR ESTADO EN BACKEND
+        // =====================================================
 
-/* =========================
-   🔑 CSRF TOKEN
-========================= */
-function getCookie(name) {
-    let cookieValue = null;
+        fetch(
+            "/guardar-estado/",
+            {
+                method:
+                    "POST",
 
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
+                headers: {
 
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
+                    "Content-Type":
+                        "application/json",
 
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(
-                    cookie.substring(name.length + 1)
-                );
-                break;
+                    "X-CSRFToken":
+                        getCookie(
+                            "csrftoken"
+                        )
+
+                },
+
+                body:
+                    JSON.stringify(
+                        {
+
+                            url:
+                                window.location.pathname,
+
+                            cueanexo:
+                                cueanexo,
+
+                            scroll:
+                                window.scrollY
+
+                        }
+                    )
+
             }
-        }
+        )
+        .catch(
+            error => {
+
+                console.error(
+                    "Error guardando estado:",
+                    error
+                );
+
+            }
+        );
+
+
+        // =====================================================
+        // AJAX MATRÍCULA
+        // =====================================================
+
+        $.ajax(
+            {
+
+                url:
+                    "{% url 'directores:matricula_uegp' %}",
+
+                data: {
+
+                    cueanexo:
+                        cueanexo
+
+                },
+
+                type:
+                    "GET",
+
+
+                success:
+                    function (data) {
+
+                        $(
+                            "#matricula-container"
+                        ).html(
+                            data
+                        );
+
+
+                        const contenedor =
+                            $(
+                                "#matricula-container"
+                            );
+
+
+                        if (
+                            contenedor.length
+                            &&
+                            contenedor.offset()
+                        ) {
+
+                            $(
+                                "html, body"
+                            ).animate(
+                                {
+
+                                    scrollTop:
+                                        contenedor
+                                        .offset()
+                                        .top
+
+                                },
+                                500
+                            );
+
+                        }
+
+                    },
+
+
+                error:
+                    function (
+                        xhr,
+                        status,
+                        error
+                    ) {
+
+                        console.error(
+                            "Error cargando matrícula:",
+                            status,
+                            error
+                        );
+
+                        alert(
+                            "Error al cargar matrícula"
+                        );
+
+                    }
+
+            }
+        );
+
     }
+);
+
+
+
+/* =============================================================
+   CSRF TOKEN
+============================================================== */
+
+function getCookie(name) {
+
+    let cookieValue =
+        null;
+
+
+    if (
+        document.cookie
+        &&
+        document.cookie !== ""
+    ) {
+
+        const cookies =
+            document.cookie.split(
+                ";"
+            );
+
+
+        for (
+            let i = 0;
+            i < cookies.length;
+            i++
+        ) {
+
+            const cookie =
+                cookies[i].trim();
+
+
+            if (
+                cookie.substring(
+                    0,
+                    name.length + 1
+                )
+                ===
+                (
+                    name + "="
+                )
+            ) {
+
+                cookieValue =
+                    decodeURIComponent(
+                        cookie.substring(
+                            name.length + 1
+                        )
+                    );
+
+                break;
+
+            }
+
+        }
+
+    }
+
 
     return cookieValue;
+
 }
+
 </script>
+
 
 {% endblock %}

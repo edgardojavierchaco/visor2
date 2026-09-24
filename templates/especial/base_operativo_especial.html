@@ -96,7 +96,7 @@
                     </select>
                 </div>
                 <div class="cef-context-actions">
-                    {% if especial_context.es_admin_especial %}
+                    {% if especial_context.puede_ver_ciclos %}
                         <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:administrar_ciclos' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" data-especial-section-link data-especial-section="ciclos">
                             <i class="fa-solid fa-calendar-plus"></i> Ciclos
                         </a>

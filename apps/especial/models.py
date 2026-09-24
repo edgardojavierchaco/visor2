@@ -5,7 +5,7 @@ import logging
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import connections, models
 from django.db.models import CharField, Func, Q, Value
 from django.db.models.functions import Cast
 from django.utils import timezone
@@ -16,6 +16,7 @@ from apps.cef.models import (
     CefFuenteFinanciamientoTipo,
     CefPrestacionTipo,
 )
+from apps.supervisa2.models.supervisor import Supervisor2
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +30,36 @@ USUARIOS_DB_ALIAS = "default"
 PREFIJO_OFERTA_COMUN = "Común -"
 PREFIJO_OFERTA_ESPECIAL = "Especial -"
 TERMINO_MATRICULA_COMPARTIDA = "integracion"
+ROL_ADMINISTRADOR_ESPECIAL = "Administrador"
+ROL_MINISTRO_ESPECIAL = "Ministro"
+ROL_SUBSECRETARIO_ESPECIAL = "Subsecretario"
+ROL_DIRECTOR_GENERAL_ESPECIAL = "Director general"
+ROL_MODALIDAD_ESPECIAL = "Director de Modalidad Especial"
+ROL_REGIONAL_ESPECIAL = "Regional"
+ROL_SUPERVISOR_ESPECIAL = "Supervisor"
+ROL_DIRECTOR_ESPECIAL = "Director"
+
 ROLES_AUTORIZADOS_ESPECIAL = {
-    "Administrador",
-    "Director",
-    "Director de Modalidad Especial",
+    ROL_ADMINISTRADOR_ESPECIAL,
+    ROL_MINISTRO_ESPECIAL,
+    ROL_SUBSECRETARIO_ESPECIAL,
+    ROL_DIRECTOR_GENERAL_ESPECIAL,
+    ROL_MODALIDAD_ESPECIAL,
+    ROL_REGIONAL_ESPECIAL,
+    ROL_SUPERVISOR_ESPECIAL,
+    ROL_DIRECTOR_ESPECIAL,
+}
+ROLES_ESPECIAL_CON_CARGA = {
+    ROL_ADMINISTRADOR_ESPECIAL,
+    ROL_DIRECTOR_ESPECIAL,
+}
+ROLES_ESPECIAL_VISUALIZADOR_DIRECTORES = {
+    ROL_ADMINISTRADOR_ESPECIAL,
+    ROL_MINISTRO_ESPECIAL,
+    ROL_SUBSECRETARIO_ESPECIAL,
+    ROL_DIRECTOR_GENERAL_ESPECIAL,
+    ROL_MODALIDAD_ESPECIAL,
+    ROL_REGIONAL_ESPECIAL,
 }
 
 # ============================================================
@@ -120,7 +147,7 @@ class EspecialRolUsuario(models.Model):
     nombre = models.CharField(max_length=100, blank=True, null=True)
     class Meta:
         managed = False
-        db_table = "usuarios_rol"
+        db_table = '"public"."usuarios_rol"'
         verbose_name = "Rol de usuario Especial"
         verbose_name_plural = "Roles de usuario Especial"
 
@@ -141,7 +168,7 @@ class EspecialUsuarioPerfil(models.Model):
     )
     class Meta:
         managed = False
-        db_table = "usuarios_perfilusuario"
+        db_table = '"public"."usuarios_perfilusuario"'
         verbose_name = "Perfil de usuario Especial"
         verbose_name_plural = "Perfiles de usuario Especial"
 
@@ -379,6 +406,24 @@ def cueanexo_tiene_oferta_matricula_compartida(cueanexo):
 # ============================================================
 # PERMISOS FUNCIONALES
 # ============================================================
+def normalizar_rol_especial(valor):
+    """Devuelve el nombre canónico de un rol proveniente de la base."""
+    texto = unicodedata.normalize("NFKD", str(valor or "")).encode(
+        "ascii", "ignore"
+    ).decode("ascii").strip().casefold()
+    equivalencias = {
+        "administrador": ROL_ADMINISTRADOR_ESPECIAL,
+        "ministro": ROL_MINISTRO_ESPECIAL,
+        "subsecretario": ROL_SUBSECRETARIO_ESPECIAL,
+        "director general": ROL_DIRECTOR_GENERAL_ESPECIAL,
+        "director de modalidad especial": ROL_MODALIDAD_ESPECIAL,
+        "regional": ROL_REGIONAL_ESPECIAL,
+        "supervisor": ROL_SUPERVISOR_ESPECIAL,
+        "director": ROL_DIRECTOR_ESPECIAL,
+    }
+    return equivalencias.get(texto, str(valor or "").strip())
+
+
 def obtener_rol_usuario_especial(user):
     if not user or not getattr(user, "is_authenticated", False):
         return None
@@ -394,7 +439,7 @@ def obtener_rol_usuario_especial(user):
     except EspecialUsuarioPerfil.DoesNotExist:
         return None
     rol_nombre = getattr(perfil.rol, "nombre", "") or ""
-    return rol_nombre.strip() or None
+    return normalizar_rol_especial(rol_nombre) or None
 
 
 def usuario_puede_ver_especial(user):
@@ -405,7 +450,57 @@ def usuario_puede_ver_especial(user):
 
 
 def usuario_es_admin_especial(user):
-    return obtener_rol_usuario_especial(user) == "Administrador"
+    return obtener_rol_usuario_especial(user) == ROL_ADMINISTRADOR_ESPECIAL
+
+
+def _cuil_asignado_a_usuario(user):
+    return normalizar_cuil_usuario(user)
+
+
+def _regiones_asignadas_usuario(user):
+    """Obtiene las regiones del usuario Regional activo."""
+    cuil = _cuil_asignado_a_usuario(user)
+    if not cuil:
+        return []
+    try:
+        with connections[USUARIOS_DB_ALIAS].cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT DISTINCT region_loc
+                  FROM public.usuarios_regionalusuarios
+                 WHERE REGEXP_REPLACE(usuario, '[^0-9]', '', 'g') = %s
+                   AND activo = TRUE
+                   AND region_loc IS NOT NULL
+                """,
+                [cuil],
+            )
+            return [fila[0] for fila in cursor.fetchall() if fila[0]]
+    except Exception:
+        logger.exception("No se pudieron resolver las regiones del usuario Especial.")
+        return []
+
+
+def _supervisor_alcance_usuario(user):
+    cuil = _cuil_asignado_a_usuario(user)
+    if not cuil:
+        return [], []
+    try:
+        supervisor = Supervisor2.objects.filter(
+            usuario=cuil,
+            activo=True,
+        ).first()
+        if not supervisor:
+            return [], []
+        regiones = list(
+            supervisor.regiones.values_list("nombre", flat=True)
+        )
+        niveles = list(
+            supervisor.niveles_modalidad.values_list("nombre", flat=True)
+        )
+        return regiones, niveles
+    except Exception:
+        logger.exception("No se pudo resolver el alcance del Supervisor Especial.")
+        return [], []
 
 
 def get_escuelas_especiales_visualizacion_usuario(user, permisos=None):
@@ -418,13 +513,42 @@ def get_escuelas_especiales_visualizacion_usuario(user, permisos=None):
     )
     if rol not in ROLES_AUTORIZADOS_ESPECIAL:
         return queryset.none()
-    if rol == "Administrador":
+    if rol in {
+        ROL_ADMINISTRADOR_ESPECIAL,
+        ROL_MINISTRO_ESPECIAL,
+        ROL_SUBSECRETARIO_ESPECIAL,
+        ROL_DIRECTOR_GENERAL_ESPECIAL,
+        ROL_MODALIDAD_ESPECIAL,
+    }:
         return queryset
+    if rol == ROL_REGIONAL_ESPECIAL:
+        regiones = _regiones_asignadas_usuario(user)
+        if not regiones:
+            return queryset.none()
+        region_filter = Q()
+        for region in regiones:
+            region_filter |= Q(region_loc__iexact=region)
+        return queryset.filter(region_filter).order_by("cueanexo")
+    if rol == ROL_SUPERVISOR_ESPECIAL:
+        regiones, niveles = _supervisor_alcance_usuario(user)
+        if not regiones or not niveles:
+            return queryset.none()
+        return queryset.filter(
+            region_loc__in=regiones,
+            oferta__in=niveles,
+        ).order_by("cueanexo")
     return get_escuelas_especiales_por_cuil_responsable(user)
 
 
 def get_escuelas_especiales_cargables_usuario(user, permisos=None):
     """Devuelve los establecimientos sobre los que el usuario puede operar."""
+    rol = (
+        (permisos or {}).get("rol")
+        if permisos is not None
+        else obtener_rol_usuario_especial(user)
+    )
+    if rol not in ROLES_ESPECIAL_CON_CARGA:
+        return get_escuelas_especiales_base_queryset().none()
     return get_escuelas_especiales_visualizacion_usuario(user, permisos=permisos)
 
 

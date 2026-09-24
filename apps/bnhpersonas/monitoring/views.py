@@ -19,6 +19,7 @@ from .selectors import (
     institution_coverage,
     institution_offers,
     jurisdiction_kpis,
+    pof_bnh_breakdown,
     recent_audit,
     regional_summary,
 )
@@ -435,6 +436,39 @@ def institution_detail(
                     limit=50,
                 ),
         },
+    )
+
+
+
+# ============================================================
+# API POF vs BNH POR CEIC
+# ============================================================
+
+@monitoring_required
+@require_GET
+def pof_bnh_breakdown_json(
+    request,
+    cueanexo,
+):
+    """
+    Devuelve el desglose por CEIC de Reunidas POF vs BNH.
+
+    La seguridad se valida antes de consultar la información.
+    """
+
+    cueanexo = assert_cue_access(
+        request.user,
+        cueanexo,
+    )
+
+    data = pof_bnh_breakdown(
+        cueanexo,
+        anio_objetivo=2026,
+    )
+
+    return JsonResponse(
+        data,
+        safe=True,
     )
 
 
