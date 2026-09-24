@@ -340,7 +340,12 @@ def _actualizar_matricula_compartida(request, especial_context, habilitada):
         request.POST.get("alumno_banco_id"),
         especial_context,
     )
-    form = _matricula_compartida_form(request.POST, especial_context, habilitada)
+    form = _matricula_compartida_form(
+        request.POST,
+        especial_context,
+        habilitada,
+        requerida=bool(habilitada),
+    )
     formulario_valido, formulario_error = _validar_matricula_compartida_form(form)
     if not formulario_valido:
         return False, formulario_error, alumno_banco
@@ -617,9 +622,14 @@ def _inscribir_alumno_desde_banco(request, especial_context):
 def _alumnos_banco_queryset(especial_context):
     if not especial_context["puede_operar"]:
         return EspecialAlumnoBanco.objects.none()
+    ciclo = especial_context["ciclo"]
+    # En producción el contexto contiene la instancia de Ciclo; algunos
+    # consumidores internos pueden aportar solamente un objeto con ``pk``.
+    # Usar explícitamente el id mantiene ambos contratos compatibles.
+    ciclo_id = getattr(ciclo, "pk", ciclo)
     return EspecialAlumnoBanco.objects.filter(
         cueanexo=especial_context["cueanexo"],
-        ciclo=especial_context["ciclo"],
+        ciclo_id=ciclo_id,
     )
 
 
