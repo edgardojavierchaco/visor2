@@ -264,7 +264,7 @@
 
             if (indice === 0) {
                 etiqueta.appendChild(
-                    crearSimbolo('info', 'biblioteca-informe__datos-adicionales-icono')
+                    crearSimbolo('badge', 'biblioteca-informe__datos-adicionales-icono')
                 );
             }
 
@@ -291,16 +291,15 @@
         boton.addEventListener('click', function () {
             var abrir = boton.getAttribute('aria-expanded') !== 'true';
             boton.setAttribute('aria-expanded', String(abrir));
+            boton.setAttribute(
+                'aria-label',
+                abrir ? 'Contraer datos del registro' : 'Expandir datos del registro'
+            );
             filaDetalle.hidden = !abrir;
 
             var simbolo = boton.querySelector('.biblioteca-symbol');
             if (simbolo) {
                 simbolo.textContent = abrir ? 'expand_less' : 'expand_more';
-            }
-
-            var textoBoton = boton.querySelector('[data-detalle-texto]');
-            if (textoBoton) {
-                textoBoton.textContent = abrir ? 'Ocultar datos' : 'Ver datos';
             }
         });
 
@@ -380,37 +379,42 @@
         tabla.appendChild(caption);
 
         var mostrarDetalles = tieneDetalles(datos);
+        var esPersonal = datos.formato === 'actual' || datos.formato === 'historico';
         var columnasTotales = datos.columnas.length + (mostrarDetalles ? 1 : 0);
+
+        if (esPersonal) {
+            tabla.classList.add('biblioteca-informe__tabla--personal');
+        }
 
         var cabecera = document.createElement('thead');
         var filaCabecera = document.createElement('tr');
+
+        if (mostrarDetalles) {
+            var cabeceraControl = document.createElement('th');
+            cabeceraControl.scope = 'col';
+            cabeceraControl.className = 'biblioteca-informe__detalle-control';
+            cabeceraControl.setAttribute('aria-label', 'Expandir registro');
+            filaCabecera.appendChild(cabeceraControl);
+        }
+
         datos.columnas.forEach(function (columna) {
             var celda = document.createElement('th');
             celda.scope = 'col';
             celda.textContent = columna;
             filaCabecera.appendChild(celda);
         });
-        if (mostrarDetalles) {
-            var cabeceraDetalles = document.createElement('th');
-            cabeceraDetalles.scope = 'col';
-            cabeceraDetalles.textContent = 'Datos adicionales';
-            filaCabecera.appendChild(cabeceraDetalles);
-        }
+
         cabecera.appendChild(filaCabecera);
         tabla.appendChild(cabecera);
 
         var cuerpo = document.createElement('tbody');
         datos.filas.forEach(function (fila, indice) {
             var filaTabla = document.createElement('tr');
-            fila.forEach(function (valor) {
-                var celda = document.createElement('td');
-                celda.textContent = valor === null || valor === undefined ? '' : String(valor);
-                filaTabla.appendChild(celda);
-            });
-
             var filaDetalle = null;
+
             if (mostrarDetalles) {
-                var celdaAccion = document.createElement('td');
+                var celdaControl = document.createElement('td');
+                celdaControl.className = 'biblioteca-informe__detalle-control';
                 var items = datos.detalles[indice];
 
                 if (items.length) {
@@ -418,22 +422,40 @@
                     boton.type = 'button';
                     boton.className = 'btn biblioteca-informe__detalle-toggle';
                     boton.setAttribute('aria-expanded', 'false');
-                    boton.setAttribute('aria-label', 'Ver datos adicionales del registro');
-
+                    boton.setAttribute('aria-label', 'Expandir datos del registro');
                     boton.appendChild(crearSimbolo('expand_more'));
 
-                    var textoBoton = document.createElement('span');
-                    textoBoton.setAttribute('data-detalle-texto', '');
-                    textoBoton.textContent = 'Ver datos';
-                    boton.appendChild(textoBoton);
-
-                    celdaAccion.appendChild(boton);
+                    celdaControl.appendChild(boton);
                     filaDetalle = crearFilaDetalle(items, columnasTotales, boton);
-                } else {
-                    celdaAccion.textContent = '—';
                 }
-                filaTabla.appendChild(celdaAccion);
+
+                filaTabla.appendChild(celdaControl);
             }
+
+            fila.forEach(function (valor, indiceValor) {
+                var celda = document.createElement('td');
+                var textoValor = valor === null || valor === undefined ? '' : String(valor);
+
+                if (esPersonal && indiceValor === 0) {
+                    var persona = document.createElement('span');
+                    persona.className = 'biblioteca-informe__persona';
+
+                    var iconoPersona = document.createElement('span');
+                    iconoPersona.className = 'biblioteca-informe__persona-icono';
+                    iconoPersona.setAttribute('aria-hidden', 'true');
+                    iconoPersona.appendChild(
+                        crearSimbolo('person', 'biblioteca-symbol--filled')
+                    );
+
+                    persona.appendChild(iconoPersona);
+                    persona.appendChild(document.createTextNode(textoValor));
+                    celda.appendChild(persona);
+                } else {
+                    celda.textContent = textoValor;
+                }
+
+                filaTabla.appendChild(celda);
+            });
 
             cuerpo.appendChild(filaTabla);
             if (filaDetalle) {

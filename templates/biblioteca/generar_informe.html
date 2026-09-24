@@ -164,9 +164,9 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-dismiss="modal">Cancelar</button>
-                    <button class="btn btn-primary" type="submit">
-                        <span class="biblioteca-symbol" aria-hidden="true">add_ad</span>
-                        Crear período
+                    <button class="btn btn-primary" type="submit" id="crearPeriodoBtn">
+                        <span class="biblioteca-symbol" id="crearPeriodoIcono" aria-hidden="true">add_ad</span>
+                        <span id="crearPeriodoTexto">Crear período</span>
                     </button>
                 </div>
             </form>
@@ -206,6 +206,25 @@ const cueanexoFijo = formInforme.dataset.cueanexoFijo;
 const meses = document.getElementById('meses');
 const annos = document.getElementById('annos');
 const alertaDup = document.getElementById('alertaDup');
+const crearPeriodoBtn = document.getElementById('crearPeriodoBtn');
+const crearPeriodoIcono = document.getElementById('crearPeriodoIcono');
+const crearPeriodoTexto = document.getElementById('crearPeriodoTexto');
+let creandoPeriodo = false;
+
+function setCreandoPeriodo(procesando) {
+    creandoPeriodo = procesando;
+    crearPeriodoBtn.disabled = procesando;
+
+    if (procesando) {
+        formInforme.setAttribute('aria-busy', 'true');
+        crearPeriodoIcono.textContent = 'progress_activity';
+        crearPeriodoTexto.textContent = 'Creando período...';
+    } else {
+        formInforme.removeAttribute('aria-busy');
+        crearPeriodoIcono.textContent = 'add_ad';
+        crearPeriodoTexto.textContent = 'Crear período';
+    }
+}
 
 function verificarDuplicado() {
     let cue = cueanexoSelect ? cueanexoSelect.value : cueanexoFijo;
@@ -234,7 +253,12 @@ annos.onchange = verificarDuplicado;
 formInforme.onsubmit = function(e){
     e.preventDefault();
 
+    if (creandoPeriodo) {
+        return;
+    }
+
     let formData = new FormData(this);
+    setCreandoPeriodo(true);
 
     fetch("{% url 'bibliotecas:generar_informe' %}", {
         method: "POST",
@@ -268,10 +292,12 @@ formInforme.onsubmit = function(e){
                 window.location.href = data.redirect_url;
             }, 1200);
         } else {
+            setCreandoPeriodo(false);
             Swal.fire("Error", data.message, "error");
         }
     })
     .catch(err => {
+        setCreandoPeriodo(false);
         Swal.fire("Error", err.message, "error");
     });
 }

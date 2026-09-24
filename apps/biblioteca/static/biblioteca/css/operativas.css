@@ -840,40 +840,90 @@
     white-space: nowrap;
 }
 
+.biblioteca-informe__tabla--personal > tbody > tr:not(.biblioteca-informe__fila-adicional) > td {
+    vertical-align: middle;
+}
+
+.biblioteca-informe__detalle-control {
+    padding-left: .25rem !important;
+    padding-right: .25rem !important;
+    text-align: center;
+    width: 3rem;
+}
+
 .biblioteca-informe__detalle-toggle {
     align-items: center;
-    background: var(--biblioteca-superficie);
-    border: 1px solid var(--biblioteca-borde);
-    color: var(--biblioteca-azul-oscuro);
+    background: var(--biblioteca-azul-suave);
+    border: 1px solid var(--biblioteca-azul-borde);
+    border-radius: 50%;
+    color: var(--biblioteca-azul);
     display: inline-flex;
-    font-size: .8rem;
-    font-weight: 700;
-    gap: .25rem;
-    min-height: 2.1rem;
-    padding: .35rem .55rem;
-    white-space: nowrap;
+    height: 1.875rem;
+    justify-content: center;
+    min-height: 1.875rem;
+    min-width: 1.875rem;
+    padding: 0;
+    width: 1.875rem;
 }
 
 .biblioteca-informe__detalle-toggle:hover,
 .biblioteca-informe__detalle-toggle[aria-expanded="true"] {
-    background: var(--biblioteca-azul-suave);
-    border-color: var(--biblioteca-azul-borde);
-    color: var(--biblioteca-azul-oscuro);
+    background: var(--biblioteca-azul);
+    border-color: var(--biblioteca-azul);
+    color: var(--biblioteca-superficie);
 }
 
 .biblioteca-informe__detalle-toggle .biblioteca-symbol {
-    font-size: 1.05rem;
+    font-size: 1.15rem;
+}
+
+.biblioteca-informe__persona {
+    align-items: center;
+    display: inline-flex;
+    gap: .5rem;
+    white-space: nowrap;
+}
+
+.biblioteca-informe__persona-icono {
+    align-items: center;
+    background: var(--biblioteca-azul-suave);
+    border: 1px solid var(--biblioteca-azul-borde);
+    border-radius: 50%;
+    color: var(--biblioteca-azul);
+    display: inline-flex;
+    flex: 0 0 1.75rem;
+    height: 1.75rem;
+    justify-content: center;
+}
+
+.biblioteca-informe__persona-icono .biblioteca-symbol {
+    font-size: 1rem;
 }
 
 .biblioteca-informe__fila-adicional > td {
     background: var(--biblioteca-superficie);
-    padding: 0 .75rem .75rem;
+    padding: 0 0 .75rem;
 }
 
 .biblioteca-informe__datos-adicionales {
+    background: var(--biblioteca-superficie);
     border: 1px solid var(--biblioteca-borde);
     border-radius: var(--biblioteca-radius-sm);
+    box-shadow: var(--biblioteca-shadow-soft);
     overflow: hidden;
+    position: relative;
+    width: 100%;
+}
+
+.biblioteca-informe__datos-adicionales::before {
+    background: var(--biblioteca-azul);
+    bottom: 0;
+    content: "";
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: .25rem;
+    z-index: 1;
 }
 
 .biblioteca-informe__datos-adicionales-icono {
@@ -890,6 +940,11 @@
 
 .biblioteca-informe__tabla-adicional thead th {
     background: var(--biblioteca-superficie-suave);
+}
+
+.biblioteca-informe__tabla-adicional thead th:first-child,
+.biblioteca-informe__tabla-adicional tbody td:first-child {
+    padding-left: 1.5rem;
 }
 
 .biblioteca-informe__tabla-adicional tbody td {

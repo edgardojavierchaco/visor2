@@ -11,7 +11,7 @@
 
 {% block content %}
 <main class="biblioteca-crud biblioteca-crud--formulario biblioteca-form-standard">
-    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='settings_suggest' %}
+    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='settings_suggest' section_return_url=list_url section_return_label='Volver a Procesos técnicos' %}
     <form method="post" action="?periodo={{ periodo_activo_id }}" enctype="multipart/form-data" class="biblioteca-crud__form">
         <div class="card biblioteca-crud__panel">
             <div class="card-header">

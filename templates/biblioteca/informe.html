@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block head %}
-<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260922-personal-detalles-4">
+<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260924-personal-filas-1">
 {% endblock %}
 
 {% block content_header %}{% endblock %}
@@ -204,6 +204,7 @@
             </div>
             <form method="post"
                   action="{% url 'bibliotecas:generar_pdf' %}?periodo={{ periodo_pendiente.pk }}"
+                  data-periodos-url="{% url 'bibliotecas:periodos' %}"
                   data-informe-finalizar-form>
                 {% csrf_token %}
                 <div class="modal-body">
@@ -251,6 +252,6 @@
 {% block javascript %}
 {{ block.super }}
 {% if periodo_pendiente %}
-<script src="{% static 'biblioteca/js/informe.js' %}?v=20260922-personal-detalles-4"></script>
+<script src="{% static 'biblioteca/js/informe.js' %}?v=20260924-finalizar-pdf-1"></script>
 {% endif %}
 {% endblock %}

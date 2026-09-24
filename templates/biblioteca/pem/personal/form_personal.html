@@ -12,7 +12,7 @@
 
 {% block content %}
 <main class="biblioteca-crud biblioteca-crud--formulario biblioteca-personal">
-    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='badge' %}
+    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='badge' section_return_url=list_url section_return_label='Volver a Personal bibliotecario' %}
 
     <form method="post"
           action="?periodo={{ periodo_activo_id }}"

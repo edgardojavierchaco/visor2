@@ -322,7 +322,7 @@ def _periodos_pendientes(cueanexos):
             cueanexo__in=cueanexos,
             estado='GENERADO',
         )
-        .only('pk', 'cueanexo', 'meses', 'annos', 'estado', 'f_generacion')
+        .only('pk', 'cueanexo', 'meses', 'annos', 'estado', 'f_generacion', 'f_envio')
         .order_by('pk')
     )
 
