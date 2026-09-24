@@ -6,6 +6,12 @@ from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.db.models import Count, Q
 
+from apps.evaluaciones_educativas.forms.validaciones_2026 import (
+    ValVeedorForm,
+    ValAplicadorForm,
+    ValPersonaEditForm,
+)
+
 from apps.evaluaciones_educativas.models.validaciones_2026 import (
     ValReferenteCargaTemporal,
     ValEstablecimiento,
@@ -909,6 +915,9 @@ def lista_establecimientos_personas(request, region):
         'regiones_autorizadas': regiones_autorizadas,
         'establecimientos': establecimientos_list,
         'total_est': total_est,
+        'form_veedor': ValVeedorForm(),
+        'form_aplicador': ValAplicadorForm(),
+        'form_editar': ValPersonaEditForm(),
     }
     return render(request, 'validaciones_2026/establecimientos_personas.html', contexto)
 
@@ -977,7 +986,8 @@ def listar_personas_establecimiento(request, cueanexo):
             'apellido': v.apellido,
             'cuil': v.cuil,
             'correo': v.correo,
-            'telefono': v.telefono,
+            'codigo_area': v.codigo_area,
+            'numero_telefono': v.numero_telefono,
             'tipo': 'veedor',
         }
         for v in veedores
@@ -990,7 +1000,8 @@ def listar_personas_establecimiento(request, cueanexo):
             'apellido': a.apellido,
             'cuil': a.cuil,
             'correo': a.correo,
-            'telefono': a.telefono,
+            'codigo_area': a.codigo_area,
+            'numero_telefono': a.numero_telefono,
             'tipo': 'aplicador',
             'seccion_id': a.seccion.pk,
             'seccion_label': f"{a.seccion.grado.nombre_grado} — Sección {a.seccion.seccion} — {a.seccion.turno}",
@@ -1016,21 +1027,18 @@ def crear_veedor(request, cueanexo):
     if not est:
         return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
 
-    nombre = request.POST.get('nombre', '').strip()
-    apellido = request.POST.get('apellido', '').strip()
-    cuil_persona = request.POST.get('cuil', '').strip()
-    correo = request.POST.get('correo', '').strip()
-    telefono = request.POST.get('telefono', '').strip()
+    form = ValVeedorForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'ok': False, 'error': form.errores_legibles()}, status=400)
 
-    if not all([nombre, apellido, cuil_persona, correo, telefono]):
-        return JsonResponse({'ok': False, 'error': 'Todos los campos son obligatorios.'}, status=400)
-
+    cd = form.cleaned_data
     veedor = ValVeedor.objects.create(
-        nombre=nombre,
-        apellido=apellido,
-        cuil=cuil_persona,
-        correo=correo,
-        telefono=telefono,
+        nombre=cd['nombre'],
+        apellido=cd['apellido'],
+        cuil=cd['cuil'],
+        correo=cd['correo'],
+        codigo_area=cd['codigo_area'],
+        numero_telefono=cd['numero_telefono'],
         establecimiento=est,
     )
 
@@ -1059,20 +1067,17 @@ def editar_veedor(request, veedor_id):
     if not est:
         return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
 
-    nombre = request.POST.get('nombre', '').strip()
-    apellido = request.POST.get('apellido', '').strip()
-    cuil_persona = request.POST.get('cuil', '').strip()
-    correo = request.POST.get('correo', '').strip()
-    telefono = request.POST.get('telefono', '').strip()
+    form = ValPersonaEditForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'ok': False, 'error': form.errores_legibles()}, status=400)
 
-    if not all([nombre, apellido, cuil_persona, correo, telefono]):
-        return JsonResponse({'ok': False, 'error': 'Todos los campos son obligatorios.'}, status=400)
-
-    veedor.nombre = nombre
-    veedor.apellido = apellido
-    veedor.cuil = cuil_persona
-    veedor.correo = correo
-    veedor.telefono = telefono
+    cd = form.cleaned_data
+    veedor.nombre = cd['nombre']
+    veedor.apellido = cd['apellido']
+    veedor.cuil = cd['cuil']
+    veedor.correo = cd['correo']
+    veedor.codigo_area = cd['codigo_area']
+    veedor.numero_telefono = cd['numero_telefono']
     veedor.save()
 
     return JsonResponse({
@@ -1117,18 +1122,17 @@ def crear_aplicador(request, cueanexo):
     if not est:
         return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
 
-    nombre = request.POST.get('nombre', '').strip()
-    apellido = request.POST.get('apellido', '').strip()
-    cuil_persona = request.POST.get('cuil', '').strip()
-    correo = request.POST.get('correo', '').strip()
-    telefono = request.POST.get('telefono', '').strip()
-    seccion_id = request.POST.get('seccion_id', '').strip()
+    form = ValAplicadorForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'ok': False, 'error': form.errores_legibles()}, status=400)
 
-    if not all([nombre, apellido, cuil_persona, correo, telefono, seccion_id]):
-        return JsonResponse({'ok': False, 'error': 'Todos los campos son obligatorios.'}, status=400)
+    cd = form.cleaned_data
+    seccion_id = cd['seccion_id']
 
     try:
-        seccion = ValSeccion.objects.get(pk=seccion_id, grado__establecimiento=est).exclude(estado_validacion="DESHABILITADO")
+        seccion = ValSeccion.objects.exclude(estado_validacion="DESHABILITADO").get(
+            pk=seccion_id, grado__establecimiento=est
+        )
     except ValSeccion.DoesNotExist:
         return JsonResponse({'ok': False, 'error': 'Sección no encontrada.'}, status=404)
 
@@ -1137,11 +1141,12 @@ def crear_aplicador(request, cueanexo):
         return JsonResponse({'ok': False, 'error': 'Esta sección ya tiene un aplicador asignado.'}, status=400)
 
     aplicador = ValAplicador.objects.create(
-        nombre=nombre,
-        apellido=apellido,
-        cuil=cuil_persona,
-        correo=correo,
-        telefono=telefono,
+        nombre=cd['nombre'],
+        apellido=cd['apellido'],
+        cuil=cd['cuil'],
+        correo=cd['correo'],
+        codigo_area=cd['codigo_area'],
+        numero_telefono=cd['numero_telefono'],
         seccion=seccion,
     )
 
@@ -1175,20 +1180,17 @@ def editar_aplicador(request, aplicador_id):
     if not est:
         return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
 
-    nombre = request.POST.get('nombre', '').strip()
-    apellido = request.POST.get('apellido', '').strip()
-    cuil_persona = request.POST.get('cuil', '').strip()
-    correo = request.POST.get('correo', '').strip()
-    telefono = request.POST.get('telefono', '').strip()
+    form = ValPersonaEditForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'ok': False, 'error': form.errores_legibles()}, status=400)
 
-    if not all([nombre, apellido, cuil_persona, correo, telefono]):
-        return JsonResponse({'ok': False, 'error': 'Todos los campos son obligatorios.'}, status=400)
-
-    aplicador.nombre = nombre
-    aplicador.apellido = apellido
-    aplicador.cuil = cuil_persona
-    aplicador.correo = correo
-    aplicador.telefono = telefono
+    cd = form.cleaned_data
+    aplicador.nombre = cd['nombre']
+    aplicador.apellido = cd['apellido']
+    aplicador.cuil = cd['cuil']
+    aplicador.correo = cd['correo']
+    aplicador.codigo_area = cd['codigo_area']
+    aplicador.numero_telefono = cd['numero_telefono']
     aplicador.save()
 
     return JsonResponse({

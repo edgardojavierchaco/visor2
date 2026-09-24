@@ -182,27 +182,39 @@ def dashboard(request):
         {
             'id':          'validaciones_2026',
             'titulo':      'Validaciones Aprender',
-            'descripcion': 'Validar secciones, establecimientos y matrículas',
+            'descripcion': 'Validaciones sobre operativo Aprender',
             'icono':       'bi-check2-circle',
             'color':       '#06b6d4',
             'anios': [
                 {
                     'anio': '2026',
                     'meses': [
+                        # {
+                        #     'mes':         'Aprender 2026',
+                        #     'descripcion': 'Validaciones de matrícula y secciones',
+                        #     'icono':       'bi-calendar-check',
+                        #     'links': [
+                        #         {
+                        #             'titulo': 'Gestión de Validaciones',
+                        #             'icono':  'bi-shield-check',
+                        #             'url':    'evaluaciones_educativas:validaciones_2026:lista',
+                        #             'roles':  ['Regional', 'Funcionario', 'Ministro', 'Subse'],
+                        #         },
+                        #     ],
+                        # },
                         {
                             'mes':         'Aprender 2026',
-                            'descripcion': 'Validaciones de matrícula y secciones',
+                            'descripcion': 'Validaciones de aplicadores y veedores',
                             'icono':       'bi-calendar-check',
                             'links': [
                                 {
-                                    'titulo': 'Gestión de Validaciones',
+                                    'titulo': 'Gestión de Aplicadores y Veedores',
                                     'icono':  'bi-shield-check',
-                                    'url':    'evaluaciones_educativas:validaciones_2026:lista',
+                                    'url':    'evaluaciones_educativas:validaciones_2026:personas_lista',
                                     'roles':  ['Regional', 'Funcionario', 'Ministro', 'Subse'],
                                 },
                             ],
                         },
-                        
                     ],
                 },
             ],
