@@ -46,24 +46,28 @@ def _resolver_permisos_especial(user):
         permisos=permisos,
     )
     if permisos["puede_ver"] and not permisos["es_admin"]:
-        cueanexos = {
-            normalizar_cueanexo(value)
-            for value in permisos["escuelas_visualizacion"].values_list(
-                "cueanexo", flat=True
-            ).distinct()
-        }
+        cueanexos = set()
+        for campo in ("cueanexo", "padron_cueanexo"):
+            cueanexos.update(
+                normalizar_cueanexo(value)
+                for value in permisos["escuelas_visualizacion"].values_list(
+                    campo, flat=True
+                ).distinct()
+            )
         cueanexos.discard("")
         cueanexos = frozenset(cueanexos)
     else:
         cueanexos = frozenset()
     permisos["cueanexos_visualizacion"] = cueanexos
     if permisos["puede_cargar"] and not permisos["es_admin"]:
-        cueanexos_cargables = {
-            normalizar_cueanexo(value)
-            for value in permisos["escuelas_cargables"].values_list(
-                "cueanexo", flat=True
-            ).distinct()
-        }
+        cueanexos_cargables = set()
+        for campo in ("cueanexo", "padron_cueanexo"):
+            cueanexos_cargables.update(
+                normalizar_cueanexo(value)
+                for value in permisos["escuelas_cargables"].values_list(
+                    campo, flat=True
+                ).distinct()
+            )
         cueanexos_cargables.discard("")
         permisos["cueanexos_cargables"] = frozenset(cueanexos_cargables)
     else:
