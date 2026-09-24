@@ -5,7 +5,7 @@
 {% block head %}
     <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2.min.css' %}">
     <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2-bootstrap4.min.css' %}">
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260917-form-normalization-2">
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260923-responsive-crud-1">
 {% endblock %}
 
 {% block content_header %}{% endblock %}
@@ -32,7 +32,7 @@
             <input type="hidden" name="action" value="{{ action }}">
 
             <section class="biblioteca-form__block" aria-labelledby="biblioteca-form-datos">
-                {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' show_info=1 only %}
+                {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' show_info=1 info_title='Referencia' info_section_icon='contact_support' info_text='Registrá los servicios de referencia brindados durante el período.' info_item_1='Servicio' info_icon_1='category' info_item_2='Turno' info_icon_2='schedule' info_item_3='Varones' info_icon_3='man' info_item_4='Total' info_icon_4='calculate' only %}
                 <div class="biblioteca-form__block-body">
                     <div class="biblioteca-form__grid">
                         <div>
@@ -139,7 +139,11 @@ function validar() {
         }
     }
 
-    btnSubmit.disabled = errores > 0;
+    if (window.biblioteca_form_state) {
+        window.biblioteca_form_state.setValidationValid(btnSubmit.form, errores === 0);
+    } else {
+        btnSubmit.disabled = errores > 0;
+    }
 
     return errores === 0;
 }
@@ -175,48 +179,36 @@ $('#formulario').on('submit', function (e) {
 
     var parameters = new FormData(this);
 
-    $.ajax({
-        url: window.location.pathname + window.location.search,
-        type: 'POST',
-        data: parameters,
-        processData: false,
-        contentType: false,
-        success: function (response) {
+    biblioteca_confirmar_guardado(function () {
+        return $.ajax({
+            url: window.location.pathname + window.location.search,
+            type: 'POST',
+            data: parameters,
+            processData: false,
+            contentType: false,
+            success: function (response) {
 
-            if (response.error) {
+                if (response.error) {
+                    biblioteca_mostrar_error_guardado(response);
+                    marcarErroresBackend(response.error);
+                    return;
+                }
 
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Revisá los campos'
-                });
-
-                marcarErroresBackend(response.error);
-                return;
+                location.href = '{{ list_url }}';
+            },
+            error: function (xhr) {
+                biblioteca_mostrar_error_guardado(
+                    xhr.responseJSON || {message: 'Error inesperado en el servidor.'}
+                );
             }
-
-            location.href = '{{ list_url }}';
-        },
-        error: function () {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Error inesperado en el servidor'
-            });
-        }
+        });
     });
 });
 
 // =========================
 // INFO POPUP
 // =========================
-$('#showPopupBtn').click(function () {
-    Swal.fire({
-        title: 'Información',
-        html: `<p>En esta sección se cargan los Servicios de Referencia correspondientes</p>`,
-        icon: 'info'
-    });
-});
+
 
 // =========================
 // BLOQUEO

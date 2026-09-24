@@ -11,7 +11,24 @@
         </div>
     </div>
     {% if show_info %}
-        <button type="button" class="btn btn-info biblioteca-form__info-btn" id="showPopupBtn">
+        <button type="button"
+                class="btn btn-info biblioteca-form__info-btn"
+                data-biblioteca-section-info
+                data-info-title="{{ info_title|default:'Información' }}"
+                data-info-section-icon="{{ info_section_icon|default:'info' }}"
+                data-info-text="{{ info_text|default:'' }}"
+                data-info-item-1="{{ info_item_1|default:'' }}"
+                data-info-icon-1="{{ info_icon_1|default:'' }}"
+                data-info-item-2="{{ info_item_2|default:'' }}"
+                data-info-icon-2="{{ info_icon_2|default:'' }}"
+                data-info-item-3="{{ info_item_3|default:'' }}"
+                data-info-icon-3="{{ info_icon_3|default:'' }}"
+                data-info-item-4="{{ info_item_4|default:'' }}"
+                data-info-icon-4="{{ info_icon_4|default:'' }}"
+                data-info-item-5="{{ info_item_5|default:'' }}"
+                data-info-icon-5="{{ info_icon_5|default:'' }}"
+                data-info-item-6="{{ info_item_6|default:'' }}"
+                data-info-icon-6="{{ info_icon_6|default:'' }}">
             <span class="biblioteca-symbol" aria-hidden="true">info</span>
             Info
         </button>

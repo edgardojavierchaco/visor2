@@ -2,7 +2,7 @@
 {% load static %}
 {% load widget_tweaks %}
 {% block head %}
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260917-form-normalization-2">
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260923-responsive-crud-1">
     {% block head_form %}
     {% endblock %}
 
@@ -45,7 +45,7 @@
                 {% endif %}
 
                 <section class="biblioteca-form__block" aria-labelledby="biblioteca-form-datos">
-                    {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' block_subtitle='AGUAPEY u otra base de datos' show_info=1 only %}
+                    {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' block_subtitle='AGUAPEY u otra base de datos' show_info=1 info_title='Aguapey' info_section_icon='dns' info_text='Registrá los datos de uso de la base durante el período.' info_item_1='Total del mes' info_icon_1='calendar_month' info_item_2='Total de la base' info_icon_2='database' info_item_3='Total de usuarios' info_icon_3='groups' info_item_4='Observaciones' info_icon_4='notes' only %}
                     <div class="biblioteca-form__block-body">
                         <div class="biblioteca-form__grid">
                             <div>
@@ -139,7 +139,11 @@
             errores++;
         }
 
-        btnSubmit.disabled = errores > 0;
+        if (window.biblioteca_form_state) {
+            window.biblioteca_form_state.setValidationValid(btnSubmit.form, errores === 0);
+        } else {
+            btnSubmit.disabled = errores > 0;
+        }
         return errores === 0;
     }
 
@@ -192,10 +196,10 @@
 
         var parameters = new FormData(this);
 
-        submit_with_ajax(
+        biblioteca_submit_with_ajax(
             window.location.pathname + window.location.search,
-            'Notificación',
-            '¿Estás seguro de realizar la siguiente acción?',
+            'Confirmar guardado',
+            '¿Querés guardar los datos cargados en este registro?',
             parameters,
             function () {
                 location.href = '{{ list_url }}';
@@ -206,13 +210,7 @@
     // =========================
     // INFO POPUP
     // =========================
-    $('#showPopupBtn').click(function () {
-        Swal.fire({
-            title: 'Información',
-            html: `<p>En esta sección se cargan los registros de Aguapey u otra base de datos del período.</p>`,
-            icon: 'info'
-        });
-    });
+
 
     // =========================
     // BLOQUEO (SI VIENE DEL BACKEND)

@@ -806,7 +806,6 @@ class BibliotecariosCueForm(forms.ModelForm):
             'f_desde_lic',
             'f_hasta_lic',
             'observaciones',
-            'situacion_laboral',
         ]
         widgets = {
             'f_desde_lic': forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),

@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block head %}
-<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260909-2">
+<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260922-personal-detalles-4">
 {% endblock %}
 
 {% block content_header %}{% endblock %}
@@ -159,22 +159,98 @@
                     Esta acción generará el PDF, cambiará el informe a Enviado y el período dejará de estar pendiente.
                 </p>
             </div>
-            <form method="post"
-                  action="{% url 'bibliotecas:generar_pdf' %}?periodo={{ periodo_pendiente.pk }}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-primary biblioteca-operativa__accion">
-                    Finalizar y generar PDF
-                    <span class="biblioteca-symbol" aria-hidden="true">picture_as_pdf</span>
-                </button>
-            </form>
+            <button type="button"
+                    class="btn btn-primary biblioteca-operativa__accion"
+                    data-toggle="modal"
+                    data-target="#modalFinalizarInforme"
+                    aria-haspopup="dialog">
+                Finalizar y generar PDF
+                <span class="biblioteca-symbol" aria-hidden="true">picture_as_pdf</span>
+            </button>
         </section>
     {% endif %}
 </main>
+
+{% if periodo_pendiente %}
+<div class="modal biblioteca-informe__modal-finalizar"
+     id="modalFinalizarInforme"
+     tabindex="-1"
+     role="dialog"
+     aria-labelledby="modalFinalizarInformeTitulo"
+     aria-describedby="modalFinalizarInformeDescripcion"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="biblioteca-informe__modal-titulo-bloque">
+                    <span class="biblioteca-informe__modal-icono" aria-hidden="true">
+                        <span class="biblioteca-symbol biblioteca-symbol--filled">warning</span>
+                    </span>
+                    <div>
+                        <h2 class="modal-title h5" id="modalFinalizarInformeTitulo">
+                            Confirmar finalización
+                        </h2>
+                        <p class="biblioteca-informe__modal-subtitulo">
+                            Revisá los datos antes de enviar el relevamiento.
+                        </p>
+                    </div>
+                </div>
+                <button type="button"
+                        class="biblioteca-informe__modal-cerrar"
+                        data-dismiss="modal"
+                        aria-label="Cerrar">
+                    <span class="biblioteca-symbol" aria-hidden="true">close</span>
+                </button>
+            </div>
+            <form method="post"
+                  action="{% url 'bibliotecas:generar_pdf' %}?periodo={{ periodo_pendiente.pk }}"
+                  data-informe-finalizar-form>
+                {% csrf_token %}
+                <div class="modal-body">
+                    <dl class="biblioteca-informe__modal-identidad">
+                        <div>
+                            <dt>Período</dt>
+                            <dd>{{ periodo_pendiente.meses|capfirst }} {{ periodo_pendiente.annos }}</dd>
+                        </div>
+                        <div>
+                            <dt>CUE-Anexo</dt>
+                            <dd>{{ periodo_pendiente.cueanexo }}</dd>
+                        </div>
+                    </dl>
+                    <div class="biblioteca-informe__modal-advertencia" id="modalFinalizarInformeDescripcion">
+                        <span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">warning</span>
+                        <p>
+                            Al confirmar, se generará el PDF y el informe pasará a <strong>Enviado</strong>.
+                            El período dejará de estar disponible como pendiente para continuar la carga.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-light"
+                            data-dismiss="modal"
+                            data-informe-finalizar-cancelar>
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="btn btn-primary"
+                            data-informe-finalizar-confirmar>
+                        <span class="biblioteca-symbol"
+                              aria-hidden="true"
+                              data-informe-finalizar-confirmar-icono>picture_as_pdf</span>
+                        <span data-informe-finalizar-confirmar-texto>Finalizar y generar PDF</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block javascript %}
 {{ block.super }}
 {% if periodo_pendiente %}
-<script src="{% static 'biblioteca/js/informe.js' %}"></script>
+<script src="{% static 'biblioteca/js/informe.js' %}?v=20260922-personal-detalles-4"></script>
 {% endif %}
 {% endblock %}

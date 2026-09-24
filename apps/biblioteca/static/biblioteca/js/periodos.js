@@ -166,6 +166,22 @@
             throw new Error('La respuesta de la sección no tiene el formato esperado.');
         }
 
+        if (datos.detalles !== undefined) {
+            if (
+                !Array.isArray(datos.detalles) ||
+                datos.detalles.length !== datos.filas.length ||
+                datos.detalles.some(function (items) {
+                    return !Array.isArray(items) || items.some(function (item) {
+                        return !item ||
+                            typeof item.etiqueta !== 'string' ||
+                            typeof item.valor !== 'string' && typeof item.valor !== 'number';
+                    });
+                })
+            ) {
+                throw new Error('La respuesta de datos adicionales no tiene el formato esperado.');
+            }
+        }
+
         if (!datos.totales || typeof datos.totales.tipo !== 'string') {
             throw new Error('La respuesta de la sección no tiene el formato esperado.');
         }
@@ -202,6 +218,95 @@
         contenedor.appendChild(estado);
     }
 
+    var contadorDetalles = 0;
+
+    function tieneDetalles(datos) {
+        return Array.isArray(datos.detalles) && datos.detalles.some(function (items) {
+            return items.length > 0;
+        });
+    }
+
+    function crearFilaDetalle(items, columnasTotales, boton) {
+        contadorDetalles += 1;
+        var detalleId = 'periodo-datos-adicionales-' + contadorDetalles;
+
+        boton.setAttribute('aria-controls', detalleId);
+
+        var filaDetalle = document.createElement('tr');
+        filaDetalle.id = detalleId;
+        filaDetalle.className = 'biblioteca-informe__fila-adicional';
+        filaDetalle.hidden = true;
+
+        var celdaDetalle = document.createElement('td');
+        celdaDetalle.colSpan = columnasTotales;
+
+        var bloque = document.createElement('div');
+        bloque.className = 'biblioteca-informe__datos-adicionales';
+
+        var responsive = document.createElement('div');
+        responsive.className = 'table-responsive';
+
+        var tablaDetalle = document.createElement('table');
+        tablaDetalle.className = 'table table-sm biblioteca-informe__tabla biblioteca-informe__tabla-adicional';
+
+        var caption = document.createElement('caption');
+        caption.className = 'sr-only';
+        caption.textContent = 'Datos adicionales del registro';
+        tablaDetalle.appendChild(caption);
+
+        var cabecera = document.createElement('thead');
+        var filaCabecera = document.createElement('tr');
+        var filaValores = document.createElement('tr');
+
+        items.forEach(function (item, indice) {
+            var etiqueta = document.createElement('th');
+            etiqueta.scope = 'col';
+
+            if (indice === 0) {
+                etiqueta.appendChild(
+                    crearSimbolo('info', 'biblioteca-informe__datos-adicionales-icono')
+                );
+            }
+
+            etiqueta.appendChild(document.createTextNode(item.etiqueta));
+            filaCabecera.appendChild(etiqueta);
+
+            var valor = document.createElement('td');
+            valor.textContent = String(item.valor);
+            filaValores.appendChild(valor);
+        });
+
+        cabecera.appendChild(filaCabecera);
+        tablaDetalle.appendChild(cabecera);
+
+        var cuerpoDetalle = document.createElement('tbody');
+        cuerpoDetalle.appendChild(filaValores);
+        tablaDetalle.appendChild(cuerpoDetalle);
+
+        responsive.appendChild(tablaDetalle);
+        bloque.appendChild(responsive);
+        celdaDetalle.appendChild(bloque);
+        filaDetalle.appendChild(celdaDetalle);
+
+        boton.addEventListener('click', function () {
+            var abrir = boton.getAttribute('aria-expanded') !== 'true';
+            boton.setAttribute('aria-expanded', String(abrir));
+            filaDetalle.hidden = !abrir;
+
+            var simbolo = boton.querySelector('.biblioteca-symbol');
+            if (simbolo) {
+                simbolo.textContent = abrir ? 'expand_less' : 'expand_more';
+            }
+
+            var textoBoton = boton.querySelector('[data-detalle-texto]');
+            if (textoBoton) {
+                textoBoton.textContent = abrir ? 'Ocultar datos' : 'Ver datos';
+            }
+        });
+
+        return filaDetalle;
+    }
+
     function agregarCeldasValores(fila, valores, indiceInicial) {
         valores.slice(indiceInicial).forEach(function (valor) {
             var celda = document.createElement('td');
@@ -219,7 +324,7 @@
             var filaConteo = document.createElement('tr');
             var celdaConteo = document.createElement('th');
             celdaConteo.scope = 'row';
-            celdaConteo.colSpan = datos.columnas.length;
+            celdaConteo.colSpan = datos.columnas.length + (tieneDetalles(datos) ? 1 : 0);
             celdaConteo.textContent = datos.totales.etiqueta + ': ' + datos.totales.valor;
             filaConteo.appendChild(celdaConteo);
             pie.appendChild(filaConteo);
@@ -274,6 +379,9 @@
         caption.textContent = 'Registros históricos de ' + datos.seccion;
         tabla.appendChild(caption);
 
+        var mostrarDetalles = tieneDetalles(datos);
+        var columnasTotales = datos.columnas.length + (mostrarDetalles ? 1 : 0);
+
         var cabecera = document.createElement('thead');
         var filaCabecera = document.createElement('tr');
         datos.columnas.forEach(function (columna) {
@@ -282,18 +390,55 @@
             celda.textContent = columna;
             filaCabecera.appendChild(celda);
         });
+        if (mostrarDetalles) {
+            var cabeceraDetalles = document.createElement('th');
+            cabeceraDetalles.scope = 'col';
+            cabeceraDetalles.textContent = 'Datos adicionales';
+            filaCabecera.appendChild(cabeceraDetalles);
+        }
         cabecera.appendChild(filaCabecera);
         tabla.appendChild(cabecera);
 
         var cuerpo = document.createElement('tbody');
-        datos.filas.forEach(function (fila) {
+        datos.filas.forEach(function (fila, indice) {
             var filaTabla = document.createElement('tr');
             fila.forEach(function (valor) {
                 var celda = document.createElement('td');
                 celda.textContent = valor === null || valor === undefined ? '' : String(valor);
                 filaTabla.appendChild(celda);
             });
+
+            var filaDetalle = null;
+            if (mostrarDetalles) {
+                var celdaAccion = document.createElement('td');
+                var items = datos.detalles[indice];
+
+                if (items.length) {
+                    var boton = document.createElement('button');
+                    boton.type = 'button';
+                    boton.className = 'btn biblioteca-informe__detalle-toggle';
+                    boton.setAttribute('aria-expanded', 'false');
+                    boton.setAttribute('aria-label', 'Ver datos adicionales del registro');
+
+                    boton.appendChild(crearSimbolo('expand_more'));
+
+                    var textoBoton = document.createElement('span');
+                    textoBoton.setAttribute('data-detalle-texto', '');
+                    textoBoton.textContent = 'Ver datos';
+                    boton.appendChild(textoBoton);
+
+                    celdaAccion.appendChild(boton);
+                    filaDetalle = crearFilaDetalle(items, columnasTotales, boton);
+                } else {
+                    celdaAccion.textContent = '—';
+                }
+                filaTabla.appendChild(celdaAccion);
+            }
+
             cuerpo.appendChild(filaTabla);
+            if (filaDetalle) {
+                cuerpo.appendChild(filaDetalle);
+            }
         });
         tabla.appendChild(cuerpo);
         agregarPie(tabla, datos);
