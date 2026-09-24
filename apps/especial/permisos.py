@@ -10,6 +10,8 @@ from django.core.exceptions import PermissionDenied
 
 from .models import (
     ROLES_AUTORIZADOS_ESPECIAL,
+    ROLES_ESPECIAL_CON_CARGA,
+    ROLES_ESPECIAL_VISUALIZADOR_DIRECTORES,
     get_escuelas_especiales_cargables_usuario,
     get_escuelas_especiales_visualizacion_usuario,
     normalizar_cuil_usuario,
@@ -28,6 +30,11 @@ def _resolver_permisos_especial(user):
         "rol": rol,
         "puede_ver": rol in ROLES_AUTORIZADOS_ESPECIAL,
         "es_admin": rol == "Administrador",
+        "puede_cargar": rol in ROLES_ESPECIAL_CON_CARGA,
+        "puede_ver_ciclos": rol == "Administrador",
+        "puede_ver_visualizador_directores": (
+            rol in ROLES_ESPECIAL_VISUALIZADOR_DIRECTORES
+        ),
         "cuil_usuario": normalizar_cuil_usuario(user),
     }
     permisos["escuelas_visualizacion"] = get_escuelas_especiales_visualizacion_usuario(
@@ -50,7 +57,17 @@ def _resolver_permisos_especial(user):
     else:
         cueanexos = frozenset()
     permisos["cueanexos_visualizacion"] = cueanexos
-    permisos["cueanexos_cargables"] = cueanexos
+    if permisos["puede_cargar"] and not permisos["es_admin"]:
+        cueanexos_cargables = {
+            normalizar_cueanexo(value)
+            for value in permisos["escuelas_cargables"].values_list(
+                "cueanexo", flat=True
+            ).distinct()
+        }
+        cueanexos_cargables.discard("")
+        permisos["cueanexos_cargables"] = frozenset(cueanexos_cargables)
+    else:
+        permisos["cueanexos_cargables"] = frozenset()
     return permisos
 
 

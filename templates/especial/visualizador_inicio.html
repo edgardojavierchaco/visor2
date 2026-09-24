@@ -240,12 +240,14 @@
             <p>Consultar las secciones y asignaciones de un docente.</p>
             <a class="btn btn-primary btn-sm" href="{% url 'especial:visualizador_docentes' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Visualizar</a>
         </article>
+        {% if visualizador_puede_ver_directores %}
         <article class="especial-visualizador-card">
             <span class="especial-visualizador-icon" aria-hidden="true"><i class="fa-solid fa-user-tie"></i></span>
             <h2>Directores</h2>
             <p>Consultar las escuelas relacionadas a un CUIL.</p>
             <a class="btn btn-primary btn-sm" href="{% url 'especial:visualizador_directores' %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">Visualizar</a>
         </article>
+        {% endif %}
     </section>
 </div>
 {% endblock %}

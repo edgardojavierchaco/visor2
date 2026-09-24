@@ -991,6 +991,50 @@ def _orden_texto(valor):
     ).casefold()
 
 
+def _ordenar_alumnos_por_seccion(alumnos_banco, inscripciones_por_alumno):
+    """Prepara el listado agrupando visualmente los alumnos por sección."""
+    for item in alumnos_banco:
+        inscripciones = sorted(
+            inscripciones_por_alumno.get(item.alumno_id, []),
+            key=lambda inscripcion: (
+                _orden_texto(inscripcion.seccion.nombre_seccion),
+                _orden_texto(inscripcion.seccion.cd_tipo_seccion.descripcion),
+                inscripcion.seccion_id,
+            ),
+        )
+        item.inscripciones_seccion = inscripciones
+        principal = inscripciones[0].seccion if inscripciones else None
+        item.seccion_principal_label = (
+            principal.nombre_seccion if principal else "Sin sección asignada"
+        )
+        item.seccion_principal_key = (
+            _orden_texto(principal.nombre_seccion)
+            if principal
+            else "sin-seccion-asignada"
+        )
+
+    return sorted(
+        alumnos_banco,
+        key=lambda item: (
+            0 if not item.inscripciones_seccion else 1,
+            item.seccion_principal_key,
+            _orden_texto(getattr(item.alumno, "apellidos", "")),
+            _orden_texto(getattr(item.alumno, "nombres", "")),
+            item.alumno_id,
+        ),
+    )
+
+
+def _marcar_grupos_seccion(alumnos_banco):
+    """Marca el primer alumno de cada grupo visual de sección."""
+    grupo_anterior = object()
+    for item in alumnos_banco:
+        item.muestra_grupo_seccion = (
+            item.seccion_principal_key != grupo_anterior
+        )
+        grupo_anterior = item.seccion_principal_key
+
+
 def _preparar_alumnos_actuales(alumnos_banco, inscripciones_por_alumno):
     """Asocia inscripciones activas y ordena el banco por persona."""
     for item in alumnos_banco:
