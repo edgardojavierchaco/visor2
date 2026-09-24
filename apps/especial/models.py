@@ -16,7 +16,7 @@ from apps.cef.models import (
     CefFuenteFinanciamientoTipo,
     CefPrestacionTipo,
 )
-from apps.supervisa2.models.supervisor import Supervisor2
+from apps.supervisor_registro.models import ABMSupervisores, SupervisorRegionalOferta
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ TERMINO_MATRICULA_COMPARTIDA = "integracion"
 ROL_ADMINISTRADOR_ESPECIAL = "Administrador"
 ROL_MINISTRO_ESPECIAL = "Ministro"
 ROL_SUBSECRETARIO_ESPECIAL = "Subsecretario"
-ROL_DIRECTOR_GENERAL_ESPECIAL = "Director general"
+ROL_DIRECTOR_GENERAL_ESPECIAL = "Director General"
 ROL_MODALIDAD_ESPECIAL = "Director de Modalidad Especial"
 ROL_REGIONAL_ESPECIAL = "Regional"
 ROL_SUPERVISOR_ESPECIAL = "Supervisor"
@@ -495,26 +495,32 @@ def _regiones_asignadas_usuario(user):
 
 
 def _supervisor_alcance_usuario(user):
+    """Obtiene los CUE-Anexos explícitamente asignados al Supervisor."""
     cuil = _cuil_asignado_a_usuario(user)
     if not cuil:
-        return [], []
+        return []
     try:
-        supervisor = Supervisor2.objects.filter(
-            usuario=cuil,
+        supervisor = ABMSupervisores.objects.filter(
+            usuario__username=cuil,
             activo=True,
         ).first()
         if not supervisor:
-            return [], []
-        regiones = list(
-            supervisor.regiones.values_list("nombre", flat=True)
+            return []
+
+        return list(
+            SupervisorRegionalOferta.objects.filter(
+                supervisor_regional__supervisor=supervisor,
+                supervisor_regional__activo=True,
+                activo=True,
+            )
+            .exclude(cueanexo__isnull=True)
+            .exclude(cueanexo__exact="")
+            .values_list("cueanexo", flat=True)
+            .distinct()
         )
-        niveles = list(
-            supervisor.niveles_modalidad.values_list("nombre", flat=True)
-        )
-        return regiones, niveles
     except Exception:
         logger.exception("No se pudo resolver el alcance del Supervisor Especial.")
-        return [], []
+        return []
 
 
 def get_escuelas_especiales_visualizacion_usuario(user, permisos=None):
@@ -544,12 +550,12 @@ def get_escuelas_especiales_visualizacion_usuario(user, permisos=None):
             region_filter |= Q(region_loc__iexact=region)
         return queryset.filter(region_filter).order_by("cueanexo")
     if rol == ROL_SUPERVISOR_ESPECIAL:
-        regiones, niveles = _supervisor_alcance_usuario(user)
-        if not regiones or not niveles:
+        cueanexos = _supervisor_alcance_usuario(user)
+        if not cueanexos:
             return queryset.none()
         return queryset.filter(
-            region_loc__in=regiones,
-            oferta__in=niveles,
+            Q(cueanexo__in=cueanexos)
+            | Q(padron_cueanexo__in=cueanexos)
         ).order_by("cueanexo")
     return get_escuelas_especiales_por_cuil_responsable(user)
 

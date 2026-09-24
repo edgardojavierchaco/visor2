@@ -435,11 +435,25 @@ def resolver_contexto_operativo(request, scope="cargables"):
         "establecimiento": establecimiento,
         "querystring": _context_querystring(cueanexo, ciclo),
         "alumnos_url": _alumnos_url(),
+        # Exponer en la plantilla los permisos ya resueltos para que la
+        # navegación interna no tenga que inferirlos ni depender de valores
+        # ausentes del contexto.
+        "rol_especial": permisos["rol"],
+        "puede_ver_ciclos": permisos["puede_ver_ciclos"],
         "es_admin_especial": permisos["es_admin"],
+        # El Visualizador global reutiliza este contexto para aplicar el
+        # alcance de CUE-Anexos de Regionales, Supervisores y Directores.
+        # Sin exponer estos conjuntos, esas vistas recibían un alcance vacío
+        # aunque los permisos ya hubieran sido resueltos correctamente.
+        "cueanexos_visualizacion": permisos["cueanexos_visualizacion"],
+        "cueanexos_cargables": permisos["cueanexos_cargables"],
         "ciclo_cerrado": bool(ciclo and getattr(ciclo, "cerrado", False)),
         "puede_consultar": bool(cueanexo and ciclo),
         "puede_operar": bool(
-            cueanexo and ciclo and not getattr(ciclo, "cerrado", False)
+            permisos["puede_cargar"]
+            and cueanexo
+            and ciclo
+            and not getattr(ciclo, "cerrado", False)
         ),
         "sin_cueanexo": not bool(cueanexo),
         "sin_ciclo": not bool(ciclo),

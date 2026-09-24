@@ -130,7 +130,8 @@
                                         <ul class="dropdown-menu cef-row-actions-menu" data-cef-row-actions-menu>
                                             <li>
                                                 <a class="dropdown-item cef-secciones-action is-primary" href="{% url 'especial:gestionar_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-                                                    <i class="fa-solid fa-clipboard-list"></i> Gestionar sección
+                                                    <i class="fa-solid fa-clipboard-list"></i>
+                                                    {% if especial_context.puede_operar %}Gestionar sección{% else %}Ver datos de sección{% endif %}
                                                 </a>
                                             </li>
                                             {% if especial_context.puede_operar %}
@@ -140,11 +141,13 @@
                                                 </a>
                                             </li>
                                             {% endif %}
+                                            {% if especial_context.puede_operar %}
                                             <li>
                                                 <a class="dropdown-item cef-secciones-action is-outline" href="{% url 'especial:inscripcion_seccion' seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
                                                     <i class="fa-solid fa-user-plus"></i> Alumnos
                                                 </a>
                                             </li>
+                                            {% endif %}
                                             <!-- NOTA: Verifica si tienes esta URL definida, sino quítala temporalmente -->
                                             <!-- 
                                             <li>

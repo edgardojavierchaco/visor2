@@ -19,7 +19,7 @@
                 <strong>{{ asignacion.seccion.nombre_seccion }}</strong>
                 <div class="small text-muted">{{ asignacion.get_rol_display }}{% if asignacion.seccion.turno %} · {{ asignacion.seccion.turno }}{% endif %}</div>
             </div>
-            <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:gestionar_seccion' asignacion.seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}"><i class="fa-solid fa-clipboard-list"></i> Gestionar sección</a>
+            <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:gestionar_seccion' asignacion.seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}"><i class="fa-solid fa-clipboard-list"></i> {% if especial_context.puede_operar %}Gestionar sección{% else %}Ver datos de sección{% endif %}</a>
         </div>
     {% endfor %}
     <p class="text-muted mt-3 mb-0">Primero deben darse de baja los cargos desde la gestión de cada sección.</p>

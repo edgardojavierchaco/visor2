@@ -617,6 +617,13 @@ def carga_seccion_form(request, seccion_id=None):
         )
         return redirect(request.get_full_path())
 
+    if request.method == "POST" and not especial_context.get("puede_operar"):
+        message = "Tu rol sólo permite consultar esta sección; no puede realizar operaciones."
+        if _is_ajax(request):
+            return JsonResponse({"error": message}, status=403)
+        messages.error(request, message)
+        return redirect(request.get_full_path())
+
     if not especial_context["puede_operar"]:
         messages.error(request, "Seleccioná un CUE-Anexo y un ciclo para cargar secciones.")
         return redirect(redirect_con_contexto("especial:carga_seccion", especial_context))
@@ -976,6 +983,13 @@ def gestionar_seccion(request, seccion_id):
             request,
             "El ciclo seleccionado está cerrado y sólo puede consultarse.",
         )
+        return redirect(request.get_full_path())
+
+    if request.method == "POST" and not especial_context.get("puede_operar"):
+        message = "Tu rol sólo permite consultar esta sección; no puede realizar operaciones."
+        if _is_ajax(request):
+            return JsonResponse({"error": message}, status=403)
+        messages.error(request, message)
         return redirect(request.get_full_path())
 
     seccion = _seccion_segura(seccion_id, especial_context)

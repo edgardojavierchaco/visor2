@@ -11,7 +11,7 @@
                     <th>Estado en banco de especial</th>
                     <th>Fecha alta</th>
                     <th class="docentes-secciones-header">Secciones asignadas</th>
-                    <th>Acciones</th>
+                    {% if especial_context.puede_operar %}<th>Acciones</th>{% endif %}
                 </tr>
             </thead>
             <tbody>

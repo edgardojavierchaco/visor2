@@ -20,7 +20,8 @@
         <div class="border rounded p-3 mb-2 d-flex flex-wrap gap-3 align-items-center justify-content-between">
             <strong>{{ inscripcion.seccion.nombre_seccion }}{% if inscripcion.seccion.cd_tipo_seccion %} · {{ inscripcion.seccion.cd_tipo_seccion }}{% endif %}</strong>
             <a class="btn btn-outline-primary btn-sm" href="{% url 'especial:gestionar_seccion' inscripcion.seccion.pk %}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}">
-                <i class="fa-solid fa-clipboard-list"></i> Gestionar sección
+                <i class="fa-solid fa-clipboard-list"></i>
+                {% if especial_context.puede_operar %}Gestionar sección{% else %}Ver datos de sección{% endif %}
             </a>
         </div>
     {% endfor %}
