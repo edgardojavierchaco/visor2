@@ -616,3 +616,127 @@ body {
         align-self: flex-start;
     }
 }
+
+
+/* ============================================================
+   CAPA EJECUTIVA V2
+============================================================ */
+
+.methodology-strip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.methodology-strip > div {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 12px 14px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(16, 24, 40, .035);
+}
+
+.methodology-strip i {
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.methodology-strip strong {
+    font-size: .75rem;
+    color: #344054;
+}
+
+.methodology-strip span {
+    color: #98a2b3;
+    font-size: .68rem;
+}
+
+.section-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 14px;
+    margin: 26px 2px 12px;
+}
+
+.section-heading h2 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 750;
+    letter-spacing: -.02em;
+}
+
+.section-note {
+    color: #667085;
+    font-size: .76rem;
+    font-weight: 650;
+}
+
+.executive-kpis {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.attendance-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.weekly-alert-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 22px;
+}
+
+.kpi-quality .kpi-icon {
+    color: #026aa2;
+    background: #f0f9ff;
+}
+
+.kpi-warning .kpi-icon {
+    color: #b54708;
+    background: #fffaeb;
+}
+
+.reason-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #f2f4f7;
+    color: #475467;
+    font-size: .68rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+@media (max-width: 1500px) {
+    .executive-kpis,
+    .weekly-alert-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 991px) {
+    .methodology-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .executive-kpis,
+    .weekly-alert-grid,
+    .attendance-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575px) {
+    .methodology-strip,
+    .executive-kpis,
+    .weekly-alert-grid,
+    .attendance-kpis {
+        grid-template-columns: 1fr;
+    }
+}

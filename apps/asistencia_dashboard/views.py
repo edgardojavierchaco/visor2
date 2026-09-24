@@ -1123,3 +1123,2335 @@ def api_alertas_alumnos(request):
         "pagination": _pagination_meta(page, page_size, total),
     })
 
+
+
+# ============================================================
+# CAPA EJECUTIVA V2
+# Matrícula, incidencia, cobertura y tendencia semanal
+# ============================================================
+
+TABLA_MATRICULA = "sge.aip_matricula_seccion_mes"
+
+
+def _cueanexos_territorio(filtros):
+    """
+    Traduce filtros territoriales/oferta del padrón a CUEANEXO.
+    Devuelve None cuando no hay filtro territorial que aplicar.
+    """
+    campos_activos = any(
+        filtros.get(campo)
+        for campo in (
+            "region",
+            "departamento",
+            "localidad",
+            "oferta",
+        )
+    )
+
+    if not campos_activos:
+        return None
+
+    qs = CapaUnicaOfertas.objects.using("default").all()
+
+    if filtros.get("region"):
+        qs = qs.filter(
+            region_loc=filtros["region"]
+        )
+
+    if filtros.get("departamento"):
+        qs = qs.filter(
+            departamento=filtros["departamento"]
+        )
+
+    if filtros.get("localidad"):
+        qs = qs.filter(
+            localidad=filtros["localidad"]
+        )
+
+    if filtros.get("oferta"):
+        qs = qs.filter(
+            oferta=filtros["oferta"]
+        )
+
+    valores = (
+        qs
+        .exclude(cueanexo__isnull=True)
+        .values_list(
+            "cueanexo",
+            flat=True,
+        )
+        .distinct()
+    )
+
+    return [
+        str(cue).strip()
+        for cue in valores
+        if cue is not None
+        and str(cue).strip()
+    ]
+
+
+def _build_where_matricula(
+    filtros,
+    request,
+    anio=None,
+    mes=None,
+    alias=None,
+):
+    prefix = f"{alias}." if alias else ""
+
+    anio = anio or filtros["anio"]
+    mes = mes or filtros["mes"]
+
+    condiciones = [
+        f"{prefix}anio = %s",
+        f"{prefix}mes = %s",
+    ]
+
+    params = [
+        anio,
+        mes,
+    ]
+
+    _apply_scope_to_conditions(
+        request,
+        condiciones,
+        params,
+        alias=alias,
+    )
+
+    cues_territorio = _cueanexos_territorio(
+        filtros
+    )
+
+    if cues_territorio is not None:
+        if cues_territorio:
+            condiciones.append(
+                f"{prefix}cueanexo = ANY(%s)"
+            )
+            params.append(
+                cues_territorio
+            )
+        else:
+            condiciones.append(
+                "1 = 0"
+            )
+
+    for campo in (
+        "departamento",
+        "localidad",
+        "nivel",
+        "oferta",
+        "ambito",
+        "cueanexo",
+        "grado",
+        "seccion",
+        "turno",
+    ):
+        valor = filtros.get(
+            campo
+        )
+
+        if valor:
+            condiciones.append(
+                f"{prefix}{campo} = %s"
+            )
+            params.append(
+                valor
+            )
+
+    return (
+        " AND ".join(condiciones),
+        params,
+    )
+
+
+def _build_where_calidad(
+    filtros,
+    request,
+):
+    condiciones = [
+        "anio = %s",
+        "mes = %s",
+    ]
+
+    params = [
+        filtros["anio"],
+        filtros["mes"],
+    ]
+
+    _apply_scope_to_conditions(
+        request,
+        condiciones,
+        params,
+    )
+
+    cues_territorio = _cueanexos_territorio(
+        filtros
+    )
+
+    if cues_territorio is not None:
+        if cues_territorio:
+            condiciones.append(
+                "cueanexo = ANY(%s)"
+            )
+            params.append(
+                cues_territorio
+            )
+        else:
+            condiciones.append(
+                "1 = 0"
+            )
+
+    for campo in (
+        "departamento",
+        "localidad",
+        "nivel",
+        "cueanexo",
+    ):
+        valor = filtros.get(
+            campo
+        )
+
+        if valor:
+            condiciones.append(
+                f"{campo} = %s"
+            )
+            params.append(
+                valor
+            )
+
+    return (
+        " AND ".join(condiciones),
+        params,
+    )
+
+
+def _build_where_semanal(
+    filtros,
+    request,
+    anio_iso=None,
+    semana_iso=None,
+    alias=None,
+):
+    prefix = f"{alias}." if alias else ""
+
+    condiciones = [
+        f"{prefix}anio_iso = %s",
+        f"{prefix}semana_iso = %s",
+    ]
+
+    params = [
+        anio_iso or filtros["anio_semana"],
+        semana_iso or filtros["semana"],
+    ]
+
+    _apply_scope_to_conditions(
+        request,
+        condiciones,
+        params,
+        alias=alias,
+    )
+
+    cues_territorio = _cueanexos_territorio(
+        filtros
+    )
+
+    if cues_territorio is not None:
+        if cues_territorio:
+            condiciones.append(
+                f"{prefix}cueanexo = ANY(%s)"
+            )
+            params.append(
+                cues_territorio
+            )
+        else:
+            condiciones.append(
+                "1 = 0"
+            )
+
+    for campo in (
+        "cueanexo",
+        "nivel",
+        "grado",
+        "seccion",
+        "turno",
+    ):
+        valor = filtros.get(
+            campo
+        )
+
+        if valor:
+            condiciones.append(
+                f"{prefix}{campo} = %s"
+            )
+            params.append(
+                valor
+            )
+
+    return (
+        " AND ".join(condiciones),
+        params,
+    )
+
+
+def _matricula_total(
+    filtros,
+    request,
+    anio=None,
+    mes=None,
+):
+    where, params = _build_where_matricula(
+        filtros,
+        request,
+        anio=anio,
+        mes=mes,
+    )
+
+    with connections[
+        DB_ALIAS
+    ].cursor() as cursor:
+
+        cursor.execute(
+            f"""
+            SELECT
+                COALESCE(
+                    SUM(matricula),
+                    0
+                )
+            FROM
+                {TABLA_MATRICULA}
+            WHERE
+                {where}
+            """,
+            params,
+        )
+
+        return int(
+            cursor.fetchone()[0]
+            or 0
+        )
+
+
+def _adjuntar_matricula(
+    datos,
+    filtros,
+    request,
+    detalle=False,
+):
+    if not datos:
+        return datos
+
+    cues = list(
+        dict.fromkeys(
+            str(fila.get("cueanexo"))
+            for fila in datos
+            if fila.get("cueanexo") is not None
+        )
+    )
+
+    if not cues:
+        return datos
+
+    where, params = _build_where_matricula(
+        filtros,
+        request,
+    )
+
+    where += " AND cueanexo = ANY(%s)"
+    params.append(
+        cues
+    )
+
+    if detalle:
+        sql = f"""
+            SELECT
+                cueanexo,
+                nivel,
+                grado,
+                seccion,
+                turno,
+                SUM(matricula)::integer
+                    AS matricula
+            FROM
+                {TABLA_MATRICULA}
+            WHERE
+                {where}
+            GROUP BY
+                cueanexo,
+                nivel,
+                grado,
+                seccion,
+                turno
+        """
+    else:
+        sql = f"""
+            SELECT
+                cueanexo,
+                SUM(matricula)::integer
+                    AS matricula
+            FROM
+                {TABLA_MATRICULA}
+            WHERE
+                {where}
+            GROUP BY
+                cueanexo
+        """
+
+    with connections[
+        DB_ALIAS
+    ].cursor() as cursor:
+
+        cursor.execute(
+            sql,
+            params,
+        )
+
+        rows = cursor.fetchall()
+
+    if detalle:
+        mapa = {
+            (
+                str(cue),
+                nivel or "",
+                grado or "",
+                seccion or "",
+                turno or "",
+            ): matricula
+            for (
+                cue,
+                nivel,
+                grado,
+                seccion,
+                turno,
+                matricula,
+            ) in rows
+        }
+
+        for fila in datos:
+            clave = (
+                str(
+                    fila.get(
+                        "cueanexo",
+                        "",
+                    )
+                ),
+                fila.get(
+                    "nivel"
+                ) or "",
+                fila.get(
+                    "grado"
+                ) or "",
+                fila.get(
+                    "seccion"
+                ) or "",
+                fila.get(
+                    "turno"
+                ) or "",
+            )
+
+            fila[
+                "matricula"
+            ] = mapa.get(
+                clave,
+                0,
+            )
+
+    else:
+        mapa = {
+            str(cue): matricula
+            for cue, matricula in rows
+        }
+
+        for fila in datos:
+            fila[
+                "matricula"
+            ] = mapa.get(
+                str(
+                    fila.get(
+                        "cueanexo",
+                        "",
+                    )
+                ),
+                0,
+            )
+
+    return datos
+
+
+@login_required
+def api_resumen(request):
+    """
+    Resumen ejecutivo mensual.
+
+    Matrícula = alumnos de referencia por sección.
+    Presentes/ausentes = alumno-jornadas del período.
+    """
+    filtros = _filtros_request(
+        request
+    )
+
+    where, params = _build_where(
+        filtros,
+        request,
+    )
+
+    sql = f"""
+        SELECT
+            COUNT(
+                DISTINCT cueanexo
+            )
+                AS establecimientos,
+
+            COUNT(
+                DISTINCT id_seccion
+            )
+                AS secciones,
+
+            COUNT(
+                DISTINCT fecha_asistencia
+            )
+                AS dias_con_registro,
+
+            COALESCE(
+                SUM(total_alumnos),
+                0
+            )
+                AS alumno_jornadas,
+
+            COALESCE(
+                SUM(presentes),
+                0
+            )
+                AS presentes,
+
+            COALESCE(
+                SUM(ausentes),
+                0
+            )
+                AS ausentes,
+
+            COALESCE(
+                SUM(ausentes_justificados),
+                0
+            )
+                AS ausentes_justificados,
+
+            COALESCE(
+                SUM(otras_faltas),
+                0
+            )
+                AS otras_faltas,
+
+            ROUND(
+                100.0
+                *
+                SUM(
+                    COALESCE(
+                        presentes,
+                        0
+                    )
+                )
+                /
+                NULLIF(
+                    SUM(
+                        COALESCE(
+                            presentes,
+                            0
+                        )
+                        +
+                        COALESCE(
+                            ausentes,
+                            0
+                        )
+                        +
+                        COALESCE(
+                            ausentes_justificados,
+                            0
+                        )
+                    ),
+                    0
+                ),
+                2
+            )
+                AS porcentaje_asistencia,
+
+            ROUND(
+                100.0
+                *
+                SUM(
+                    COALESCE(
+                        ausentes,
+                        0
+                    )
+                    +
+                    COALESCE(
+                        ausentes_justificados,
+                        0
+                    )
+                )
+                /
+                NULLIF(
+                    SUM(
+                        COALESCE(
+                            presentes,
+                            0
+                        )
+                        +
+                        COALESCE(
+                            ausentes,
+                            0
+                        )
+                        +
+                        COALESCE(
+                            ausentes_justificados,
+                            0
+                        )
+                    ),
+                    0
+                ),
+                2
+            )
+                AS porcentaje_ausentismo
+
+        FROM
+            {TABLA_ASISTENCIA}
+
+        WHERE
+            {where}
+    """
+
+    with connections[
+        DB_ALIAS
+    ].cursor() as cursor:
+
+        cursor.execute(
+            sql,
+            params,
+        )
+
+        columnas = [
+            col[0]
+            for col in cursor.description
+        ]
+
+        row = cursor.fetchone()
+
+        resultado = dict(
+            zip(
+                columnas,
+                row,
+            )
+        )
+
+    resultado[
+        "matricula"
+    ] = _matricula_total(
+        filtros,
+        request,
+    )
+
+    where_calidad, params_calidad = _build_where_calidad(
+        filtros,
+        request,
+    )
+
+    try:
+        with connections[
+            DB_ALIAS
+        ].cursor() as cursor:
+
+            cursor.execute(
+                f"""
+                SELECT
+                    COALESCE(
+                        SUM(dias_esperados),
+                        0
+                    ) AS jornadas_esperadas,
+
+                    COALESCE(
+                        SUM(dias_registrados),
+                        0
+                    ) AS jornadas_registradas,
+
+                    COALESCE(
+                        SUM(dias_sin_registro),
+                        0
+                    ) AS jornadas_sin_registro,
+
+                    COUNT(*) AS secciones_calidad,
+
+                    COUNT(*) FILTER
+                    (
+                        WHERE
+                            estado_registro =
+                            'COMPLETO'
+                    )
+                        AS secciones_completas,
+
+                    ROUND(
+                        100.0
+                        *
+                        SUM(
+                            dias_registrados
+                        )
+                        /
+                        NULLIF(
+                            SUM(
+                                dias_esperados
+                            ),
+                            0
+                        ),
+                        2
+                    )
+                        AS porcentaje_cobertura
+
+                FROM
+                    {TABLA_CALIDAD}
+
+                WHERE
+                    {where_calidad}
+                """,
+                params_calidad,
+            )
+
+            fila_calidad = cursor.fetchone()
+
+            (
+                resultado[
+                    "jornadas_esperadas"
+                ],
+                resultado[
+                    "jornadas_registradas"
+                ],
+                resultado[
+                    "jornadas_sin_registro"
+                ],
+                resultado[
+                    "secciones_calidad"
+                ],
+                resultado[
+                    "secciones_completas"
+                ],
+                resultado[
+                    "porcentaje_cobertura"
+                ],
+            ) = fila_calidad
+
+    except Exception:
+        resultado.update(
+            {
+                "jornadas_esperadas": 0,
+                "jornadas_registradas": 0,
+                "jornadas_sin_registro": 0,
+                "secciones_calidad": 0,
+                "secciones_completas": 0,
+                "porcentaje_cobertura": None,
+            }
+        )
+
+    return JsonResponse(
+        resultado
+    )
+
+
+@login_required
+def api_ranking(request):
+    filtros = _filtros_request(
+        request
+    )
+
+    where, params = _build_where(
+        filtros,
+        request,
+    )
+
+    page, page_size, offset = _pagination_request(
+        request
+    )
+
+    base_sql = f"""
+        SELECT
+            cueanexo,
+
+            MAX(
+                escuela
+            )
+                AS escuela,
+
+            MAX(
+                departamento
+            )
+                AS departamento,
+
+            MAX(
+                localidad
+            )
+                AS localidad,
+
+            COUNT(
+                DISTINCT fecha_asistencia
+            )
+                AS dias_registrados,
+
+            SUM(
+                total_alumnos
+            )
+                AS alumno_jornadas,
+
+            SUM(
+                presentes
+            )
+                AS presentes,
+
+            SUM(
+                ausentes
+            )
+                AS ausentes,
+
+            ROUND(
+                100.0
+                *
+                SUM(
+                    COALESCE(
+                        presentes,
+                        0
+                    )
+                )
+                /
+                NULLIF(
+                    SUM(
+                        COALESCE(
+                            presentes,
+                            0
+                        )
+                        +
+                        COALESCE(
+                            ausentes,
+                            0
+                        )
+                        +
+                        COALESCE(
+                            ausentes_justificados,
+                            0
+                        )
+                    ),
+                    0
+                ),
+                2
+            )
+                AS porcentaje_asistencia,
+
+            ROUND(
+                100.0
+                *
+                SUM(
+                    COALESCE(
+                        ausentes,
+                        0
+                    )
+                    +
+                    COALESCE(
+                        ausentes_justificados,
+                        0
+                    )
+                )
+                /
+                NULLIF(
+                    SUM(
+                        COALESCE(
+                            presentes,
+                            0
+                        )
+                        +
+                        COALESCE(
+                            ausentes,
+                            0
+                        )
+                        +
+                        COALESCE(
+                            ausentes_justificados,
+                            0
+                        )
+                    ),
+                    0
+                ),
+                2
+            )
+                AS porcentaje_ausentismo
+
+        FROM
+            {TABLA_ASISTENCIA}
+
+        WHERE
+            {where}
+
+        GROUP BY
+            cueanexo
+    """
+
+    with connections[
+        DB_ALIAS
+    ].cursor() as cursor:
+
+        cursor.execute(
+            f"""
+            SELECT
+                COUNT(*)
+            FROM
+                ({base_sql}) q
+            """,
+            params,
+        )
+
+        total = cursor.fetchone()[0]
+
+        cursor.execute(
+            base_sql
+            +
+            """
+            ORDER BY
+                porcentaje_ausentismo DESC NULLS LAST,
+                escuela
+            LIMIT %s
+            OFFSET %s
+            """,
+            params
+            +
+            [
+                page_size,
+                offset,
+            ],
+        )
+
+        datos = _dictfetchall(
+            cursor
+        )
+
+    _adjuntar_matricula(
+        datos,
+        filtros,
+        request,
+        detalle=False,
+    )
+
+    return JsonResponse(
+        {
+            "data": datos,
+            "pagination": _pagination_meta(
+                page,
+                page_size,
+                total,
+            ),
+        }
+    )
+
+
+@login_required
+def api_mensual(request):
+    filtros = _filtros_request(
+        request
+    )
+
+    where, params = _build_where(
+        filtros,
+        request,
+    )
+
+    page, page_size, offset = _pagination_request(
+        request
+    )
+
+    detalle = bool(
+        filtros.get(
+            "cueanexo"
+        )
+    )
+
+    if detalle:
+        base_sql = f"""
+            SELECT
+                cueanexo,
+
+                MAX(
+                    escuela
+                )
+                    AS escuela,
+
+                nivel,
+                grado,
+                seccion,
+                turno,
+
+                COUNT(
+                    DISTINCT fecha_asistencia
+                )
+                    AS dias_registrados,
+
+                SUM(
+                    total_alumnos
+                )
+                    AS alumno_jornadas,
+
+                SUM(
+                    presentes
+                )
+                    AS presentes,
+
+                SUM(
+                    ausentes
+                )
+                    AS ausentes,
+
+                SUM(
+                    ausentes_justificados
+                )
+                    AS ausentes_justificados,
+
+                SUM(
+                    otras_faltas
+                )
+                    AS otras_faltas,
+
+                ROUND(
+                    100.0
+                    *
+                    SUM(
+                        COALESCE(
+                            presentes,
+                            0
+                        )
+                    )
+                    /
+                    NULLIF(
+                        SUM(
+                            COALESCE(
+                                presentes,
+                                0
+                            )
+                            +
+                            COALESCE(
+                                ausentes,
+                                0
+                            )
+                            +
+                            COALESCE(
+                                ausentes_justificados,
+                                0
+                            )
+                        ),
+                        0
+                    ),
+                    2
+                )
+                    AS porcentaje_asistencia
+
+            FROM
+                {TABLA_ASISTENCIA}
+
+            WHERE
+                {where}
+
+            GROUP BY
+                cueanexo,
+                nivel,
+                grado,
+                seccion,
+                turno
+        """
+
+        order_sql = """
+            ORDER BY
+                nivel,
+                grado,
+                seccion,
+                turno
+        """
+
+        nivel_resultado = "seccion"
+
+    else:
+        base_sql = f"""
+            SELECT
+                cueanexo,
+
+                MAX(
+                    escuela
+                )
+                    AS escuela,
+
+                MAX(
+                    departamento
+                )
+                    AS departamento,
+
+                MAX(
+                    localidad
+                )
+                    AS localidad,
+
+                COUNT(
+                    DISTINCT fecha_asistencia
+                )
+                    AS dias_registrados,
+
+                SUM(
+                    total_alumnos
+                )
+                    AS alumno_jornadas,
+
+                SUM(
+                    presentes
+                )
+                    AS presentes,
+
+                SUM(
+                    ausentes
+                )
+                    AS ausentes,
+
+                SUM(
+                    ausentes_justificados
+                )
+                    AS ausentes_justificados,
+
+                SUM(
+                    otras_faltas
+                )
+                    AS otras_faltas,
+
+                ROUND(
+                    100.0
+                    *
+                    SUM(
+                        COALESCE(
+                            presentes,
+                            0
+                        )
+                    )
+                    /
+                    NULLIF(
+                        SUM(
+                            COALESCE(
+                                presentes,
+                                0
+                            )
+                            +
+                            COALESCE(
+                                ausentes,
+                                0
+                            )
+                            +
+                            COALESCE(
+                                ausentes_justificados,
+                                0
+                            )
+                        ),
+                        0
+                    ),
+                    2
+                )
+                    AS porcentaje_asistencia
+
+            FROM
+                {TABLA_ASISTENCIA}
+
+            WHERE
+                {where}
+
+            GROUP BY
+                cueanexo
+        """
+
+        order_sql = """
+            ORDER BY
+                escuela
+        """
+
+        nivel_resultado = "establecimiento"
+
+    with connections[
+        DB_ALIAS
+    ].cursor() as cursor:
+
+        cursor.execute(
+            f"""
+            SELECT
+                COUNT(*)
+            FROM
+                ({base_sql}) q
+            """,
+            params,
+        )
+
+        total = cursor.fetchone()[0]
+
+        cursor.execute(
+            base_sql
+            +
+            order_sql
+            +
+            """
+            LIMIT %s
+            OFFSET %s
+            """,
+            params
+            +
+            [
+                page_size,
+                offset,
+            ],
+        )
+
+        datos = _dictfetchall(
+            cursor
+        )
+
+    _adjuntar_matricula(
+        datos,
+        filtros,
+        request,
+        detalle=detalle,
+    )
+
+    return JsonResponse(
+        {
+            "data": datos,
+            "nivel": nivel_resultado,
+            "pagination": _pagination_meta(
+                page,
+                page_size,
+                total,
+            ),
+        }
+    )
+
+
+@login_required
+def api_secciones(request):
+    filtros = _filtros_request(
+        request
+    )
+
+    if not filtros.get(
+        "cueanexo"
+    ):
+        return JsonResponse(
+            {
+                "data": [],
+                "requiere_cue": True,
+                "pagination": _pagination_meta(
+                    1,
+                    10,
+                    0,
+                ),
+            }
+        )
+
+    where, params = _build_where(
+        filtros,
+        request,
+    )
+
+    page, page_size, offset = _pagination_request(
+        request
+    )
+
+    base_sql = f"""
+        SELECT
+            cueanexo,
+
+            MAX(
+                escuela
+            )
+                AS escuela,
+
+            nivel,
+            grado,
+            seccion,
+            turno,
+
+            COUNT(
+                DISTINCT fecha_asistencia
+            )
+                AS dias_registrados,
+
+            SUM(
+                total_alumnos
+            )
+                AS alumno_jornadas,
+
+            SUM(
+                presentes
+            )
+                AS presentes,
+
+            SUM(
+                ausentes
+            )
+                AS ausentes,
+
+            SUM(
+                ausentes_justificados
+            )
+                AS ausentes_justificados,
+
+            SUM(
+                otras_faltas
+            )
+                AS otras_faltas,
+
+            ROUND(
+                100.0
+                *
+                SUM(
+                    COALESCE(
+                        presentes,
+                        0
+                    )
+                )
+                /
+                NULLIF(
+                    SUM(
+                        COALESCE(
+                            presentes,
+                            0
+                        )
+                        +
+                        COALESCE(
+                            ausentes,
+                            0
+                        )
+                        +
+                        COALESCE(
+                            ausentes_justificados,
+                            0
+                        )
+                    ),
+                    0
+                ),
+                2
+            )
+                AS porcentaje_asistencia
+
+        FROM
+            {TABLA_ASISTENCIA}
+
+        WHERE
+            {where}
+
+        GROUP BY
+            cueanexo,
+            nivel,
+            grado,
+            seccion,
+            turno
+    """
+
+    with connections[
+        DB_ALIAS
+    ].cursor() as cursor:
+
+        cursor.execute(
+            f"""
+            SELECT
+                COUNT(*)
+            FROM
+                ({base_sql}) q
+            """,
+            params,
+        )
+
+        total = cursor.fetchone()[0]
+
+        cursor.execute(
+            base_sql
+            +
+            """
+            ORDER BY
+                nivel,
+                grado,
+                seccion,
+                turno
+            LIMIT %s
+            OFFSET %s
+            """,
+            params
+            +
+            [
+                page_size,
+                offset,
+            ],
+        )
+
+        datos = _dictfetchall(
+            cursor
+        )
+
+    _adjuntar_matricula(
+        datos,
+        filtros,
+        request,
+        detalle=True,
+    )
+
+    return JsonResponse(
+        {
+            "data": datos,
+            "pagination": _pagination_meta(
+                page,
+                page_size,
+                total,
+            ),
+        }
+    )
+
+
+@login_required
+def api_establecimientos(request):
+    q = request.GET.get(
+        "q",
+        "",
+    ).strip()
+
+    anio = _int_param(
+        request,
+        "anio",
+        date.today().year,
+    )
+
+    mes = _int_param(
+        request,
+        "mes",
+        date.today().month,
+    )
+
+    filtros = _filtros_request(
+        request
+    )
+
+    desde, hasta = _rango_mes(
+        anio,
+        mes,
+    )
+
+    condiciones = [
+        "fecha_asistencia >= %s",
+        "fecha_asistencia < %s",
+    ]
+
+    params = [
+        desde,
+        hasta,
+    ]
+
+    _apply_scope_to_conditions(
+        request,
+        condiciones,
+        params,
+    )
+
+    cues_territorio = _cueanexos_territorio(
+        filtros
+    )
+
+    if cues_territorio is not None:
+        if cues_territorio:
+            condiciones.append(
+                "cueanexo = ANY(%s)"
+            )
+            params.append(
+                cues_territorio
+            )
+        else:
+            condiciones.append(
+                "1 = 0"
+            )
+
+    if q:
+        condiciones.append(
+            """
+            (
+                cueanexo ILIKE %s
+                OR
+                escuela ILIKE %s
+            )
+            """
+        )
+
+        termino = f"%{q}%"
+
+        params.extend(
+            [
+                termino,
+                termino,
+            ]
+        )
+
+    with connections[
+        DB_ALIAS
+    ].cursor() as cursor:
+
+        cursor.execute(
+            f"""
+            SELECT
+                cueanexo,
+                MAX(
+                    escuela
+                ) AS escuela
+
+            FROM
+                {TABLA_ASISTENCIA}
+
+            WHERE
+                {" AND ".join(condiciones)}
+
+            GROUP BY
+                cueanexo
+
+            ORDER BY
+                escuela
+
+            LIMIT 10
+            """,
+            params,
+        )
+
+        filas = cursor.fetchall()
+
+    return JsonResponse(
+        {
+            "results": [
+                {
+                    "id": cue,
+                    "text": (
+                        f"{cue} · {escuela}"
+                    ),
+                }
+                for cue, escuela
+                in filas
+            ]
+        }
+    )
+
+
+def _nivel_severidad(
+    nivel,
+):
+    return {
+        "SIN DATOS": 0,
+        "NORMAL": 1,
+        "ATENCION": 2,
+        "ALTO": 3,
+        "CRITICO": 4,
+    }.get(
+        nivel or "SIN DATOS",
+        0,
+    )
+
+
+def _motivo_alerta(
+    nivel_porcentaje,
+    nivel_continuidad,
+    nivel_final,
+):
+    if nivel_final in (
+        None,
+        "NORMAL",
+        "SIN DATOS",
+    ):
+        return "Sin alerta"
+
+    sev_p = _nivel_severidad(
+        nivel_porcentaje
+    )
+
+    sev_c = _nivel_severidad(
+        nivel_continuidad
+    )
+
+    sev_f = _nivel_severidad(
+        nivel_final
+    )
+
+    porcentaje = sev_p == sev_f
+    continuidad = sev_c == sev_f
+
+    if porcentaje and continuidad:
+        return "Porcentaje + continuidad"
+
+    if porcentaje:
+        return "Porcentaje"
+
+    if continuidad:
+        return "Continuidad"
+
+    return "Combinada"
+
+
+@login_required
+def api_alertas_alumnos(request):
+    filtros = _filtros_request(
+        request
+    )
+
+    page, page_size, offset = _pagination_request(
+        request
+    )
+
+    if not filtros.get(
+        "cueanexo"
+    ):
+        return JsonResponse(
+            {
+                "data": [],
+                "resumen": {
+                    "NORMAL": 0,
+                    "ATENCION": 0,
+                    "ALTO": 0,
+                    "CRITICO": 0,
+                    "SIN DATOS": 0,
+                },
+                "requiere_cue": True,
+                "pagination": _pagination_meta(
+                    page,
+                    page_size,
+                    0,
+                ),
+            }
+        )
+
+    where, params = _build_where_semanal(
+        filtros,
+        request,
+    )
+
+    if filtros.get(
+        "alerta"
+    ):
+        where += " AND nivel_alerta_final = %s"
+        params.append(
+            filtros["alerta"]
+        )
+
+    select_sql = f"""
+        SELECT
+            cueanexo,
+            escuela,
+            id_alumno,
+            id_persona,
+            nombre_apellido,
+            nivel,
+            grado,
+            seccion,
+            turno,
+            fecha_desde,
+            fecha_hasta,
+            dias_esperados_semana,
+            dias_registrados,
+            dias_sin_registro_semana,
+            porcentaje_cumplimiento_registro,
+            unidades_calificables,
+            inasistencias_equivalentes,
+            dias_ausencia_completa,
+            fecha_ultima_presencia,
+            fecha_ultima_ausencia_completa,
+            ultima_fecha_registrada,
+            racha_actual_ausencias,
+            racha_maxima_ausencias,
+            porcentaje_asistencia,
+            nivel_porcentaje,
+            nivel_continuidad,
+            nivel_alerta_final
+
+        FROM
+            {TABLA_ALERTA_SEMANAL}
+
+        WHERE
+            {where}
+    """
+
+    order_sql = """
+        ORDER BY
+            CASE nivel_alerta_final
+                WHEN 'CRITICO'
+                    THEN 1
+                WHEN 'ALTO'
+                    THEN 2
+                WHEN 'ATENCION'
+                    THEN 3
+                WHEN 'NORMAL'
+                    THEN 4
+                ELSE 5
+            END,
+
+            racha_actual_ausencias DESC,
+
+            racha_maxima_ausencias DESC,
+
+            porcentaje_asistencia ASC NULLS LAST,
+
+            nombre_apellido
+    """
+
+    with connections[
+        DB_ALIAS
+    ].cursor() as cursor:
+
+        cursor.execute(
+            f"""
+            SELECT
+                COUNT(*)
+            FROM
+                ({select_sql}) q
+            """,
+            params,
+        )
+
+        total = cursor.fetchone()[0]
+
+        cursor.execute(
+            f"""
+            SELECT
+                nivel_alerta_final,
+                COUNT(
+                    DISTINCT id_alumno
+                )
+
+            FROM
+                {TABLA_ALERTA_SEMANAL}
+
+            WHERE
+                {where}
+
+            GROUP BY
+                nivel_alerta_final
+            """,
+            params,
+        )
+
+        resumen = {
+            "NORMAL": 0,
+            "ATENCION": 0,
+            "ALTO": 0,
+            "CRITICO": 0,
+            "SIN DATOS": 0,
+        }
+
+        for nivel, cantidad in cursor.fetchall():
+            if nivel in resumen:
+                resumen[
+                    nivel
+                ] = cantidad
+
+        cursor.execute(
+            select_sql
+            +
+            order_sql
+            +
+            """
+            LIMIT %s
+            OFFSET %s
+            """,
+            params
+            +
+            [
+                page_size,
+                offset,
+            ],
+        )
+
+        datos = _dictfetchall(
+            cursor
+        )
+
+    for fila in datos:
+        fila[
+            "motivo_alerta"
+        ] = _motivo_alerta(
+            fila.get(
+                "nivel_porcentaje"
+            ),
+            fila.get(
+                "nivel_continuidad"
+            ),
+            fila.get(
+                "nivel_alerta_final"
+            ),
+        )
+
+        for campo_fecha in (
+            "fecha_desde",
+            "fecha_hasta",
+            "fecha_ultima_presencia",
+            "fecha_ultima_ausencia_completa",
+            "ultima_fecha_registrada",
+        ):
+            if fila.get(
+                campo_fecha
+            ):
+                fila[
+                    campo_fecha
+                ] = fila[
+                    campo_fecha
+                ].isoformat()
+
+    return JsonResponse(
+        {
+            "data": datos,
+            "resumen": resumen,
+            "requiere_cue": False,
+            "pagination": _pagination_meta(
+                page,
+                page_size,
+                total,
+            ),
+        }
+    )
+
+
+@login_required
+def api_resumen_alertas_semana(request):
+    filtros = _filtros_request(
+        request
+    )
+
+    where, params = _build_where_semanal(
+        filtros,
+        request,
+    )
+
+    with connections[
+        DB_ALIAS
+    ].cursor() as cursor:
+
+        cursor.execute(
+            f"""
+            SELECT
+                COUNT(
+                    DISTINCT id_alumno
+                ) FILTER
+                (
+                    WHERE
+                        nivel_alerta_final
+                        IN
+                        (
+                            'ATENCION',
+                            'ALTO',
+                            'CRITICO'
+                        )
+                )
+                    AS alumnos_alerta,
+
+                COUNT(
+                    DISTINCT id_alumno
+                ) FILTER
+                (
+                    WHERE
+                        nivel_alerta_final =
+                        'ATENCION'
+                )
+                    AS atencion,
+
+                COUNT(
+                    DISTINCT id_alumno
+                ) FILTER
+                (
+                    WHERE
+                        nivel_alerta_final =
+                        'ALTO'
+                )
+                    AS alto,
+
+                COUNT(
+                    DISTINCT id_alumno
+                ) FILTER
+                (
+                    WHERE
+                        nivel_alerta_final =
+                        'CRITICO'
+                )
+                    AS critico,
+
+                MIN(
+                    fecha_desde
+                )
+                    AS fecha_desde,
+
+                MAX(
+                    fecha_hasta
+                )
+                    AS fecha_hasta
+
+            FROM
+                {TABLA_ALERTA_SEMANAL}
+
+            WHERE
+                {where}
+            """,
+            params,
+        )
+
+        row = cursor.fetchone()
+
+    (
+        alumnos_alerta,
+        atencion,
+        alto,
+        critico,
+        fecha_desde,
+        fecha_hasta,
+    ) = row
+
+    if fecha_hasta is None:
+        fecha_desde = date.fromisocalendar(
+            filtros[
+                "anio_semana"
+            ],
+            filtros[
+                "semana"
+            ],
+            1,
+        )
+
+        fecha_hasta = (
+            fecha_desde
+            +
+            timedelta(
+                days=6
+            )
+        )
+
+    filtros_matricula = dict(
+        filtros
+    )
+
+    matricula = _matricula_total(
+        filtros_matricula,
+        request,
+        anio=fecha_hasta.year,
+        mes=fecha_hasta.month,
+    )
+
+    incidencia = (
+        round(
+            100.0
+            *
+            int(
+                alumnos_alerta
+                or 0
+            )
+            /
+            matricula,
+            2,
+        )
+        if matricula
+        else None
+    )
+
+    return JsonResponse(
+        {
+            "matricula_referencia": matricula,
+            "alumnos_alerta": int(
+                alumnos_alerta
+                or 0
+            ),
+            "atencion": int(
+                atencion
+                or 0
+            ),
+            "alto": int(
+                alto
+                or 0
+            ),
+            "critico": int(
+                critico
+                or 0
+            ),
+            "incidencia": incidencia,
+            "fecha_desde": (
+                fecha_desde.isoformat()
+                if fecha_desde
+                else None
+            ),
+            "fecha_hasta": (
+                fecha_hasta.isoformat()
+                if fecha_hasta
+                else None
+            ),
+        }
+    )
+
+
+@login_required
+def api_tendencia_alertas(request):
+    filtros = _filtros_request(
+        request
+    )
+
+    semana_actual_inicio = date.fromisocalendar(
+        filtros[
+            "anio_semana"
+        ],
+        filtros[
+            "semana"
+        ],
+        1,
+    )
+
+    resultado = []
+
+    for desplazamiento in (
+        3,
+        2,
+        1,
+        0,
+    ):
+        inicio = (
+            semana_actual_inicio
+            -
+            timedelta(
+                weeks=desplazamiento
+            )
+        )
+
+        iso = inicio.isocalendar()
+
+        filtros_semana = dict(
+            filtros
+        )
+
+        filtros_semana[
+            "anio_semana"
+        ] = iso.year
+
+        filtros_semana[
+            "semana"
+        ] = iso.week
+
+        where, params = _build_where_semanal(
+            filtros_semana,
+            request,
+            anio_iso=iso.year,
+            semana_iso=iso.week,
+        )
+
+        with connections[
+            DB_ALIAS
+        ].cursor() as cursor:
+
+            cursor.execute(
+                f"""
+                SELECT
+                    COUNT(
+                        DISTINCT id_alumno
+                    ) FILTER
+                    (
+                        WHERE
+                            nivel_alerta_final
+                            IN
+                            (
+                                'ATENCION',
+                                'ALTO',
+                                'CRITICO'
+                            )
+                    ),
+
+                    COUNT(
+                        DISTINCT id_alumno
+                    ) FILTER
+                    (
+                        WHERE
+                            nivel_alerta_final =
+                            'CRITICO'
+                    )
+
+                FROM
+                    {TABLA_ALERTA_SEMANAL}
+
+                WHERE
+                    {where}
+                """,
+                params,
+            )
+
+            alertas,
+            criticos = cursor.fetchone()
+
+        fin = (
+            inicio
+            +
+            timedelta(
+                days=6
+            )
+        )
+
+        matricula = _matricula_total(
+            filtros_semana,
+            request,
+            anio=fin.year,
+            mes=fin.month,
+        )
+
+        incidencia = (
+            round(
+                100.0
+                *
+                int(
+                    alertas
+                    or 0
+                )
+                /
+                matricula,
+                2,
+            )
+            if matricula
+            else None
+        )
+
+        resultado.append(
+            {
+                "anio_iso": iso.year,
+                "semana_iso": iso.week,
+                "fecha_desde": inicio.isoformat(),
+                "fecha_hasta": fin.isoformat(),
+                "label": (
+                    f"Sem {iso.week}"
+                ),
+                "alumnos_alerta": int(
+                    alertas
+                    or 0
+                ),
+                "criticos": int(
+                    criticos
+                    or 0
+                ),
+                "matricula": matricula,
+                "incidencia": incidencia,
+            }
+        )
+
+    return JsonResponse(
+        {
+            "data": resultado,
+        }
+    )
+
+
+@login_required
+def api_ranking_alertas(request):
+    filtros = _filtros_request(
+        request
+    )
+
+    page, page_size, offset = _pagination_request(
+        request
+    )
+
+    where_alerta, params_alerta = _build_where_semanal(
+        filtros,
+        request,
+        alias="a",
+    )
+
+    inicio = date.fromisocalendar(
+        filtros[
+            "anio_semana"
+        ],
+        filtros[
+            "semana"
+        ],
+        1,
+    )
+
+    fin = (
+        inicio
+        +
+        timedelta(
+            days=6
+        )
+    )
+
+    where_matricula, params_matricula = _build_where_matricula(
+        filtros,
+        request,
+        anio=fin.year,
+        mes=fin.month,
+        alias="m",
+    )
+
+    cte = f"""
+        WITH alertas AS
+        (
+            SELECT
+                a.cueanexo,
+
+                MAX(
+                    a.escuela
+                )
+                    AS escuela,
+
+                COUNT(
+                    DISTINCT a.id_alumno
+                ) FILTER
+                (
+                    WHERE
+                        a.nivel_alerta_final
+                        IN
+                        (
+                            'ATENCION',
+                            'ALTO',
+                            'CRITICO'
+                        )
+                )
+                    AS alumnos_alerta,
+
+                COUNT(
+                    DISTINCT a.id_alumno
+                ) FILTER
+                (
+                    WHERE
+                        a.nivel_alerta_final =
+                        'CRITICO'
+                )
+                    AS criticos
+
+            FROM
+                {TABLA_ALERTA_SEMANAL} a
+
+            WHERE
+                {where_alerta}
+
+            GROUP BY
+                a.cueanexo
+        ),
+
+        matricula AS
+        (
+            SELECT
+                m.cueanexo,
+
+                SUM(
+                    m.matricula
+                )::integer
+                    AS matricula
+
+            FROM
+                {TABLA_MATRICULA} m
+
+            WHERE
+                {where_matricula}
+
+            GROUP BY
+                m.cueanexo
+        ),
+
+        resultado AS
+        (
+            SELECT
+                a.cueanexo,
+                a.escuela,
+                COALESCE(
+                    m.matricula,
+                    0
+                )
+                    AS matricula,
+                a.alumnos_alerta,
+                a.criticos,
+
+                ROUND(
+                    100.0
+                    *
+                    a.alumnos_alerta
+                    /
+                    NULLIF(
+                        m.matricula,
+                        0
+                    ),
+                    2
+                )
+                    AS incidencia_alerta
+
+            FROM
+                alertas a
+
+            LEFT JOIN
+                matricula m
+                ON
+                    m.cueanexo =
+                    a.cueanexo
+
+            WHERE
+                a.alumnos_alerta > 0
+        )
+    """
+
+    all_params = (
+        params_alerta
+        +
+        params_matricula
+    )
+
+    with connections[
+        DB_ALIAS
+    ].cursor() as cursor:
+
+        cursor.execute(
+            cte
+            +
+            """
+            SELECT
+                COUNT(*)
+            FROM
+                resultado
+            """,
+            all_params,
+        )
+
+        total = cursor.fetchone()[0]
+
+        cursor.execute(
+            cte
+            +
+            """
+            SELECT
+                cueanexo,
+                escuela,
+                matricula,
+                alumnos_alerta,
+                criticos,
+                incidencia_alerta
+
+            FROM
+                resultado
+
+            ORDER BY
+                incidencia_alerta DESC NULLS LAST,
+                alumnos_alerta DESC,
+                escuela
+
+            LIMIT %s
+            OFFSET %s
+            """,
+            all_params
+            +
+            [
+                page_size,
+                offset,
+            ],
+        )
+
+        datos = _dictfetchall(
+            cursor
+        )
+
+    return JsonResponse(
+        {
+            "data": datos,
+            "pagination": _pagination_meta(
+                page,
+                page_size,
+                total,
+            ),
+        }
+    )

@@ -20,4 +20,8 @@ urlpatterns = [
     path("api/mensual/", views.api_mensual, name="api_mensual"),
     path("api/calidad-registro/", views.api_calidad_registro, name="api_calidad_registro"),
     path("api/alertas-alumnos/", views.api_alertas_alumnos, name="api_alertas_alumnos"),
+
+    path("api/resumen-alertas-semana/", views.api_resumen_alertas_semana, name="api_resumen_alertas_semana"),
+    path("api/tendencia-alertas/", views.api_tendencia_alertas, name="api_tendencia_alertas"),
+    path("api/ranking-alertas/", views.api_ranking_alertas, name="api_ranking_alertas"),
 ]

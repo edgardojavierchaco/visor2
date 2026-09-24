@@ -27,6 +27,9 @@ class Command(BaseCommand):
             self.stdout.write("Refrescando hecho nominal...")
             cursor.execute("CALL sge.refrescar_asistencia_alumno_mes(%s,%s)", [anio, mes])
 
+            self.stdout.write("Refrescando matrícula mensual por sección...")
+            cursor.execute("CALL sge.refrescar_matricula_mes(%s,%s)", [anio, mes])
+
             self.stdout.write("Refrescando calidad de registración según calendario...")
             cursor.execute("CALL sge.refrescar_calidad_registro_mes(%s,%s)", [anio, mes])
 
