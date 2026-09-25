@@ -90,8 +90,9 @@ LOCAL_APPS = [
     'apps.monitoreo_login',
     'apps.sirtee',
     'apps.sirtee.catalogos',
-    "apps.especial",
+    'apps.especial',
     'apps.reunidas_pof.apps.ReunidasPofConfig',
+    'apps.asistencia_dashboard',
 
 ]
 
@@ -186,7 +187,7 @@ DATABASES = {
         'HOST': os.environ.get('SGE_NACION_DB_HOST'),
         'PORT': os.environ.get('SGE_NACION_DB_PORT'),
         'OPTIONS': {
-            'options': '-c search_path=public',
+            'options': '-c search_path=sge,public',
         }
     },
 }
