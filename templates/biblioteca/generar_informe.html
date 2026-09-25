@@ -5,13 +5,13 @@
 <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2.min.css' %}">
 <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2-bootstrap4.min.css' %}">
 <link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260909-2">
-<link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260908-5">
+<link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260923-responsive-crud-1">
 {% endblock %}
 
 {% block content_header %}{% endblock %}
 
 {% block content %}
-<main class="biblioteca-operativa biblioteca-nuevo-periodo" aria-labelledby="biblioteca-nuevo-periodo-titulo">
+<main class="biblioteca-screen biblioteca-operativa biblioteca-nuevo-periodo" aria-labelledby="biblioteca-nuevo-periodo-titulo">
     <header class="biblioteca-operativa__encabezado">
         <div class="biblioteca-nuevo-periodo__identidad">
             <span class="biblioteca-crud__icono" aria-hidden="true">
@@ -37,7 +37,7 @@
                     data-toggle="modal"
                     data-target="#modalInforme">
                 Crear período
-                <span class="biblioteca-symbol" aria-hidden="true">add</span>
+                <span class="biblioteca-symbol" aria-hidden="true">add_ad</span>
             </button>
         {% endif %}
     </header>
@@ -85,30 +85,45 @@
 </main>
 
 {% if cueanexos_disponibles %}
-<div class="modal fade biblioteca-nuevo-periodo-modal" id="modalInforme" tabindex="-1" role="dialog" aria-labelledby="modalInformeTitulo" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+<div class="modal fade biblioteca-nuevo-periodo-modal"
+     id="modalInforme"
+     tabindex="-1"
+     role="dialog"
+     aria-labelledby="modalInformeTitulo"
+     aria-describedby="modalInformeDescripcion"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h3 class="modal-title h5" id="modalInformeTitulo">
-                    <span class="biblioteca-symbol" aria-hidden="true">calendar_add_on</span>
-                    Crear nuevo período
-                </h3>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
-                    <span aria-hidden="true">&times;</span>
+            <div class="modal-header">
+                <div class="biblioteca-nuevo-periodo-modal__titulo-bloque">
+                    <span class="biblioteca-nuevo-periodo-modal__icono" aria-hidden="true">
+                        <span class="biblioteca-symbol">add_ad</span>
+                    </span>
+                    <div>
+                        <h3 class="modal-title h5" id="modalInformeTitulo">Crear nuevo período</h3>
+                        <p class="biblioteca-nuevo-periodo-modal__subtitulo" id="modalInformeDescripcion">
+                            Definí el período del relevamiento que vas a iniciar.
+                        </p>
+                    </div>
+                </div>
+                <button type="button"
+                        class="biblioteca-nuevo-periodo-modal__cerrar"
+                        data-dismiss="modal"
+                        aria-label="Cerrar">
+                    <span class="biblioteca-symbol" aria-hidden="true">close</span>
                 </button>
             </div>
 
-            <div class="modal-body">
-                <form id="formInforme" data-cueanexo-fijo="{{ cueanexo_unico|default:'' }}">
-                    {% csrf_token %}
-
-                    <div class="form-group">
-                        {% if cueanexo_unico %}
-                            <span class="d-block">CUE-Anexo</span>
-                            <p class="form-control-plaintext mb-0">
-                                <strong>{{ cueanexo_unico }}</strong>
-                            </p>
-                        {% else %}
+            <form id="formInforme" data-cueanexo-fijo="{{ cueanexo_unico|default:'' }}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    {% if cueanexo_unico %}
+                        <div class="biblioteca-nuevo-periodo-modal__cue">
+                            <span>CUE-Anexo</span>
+                            <strong>{{ cueanexo_unico }}</strong>
+                        </div>
+                    {% else %}
+                        <div class="form-group">
                             <label for="cueanexo">CUE-Anexo</label>
                             <select name="cueanexo" id="cueanexo" class="form-control select2">
                                 <option value="">Seleccione...</option>
@@ -116,39 +131,45 @@
                                     <option value="{{ c }}">{{ c }}</option>
                                 {% endfor %}
                             </select>
-                        {% endif %}
-                    </div>
+                        </div>
+                    {% endif %}
 
-                    <div class="form-group">
-                        <label for="meses">Mes</label>
-                        <select name="meses" id="meses" class="form-control select2">
-                            <option value="">Seleccione...</option>
-                            <option>ABRIL</option>
-                            <option>JULIO</option>
-                            <option>NOVIEMBRE</option>
-                        </select>
-                    </div>
+                    <div class="biblioteca-nuevo-periodo-modal__periodo-grid">
+                        <div class="form-group">
+                            <label for="meses">Mes</label>
+                            <select name="meses" id="meses" class="form-control select2">
+                                <option value="">Seleccione...</option>
+                                <option>ABRIL</option>
+                                <option>JULIO</option>
+                                <option>NOVIEMBRE</option>
+                            </select>
+                        </div>
 
-                    <div class="form-group">
-                        <label for="annos">Año</label>
-                        <select name="annos" id="annos" class="form-control select2">
-                            <option value="">Seleccione...</option>
-                            <option>2025</option>
-                            <option>2026</option>
-                            <option>2027</option>
-                        </select>
+                        <div class="form-group">
+                            <label for="annos">Año</label>
+                            <select name="annos" id="annos" class="form-control select2">
+                                <option value="">Seleccione...</option>
+                                <option>2025</option>
+                                <option>2026</option>
+                                <option>2027</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div id="alertaDup" class="alert alert-danger d-none" role="alert">
-                        Ya existe informe para ese período
+                        <span class="biblioteca-symbol" aria-hidden="true">error</span>
+                        <span>Ya existe un informe para ese período.</span>
                     </div>
+                </div>
 
-                    <button class="btn btn-primary btn-block" type="submit">
-                        <span class="biblioteca-symbol" aria-hidden="true">save</span>
-                        Guardar período
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-primary" type="submit" id="crearPeriodoBtn">
+                        <span class="biblioteca-symbol" id="crearPeriodoIcono" aria-hidden="true">add_ad</span>
+                        <span id="crearPeriodoTexto">Crear período</span>
                     </button>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -185,6 +206,25 @@ const cueanexoFijo = formInforme.dataset.cueanexoFijo;
 const meses = document.getElementById('meses');
 const annos = document.getElementById('annos');
 const alertaDup = document.getElementById('alertaDup');
+const crearPeriodoBtn = document.getElementById('crearPeriodoBtn');
+const crearPeriodoIcono = document.getElementById('crearPeriodoIcono');
+const crearPeriodoTexto = document.getElementById('crearPeriodoTexto');
+let creandoPeriodo = false;
+
+function setCreandoPeriodo(procesando) {
+    creandoPeriodo = procesando;
+    crearPeriodoBtn.disabled = procesando;
+
+    if (procesando) {
+        formInforme.setAttribute('aria-busy', 'true');
+        crearPeriodoIcono.textContent = 'progress_activity';
+        crearPeriodoTexto.textContent = 'Creando período...';
+    } else {
+        formInforme.removeAttribute('aria-busy');
+        crearPeriodoIcono.textContent = 'add_ad';
+        crearPeriodoTexto.textContent = 'Crear período';
+    }
+}
 
 function verificarDuplicado() {
     let cue = cueanexoSelect ? cueanexoSelect.value : cueanexoFijo;
@@ -213,7 +253,12 @@ annos.onchange = verificarDuplicado;
 formInforme.onsubmit = function(e){
     e.preventDefault();
 
+    if (creandoPeriodo) {
+        return;
+    }
+
     let formData = new FormData(this);
+    setCreandoPeriodo(true);
 
     fetch("{% url 'bibliotecas:generar_informe' %}", {
         method: "POST",
@@ -247,10 +292,12 @@ formInforme.onsubmit = function(e){
                 window.location.href = data.redirect_url;
             }, 1200);
         } else {
+            setCreandoPeriodo(false);
             Swal.fire("Error", data.message, "error");
         }
     })
     .catch(err => {
+        setCreandoPeriodo(false);
         Swal.fire("Error", err.message, "error");
     });
 }
