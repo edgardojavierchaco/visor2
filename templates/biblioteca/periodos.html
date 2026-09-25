@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block head %}
-<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260924-personal-filas-1">
+<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260925-periodos-paginacion-2">
 {% endblock %}
 
 {% block content_header %}{% endblock %}
@@ -190,6 +190,58 @@
                     </li>
                 {% endfor %}
             </ol>
+
+            {% if historial.has_other_pages %}
+                <nav class="biblioteca-periodos__paginacion" aria-label="Paginación del historial">
+                    <p class="biblioteca-periodos__paginacion-resumen">
+                        Mostrando {{ historial.start_index }}–{{ historial.end_index }}
+                        de {{ historial.paginator.count }} relevamientos
+                    </p>
+                    <ul class="pagination pagination-sm">
+                        <li class="page-item{% if not historial.has_previous %} disabled{% endif %}">
+                            {% if historial.has_previous %}
+                                <a class="page-link"
+                                   href="?{% if historial_query %}{{ historial_query }}&amp;{% endif %}page={{ historial.previous_page_number }}#biblioteca-historial-titulo"
+                                   aria-label="Página anterior">
+                                    <span>Anterior</span>
+                                </a>
+                            {% else %}
+                                <span class="page-link" aria-disabled="true">
+                                    <span>Anterior</span>
+                                </span>
+                            {% endif %}
+                        </li>
+
+                        {% for numero in historial.paginator.page_range %}
+                            <li class="page-item{% if historial.number == numero %} active{% endif %}">
+                                {% if historial.number == numero %}
+                                    <span class="page-link" aria-current="page">{{ numero }}</span>
+                                {% else %}
+                                    <a class="page-link"
+                                       href="?{% if historial_query %}{{ historial_query }}&amp;{% endif %}page={{ numero }}#biblioteca-historial-titulo"
+                                       aria-label="Ir a la página {{ numero }}">
+                                        {{ numero }}
+                                    </a>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+
+                        <li class="page-item{% if not historial.has_next %} disabled{% endif %}">
+                            {% if historial.has_next %}
+                                <a class="page-link"
+                                   href="?{% if historial_query %}{{ historial_query }}&amp;{% endif %}page={{ historial.next_page_number }}#biblioteca-historial-titulo"
+                                   aria-label="Página siguiente">
+                                    <span>Siguiente</span>
+                                </a>
+                            {% else %}
+                                <span class="page-link" aria-disabled="true">
+                                    <span>Siguiente</span>
+                                </span>
+                            {% endif %}
+                        </li>
+                    </ul>
+                </nav>
+            {% endif %}
         {% else %}
             <div class="biblioteca-aviso biblioteca-aviso--vacio">
                 <span class="biblioteca-aviso__icono" aria-hidden="true">

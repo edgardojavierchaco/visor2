@@ -418,6 +418,42 @@
     background: var(--biblioteca-azul-suave);
 }
 
+.biblioteca-periodos__paginacion {
+    align-items: center;
+    border-top: 1px solid var(--biblioteca-borde);
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem 1rem;
+    justify-content: space-between;
+    padding: 1rem 1.5rem 1.25rem;
+}
+
+.biblioteca-periodos__paginacion-resumen {
+    color: var(--biblioteca-muted);
+    font-size: .825rem;
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+}
+
+.biblioteca-periodos__paginacion .pagination {
+    margin: 0;
+}
+
+.biblioteca-periodos__paginacion .page-link {
+    border-color: var(--biblioteca-border);
+    color: var(--biblioteca-primary-3);
+}
+
+.biblioteca-periodos__paginacion .page-item.active .page-link {
+    background: var(--biblioteca-primary);
+    border-color: var(--biblioteca-primary);
+}
+
+.biblioteca-periodos__paginacion .page-item.disabled .page-link {
+    background: var(--biblioteca-surface-soft);
+    color: var(--biblioteca-muted);
+}
+
 .biblioteca-periodos__relevamiento {
     background: var(--biblioteca-superficie);
     border-top: 1px solid var(--biblioteca-borde);
@@ -1364,6 +1400,21 @@
 
     .biblioteca-periodos__ver-relevamiento {
         width: 100%;
+    }
+
+    .biblioteca-periodos__paginacion {
+        align-items: stretch;
+        flex-direction: column;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .biblioteca-periodos__paginacion-resumen {
+        text-align: center;
+    }
+
+    .biblioteca-periodos__paginacion .pagination {
+        justify-content: center;
     }
 
     .biblioteca-periodos__modal-identidad,

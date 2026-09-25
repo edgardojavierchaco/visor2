@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.paginator import Paginator
 from django.db import DatabaseError, transaction
 from django.db.models import (
     Case,
@@ -649,7 +650,7 @@ class PeriodosView(LoginRequiredMixin, TemplateView):
             default=Value(0),
             output_field=IntegerField(),
         )
-        informes = list(
+        informes = (
             GenerarInforme.objects.filter(cueanexo__in=cueanexos_autorizados)
             .annotate(orden_mes=orden_mes)
             .only(
@@ -662,7 +663,12 @@ class PeriodosView(LoginRequiredMixin, TemplateView):
             )
             .order_by('-annos', '-orden_mes', '-f_generacion', '-pk')
         )
-        pendientes = [informe for informe in informes if informe.estado == 'GENERADO']
+        pendientes = list(informes.filter(estado='GENERADO'))
+        historial_paginator = Paginator(informes.filter(estado='ENVIADO'), 6)
+        historial = historial_paginator.get_page(self.request.GET.get('page'))
+        query_params = self.request.GET.copy()
+        query_params.pop('page', None)
+
         cueanexos_ocupados = {
             str(informe.cueanexo) for informe in pendientes
         }
@@ -674,9 +680,8 @@ class PeriodosView(LoginRequiredMixin, TemplateView):
         ))
 
         context.update({
-            'historial': [
-                informe for informe in informes if informe.estado == 'ENVIADO'
-            ],
+            'historial': historial,
+            'historial_query': query_params.urlencode(),
             'puede_crear_periodo': any(
                 cueanexo not in cueanexos_ocupados
                 for cueanexo in cueanexos_autorizados

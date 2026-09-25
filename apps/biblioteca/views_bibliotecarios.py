@@ -20,6 +20,13 @@ from django.utils.decorators import method_decorator
 # =========================
 # UTIL: PERSONA BNH (SOLO LECTURA)
 # =========================
+CEIC_BIBLIOTECA = (
+    180,
+    182, 183, 184, 185, 186, 187, 188, 189,
+    190, 191, 192, 193, 194, 195, 196, 197,
+)
+
+
 def _normalizar_cuil(cuil):
     return re.sub(r'\D', '', cuil or '')
 
@@ -37,13 +44,15 @@ def _buscar_persona_bnh(cuil):
 
 
 def _obtener_actividades_bnh(persona_id, cueanexo):
-    """Devuelve las actividades BNH no eliminadas de la persona en el CUE-Anexo."""
+    """Devuelve actividades BNH no eliminadas con CEIC de Biblioteca en el CUE-Anexo."""
     if not persona_id or not cueanexo:
         return []
 
+    ceic_placeholders = ', '.join(['%s'] * len(CEIC_BIBLIOTECA))
+
     with connection.cursor() as cursor:
         cursor.execute(
-            """
+            f"""
             SELECT
                 ra.id,
                 ra.ceic_id,
@@ -63,9 +72,10 @@ def _obtener_actividades_bnh(persona_id, cueanexo):
             WHERE ra.persona_id = %s
               AND ra.cueanexo = %s
               AND ra.eliminado IS NOT TRUE
+              AND ra.ceic_id IN ({ceic_placeholders})
             ORDER BY ra.f_desde DESC NULLS LAST, ra.id DESC
             """,
-            [persona_id, str(cueanexo)],
+            [persona_id, str(cueanexo), *CEIC_BIBLIOTECA],
         )
         filas = cursor.fetchall()
 
@@ -152,8 +162,8 @@ class BibliotecarioPersonaLookupView(
                 'error': False,
                 'estado': 'persona_sin_vinculacion',
                 'message': (
-                    'La persona existe en BNH, pero todavía no está vinculada '
-                    'a esta institución.'
+                    'La persona existe en BNH, pero no tiene un cargo de Biblioteca '
+                    'asociado a esta institución.'
                 ),
                 'persona': persona_json,
                 'accion': {
@@ -164,10 +174,10 @@ class BibliotecarioPersonaLookupView(
             })
 
         if len(actividades) == 1:
-            mensaje = 'Personal encontrado con un cargo en esta institución.'
+            mensaje = 'Personal encontrado con un cargo de Biblioteca en esta institución.'
         else:
             mensaje = (
-                'Personal encontrado con varios cargos en esta institución. '
+                'Personal encontrado con varios cargos de Biblioteca en esta institución. '
                 'Seleccioná el que corresponde a este registro.'
             )
 
@@ -214,8 +224,8 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
 
                 if not actividades:
                     self.persona_bnh_error = (
-                        'La persona existe en BNH, pero todavía no está vinculada '
-                        'a esta institución.'
+                        'La persona existe en BNH, pero no tiene un cargo de Biblioteca '
+                        'asociado a esta institución.'
                     )
                 else:
                     actividad_id = str(data.get('bnh_actividad_id') or '').strip()
@@ -231,15 +241,15 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
                         )
                         if self.actividad_bnh is None:
                             self.actividad_bnh_error = (
-                                'El cargo seleccionado ya no está disponible para esta persona '
-                                'en la institución. Reconsultá BNH.'
+                                'El cargo de Biblioteca seleccionado ya no está disponible para '
+                                'esta persona en la institución. Reconsultá BNH.'
                             )
                     elif len(actividades) == 1:
                         self.actividad_bnh = actividades[0]
                         data['bnh_actividad_id'] = str(self.actividad_bnh['id'])
                     else:
                         self.actividad_bnh_error = (
-                            'Seleccioná el cargo de BNH que corresponde a este registro.'
+                            'Seleccioná el cargo de Biblioteca que corresponde a este registro.'
                         )
 
                     if self.actividad_bnh is not None:
