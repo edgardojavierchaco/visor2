@@ -11,7 +11,7 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
 
-    <link rel="stylesheet" href="{% static 'asistencia_dashboard/css/dashboard.css' %}?v=20260923.8">
+    <link rel="stylesheet" href="{% static 'asistencia_dashboard/css/dashboard.css' %}?v=20260925.4">
 </head>
 <body>
 
@@ -36,11 +36,22 @@
             <p>Indicadores mensuales y alertas nominales semanales</p>
         </div>
 
-        <div class="dashboard-header-badge">
-            <i class="bi bi-bar-chart-fill"></i>
-            <div>
-                <span>Período de análisis</span>
-                <strong id="periodoActual">—</strong>
+        <div class="dashboard-header-actions">
+            <a
+                href="{% url 'asistencia_dashboard:guia' %}"
+                class="dashboard-help-btn"
+                title="Abrir guía de uso"
+            >
+                <i class="bi bi-question-circle-fill"></i>
+                <span>Ayuda / Guía</span>
+            </a>
+
+            <div class="dashboard-header-badge">
+                <i class="bi bi-bar-chart-fill"></i>
+                <div>
+                    <span>Período de análisis</span>
+                    <strong id="periodoActual">—</strong>
+                </div>
             </div>
         </div>
     </header>
@@ -172,7 +183,7 @@
             <div>
                 <span class="kpi-label">Matrícula</span>
                 <strong class="kpi-value" id="kpiMatricula">—</strong>
-                <small>Alumnos de referencia en secciones</small>
+                <small id="kpiMatriculaDetalle">Alumnos únicos inscriptos por sección</small>
             </div>
         </article>
 
@@ -197,9 +208,9 @@
         <article class="kpi-card">
             <div class="kpi-icon"><i class="bi bi-calendar-check"></i></div>
             <div>
-                <span class="kpi-label">Días registrados</span>
+                <span class="kpi-label">Días efectivos registrados</span>
                 <strong class="kpi-value" id="kpiDias">—</strong>
-                <small>Fechas con asistencia cargada</small>
+                <small id="kpiDiasDetalle">Según calendario escolar efectivo</small>
             </div>
         </article>
 
@@ -513,11 +524,11 @@
                 <h2>Seguimiento institucional prioritario</h2>
             </div>
 
-            <div class="alert-legend">
-                <span class="legend-normal">Normal</span>
-                <span class="legend-atencion">Atención</span>
-                <span class="legend-alto">Alto</span>
-                <span class="legend-critico">Crítico</span>
+            <div class="alert-legend" aria-label="Filtrar seguimiento institucional por nivel de alerta">
+                <button type="button" class="alert-filter-btn legend-normal" data-alerta="NORMAL" aria-pressed="false">Normal <strong id="alertaFiltroNormal" class="filter-count">0</strong></button>
+                <button type="button" class="alert-filter-btn legend-atencion" data-alerta="ATENCION" aria-pressed="false">Atención <strong id="alertaFiltroAtencion" class="filter-count">0</strong></button>
+                <button type="button" class="alert-filter-btn legend-alto" data-alerta="ALTO" aria-pressed="false">Alto <strong id="alertaFiltroAlto" class="filter-count">0</strong></button>
+                <button type="button" class="alert-filter-btn legend-critico" data-alerta="CRITICO" aria-pressed="false">Crítico <strong id="alertaFiltroCritico" class="filter-count">0</strong></button>
             </div>
         </div>
 
@@ -563,6 +574,7 @@
                     <tr>
                         <th>CUE / Establecimiento</th>
                         <th>Nivel / Grado / Sección</th>
+                        <th class="text-end">Matrícula</th>
                         <th class="text-end">Presentes</th>
                         <th class="text-end">Ausentes</th>
                         <th class="text-end">Justificadas</th>
@@ -571,7 +583,7 @@
                     </tr>
                 </thead>
                 <tbody id="tablaMensual">
-                    <tr><td colspan="7" class="text-center py-5 text-muted">Cargando resumen mensual...</td></tr>
+                    <tr><td colspan="8" class="text-center py-5 text-muted">Cargando resumen mensual...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -599,10 +611,10 @@
                 <h2>Cumplimiento del calendario efectivo</h2>
                 <small class="text-muted">No computa feriados, fines de semana, excepciones ni eventos excluyentes.</small>
             </div>
-            <div class="quality-summary-inline">
-                <span class="quality-chip complete">Completos <strong id="calidadCompleto">0</strong></span>
-                <span class="quality-chip partial">Parciales <strong id="calidadParcial">0</strong></span>
-                <span class="quality-chip missing">Sin carga <strong id="calidadSinCarga">0</strong></span>
+            <div class="quality-summary-inline" aria-label="Filtrar calidad de registración por estado">
+                <button type="button" class="quality-chip quality-filter-btn complete" data-calidad-estado="COMPLETO" aria-pressed="false">Completos <strong id="calidadCompleto">0</strong></button>
+                <button type="button" class="quality-chip quality-filter-btn partial" data-calidad-estado="PARCIAL" aria-pressed="false">Parciales <strong id="calidadParcial">0</strong></button>
+                <button type="button" class="quality-chip quality-filter-btn missing" data-calidad-estado="SIN_CARGA" aria-pressed="false">Sin carga <strong id="calidadSinCarga">0</strong></button>
             </div>
         </div>
         <div class="table-responsive">
@@ -666,10 +678,12 @@
                     <tr>
                         <th>Alerta</th>
                         <th>Estudiante</th>
+                        <th>Motivo</th>
                         <th>CUE</th>
                         <th>Escuela</th>
                         <th>Grado / Sección</th>
                         <th class="text-end">Asistencia</th>
+                        <th class="text-end">Cobertura</th>
                         <th class="text-end">Inasist. equiv.</th>
                         <th class="text-center">Racha actual</th>
                         <th class="text-center">Racha máxima</th>
@@ -678,7 +692,7 @@
 
                 <tbody id="tablaAlertasAlumnos">
                     <tr>
-                        <td colspan="9" class="text-center py-5 text-muted">
+                        <td colspan="11" class="text-center py-5 text-muted">
                             Cargando alertas nominales...
                         </td>
                     </tr>
@@ -712,15 +726,15 @@
             <table class="table ministerial-table detail-table">
                 <thead>
                     <tr>
-                        <th>Escuela</th>
                         <th>Nivel</th>
                         <th>Grado</th>
                         <th>Sección</th>
                         <th>Turno</th>
-                        <th class="text-center">Días</th>
-                        <th class="text-end">Alumno-días</th>
+                        <th class="text-end">Matrícula</th>
+                        <th class="text-center">Días efectivos</th>
                         <th class="text-end">Presentes</th>
                         <th class="text-end">Ausentes</th>
+                        <th class="text-end">Justificadas</th>
                         <th class="text-end">Asistencia</th>
                     </tr>
                 </thead>
@@ -790,7 +804,7 @@ window.ASISTENCIA_DASHBOARD = {
 };
 </script>
 
-<script src="{% static 'asistencia_dashboard/js/dashboard.js' %}?v=20260923.8"></script>
+<script src="{% static 'asistencia_dashboard/js/dashboard.js' %}?v=20260925.2"></script>
 
 </body>
 </html>
