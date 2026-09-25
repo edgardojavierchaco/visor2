@@ -151,6 +151,13 @@
       .badge-veedores  { background: #ede9fe; color: #5b21b6; }
       .badge-aplicadores { background: #ccfbf1; color: #115e59; }
       .badge-sin-personas { background: #fef3c7; color: #92400e; }
+      .cupo-veedores { font-size: 0.72rem; color: #6b7280; margin-bottom: 0.5rem; }
+      .cupo-veedores strong { color: #5b21b6; }
+      .cupo-veedores.completo strong { color: #b45309; }
+      .cupo-veedores .cupo-motivo { color: #9ca3af; }
+      .cupo-aplicadores { margin-top: -0.3rem; }
+      .cupo-aplicadores strong { color: #0f766e; }
+      .cupo-aplicadores.completo strong { color: #b45309; }
 
       /* Footer de tarjeta */
       .card-footer-row {
@@ -391,6 +398,8 @@
              id="card-{{ est.cueanexo }}"
              data-search="{{ est.escuela|lower }} {{ est.cueanexo }}"
              data-veedores="{{ est.cant_veedores }}"
+             data-max-veedores="{{ est.max_veedores }}"
+             data-secciones="{{ est.cant_secciones }}"
              data-aplicadores="{{ est.cant_aplicadores }}">
 
           <!-- Barra de estado superior -->
@@ -419,6 +428,19 @@
               {% if est.cant_personas == 0 %}
                 <span class="badge-personas badge-sin-personas"><i class="bi bi-clock me-1"></i>Sin personas asignadas</span>
               {% endif %}
+            </div>
+            <!-- Cupo de veedores: 1, o 2 si el establecimiento tiene 2 o más secciones -->
+            <div class="cupo-veedores {% if est.cant_veedores >= est.max_veedores %}completo{% endif %}"
+                 id="cupo-{{ est.cueanexo }}"
+                 title="Un establecimiento admite 1 veedor, o 2 si tiene 2 o más secciones.">
+              <i class="bi bi-eye me-1"></i>Veedores: <strong>{{ est.cant_veedores }} de {{ est.max_veedores }}</strong>
+              <span class="cupo-motivo">· {{ est.cant_secciones }} secci{{ est.cant_secciones|pluralize:"ón,ones" }}</span>
+            </div>
+            <!-- Cupo de aplicadores: uno por sección -->
+            <div class="cupo-veedores cupo-aplicadores {% if est.cant_aplicadores >= est.cant_secciones %}completo{% endif %}"
+                 id="cupo-aplicadores-{{ est.cueanexo }}"
+                 title="Cada sección admite un aplicador.">
+              <i class="bi bi-person-check me-1"></i>Aplicadores: <strong>{{ est.cant_aplicadores }} de {{ est.cant_secciones }}</strong>
             </div>
 
             <!-- Footer -->
@@ -473,11 +495,13 @@
                 <div class="rol-icon">👁️</div>
                 <div class="rol-title" style="color:var(--purple);">Veedor</div>
                 <div class="rol-sub">Asignado al establecimiento</div>
+                <div class="rol-sub fw-bold" id="rolVeedorCupo" style="color:var(--purple);"></div>
               </div>
               <div class="rol-btn aplicador" onclick="abrirSeleccionSeccion()">
                 <div class="rol-icon">📋</div>
                 <div class="rol-title" style="color:var(--teal);">Aplicador</div>
                 <div class="rol-sub">Asignado a una sección</div>
+                <div class="rol-sub fw-bold" id="rolAplicadorCupo" style="color:var(--teal);"></div>
               </div>
             </div>
           </div>
@@ -872,10 +896,45 @@
         cueActual = cueanexo;
         nombreEscuelaActual = nombre;
         document.getElementById('rolEscuelaNombre').textContent = nombre;
+
+        // Cupo de veedores del establecimiento elegido, tomado de su tarjeta.
+        const card = document.getElementById('card-' + cueanexo);
+        const cupoEl = document.getElementById('rolVeedorCupo');
+        if (card && cupoEl) {
+          const asignados = parseInt(card.dataset.veedores || 0);
+          const cupo = parseInt(card.dataset.maxVeedores || 1);
+          const secciones = parseInt(card.dataset.secciones || 0);
+          cupoEl.textContent = asignados + ' de ' + cupo + ' (' + secciones + (secciones === 1 ? ' sección)' : ' secciones)');
+        }
+        const cupoAplEl = document.getElementById('rolAplicadorCupo');
+        if (card && cupoAplEl) {
+          cupoAplEl.textContent = parseInt(card.dataset.aplicadores || 0) + ' de ' + parseInt(card.dataset.secciones || 0);
+        }
         modalSeleccionRolBS.show();
       }
 
       function abrirFormVeedor() {
+        // Cupo de veedores: 1 por establecimiento, o 2 si tiene 2 o más
+        // secciones. Si ya está cubierto, hay que eliminar uno antes.
+        const card = document.getElementById('card-' + cueActual);
+        if (card) {
+          const asignados = parseInt(card.dataset.veedores || 0);
+          const cupo = parseInt(card.dataset.maxVeedores || 1);
+          const secciones = parseInt(card.dataset.secciones || 0);
+          if (asignados >= cupo) {
+            modalSeleccionRolBS.hide();
+            const detalle = cupo === 1
+              ? 'Admite un solo veedor porque tiene ' + secciones + (secciones === 1 ? ' sección.' : ' secciones.')
+              : 'Admite hasta ' + cupo + ' veedores y ya tiene ' + asignados + '.';
+            showToast(
+              'Este establecimiento ya alcanzó el máximo de veedores. ' + detalle +
+              ' Para cambiarlos, eliminá alguno desde "Modificar Aplicador y Veedor".',
+              'warning'
+            );
+            return;
+          }
+        }
+
         modalSeleccionRolBS.hide();
         document.getElementById('veedorEscuelaNombre').textContent = nombreEscuelaActual;
         document.getElementById('id_veedor-nombre').value = '';
@@ -1244,6 +1303,20 @@
               html += '<span class="badge-personas badge-sin-personas"><i class="bi bi-clock me-1"></i>Sin personas asignadas</span>';
             }
             badgesDiv.innerHTML = html;
+
+            // Refresca la línea de cupo: cambia al cargar o eliminar un veedor.
+            const cupo = parseInt(card.dataset.maxVeedores || 1);
+            const cupoDiv = document.getElementById('cupo-' + cueanexo);
+            if (cupoDiv) {
+              cupoDiv.querySelector('strong').textContent = cantV + ' de ' + cupo;
+              cupoDiv.classList.toggle('completo', cantV >= cupo);
+            }
+            const secciones = parseInt(card.dataset.secciones || 0);
+            const cupoApl = document.getElementById('cupo-aplicadores-' + cueanexo);
+            if (cupoApl) {
+              cupoApl.querySelector('strong').textContent = cantA + ' de ' + secciones;
+              cupoApl.classList.toggle('completo', cantA >= secciones);
+            }
             actualizarStats();
           }
         } catch(e) {

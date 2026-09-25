@@ -39,6 +39,27 @@ def _get_referente(cuil):
     return ValReferenteCargaTemporal.objects.filter(cuil=cuil).first()
 
 
+# Cupo de veedores por establecimiento: uno solo, salvo que tenga 2 o más
+# secciones habilitadas, en cuyo caso admite un segundo.
+MAX_VEEDORES_BASE = 1
+MAX_VEEDORES_AMPLIADO = 2
+
+
+def _cant_secciones(est):
+    """Secciones habilitadas del establecimiento."""
+    return (
+        ValSeccion.objects
+        .filter(grado__establecimiento=est)
+        .exclude(estado_validacion="DESHABILITADO")
+        .count()
+    )
+
+
+def _max_veedores(cant_secciones):
+    """Cuántos veedores admite un establecimiento según sus secciones."""
+    return MAX_VEEDORES_AMPLIADO if cant_secciones >= 2 else MAX_VEEDORES_BASE
+
+
 
 # ---------------------------------------------------------------------------
 # PASO 0: Seleccionar región
@@ -901,12 +922,37 @@ def lista_establecimientos_personas(request, region):
     total_est = establecimientos.count()
 
     establecimientos_list = list(establecimientos)
+
+    # Veedores y aplicadores por establecimiento, en dos consultas agrupadas
+    # en vez de dos por cada tarjeta.
+    veedores_por_est = dict(
+        ValVeedor.objects
+        .filter(establecimiento__region=region)
+        .values_list('establecimiento')
+        .annotate(total=Count('pk'))
+    )
+    aplicadores_por_est = dict(
+        ValAplicador.objects
+        .filter(seccion__grado__establecimiento__region=region)
+        .values_list('seccion__grado__establecimiento')
+        .annotate(total=Count('pk'))
+    )
+
+    # Secciones habilitadas por establecimiento: definen el cupo de veedores.
+    secciones_por_est = dict(
+        ValSeccion.objects
+        .filter(grado__establecimiento__region=region)
+        .exclude(estado_validacion="DESHABILITADO")
+        .values_list('grado__establecimiento')
+        .annotate(total=Count('pk'))
+    )
+
     for est in establecimientos_list:
-        est.cant_veedores = ValVeedor.objects.filter(establecimiento=est).count()
-        est.cant_aplicadores = ValAplicador.objects.filter(
-            seccion__grado__establecimiento=est
-        ).count()
+        est.cant_veedores = veedores_por_est.get(est.cueanexo, 0)
+        est.cant_aplicadores = aplicadores_por_est.get(est.cueanexo, 0)
         est.cant_personas = est.cant_veedores + est.cant_aplicadores
+        est.cant_secciones = secciones_por_est.get(est.cueanexo, 0)
+        est.max_veedores = _max_veedores(est.cant_secciones)
 
     contexto = {
         'sin_acceso': False,
@@ -1026,6 +1072,27 @@ def crear_veedor(request, cueanexo):
     est = ValEstablecimiento.objects.for_referente(cuil, cueanexo)
     if not est:
         return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    # Cupo de veedores: 1 por establecimiento, o 2 si tiene 2 o más secciones.
+    # Para cambiar uno ya cargado hay que eliminarlo primero.
+    cant_secciones = _cant_secciones(est)
+    cupo = _max_veedores(cant_secciones)
+    asignados = ValVeedor.objects.filter(establecimiento=est).count()
+    if asignados >= cupo:
+        if cupo == 1:
+            detalle = (
+                f'Admite un solo veedor porque tiene {cant_secciones} '
+                f'{"sección" if cant_secciones == 1 else "secciones"}.'
+            )
+        else:
+            detalle = f'Admite hasta {cupo} veedores y ya tiene {asignados}.'
+        return JsonResponse({
+            'ok': False,
+            'error': (
+                f'Este establecimiento ya alcanzó el máximo de veedores. '
+                f'{detalle} Para cambiarlos, primero eliminá alguno.'
+            ),
+        }, status=400)
 
     form = ValVeedorForm(request.POST)
     if not form.is_valid():
