@@ -1,7 +1,7 @@
 {% extends 'biblioteca/layout.html' %}
 {% load static %}
 {% block head %}
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260914-2">
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260923-dtr-control-1">
     <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
     <link rel="stylesheet"
           href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
@@ -12,7 +12,7 @@
     <script>
         window.bibliotecaPeriodoActivoId = '{{ periodo_activo_id|escapejs }}';
     </script>
-    <script src="{% static 'biblioteca/js/crud-list.js' %}?v=20260914-1"></script>
+    <script src="{% static 'biblioteca/js/crud-list.js' %}?v=20260923-actions-stable-2"></script>
 
     {% block head_list %}
 
@@ -23,7 +23,7 @@
 {% block content_header %}{% endblock %}
 
 {% block content %}
-<main class="biblioteca-crud biblioteca-crud--listado">
+<main class="biblioteca-crud biblioteca-crud--listado {% block list_main_class %}{% endblock %}">
     {% block section_header %}
         {% include 'biblioteca/includes/crud_section_header.html' with material_icon='table_rows' %}
     {% endblock %}
@@ -38,7 +38,7 @@
         <div class="card-body">
             <div class="biblioteca-crud__list-toolbar">
                 <a href="{{ create_url }}" class="btn btn-primary btn-flat btnTest">
-                    <span class="biblioteca-symbol" aria-hidden="true">add_notes</span>
+                    <span class="biblioteca-symbol" aria-hidden="true">{% block create_icon %}add_notes{% endblock %}</span>
                     Nuevo registro
                 </a>
                 <label class="biblioteca-crud__list-search" for="biblioteca-crud-search">
@@ -75,6 +75,7 @@
                     {% endblock %}
                     </tfoot>
                 </table>
+                {% block section_totals %}{% endblock %}
             </div>
         </div>
         {% if before_url or next_url %}
@@ -89,7 +90,7 @@
                     {% endif %}
                     <span class="biblioteca-crud__section-nav-context">
                         <span class="biblioteca-crud__section-nav-label">Navegación entre secciones</span>
-                        <span class="biblioteca-crud__section-nav-current">{{ title }}</span>
+                        <span class="biblioteca-crud__section-nav-current">{{ section_nav_title|default:title }}</span>
                     </span>
                     {% if next_url %}
                         <a href="{{ next_url }}" class="btn btn-primary btn-flat biblioteca-crud__section-nav-next">
@@ -103,6 +104,102 @@
         {% endif %}
     </div>
 </main>
+
+<div class="biblioteca-crud-action-menu"
+     id="bibliotecaCrudActionMenu"
+     role="menu"
+     aria-label="Acciones del registro"
+     hidden
+     data-biblioteca-action-menu>
+    <button type="button"
+            class="biblioteca-crud-action-menu__item biblioteca-crud-action-menu__item--edit"
+            role="menuitem"
+            data-biblioteca-menu-action="edit">
+        <span class="biblioteca-symbol" aria-hidden="true">edit_square</span>
+        <span>Editar</span>
+    </button>
+    <span class="biblioteca-crud-action-menu__divider"
+          aria-hidden="true"
+          data-biblioteca-menu-divider="primary"></span>
+    <button type="button"
+            class="biblioteca-crud-action-menu__item biblioteca-crud-action-menu__item--danger"
+            role="menuitem"
+            data-biblioteca-menu-action="delete">
+        <span class="biblioteca-symbol" aria-hidden="true">delete_forever</span>
+        <span>Eliminar</span>
+    </button>
+    <span class="biblioteca-crud-action-menu__divider"
+          aria-hidden="true"
+          hidden
+          data-biblioteca-menu-divider="details"></span>
+    <button type="button"
+            class="biblioteca-crud-action-menu__item biblioteca-crud-action-menu__item--details"
+            role="menuitem"
+            hidden
+            data-biblioteca-menu-action="details">
+        <span class="biblioteca-symbol" aria-hidden="true" data-biblioteca-menu-details-icon>expand_more</span>
+        <span data-biblioteca-menu-details-label>Ver detalles</span>
+    </button>
+</div>
+
+<form class="d-none" aria-hidden="true" data-biblioteca-delete-csrf>
+    {% csrf_token %}
+</form>
+
+<div class="modal fade biblioteca-crud-delete-modal"
+     id="bibliotecaEliminarRegistroModal"
+     tabindex="-1"
+     role="dialog"
+     aria-labelledby="bibliotecaEliminarRegistroTitulo"
+     aria-describedby="bibliotecaEliminarRegistroDescripcion"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title h5" id="bibliotecaEliminarRegistroTitulo">
+                    <span class="biblioteca-symbol" aria-hidden="true">delete</span>
+                    Eliminar registro
+                </h2>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form data-biblioteca-delete-form>
+                <div class="modal-body">
+                    <p class="biblioteca-crud-delete-modal__record">
+                        Registro <strong data-biblioteca-delete-record>seleccionado</strong>
+                    </p>
+                    <div class="biblioteca-crud-delete-modal__warning"
+                         id="bibliotecaEliminarRegistroDescripcion">
+                        <span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">warning</span>
+                        <div>
+                            <p>Este registro se eliminará de la sección actual.</p>
+                            <strong>Esta acción no se puede deshacer.</strong>
+                        </div>
+                    </div>
+                    <div class="alert alert-danger biblioteca-crud-delete-modal__error"
+                         role="alert"
+                         hidden
+                         data-biblioteca-delete-error></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-light"
+                            data-dismiss="modal"
+                            data-biblioteca-delete-cancelar>
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="btn btn-danger"
+                            data-biblioteca-delete-confirmar>
+                        <span class="biblioteca-symbol" aria-hidden="true">delete</span>
+                        <span data-biblioteca-delete-confirmar-texto>Eliminar registro</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block javascript %}

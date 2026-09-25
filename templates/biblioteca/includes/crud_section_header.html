@@ -24,8 +24,15 @@
             {% endif %}
         </div>
     </div>
-    <a href="{% url 'bibliotecas:carga' %}?periodo={{ periodo_activo_id }}" class="btn biblioteca-crud__volver">
-        <span class="biblioteca-symbol" aria-hidden="true">arrow_back</span>
-        Volver a Carga
-    </a>
+    {% if section_return_url %}
+        <a href="{{ section_return_url }}" class="btn biblioteca-crud__volver">
+            <span class="biblioteca-symbol" aria-hidden="true">arrow_back</span>
+            {{ section_return_label|default:"Volver a la sección" }}
+        </a>
+    {% else %}
+        <a href="{% url 'bibliotecas:carga' %}?periodo={{ periodo_activo_id }}" class="btn biblioteca-crud__volver">
+            <span class="biblioteca-symbol" aria-hidden="true">arrow_back</span>
+            Volver a Carga
+        </a>
+    {% endif %}
 </header>

@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from django.db import connection
+from django.db import connection, transaction
 from django.shortcuts import render
 from django.http import JsonResponse
 from pyparsing import C
@@ -337,22 +337,52 @@ def reabrir_informe(request):
             return JsonResponse({"success": False, "msg": "Datos incompletos"})
 
         try:
-            informe = GenerarInforme.objects.get(
-                cueanexo=cueanexo,
-                meses=meses,
-                annos=annos
+            annos = int(annos)
+        except (TypeError, ValueError):
+            return JsonResponse({"success": False, "msg": "Año inválido"})
+
+        with transaction.atomic():
+            # Bloqueamos los informes existentes del mismo CUE-Anexo para que dos
+            # reaperturas simultáneas no puedan crear dos períodos pendientes.
+            informes_cue = list(
+                GenerarInforme.objects
+                .select_for_update()
+                .filter(cueanexo=cueanexo)
+                .order_by("pk")
             )
-        except GenerarInforme.DoesNotExist:
-            return JsonResponse({"success": False, "msg": "No existe el informe"})
 
-        if informe.estado != "ENVIADO":
-            return JsonResponse({"success": False, "msg": "Solo se pueden reabrir enviados"})
+            informe = next(
+                (
+                    item
+                    for item in informes_cue
+                    if item.meses == meses and item.annos == annos
+                ),
+                None,
+            )
 
-        # 🔥 REAPERTURA
-        informe.estado = "GENERADO"
-        informe.rehab = True
-        informe.f_rehab = timezone.now()
-        informe.save()
+            if informe is None:
+                return JsonResponse({"success": False, "msg": "No existe el informe"})
+
+            if informe.estado != "ENVIADO":
+                return JsonResponse({"success": False, "msg": "Solo se pueden reabrir enviados"})
+
+            existe_otro_pendiente = any(
+                item.pk != informe.pk and item.estado == "GENERADO"
+                for item in informes_cue
+            )
+            if existe_otro_pendiente:
+                return JsonResponse({
+                    "success": False,
+                    "msg": (
+                        "Ya existe un período pendiente para este CUE-Anexo. "
+                        "Finalizalo antes de reabrir otro período."
+                    ),
+                })
+
+            informe.estado = "GENERADO"
+            informe.rehab = True
+            informe.f_rehab = timezone.now()
+            informe.save(update_fields=["estado", "rehab", "f_rehab"])
 
         return JsonResponse({
             "success": True,

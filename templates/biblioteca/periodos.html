@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block head %}
-<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260914-2">
+<link rel="stylesheet" href="{% static 'biblioteca/css/operativas.css' %}?v=20260925-periodos-paginacion-2">
 {% endblock %}
 
 {% block content_header %}{% endblock %}
@@ -61,17 +61,19 @@
                                 {% else %}
                                     <span>Requiere revisión</span>
                                 {% endif %}
-                                <button type="button"
-                                        class="btn btn-outline-danger biblioteca-periodos__eliminar"
-                                        data-toggle="modal"
-                                        data-target="#modalEliminarPeriodo"
-                                        data-delete-url="{% url 'bibliotecas:periodo_pendiente_eliminar' opcion.periodo.pk %}"
-                                        data-periodo-mes="{{ opcion.periodo.meses|capfirst }}"
-                                        data-periodo-anio="{{ opcion.periodo.annos }}"
-                                        data-periodo-cue="{{ opcion.periodo.cueanexo }}">
-                                    <span class="biblioteca-symbol" aria-hidden="true">delete</span>
-                                    Eliminar período
-                                </button>
+                                {% if not opcion.periodo.f_envio %}
+                                    <button type="button"
+                                            class="btn btn-outline-danger biblioteca-periodos__eliminar"
+                                            data-toggle="modal"
+                                            data-target="#modalEliminarPeriodo"
+                                            data-delete-url="{% url 'bibliotecas:periodo_pendiente_eliminar' opcion.periodo.pk %}"
+                                            data-periodo-mes="{{ opcion.periodo.meses|capfirst }}"
+                                            data-periodo-anio="{{ opcion.periodo.annos }}"
+                                            data-periodo-cue="{{ opcion.periodo.cueanexo }}">
+                                        <span class="biblioteca-symbol" aria-hidden="true">delete</span>
+                                        Eliminar período
+                                    </button>
+                                {% endif %}
                             </div>
                         </div>
                     </article>
@@ -97,17 +99,19 @@
                         Ir a carga
                         <span class="biblioteca-symbol" aria-hidden="true">arrow_forward</span>
                     </a>
-                    <button type="button"
-                            class="btn btn-outline-danger biblioteca-periodos__eliminar"
-                            data-toggle="modal"
-                            data-target="#modalEliminarPeriodo"
-                            data-delete-url="{% url 'bibliotecas:periodo_pendiente_eliminar' periodo_pendiente.pk %}"
-                            data-periodo-mes="{{ periodo_pendiente.meses|capfirst }}"
-                            data-periodo-anio="{{ periodo_pendiente.annos }}"
-                            data-periodo-cue="{{ periodo_pendiente.cueanexo }}">
-                        <span class="biblioteca-symbol" aria-hidden="true">delete</span>
-                        Eliminar período
-                    </button>
+                    {% if not periodo_pendiente.f_envio %}
+                        <button type="button"
+                                class="btn btn-outline-danger biblioteca-periodos__eliminar"
+                                data-toggle="modal"
+                                data-target="#modalEliminarPeriodo"
+                                data-delete-url="{% url 'bibliotecas:periodo_pendiente_eliminar' periodo_pendiente.pk %}"
+                                data-periodo-mes="{{ periodo_pendiente.meses|capfirst }}"
+                                data-periodo-anio="{{ periodo_pendiente.annos }}"
+                                data-periodo-cue="{{ periodo_pendiente.cueanexo }}">
+                            <span class="biblioteca-symbol" aria-hidden="true">delete</span>
+                            Eliminar período
+                        </button>
+                    {% endif %}
                 </div>
             </article>
         {% else %}
@@ -186,6 +190,58 @@
                     </li>
                 {% endfor %}
             </ol>
+
+            {% if historial.has_other_pages %}
+                <nav class="biblioteca-periodos__paginacion" aria-label="Paginación del historial">
+                    <p class="biblioteca-periodos__paginacion-resumen">
+                        Mostrando {{ historial.start_index }}–{{ historial.end_index }}
+                        de {{ historial.paginator.count }} relevamientos
+                    </p>
+                    <ul class="pagination pagination-sm">
+                        <li class="page-item{% if not historial.has_previous %} disabled{% endif %}">
+                            {% if historial.has_previous %}
+                                <a class="page-link"
+                                   href="?{% if historial_query %}{{ historial_query }}&amp;{% endif %}page={{ historial.previous_page_number }}#biblioteca-historial-titulo"
+                                   aria-label="Página anterior">
+                                    <span>Anterior</span>
+                                </a>
+                            {% else %}
+                                <span class="page-link" aria-disabled="true">
+                                    <span>Anterior</span>
+                                </span>
+                            {% endif %}
+                        </li>
+
+                        {% for numero in historial.paginator.page_range %}
+                            <li class="page-item{% if historial.number == numero %} active{% endif %}">
+                                {% if historial.number == numero %}
+                                    <span class="page-link" aria-current="page">{{ numero }}</span>
+                                {% else %}
+                                    <a class="page-link"
+                                       href="?{% if historial_query %}{{ historial_query }}&amp;{% endif %}page={{ numero }}#biblioteca-historial-titulo"
+                                       aria-label="Ir a la página {{ numero }}">
+                                        {{ numero }}
+                                    </a>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+
+                        <li class="page-item{% if not historial.has_next %} disabled{% endif %}">
+                            {% if historial.has_next %}
+                                <a class="page-link"
+                                   href="?{% if historial_query %}{{ historial_query }}&amp;{% endif %}page={{ historial.next_page_number }}#biblioteca-historial-titulo"
+                                   aria-label="Página siguiente">
+                                    <span>Siguiente</span>
+                                </a>
+                            {% else %}
+                                <span class="page-link" aria-disabled="true">
+                                    <span>Siguiente</span>
+                                </span>
+                            {% endif %}
+                        </li>
+                    </ul>
+                </nav>
+            {% endif %}
         {% else %}
             <div class="biblioteca-aviso biblioteca-aviso--vacio">
                 <span class="biblioteca-aviso__icono" aria-hidden="true">
@@ -262,6 +318,6 @@
 {% block javascript %}
 {{ block.super }}
 {% if historial or periodos_pendientes %}
-<script src="{% static 'biblioteca/js/periodos.js' %}?v=20260914-3"></script>
+<script src="{% static 'biblioteca/js/periodos.js' %}?v=20260924-personal-filas-1"></script>
 {% endif %}
 {% endblock %}

@@ -1,34 +1,347 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
+{% block list_main_class %}biblioteca-personal-list{% endblock %}
+{% block create_icon %}person_add{% endblock %}
+
 {% block section_header %}
     {% include 'biblioteca/includes/crud_section_header.html' with material_icon='badge' %}
 {% endblock %}
 
-{% block head_list %}
-    
-{% endblock %}
 {% block columns %}
     <tr>
-        <th scope="col" style="width: 15%;">CUEANEXO</th>
-        <th scope="col" style="width: 15%;">CUIL</th>
-        <th scope="col" style="width: 20%;">APELLIDOS</th>
-        <th scope="col" style="width: 20%;">NOMBRES</th>
-        <th scope="col" style="width: 20%;">CARGO</th>
-        <th scope="col" style="width: 20%;">SIT_REVISTA</th>
-        <th scope="col" style="width: 20%;">F_INGRESO</th>
-        <th scope="col" style="width: 20%;">F_HASTA</th>
-        <th scope="col" style="width: 20%;">TURNO</th>
-        <th scope="col" style="width: 15%;">MES</th>
-        <th scope="col" style="width: 10%;">AÑO</th>
-        <th scope="col" style="width: 20%;">Botones</th>
+        <th scope="col">Personal</th>
+        <th scope="col">CUOF</th>
+        <th scope="col">Licencia</th>
+        <th scope="col">Desde / Hasta</th>
+        <th scope="col">Cargo / turno</th>
+        <th scope="col">ACCIÓN</th>
     </tr>
 {% endblock %}
 
+{% block section_totals %}
+<div class="biblioteca-crud__totals" data-biblioteca-section-totals>
+    <div class="biblioteca-crud__totals-title">
+        <span class="biblioteca-symbol" aria-hidden="true">functions</span>
+        <span>Totales de la sección</span>
+    </div>
+    <div class="biblioteca-crud__totals-metrics">
+        <div class="biblioteca-crud__total-metric">
+            <span>Personal</span>
+            <strong data-biblioteca-total-count>0</strong>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
 {% block javascript %}
-    <script src="{% static 'biblioteca/pem/personal/js/list_bibliotecario.js' %}"></script>
-    <!-- 🔥 CSRF TOKEN (OCULTO PERO EXISTE) -->
-    <form style="display:none;">
-        {% csrf_token %}
-    </form>
+<form id="biblioteca-personal-list-csrf" class="d-none" aria-hidden="true">
+    {% csrf_token %}
+</form>
+
+<script>
+(function ($) {
+    'use strict';
+
+    const csrfToken = document.querySelector('#biblioteca-personal-list-csrf [name="csrfmiddlewaretoken"]')?.value || '';
+    const updateBaseUrl = '{{ update_url|escapejs }}';
+    const deleteBaseUrl = "{% url 'bibliotecas:bibliotecario_delete' 0 %}";
+    const labels = ['Personal', 'CUOF', 'Licencia', 'Desde / Hasta', 'Cargo / turno', 'Acción'];
+
+    function escapeHtml(value) {
+        return $('<div>').text(value == null ? '' : String(value)).html();
+    }
+
+    function hasValue(value) {
+        return value !== null && value !== undefined && value !== '' && value !== '—';
+    }
+
+    function dash() {
+        return '<span class="biblioteca-personal-list__dash">—</span>';
+    }
+
+    function formatCuil(value) {
+        const digits = String(value || '').replace(/\D/g, '');
+        return digits || '—';
+    }
+
+    function formatDni(value) {
+        const digits = String(value || '').replace(/\D/g, '');
+        return digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '—';
+    }
+
+    function formatDate(value) {
+        if (!hasValue(value)) return '';
+        const raw = String(value).slice(0, 10);
+        const parts = raw.split('-');
+        return parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : raw;
+    }
+
+    function rowUrl(base, id) {
+        return base.replace('/0/', '/' + encodeURIComponent(id) + '/');
+    }
+
+    function renderPersonal(data, type, row) {
+        const nombre = [row.nombres, row.apellidos].filter(Boolean).join(' ').trim();
+        const searchable = [nombre, row.cuil, row.n_doc].filter(Boolean).join(' ');
+        if (type === 'sort' || type === 'type') {
+            return [row.apellidos, row.nombres].filter(Boolean).join(' ');
+        }
+        if (type !== 'display') return searchable;
+
+        return '' +
+            '<div class="biblioteca-personal-list__person">' +
+                '<button type="button" class="biblioteca-personal-list__details-toggle" title="Ver detalles" aria-label="Ver detalles del registro" aria-expanded="false">' +
+                    '<span class="biblioteca-symbol" aria-hidden="true">expand_more</span>' +
+                '</button>' +
+                '<span class="biblioteca-personal-list__avatar" aria-hidden="true">' +
+                    '<span class="biblioteca-symbol biblioteca-symbol--filled">person</span>' +
+                '</span>' +
+                '<div class="biblioteca-personal-list__person-copy">' +
+                    '<strong>' + escapeHtml(nombre || 'Sin nombre') + '</strong>' +
+                    '<div class="biblioteca-personal-list__identity">' +
+                        '<span><span class="biblioteca-symbol" aria-hidden="true">id_card</span>CUIL ' + escapeHtml(formatCuil(row.cuil)) + '</span>' +
+                        '<span><span class="biblioteca-symbol" aria-hidden="true">badge</span>DNI ' + escapeHtml(formatDni(row.n_doc)) + '</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+    }
+
+    function renderCuof(data, type, row) {
+        const cuof = hasValue(row.cuof) ? String(row.cuof) : '';
+        const anexo = hasValue(row.cuof_anexo) ? String(row.cuof_anexo) : '';
+        if (type !== 'display') return [cuof, anexo].filter(Boolean).join(' ');
+        if (!cuof && !anexo) return dash();
+
+        let html = '<div class="biblioteca-personal-list__stack">';
+        html += '<strong>' + escapeHtml(cuof || '—') + '</strong>';
+        if (anexo) html += '<span>Anexo ' + escapeHtml(anexo) + '</span>';
+        html += '</div>';
+        return html;
+    }
+
+    function renderLicencia(data, type) {
+        const value = hasValue(data) ? String(data) : '';
+        if (type !== 'display') return value;
+        if (!value) return '<span class="biblioteca-personal-list__tag biblioteca-personal-list__tag--neutral">Sin licencia</span>';
+
+        return '<span class="biblioteca-personal-list__tag biblioteca-personal-list__tag--success">' +
+            '<span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">check_circle</span>' +
+            escapeHtml(value) +
+        '</span>';
+    }
+
+    function renderFechas(data, type, row) {
+        const desde = formatDate(row.f_desde_lic);
+        const hasta = formatDate(row.f_hasta_lic);
+        if (type === 'sort' || type === 'type') {
+            return [row.f_desde_lic || '', row.f_hasta_lic || ''].join(' ');
+        }
+        if (type !== 'display') return [desde, hasta].filter(Boolean).join(' ');
+        if (!desde && !hasta) return dash();
+
+        let html = '<div class="biblioteca-personal-list__stack">';
+        if (desde) html += '<strong>' + escapeHtml(desde) + '</strong>';
+        if (hasta) html += '<span>hasta ' + escapeHtml(hasta) + '</span>';
+        html += '</div>';
+        return html;
+    }
+
+    function renderCargoTurno(data, type, row) {
+        const cargo = hasValue(row.cargo) ? String(row.cargo) : '';
+        const situacionRevista = hasValue(row.situacion_revista) ? String(row.situacion_revista) : '';
+        const turno = hasValue(row.turno) ? String(row.turno) : '';
+        const searchable = [cargo, situacionRevista, turno].filter(Boolean).join(' ');
+
+        if (type === 'sort' || type === 'type') return cargo || searchable;
+        if (type !== 'display') return searchable;
+        if (!cargo && !situacionRevista && !turno) return dash();
+
+        let html = '<div class="biblioteca-personal-list__labor">';
+        if (cargo) {
+            html += '<strong>' + escapeHtml(cargo) + '</strong>';
+        }
+        if (situacionRevista || turno) {
+            html += '<div class="biblioteca-personal-list__labor-meta">';
+            if (situacionRevista) {
+                html += '<span class="biblioteca-personal-list__mini">' + escapeHtml(situacionRevista) + '</span>';
+            }
+            if (turno) {
+                html += '<span class="biblioteca-personal-list__mini">' + escapeHtml(turno) + '</span>';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function renderActions(data, type, row) {
+        if (type !== 'display') return '';
+        const editUrl = rowUrl(updateBaseUrl, row.id);
+        const deleteUrl = rowUrl(deleteBaseUrl, row.id);
+
+        return '' +
+            '<div class="biblioteca-personal-list__actions">' +
+                '<a href="' + escapeHtml(editUrl) + '" class="btn biblioteca-personal-list__icon-btn" title="Editar registro" aria-label="Editar registro">' +
+                    '<span class="biblioteca-symbol" aria-hidden="true">edit</span>' +
+                '</a>' +
+                '<a href="' + escapeHtml(deleteUrl) + '" class="btn biblioteca-personal-list__icon-btn biblioteca-personal-list__icon-btn--danger" title="Eliminar registro" aria-label="Eliminar registro">' +
+                    '<span class="biblioteca-symbol" aria-hidden="true">delete</span>' +
+                '</a>' +
+            '</div>';
+    }
+
+    function buildDetailField(label, value) {
+        const text = hasValue(value) ? String(value) : '—';
+        return '' +
+            '<div class="biblioteca-personal-list__detail-field">' +
+                '<span>' + escapeHtml(label) + '</span>' +
+                '<strong>' + escapeHtml(text) + '</strong>' +
+            '</div>';
+    }
+
+    function buildIngresoHasta(row) {
+        const ingreso = formatDate(row.f_ingreso) || '—';
+        const hasta = formatDate(row.f_hasta) || '—';
+        return ingreso + ' · ' + hasta;
+    }
+
+    function buildObservacionesHtml(value) {
+        const observaciones = hasValue(value) ? String(value) : 'Sin observaciones.';
+        const limite = 60;
+
+        if (!hasValue(value) || observaciones.length <= limite) {
+            return '<span class="biblioteca-personal-list__detail-value">' +
+                escapeHtml(observaciones) +
+            '</span>';
+        }
+
+        const resumen = observaciones.slice(0, limite).trimEnd() + '…';
+
+        return '' +
+            '<span class="biblioteca-personal-list__detail-value">' +
+                '<span data-observacion-resumen>' + escapeHtml(resumen) + '</span>' +
+                '<span class="d-none" data-observacion-completa>' + escapeHtml(observaciones) + '</span> ' +
+                '<button type="button" class="biblioteca-personal-list__more-toggle" aria-expanded="false">Mostrar más</button>' +
+            '</span>';
+    }
+
+    function detailsHtml(row) {
+        const situacionHistorica = hasValue(row.situacion_laboral)
+            ? '<span class="biblioteca-personal-list__historical">' +
+                '<span class="biblioteca-symbol" aria-hidden="true">history</span>' +
+                'Situación laboral histórica: ' + escapeHtml(row.situacion_laboral) +
+              '</span>'
+            : '';
+
+        return '' +
+            '<div class="biblioteca-personal-list__details">' +
+                '<div class="biblioteca-personal-list__detail biblioteca-personal-list__detail--labor">' +
+                    '<span class="biblioteca-symbol" aria-hidden="true">work</span>' +
+                    '<div class="biblioteca-personal-list__detail-content">' +
+                        '<span class="biblioteca-personal-list__detail-label">Datos laborales</span>' +
+                        '<div class="biblioteca-personal-list__detail-grid">' +
+                            buildDetailField('Cargo', row.cargo) +
+                            buildDetailField('Situación de revista', row.situacion_revista) +
+                            buildDetailField('Turno', row.turno) +
+                            buildDetailField('Ingreso / Hasta', buildIngresoHasta(row)) +
+                        '</div>' +
+                        situacionHistorica +
+                    '</div>' +
+                '</div>' +
+                '<div class="biblioteca-personal-list__detail">' +
+                    '<span class="biblioteca-symbol" aria-hidden="true">notes</span>' +
+                    '<div class="biblioteca-personal-list__detail-content">' +
+                        '<span class="biblioteca-personal-list__detail-label">Observaciones</span>' +
+                        buildObservacionesHtml(row.observaciones) +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+    }
+
+    $(function () {
+        const tableElement = document.getElementById('data');
+        if (!tableElement) return;
+
+        const table = $('#data').DataTable({
+            ajax: {
+                url: window.location.pathname + window.location.search,
+                type: 'POST',
+                headers: {'X-CSRFToken': csrfToken},
+                data: {action: 'searchdata'},
+                dataSrc: ''
+            },
+            autoWidth: false,
+            deferRender: true,
+            responsive: false,
+            processing: false,
+            pageLength: 10,
+            lengthChange: false,
+            dom: 'rtip',
+            order: [[0, 'asc']],
+            columns: [
+                {data: null, render: renderPersonal},
+                {data: null, render: renderCuof},
+                {data: 'licencia_permiso', render: renderLicencia},
+                {data: null, render: renderFechas},
+                {data: null, render: renderCargoTurno},
+                {data: null, render: renderActions, orderable: false, searchable: false}
+            ],
+            createdRow: function (row) {
+                row.classList.add('biblioteca-personal-list__record');
+                $('td', row).each(function (index) {
+                    this.setAttribute('data-label', labels[index] || '');
+                });
+            },
+            language: {
+                emptyTable: 'Todavía no hay personal registrado en este período.',
+                zeroRecords: 'No se encontraron registros con esa búsqueda.',
+                info: 'Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros',
+                infoEmpty: 'No hay registros para mostrar',
+                infoFiltered: '',
+                paginate: {
+                    previous: 'Anterior',
+                    next: 'Siguiente'
+                }
+            }
+        });
+
+        $('#data tbody').on('click', '.biblioteca-personal-list__details-toggle', function () {
+            const button = this;
+            const tr = $(button).closest('tr');
+            const row = table.row(tr);
+            const expanded = row.child.isShown();
+
+            if (expanded) {
+                row.child.hide();
+                tr.removeClass('is-expanded');
+                button.setAttribute('aria-expanded', 'false');
+                return;
+            }
+
+            row.child(detailsHtml(row.data()), 'biblioteca-personal-list__details-row').show();
+            tr.addClass('is-expanded');
+            button.setAttribute('aria-expanded', 'true');
+        });
+
+        $('#data tbody').on('click', '.biblioteca-personal-list__more-toggle', function (event) {
+            event.preventDefault();
+
+            const button = this;
+            const contenedor = button.closest('.biblioteca-personal-list__detail-value');
+            if (!contenedor) return;
+
+            const resumen = contenedor.querySelector('[data-observacion-resumen]');
+            const completa = contenedor.querySelector('[data-observacion-completa]');
+            if (!resumen || !completa) return;
+
+            const expandido = button.getAttribute('aria-expanded') === 'true';
+            resumen.classList.toggle('d-none', !expandido);
+            completa.classList.toggle('d-none', expandido);
+            button.setAttribute('aria-expanded', expandido ? 'false' : 'true');
+            button.textContent = expandido ? 'Mostrar más' : 'Mostrar menos';
+        });
+    });
+}(jQuery));
+</script>
 {% endblock %}
