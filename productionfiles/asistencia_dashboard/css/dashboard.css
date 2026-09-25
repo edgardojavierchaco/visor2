@@ -798,3 +798,66 @@ body {
     font-weight: 800;
     line-height: 1;
 }
+
+/* ============================================================
+   ACCIONES DE CABECERA · AYUDA / GUÍA
+============================================================ */
+.dashboard-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+}
+
+.dashboard-help-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 48px;
+    padding: 0 16px;
+    color: #fff;
+    text-decoration: none;
+    font-size: .82rem;
+    font-weight: 750;
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 13px;
+    background: rgba(255,255,255,.13);
+    backdrop-filter: blur(8px);
+    transition: transform .18s ease, background .18s ease, border-color .18s ease;
+}
+
+.dashboard-help-btn:hover {
+    color: #fff;
+    background: rgba(255,255,255,.22);
+    border-color: rgba(255,255,255,.42);
+    transform: translateY(-1px);
+}
+
+.dashboard-help-btn i {
+    font-size: 1.05rem;
+}
+
+@media (max-width: 900px) {
+    .dashboard-header {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .dashboard-header-actions {
+        width: 100%;
+        margin-left: 0;
+        align-items: stretch;
+    }
+
+    .dashboard-help-btn,
+    .dashboard-header-badge {
+        flex: 1 1 0;
+    }
+}
+
+@media (max-width: 575px) {
+    .dashboard-header-actions {
+        flex-direction: column;
+    }
+}
