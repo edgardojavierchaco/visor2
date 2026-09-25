@@ -1,9 +1,9 @@
 from collections import defaultdict
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.conf import settings
 from django.db import connection
-from django.db.models import Count, Max, Q
+from django.db.models import Count, Max, Q, Sum
 from django.utils import timezone
 
 from apps.consultasge.models_padron import CapaUnicaOfertas
@@ -479,6 +479,403 @@ def cobertura_por_cue(
             ] = row
 
     return result
+
+
+
+# ============================================================
+# COMPARATIVA REUNIDAS POF vs BNH POR CEIC
+# ============================================================
+
+def pof_bnh_breakdown(
+    cueanexo,
+    anio_objetivo=2026,
+):
+    """
+    Compara, por CEIC, cargos y horas cátedra de Reunidas POF
+    contra BNH para un CUEANEXO.
+
+    Reglas POF:
+    - Usa datos AFECTADOS.
+    - Prioriza el año objetivo (2026).
+    - Si no existe, usa el último año disponible para el CUEANEXO.
+
+    Reglas BNH:
+    - Actividades no eliminadas.
+    - Personas no archivadas.
+    - Estado ACTIVO.
+    - Tipo de designación 1 = CARGO.
+    - Tipo de designación 3 = HORAS CÁTEDRAS.
+    - Vigentes en el año objetivo.
+
+    La seguridad del CUEANEXO se resuelve en la vista mediante
+    assert_cue_access().
+    """
+
+    from apps.reunidas_pof.models import CargoPof
+
+    cue = normalize_cue(cueanexo)
+
+    if not cue:
+        return {
+            "cueanexo": "",
+            "anio_objetivo": int(anio_objetivo),
+            "anio_pof": None,
+            "anio_bnh": int(anio_objetivo),
+            "pof_disponible": False,
+            "usa_anio_anterior": False,
+            "mensaje_pof": "No se pudo determinar el CUEANEXO.",
+            "resumen": {
+                "cargos_pof": 0,
+                "cargos_bnh": 0,
+                "diferencia_cargos": 0,
+                "horas_pof": 0,
+                "horas_bnh": 0,
+                "diferencia_horas": 0,
+            },
+            "cargos": [],
+            "horas": [],
+        }
+
+    anio_objetivo = int(anio_objetivo)
+
+    # --------------------------------------------------------
+    # Base POF disponible para la institución
+    # --------------------------------------------------------
+
+    pof_base = CargoPof.objects.filter(
+        localizacion__cueanexo=cue,
+        localizacion__reunida__isnull=False,
+        estado_pof=CargoPof.EstadoPof.AFECTADO,
+    )
+
+    # Primero se busca el año objetivo o el último anterior.
+    anio_pof = (
+        pof_base
+        .filter(
+            localizacion__reunida__anio__lte=anio_objetivo,
+        )
+        .order_by(
+            "-localizacion__reunida__anio",
+        )
+        .values_list(
+            "localizacion__reunida__anio",
+            flat=True,
+        )
+        .first()
+    )
+
+    # Si no hubiera ningún año <= al objetivo, se usa el último
+    # existente para el CUEANEXO, cualquiera sea su año.
+    if anio_pof is None:
+        anio_pof = (
+            pof_base
+            .order_by(
+                "-localizacion__reunida__anio",
+            )
+            .values_list(
+                "localizacion__reunida__anio",
+                flat=True,
+            )
+            .first()
+        )
+
+    pof_disponible = anio_pof is not None
+    usa_anio_anterior = (
+        pof_disponible
+        and int(anio_pof) != anio_objetivo
+    )
+
+    if not pof_disponible:
+        mensaje_pof = (
+            f"No se encontraron datos POF disponibles para esta unidad de servicio. "
+            f"POF {anio_objetivo} estará disponible para comparar cuando el "
+            f"Departamento POF actualice los datos."
+        )
+    elif usa_anio_anterior:
+        mensaje_pof = (
+            f"POF {anio_objetivo} aún no se encuentra disponible para esta unidad "
+            f"de servicio. La comparación se realiza con la última POF disponible, "
+            f"correspondiente al año {int(anio_pof)}. POF {anio_objetivo} estará "
+            f"disponible para comparar cuando el Departamento POF actualice los datos."
+        )
+    else:
+        mensaje_pof = None
+
+    # --------------------------------------------------------
+    # POF por CEIC
+    # --------------------------------------------------------
+
+    pof = {}
+
+    if pof_disponible:
+        pof_rows = (
+            pof_base
+            .filter(
+                localizacion__reunida__anio=int(anio_pof),
+            )
+            .values(
+                "ceic",
+            )
+            .annotate(
+                descripcion=Max("cargo"),
+                cargos_pof=Sum(
+                    "cantidad",
+                    filter=Q(
+                        unidad_cantidad=CargoPof.UnidadCantidad.CARGO,
+                    ),
+                ),
+                horas_pof=Sum(
+                    "cantidad",
+                    filter=Q(
+                        unidad_cantidad=CargoPof.UnidadCantidad.HORA_CATEDRA,
+                    ),
+                ),
+            )
+            .order_by(
+                "ceic",
+            )
+        )
+
+        for row in pof_rows:
+            ceic = row.get("ceic")
+
+            if ceic is None:
+                continue
+
+            pof[int(ceic)] = {
+                "descripcion": row.get("descripcion") or "",
+                "cargos": float(row.get("cargos_pof") or 0),
+                "horas": float(row.get("horas_pof") or 0),
+            }
+
+    # --------------------------------------------------------
+    # BNH por CEIC
+    # --------------------------------------------------------
+
+    fecha_desde = date(
+        anio_objetivo,
+        1,
+        1,
+    )
+
+    fecha_hasta = date(
+        anio_objetivo,
+        12,
+        31,
+    )
+
+    bnh_rows = (
+        RegistroActividades.objects
+        .filter(
+            cueanexo=cue,
+            eliminado=False,
+            persona__archivada=False,
+            estado="ACTIVO",
+            t_designacion_id__in=(1, 3),
+            f_desde__lte=fecha_hasta,
+        )
+        .filter(
+            Q(f_hasta__isnull=True)
+            |
+            Q(f_hasta__gte=fecha_desde)
+        )
+        .values(
+            "ceic_id",
+            "ceic__descripcion",
+        )
+        .annotate(
+            cargos_bnh=Count(
+                "id",
+                filter=Q(
+                    t_designacion_id=1,
+                ),
+            ),
+            horas_bnh=Sum(
+                "carga_horaria",
+                filter=Q(
+                    t_designacion_id=3,
+                ),
+            ),
+        )
+        .order_by(
+            "ceic_id",
+        )
+    )
+
+    bnh = {}
+
+    for row in bnh_rows:
+        ceic = row.get("ceic_id")
+
+        if ceic is None:
+            continue
+
+        bnh[int(ceic)] = {
+            "descripcion": row.get("ceic__descripcion") or "",
+            "cargos": float(row.get("cargos_bnh") or 0),
+            "horas": float(row.get("horas_bnh") or 0),
+        }
+
+    # --------------------------------------------------------
+    # Estados y orden
+    # --------------------------------------------------------
+
+    def _estado(valor_pof, valor_bnh):
+        diferencia = valor_pof - valor_bnh
+
+        if diferencia == 0:
+            return "COINCIDE"
+
+        if valor_pof > 0 and valor_bnh == 0:
+            return "SIN_BNH"
+
+        if valor_pof == 0 and valor_bnh > 0:
+            return "SOLO_BNH"
+
+        if diferencia > 0:
+            return "FALTA_BNH"
+
+        return "EXCEDE_BNH"
+
+    prioridad_estado = {
+        "SIN_BNH": 0,
+        "FALTA_BNH": 1,
+        "EXCEDE_BNH": 2,
+        "SOLO_BNH": 3,
+        "COINCIDE": 4,
+    }
+
+    cargos = []
+    horas = []
+
+    ceics = sorted(
+        set(pof.keys())
+        |
+        set(bnh.keys())
+    )
+
+    for ceic in ceics:
+        dato_pof = pof.get(ceic, {})
+        dato_bnh = bnh.get(ceic, {})
+
+        descripcion = (
+            dato_pof.get("descripcion")
+            or dato_bnh.get("descripcion")
+            or ""
+        )
+
+        cargos_pof = float(
+            dato_pof.get("cargos", 0)
+        )
+        cargos_bnh = float(
+            dato_bnh.get("cargos", 0)
+        )
+
+        if cargos_pof or cargos_bnh:
+            cargos.append({
+                "ceic": ceic,
+                "descripcion": descripcion,
+                "pof": cargos_pof,
+                "bnh": cargos_bnh,
+                "diferencia": cargos_pof - cargos_bnh,
+                "estado": _estado(
+                    cargos_pof,
+                    cargos_bnh,
+                ),
+            })
+
+        horas_pof = float(
+            dato_pof.get("horas", 0)
+        )
+        horas_bnh = float(
+            dato_bnh.get("horas", 0)
+        )
+
+        if horas_pof or horas_bnh:
+            horas.append({
+                "ceic": ceic,
+                "descripcion": descripcion,
+                "pof": horas_pof,
+                "bnh": horas_bnh,
+                "diferencia": horas_pof - horas_bnh,
+                "estado": _estado(
+                    horas_pof,
+                    horas_bnh,
+                ),
+            })
+
+    cargos.sort(
+        key=lambda row: (
+            prioridad_estado.get(
+                row["estado"],
+                99,
+            ),
+            -abs(row["diferencia"]),
+            row["ceic"],
+        )
+    )
+
+    horas.sort(
+        key=lambda row: (
+            prioridad_estado.get(
+                row["estado"],
+                99,
+            ),
+            -abs(row["diferencia"]),
+            row["ceic"],
+        )
+    )
+
+    # --------------------------------------------------------
+    # Totales
+    # --------------------------------------------------------
+
+    total_cargos_pof = sum(
+        row["pof"]
+        for row in cargos
+    )
+    total_cargos_bnh = sum(
+        row["bnh"]
+        for row in cargos
+    )
+    total_horas_pof = sum(
+        row["pof"]
+        for row in horas
+    )
+    total_horas_bnh = sum(
+        row["bnh"]
+        for row in horas
+    )
+
+    return {
+        "cueanexo": cue,
+        "anio_objetivo": anio_objetivo,
+        "anio_pof": (
+            int(anio_pof)
+            if anio_pof is not None
+            else None
+        ),
+        "anio_bnh": anio_objetivo,
+        "pof_disponible": pof_disponible,
+        "usa_anio_anterior": usa_anio_anterior,
+        "mensaje_pof": mensaje_pof,
+        "resumen": {
+            "cargos_pof": total_cargos_pof,
+            "cargos_bnh": total_cargos_bnh,
+            "diferencia_cargos": (
+                total_cargos_pof
+                - total_cargos_bnh
+            ),
+            "horas_pof": total_horas_pof,
+            "horas_bnh": total_horas_bnh,
+            "diferencia_horas": (
+                total_horas_pof
+                - total_horas_bnh
+            ),
+        },
+        "cargos": cargos,
+        "horas": horas,
+    }
 
 
 # ============================================================
