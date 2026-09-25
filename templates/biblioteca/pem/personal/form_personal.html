@@ -204,7 +204,7 @@
                                 <span class="biblioteca-symbol">work</span>
                             </span>
                             <div>
-                                <h4 class="biblioteca-personal__block-title" id="personal-actividad-titulo">Cargo en BNH</h4>
+                                <h4 class="biblioteca-personal__block-title" id="personal-actividad-titulo">Cargo de Biblioteca en BNH</h4>
                                 <p class="biblioteca-personal__block-subtitle" id="biblioteca_personal_actividad_subtitulo"></p>
                             </div>
                         </div>
@@ -212,10 +212,10 @@
 
                     <div class="biblioteca-personal__block-body">
                         <div id="biblioteca_personal_actividad_selector" class="d-none">
-                            <label for="biblioteca_personal_actividad_select">Seleccioná el cargo</label>
+                            <label for="biblioteca_personal_actividad_select">Seleccioná el cargo de Biblioteca</label>
                             <div class="biblioteca-personal__select-wrap">
                                 <select id="biblioteca_personal_actividad_select" class="form-control">
-                                    <option value="">Seleccioná un cargo</option>
+                                    <option value="">Seleccioná un cargo de Biblioteca</option>
                                 </select>
                                 <span class="biblioteca-symbol biblioteca-personal__select-icon" aria-hidden="true">expand_more</span>
                             </div>
@@ -525,7 +525,7 @@
         if (bloqueActividad) bloqueActividad.classList.add('d-none');
         if (actividadSelector) actividadSelector.classList.add('d-none');
         if (actividadSelect) {
-            actividadSelect.innerHTML = '<option value="">Seleccioná un cargo</option>';
+            actividadSelect.innerHTML = '<option value="">Seleccioná un cargo de Biblioteca</option>';
             actividadSelect.value = '';
         }
         if (actividadDetalle) {
@@ -550,7 +550,7 @@
             if (bloqueManual) bloqueManual.classList.add('d-none');
             if (footerFormulario) footerFormulario.classList.add('d-none');
             if (actividadesBnh.length > 1) {
-                mostrarEstadoBusqueda('info', 'Seleccioná el cargo de BNH que corresponde a este registro.');
+                mostrarEstadoBusqueda('info', 'Seleccioná el cargo de Biblioteca que corresponde a este registro.');
             }
             return;
         }
@@ -572,14 +572,14 @@
 
         if (actividadesBnh.length === 1) {
             if (actividadSubtitulo) {
-                actividadSubtitulo.textContent = 'Cargo informado por BNH para esta institución.';
+                actividadSubtitulo.textContent = 'Cargo de Biblioteca informado por BNH para esta institución.';
             }
             seleccionarActividadBnh(actividadesBnh[0].id);
             return;
         }
 
         if (actividadSubtitulo) {
-            actividadSubtitulo.textContent = 'La persona tiene varios cargos en BNH. Elegí el que corresponde a este registro.';
+            actividadSubtitulo.textContent = 'La persona tiene varios cargos de Biblioteca en BNH. Elegí el que corresponde a este registro.';
         }
         if (actividadSelector) actividadSelector.classList.remove('d-none');
         if (actividadSelect) {
@@ -687,11 +687,11 @@
             if (data.estado === 'persona_sin_vinculacion') {
                 limpiarActividadBnh();
                 aplicarPersonaBnh(data.persona, false);
-                mostrarEstadoBusqueda('info', data.message || 'Falta vincular la persona a esta institución.');
+                mostrarEstadoBusqueda('info', data.message || 'Falta un cargo de Biblioteca en esta institución.');
                 mostrarAccionBnh(
                     data.accion,
-                    'Falta la vinculación institucional',
-                    'Vinculala a esta institución y después volvé acá para reconsultar.'
+                    'Falta un cargo de Biblioteca',
+                    'Completá en BNH un cargo de Biblioteca para esta institución y después volvé acá para reconsultar.'
                 );
                 return;
             }
@@ -701,7 +701,7 @@
                 ocultarAccionBnh();
 
                 if (!Array.isArray(data.actividades) || !data.actividades.length) {
-                    throw new Error('BNH no devolvió los cargos vinculados de la persona.');
+                    throw new Error('BNH no devolvió cargos de Biblioteca válidos para la persona.');
                 }
 
                 mostrarEstadoBusqueda(
@@ -785,7 +785,7 @@
             mostrarEstadoBusqueda(
                 'error',
                 requiereCargo
-                    ? 'Seleccioná el cargo de BNH que corresponde a este registro.'
+                    ? 'Seleccioná el cargo de Biblioteca que corresponde a este registro.'
                     : 'Buscá y confirmá el personal por CUIL antes de guardar.'
             );
             if (requiereCargo && actividadSelect && !actividadSelector.classList.contains('d-none')) {
