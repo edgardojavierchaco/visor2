@@ -7,9 +7,6 @@ let chartNivel = null;
 let chartRanking = null;
 let chartTendenciaAlertas = null;
 
-let filtroAlertaInstitucional = "";
-let filtroCalidadEstado = "";
-
 const paginationState = {
     ranking: 1,
     alertas: 1,
@@ -27,7 +24,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     inicializarSelect2();
     configurarEventos();
     configurarPaginacion();
-    actualizarEstadoBotonesFiltros();
 
     await cargarFiltros();
     await cargarSemanas(true);
@@ -249,10 +245,6 @@ async function cargarPanelesComplementarios(params) {
 
     const calidadParams = new URLSearchParams(params);
     calidadParams.set("page", paginationState.calidad);
-    calidadParams.set("page_size", 10);
-    if (filtroCalidadEstado) {
-        calidadParams.set("estado_registro", filtroCalidadEstado);
-    }
 
     const resultados = await Promise.allSettled([
         fetchJSON(`${CFG.urls.mensual}?${mensualParams}`, 30000),
@@ -373,9 +365,6 @@ async function cargarPaginaAlertas() {
     const params = new URLSearchParams(obtenerParametros());
     params.set("page", paginationState.alertas);
     params.set("page_size", 10);
-    if (filtroAlertaInstitucional) {
-        params.set("alerta", filtroAlertaInstitucional);
-    }
 
     try {
         const alertas = await fetchJSON(`${CFG.urls.alertas}?${params}`, 20000);
@@ -385,39 +374,6 @@ async function cargarPaginaAlertas() {
     catch (error) {
         console.error("Error cargando página de alertas institucionales:", error);
     }
-}
-
-async function cargarPaginaCalidad() {
-    const params = new URLSearchParams(obtenerParametros());
-    params.set("page", paginationState.calidad);
-    params.set("page_size", 10);
-
-    if (filtroCalidadEstado) {
-        params.set("estado_registro", filtroCalidadEstado);
-    }
-
-    try {
-        const calidad = await fetchJSON(`${CFG.urls.calidadRegistro}?${params}`, 30000);
-        pintarCalidad(calidad);
-        pintarPaginacion("pagerCalidad", calidad.pagination, "calidad");
-    }
-    catch (error) {
-        console.error("Error cargando página de calidad:", error);
-    }
-}
-
-function actualizarEstadoBotonesFiltros() {
-    document.querySelectorAll(".alert-filter-btn").forEach(function (btn) {
-        const activo = btn.dataset.alerta === filtroAlertaInstitucional;
-        btn.classList.toggle("active", activo);
-        btn.setAttribute("aria-pressed", activo ? "true" : "false");
-    });
-
-    document.querySelectorAll(".quality-filter-btn").forEach(function (btn) {
-        const activo = btn.dataset.calidadEstado === filtroCalidadEstado;
-        btn.classList.toggle("active", activo);
-        btn.setAttribute("aria-pressed", activo ? "true" : "false");
-    });
 }
 
 function configurarPager(id, key, reload) {
@@ -856,13 +812,6 @@ function pintarAlertas(data) {
         )
     );
 
-    // Totales visibles también dentro de los botones de filtrado
-    // del seguimiento institucional, del mismo modo que Calidad.
-    $("#alertaFiltroNormal").text(formatNumero(resumen.NORMAL || 0));
-    $("#alertaFiltroAtencion").text(formatNumero(resumen.ATENCION || 0));
-    $("#alertaFiltroAlto").text(formatNumero(resumen.ALTO || 0));
-    $("#alertaFiltroCritico").text(formatNumero(resumen.CRITICO || 0));
-
     pintarTablaAlertas(
         data.data || []
     );
@@ -1105,7 +1054,7 @@ function pintarCalidad(resultado) {
                 <td class="text-center">${formatNumero(fila.cantidad_secciones)}</td>
                 <td class="text-center">${formatNumero(fila.dias_habiles_calendario)}</td>
                 <td class="text-center">${formatNumero(fila.jornadas_esperadas)}</td>
-                <td class="text-center">${formatNumero(fila.jornadas_registradas)}</td>
+                <td class="text-center">${formatNumero(fila.dias_registrados)}</td>
                 <td class="text-center"><strong>${formatNumero(fila.jornadas_sin_registro)}</strong></td>
                 <td class="text-end">${formatPorcentaje(fila.porcentaje_cumplimiento)}</td>
                 <td>${escapeHtml((fila.estado_registro || "—").replaceAll("_", " "))}</td>
@@ -1134,10 +1083,6 @@ async function actualizarDashboard() {
     rankingParams.set("page", 1);
     const alertasParams = new URLSearchParams(params);
     alertasParams.set("page", 1);
-    alertasParams.set("page_size", 10);
-    if (filtroAlertaInstitucional) {
-        alertasParams.set("alerta", filtroAlertaInstitucional);
-    }
     const rankingAlertasParams = new URLSearchParams(params);
     rankingAlertasParams.set("page", 1);
 
@@ -1288,22 +1233,6 @@ function configurarEventos() {
         }
     );
 
-    $(document).on("click", ".alert-filter-btn", async function () {
-        const nivel = String($(this).data("alerta") || "");
-        filtroAlertaInstitucional = filtroAlertaInstitucional === nivel ? "" : nivel;
-        paginationState.alertas = 1;
-        actualizarEstadoBotonesFiltros();
-        await cargarPaginaAlertas();
-    });
-
-    $(document).on("click", ".quality-filter-btn", async function () {
-        const estado = String($(this).data("calidad-estado") || "");
-        filtroCalidadEstado = filtroCalidadEstado === estado ? "" : estado;
-        paginationState.calidad = 1;
-        actualizarEstadoBotonesFiltros();
-        await cargarPaginaCalidad();
-    });
-
     $("#btnLimpiar").on(
         "click",
         async function () {
@@ -1320,12 +1249,6 @@ function configurarEventos() {
                     .val(null)
                     .trigger("change.select2");
             });
-
-            filtroAlertaInstitucional = "";
-            filtroCalidadEstado = "";
-            paginationState.alertas = 1;
-            paginationState.calidad = 1;
-            actualizarEstadoBotonesFiltros();
 
             await actualizarDashboard();
         }
@@ -1362,7 +1285,14 @@ function configurarPaginacion() {
     configurarPager(
         "pagerCalidad",
         "calidad",
-        cargarPaginaCalidad
+        async () => {
+            const params = new URLSearchParams(
+                obtenerParametros()
+            );
+            await cargarPanelesComplementarios(
+                params
+            );
+        }
     );
 
     configurarPager(

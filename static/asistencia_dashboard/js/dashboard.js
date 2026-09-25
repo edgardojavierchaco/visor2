@@ -7,6 +7,9 @@ let chartNivel = null;
 let chartRanking = null;
 let chartTendenciaAlertas = null;
 
+let filtroAlertaInstitucional = "";
+let filtroCalidadEstado = "";
+
 const paginationState = {
     ranking: 1,
     alertas: 1,
@@ -24,6 +27,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     inicializarSelect2();
     configurarEventos();
     configurarPaginacion();
+    actualizarEstadoBotonesFiltros();
 
     await cargarFiltros();
     await cargarSemanas(true);
@@ -116,93 +120,6 @@ function inicializarSelect2() {
             }
         }
     });
-}
-
-function configurarEventos() {
-    // Filtros mensuales generales.
-    [
-        "#filtroNivel",
-        "#filtroAmbito",
-        "#filtroDepartamento",
-        "#filtroLocalidad",
-        "#filtroOferta"
-    ].forEach(function (selector) {
-        $(selector).on(
-            "change",
-            async function () {
-                await actualizarDashboard();
-            }
-        );
-    });
-
-    // Año/mes: primero actualiza las opciones disponibles y luego el tablero.
-    $("#filtroAnio, #filtroMes").on(
-        "change",
-        async function () {
-            actualizarTituloPeriodo();
-            await cargarFiltros();
-            await actualizarDashboard();
-        }
-    );
-
-    // Regional: invalida el CUE seleccionado y refresca el tablero.
-    $("#filtroRegion").on(
-        "change",
-        async function () {
-            $("#filtroCue")
-                .val(null)
-                .trigger("change.select2");
-
-            await actualizarDashboard();
-        }
-    );
-
-    // Seleccionar CUE filtra indicadores mensuales y habilita drill-down semanal.
-    $("#filtroCue").on(
-        "change",
-        async function () {
-            await actualizarDashboard();
-        }
-    );
-
-    // El año/semana de alerta sólo refresca la capa nominal.
-    $("#filtroAnioSemana").on(
-        "change",
-        async function () {
-            await cargarSemanas(false);
-            actualizarTituloPeriodo();
-            await cargarDetalleCue();
-        }
-    );
-
-    $("#filtroSemana").on(
-        "change",
-        async function () {
-            actualizarTituloPeriodo();
-            await cargarDetalleCue();
-        }
-    );
-
-    $("#btnLimpiar").on(
-        "click",
-        async function () {
-            [
-                "#filtroNivel",
-                "#filtroAmbito",
-                "#filtroRegion",
-                "#filtroDepartamento",
-                "#filtroLocalidad",
-                "#filtroOferta",
-                "#filtroCue"
-            ].forEach(function (selector) {
-                $(selector)
-                    .val(null)
-                    .trigger("change.select2");
-            });
-
-            await actualizarDashboard();
-        }
-    );
 }
 
 async function cargarFiltros() {
@@ -326,93 +243,45 @@ function obtenerParametros() {
     };
 }
 
-async function actualizarDashboard() {
-    paginationState.ranking = 1;
-    paginationState.alertas = 1;
-    paginationState.mensual = 1;
-    paginationState.calidad = 1;
-    paginationState.alertasAlumnos = 1;
-    paginationState.secciones = 1;
-    mostrarLoader(true);
-
-    try {
-        const params = new URLSearchParams(
-            obtenerParametros()
-        );
-
-        const rankingParams = new URLSearchParams(params);
-        rankingParams.set("page", paginationState.ranking);
-        rankingParams.set("page_size", 10);
-
-        const alertasParams = new URLSearchParams(params);
-        alertasParams.set("page", paginationState.alertas);
-        alertasParams.set("page_size", 10);
-
-        const [
-            resumen,
-            evolucion,
-            niveles,
-            ranking,
-            alertas
-        ] = await Promise.all([
-            fetchJSON(`${CFG.urls.resumen}?${params}`),
-            fetchJSON(`${CFG.urls.evolucion}?${params}`),
-            fetchJSON(`${CFG.urls.niveles}?${params}`),
-            fetchJSON(`${CFG.urls.ranking}?${rankingParams}`),
-            fetchJSON(`${CFG.urls.alertas}?${alertasParams}`)
-        ]);
-
-        pintarResumen(resumen);
-        pintarEvolucion(evolucion.data || []);
-        pintarNiveles(niveles.data || []);
-        pintarRanking(ranking.data || []);
-        pintarTablaRanking(ranking.data || []);
-        pintarPaginacion("pagerRanking", ranking.pagination, "ranking");
-        pintarAlertas(alertas);
-        pintarPaginacion("pagerAlertas", alertas.pagination, "alertas");
-
-        // Estos paneles leen datos agregados/materializados y no bloquean
-        // la carga principal del tablero.
-        cargarPanelesComplementarios(params);
-    }
-    catch (error) {
-        console.error("Error actualizando dashboard:", error);
-    }
-    finally {
-        mostrarLoader(false);
-    }
-
-    await cargarDetalleCue();
-}
-
-
 async function cargarPanelesComplementarios(params) {
-    try {
-        const mensualParams = new URLSearchParams(params);
-        mensualParams.set("page", paginationState.mensual);
-        mensualParams.set("page_size", 10);
+    const mensualParams = new URLSearchParams(params);
+    mensualParams.set("page", paginationState.mensual);
 
-        const calidadParams = new URLSearchParams(params);
-        calidadParams.set("page", paginationState.calidad);
-        calidadParams.set("page_size", 10);
-
-        const [mensual, calidad] = await Promise.all([
-            fetchJSON(`${CFG.urls.mensual}?${mensualParams}`, 20000),
-            fetchJSON(`${CFG.urls.calidadRegistro}?${calidadParams}`, 20000)
-        ]);
-
-        pintarMensual(mensual.data || []);
-        pintarPaginacion("pagerMensual", mensual.pagination, "mensual");
-
-        pintarCalidad(calidad);
-        pintarPaginacion("pagerCalidad", calidad.pagination, "calidad");
+    const calidadParams = new URLSearchParams(params);
+    calidadParams.set("page", paginationState.calidad);
+    calidadParams.set("page_size", 10);
+    if (filtroCalidadEstado) {
+        calidadParams.set("estado_registro", filtroCalidadEstado);
     }
-    catch (error) {
-        console.error("Error cargando paneles complementarios:", error);
-        pintarCalidad({data: [], resumen: {}, procesado: false, message: error.message});
+
+    const resultados = await Promise.allSettled([
+        fetchJSON(`${CFG.urls.mensual}?${mensualParams}`, 30000),
+        fetchJSON(`${CFG.urls.calidadRegistro}?${calidadParams}`, 30000)
+    ]);
+
+    const mensual = resultados[0];
+    const calidad = resultados[1];
+
+    if (mensual.status === "fulfilled") {
+        pintarMensual(mensual.value.data || []);
+        pintarPaginacion("pagerMensual", mensual.value.pagination, "mensual");
+    } else {
+        console.error("Error cargando consulta mensual:", mensual.reason);
+        pintarMensual([]);
+        pintarPaginacion("pagerMensual", null, "mensual");
+    }
+
+    if (calidad.status === "fulfilled") {
+        pintarCalidad(calidad.value);
+        pintarPaginacion("pagerCalidad", calidad.value.pagination, "calidad");
+    } else {
+        console.error("Error cargando calidad:", calidad.reason);
+        pintarCalidad({data: [], resumen: {}, procesado: false, message: calidad.reason?.message || "No se pudo cargar calidad."});
         pintarPaginacion("pagerCalidad", null, "calidad");
     }
 }
+
+
 
 
 async function cargarDetalleCue() {
@@ -429,27 +298,32 @@ async function cargarDetalleCue() {
     const base = new URLSearchParams(obtenerParametros());
     const paramsSecciones = new URLSearchParams(base);
     paramsSecciones.set("page", paginationState.secciones);
-    paramsSecciones.set("page_size", 10);
     const paramsAlertas = new URLSearchParams(base);
     paramsAlertas.set("page", paginationState.alertasAlumnos);
-    paramsAlertas.set("page_size", 10);
 
-    try {
-        const [secciones, alertasAlumnos] = await Promise.all([
-            fetchJSON(`${CFG.urls.secciones}?${paramsSecciones}`, 20000),
-            fetchJSON(`${CFG.urls.alertasAlumnos}?${paramsAlertas}`, 20000)
-        ]);
-        pintarSecciones(secciones.data || []);
-        pintarPaginacion("pagerSecciones", secciones.pagination, "secciones");
-        pintarAlertasAlumnos(alertasAlumnos.data || []);
-        pintarPaginacion("pagerAlertasAlumnos", alertasAlumnos.pagination, "alertasAlumnos");
-    }
-    catch (error) {
-        console.error("Error cargando detalle del establecimiento:", error);
+    const resultados = await Promise.allSettled([
+        fetchJSON(`${CFG.urls.secciones}?${paramsSecciones}`, 30000),
+        fetchJSON(`${CFG.urls.alertasAlumnos}?${paramsAlertas}`, 30000)
+    ]);
+
+    if (resultados[0].status === "fulfilled") {
+        pintarSecciones(resultados[0].value.data || []);
+        pintarPaginacion("pagerSecciones", resultados[0].value.pagination, "secciones");
+    } else {
+        console.error("Error cargando secciones:", resultados[0].reason);
         pintarSecciones([]);
+    }
+
+    if (resultados[1].status === "fulfilled") {
+        pintarAlertasAlumnos(resultados[1].value.data || []);
+        pintarPaginacion("pagerAlertasAlumnos", resultados[1].value.pagination, "alertasAlumnos");
+    } else {
+        console.error("Error cargando alertas nominales:", resultados[1].reason);
         pintarAlertasAlumnos([]);
     }
 }
+
+
 
 
 function mostrarMensajeDetalle() {
@@ -499,6 +373,9 @@ async function cargarPaginaAlertas() {
     const params = new URLSearchParams(obtenerParametros());
     params.set("page", paginationState.alertas);
     params.set("page_size", 10);
+    if (filtroAlertaInstitucional) {
+        params.set("alerta", filtroAlertaInstitucional);
+    }
 
     try {
         const alertas = await fetchJSON(`${CFG.urls.alertas}?${params}`, 20000);
@@ -510,19 +387,37 @@ async function cargarPaginaAlertas() {
     }
 }
 
-function configurarPaginacion() {
-    configurarPager("pagerRanking", "ranking", cargarPaginaRanking);
-    configurarPager("pagerAlertas", "alertas", cargarPaginaAlertas);
-    configurarPager("pagerMensual", "mensual", async () => {
-        const params = new URLSearchParams(obtenerParametros());
-        await cargarPanelesComplementarios(params);
+async function cargarPaginaCalidad() {
+    const params = new URLSearchParams(obtenerParametros());
+    params.set("page", paginationState.calidad);
+    params.set("page_size", 10);
+
+    if (filtroCalidadEstado) {
+        params.set("estado_registro", filtroCalidadEstado);
+    }
+
+    try {
+        const calidad = await fetchJSON(`${CFG.urls.calidadRegistro}?${params}`, 30000);
+        pintarCalidad(calidad);
+        pintarPaginacion("pagerCalidad", calidad.pagination, "calidad");
+    }
+    catch (error) {
+        console.error("Error cargando página de calidad:", error);
+    }
+}
+
+function actualizarEstadoBotonesFiltros() {
+    document.querySelectorAll(".alert-filter-btn").forEach(function (btn) {
+        const activo = btn.dataset.alerta === filtroAlertaInstitucional;
+        btn.classList.toggle("active", activo);
+        btn.setAttribute("aria-pressed", activo ? "true" : "false");
     });
-    configurarPager("pagerCalidad", "calidad", async () => {
-        const params = new URLSearchParams(obtenerParametros());
-        await cargarPanelesComplementarios(params);
+
+    document.querySelectorAll(".quality-filter-btn").forEach(function (btn) {
+        const activo = btn.dataset.calidadEstado === filtroCalidadEstado;
+        btn.classList.toggle("active", activo);
+        btn.setAttribute("aria-pressed", activo ? "true" : "false");
     });
-    configurarPager("pagerAlertasAlumnos", "alertasAlumnos", cargarDetalleCue);
-    configurarPager("pagerSecciones", "secciones", cargarDetalleCue);
 }
 
 function configurarPager(id, key, reload) {
@@ -578,40 +473,6 @@ async function fetchJSON(url, timeoutMs = 20000) {
     finally {
         clearTimeout(timeout);
     }
-}
-
-function pintarResumen(data) {
-    $("#kpiEstablecimientos").text(
-        formatNumero(data.establecimientos)
-    );
-
-    $("#kpiDias").text(
-        formatNumero(data.dias_con_registro)
-    );
-
-    $("#kpiSecciones").text(
-        formatNumero(data.secciones)
-    );
-
-    $("#kpiAsistencia").text(
-        formatPorcentaje(
-            data.porcentaje_asistencia
-        )
-    );
-
-    $("#kpiAusentismo").text(
-        formatPorcentaje(
-            data.porcentaje_ausentismo
-        )
-    );
-
-    $("#kpiPresentes").text(
-        `${formatNumero(data.presentes)} alumno-días presentes`
-    );
-
-    $("#kpiAusentes").text(
-        `${formatNumero(data.ausentes)} alumno-días ausentes`
-    );
 }
 
 function pintarEvolucion(data) {
@@ -941,7 +802,7 @@ function pintarTablaRanking(data) {
                     </td>
 
                     <td class="text-center">
-                        ${formatNumero(fila.jornadas_registradas)}
+                        ${formatNumero(fila.dias_registrados)}
                     </td>
 
                     <td class="text-end">
@@ -959,107 +820,6 @@ function pintarTablaRanking(data) {
 
                     <td class="text-end">
                         ${ausentismo.toFixed(2)}%
-                    </td>
-
-                </tr>
-                `
-            );
-        }
-    );
-}
-
-function pintarSecciones(data) {
-    const tbody = document.getElementById(
-        "tablaSecciones"
-    );
-
-    tbody.innerHTML = "";
-
-    $("#contadorSecciones").text(
-        formatNumero(data.length)
-    );
-
-    if (!data.length) {
-        tbody.innerHTML = `
-            <tr>
-                <td
-                    colspan="10"
-                    class="text-center py-5 text-muted"
-                >
-                    No existen registros para los filtros seleccionados.
-                </td>
-            </tr>
-        `;
-
-        return;
-    }
-
-    data.forEach(
-        fila => {
-            const asistencia = Number(
-                fila.porcentaje_asistencia || 0
-            );
-
-            tbody.insertAdjacentHTML(
-                "beforeend",
-                `
-                <tr>
-
-                    <td class="school-name">
-
-                        <div>
-                            ${escapeHtml(fila.escuela || "—")}
-                        </div>
-
-                        <small class="text-muted">
-                            ${escapeHtml(fila.cueanexo || "")}
-                        </small>
-
-                    </td>
-
-                    <td>
-                        ${escapeHtml(fila.nivel || "—")}
-                    </td>
-
-                    <td>
-                        ${escapeHtml(fila.grado || "—")}
-                    </td>
-
-                    <td>
-                        ${escapeHtml(fila.seccion || "—")}
-                    </td>
-
-                    <td>
-                        ${escapeHtml(fila.turno || "—")}
-                    </td>
-
-                    <td class="text-center">
-                        ${formatNumero(fila.jornadas_registradas)}
-                    </td>
-
-                    <td class="text-end">
-                        ${formatNumero(fila.alumno_dias)}
-                    </td>
-
-                    <td class="text-end">
-                        ${formatNumero(fila.presentes)}
-                    </td>
-
-                    <td class="text-end">
-                        ${formatNumero(fila.ausentes)}
-                    </td>
-
-                    <td class="text-end">
-
-                        <span
-                            class="
-                                metric-pill
-                                ${claseAsistencia(asistencia)}
-                            "
-                        >
-                            ${asistencia.toFixed(2)}%
-                        </span>
-
                     </td>
 
                 </tr>
@@ -1095,6 +855,13 @@ function pintarAlertas(data) {
             resumen.CRITICO || 0
         )
     );
+
+    // Totales visibles también dentro de los botones de filtrado
+    // del seguimiento institucional, del mismo modo que Calidad.
+    $("#alertaFiltroNormal").text(formatNumero(resumen.NORMAL || 0));
+    $("#alertaFiltroAtencion").text(formatNumero(resumen.ATENCION || 0));
+    $("#alertaFiltroAlto").text(formatNumero(resumen.ALTO || 0));
+    $("#alertaFiltroCritico").text(formatNumero(resumen.CRITICO || 0));
 
     pintarTablaAlertas(
         data.data || []
@@ -1169,7 +936,7 @@ function pintarTablaAlertas(data) {
                     </td>
 
                     <td class="text-center">
-                        ${formatNumero(fila.jornadas_registradas)}
+                        ${formatNumero(fila.dias_registrados)}
                     </td>
 
                     <td class="text-center">
@@ -1307,158 +1074,6 @@ function escapeHtml(value) {
 }
 
 
-function pintarAlertasAlumnos(data) {
-    const tbody = document.getElementById(
-        "tablaAlertasAlumnos"
-    );
-
-    if (!tbody) {
-        return;
-    }
-
-    tbody.innerHTML = "";
-
-    $("#contadorAlertasAlumnos").text(
-        formatNumero(data.length)
-    );
-
-    if (!data.length) {
-        tbody.innerHTML = `
-            <tr>
-                <td
-                    colspan="9"
-                    class="text-center py-5 text-muted"
-                >
-                    No existen estudiantes con información nominal
-                    para los filtros seleccionados.
-                </td>
-            </tr>
-        `;
-
-        return;
-    }
-
-    data.forEach(
-        fila => {
-
-            const porcentaje =
-                fila.porcentaje_asistencia !== null
-                ? Number(fila.porcentaje_asistencia)
-                : null;
-
-            const nivel =
-                fila.nivel_alerta_final
-                || "SIN DATOS";
-
-            tbody.insertAdjacentHTML(
-                "beforeend",
-                `
-                <tr>
-
-                    <td>
-                        <span
-                            class="
-                                alert-badge
-                                ${claseAlerta(nivel)}
-                            "
-                        >
-                            ${textoAlerta(nivel)}
-                        </span>
-                    </td>
-
-                    <td>
-                        <strong>
-                            ${escapeHtml(
-                                fila.nombre_apellido
-                                || `Alumno ${fila.id_alumno}`
-                            )}
-                        </strong>
-                    </td>
-
-                    <td>
-                        ${escapeHtml(
-                            fila.cueanexo || ""
-                        )}
-                    </td>
-
-                    <td class="school-name">
-                        ${escapeHtml(
-                            fila.escuela || "—"
-                        )}
-                    </td>
-
-                    <td>
-                        ${escapeHtml(
-                            fila.grado || "—"
-                        )}
-                        ·
-                        ${escapeHtml(
-                            fila.seccion || "—"
-                        )}
-                    </td>
-
-                    <td class="text-end">
-                        ${
-                            porcentaje !== null
-                            ? porcentaje.toFixed(2) + "%"
-                            : "—"
-                        }
-                    </td>
-
-                    <td class="text-end">
-                        ${Number(
-                            fila.inasistencias_equivalentes || 0
-                        ).toFixed(2)}
-                    </td>
-
-                    <td class="text-center">
-                        ${formatNumero(
-                            fila.racha_actual_ausencias
-                        )}
-                    </td>
-
-                    <td class="text-center">
-                        ${formatNumero(
-                            fila.racha_maxima_ausencias
-                        )}
-                    </td>
-
-                </tr>
-                `
-            );
-        }
-    );
-}
-
-
-function pintarMensual(data) {
-    const tbody = document.getElementById("tablaMensual");
-    if (!tbody) return;
-    tbody.innerHTML = "";
-    $("#contadorMensual").text(formatNumero(data.length));
-
-    if (!data.length) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted">Sin información mensual para los filtros seleccionados.</td></tr>`;
-        return;
-    }
-
-    data.forEach(fila => {
-        const detalle = [fila.nivel, fila.grado, fila.seccion, fila.turno]
-            .filter(Boolean).join(" · ") || "Resumen establecimiento";
-        tbody.insertAdjacentHTML("beforeend", `
-            <tr>
-                <td><strong>${escapeHtml(fila.cueanexo || "")}</strong><br><small>${escapeHtml(fila.escuela || "")}</small></td>
-                <td>${escapeHtml(detalle)}</td>
-                <td class="text-end">${formatNumero(fila.presentes)}</td>
-                <td class="text-end">${formatNumero(fila.ausentes)}</td>
-                <td class="text-end">${formatNumero(fila.ausentes_justificados)}</td>
-                <td class="text-end">${formatNumero(fila.otras_faltas)}</td>
-                <td class="text-end"><span class="metric-pill ${claseAsistencia(Number(fila.porcentaje_asistencia || 0))}">${Number(fila.porcentaje_asistencia || 0).toFixed(2)}%</span></td>
-            </tr>
-        `);
-    });
-}
-
 function pintarCalidad(resultado) {
     const datos = resultado.data || [];
     const resumen = resultado.resumen || {};
@@ -1514,159 +1129,103 @@ async function actualizarDashboard() {
     paginationState.rankingAlertas = 1;
 
     mostrarLoader(true);
+    const params = new URLSearchParams(obtenerParametros());
+    const rankingParams = new URLSearchParams(params);
+    rankingParams.set("page", 1);
+    const alertasParams = new URLSearchParams(params);
+    alertasParams.set("page", 1);
+    alertasParams.set("page_size", 10);
+    if (filtroAlertaInstitucional) {
+        alertasParams.set("alerta", filtroAlertaInstitucional);
+    }
+    const rankingAlertasParams = new URLSearchParams(params);
+    rankingAlertasParams.set("page", 1);
 
     try {
-        const params = new URLSearchParams(
-            obtenerParametros()
-        );
-
-        const rankingParams = new URLSearchParams(params);
-        rankingParams.set("page", 1);
-
-        const alertasParams = new URLSearchParams(params);
-        alertasParams.set("page", 1);
-
-        const rankingAlertasParams = new URLSearchParams(params);
-        rankingAlertasParams.set("page", 1);
-
-        const [
-            resumen,
-            evolucion,
-            niveles,
-            ranking,
-            alertas,
-            resumenSemana,
-            tendenciaSemana,
-            rankingAlertas
-        ] = await Promise.all([
-            fetchJSON(`${CFG.urls.resumen}?${params}`),
-            fetchJSON(`${CFG.urls.evolucion}?${params}`),
-            fetchJSON(`${CFG.urls.niveles}?${params}`),
-            fetchJSON(`${CFG.urls.ranking}?${rankingParams}`),
-            fetchJSON(`${CFG.urls.alertas}?${alertasParams}`),
-            fetchJSON(`${CFG.urls.resumenAlertasSemana}?${params}`),
-            fetchJSON(`${CFG.urls.tendenciaAlertas}?${params}`),
-            fetchJSON(`${CFG.urls.rankingAlertas}?${rankingAlertasParams}`)
+        const resultados = await Promise.allSettled([
+            fetchJSON(`${CFG.urls.resumen}?${params}`, 30000),
+            fetchJSON(`${CFG.urls.evolucion}?${params}`, 30000),
+            fetchJSON(`${CFG.urls.niveles}?${params}`, 30000),
+            fetchJSON(`${CFG.urls.ranking}?${rankingParams}`, 30000),
+            fetchJSON(`${CFG.urls.alertas}?${alertasParams}`, 30000),
+            fetchJSON(`${CFG.urls.resumenAlertasSemana}?${params}`, 30000),
+            fetchJSON(`${CFG.urls.tendenciaAlertas}?${params}`, 30000),
+            fetchJSON(`${CFG.urls.rankingAlertas}?${rankingAlertasParams}`, 30000)
         ]);
 
-        pintarResumen(resumen);
-        pintarEvolucion(evolucion.data || []);
-        pintarNiveles(niveles.data || []);
+        const valor = (idx) => resultados[idx].status === "fulfilled" ? resultados[idx].value : null;
+        resultados.forEach((r, i) => {
+            if (r.status === "rejected") console.error(`Panel ${i} no pudo cargarse:`, r.reason);
+        });
 
-        pintarRanking(ranking.data || []);
-        pintarTablaRanking(ranking.data || []);
-        pintarPaginacion(
-            "pagerRanking",
-            ranking.pagination,
-            "ranking"
-        );
+        const resumen = valor(0);
+        const evolucion = valor(1);
+        const niveles = valor(2);
+        const ranking = valor(3);
+        const alertas = valor(4);
+        const resumenSemana = valor(5);
+        const tendenciaSemana = valor(6);
+        const rankingAlertas = valor(7);
 
-        pintarAlertas(alertas);
-        pintarPaginacion(
-            "pagerAlertas",
-            alertas.pagination,
-            "alertas"
-        );
+        if (resumen) pintarResumen(resumen);
+        if (evolucion) pintarEvolucion(evolucion.data || []);
+        if (niveles) pintarNiveles(niveles.data || []);
+        if (ranking) {
+            pintarRanking(ranking.data || []);
+            pintarTablaRanking(ranking.data || []);
+            pintarPaginacion("pagerRanking", ranking.pagination, "ranking");
+        }
+        if (alertas) {
+            pintarAlertas(alertas);
+            pintarPaginacion("pagerAlertas", alertas.pagination, "alertas");
+        }
+        if (resumenSemana) pintarResumenAlertasSemana(resumenSemana);
+        if (tendenciaSemana) pintarTendenciaAlertas(tendenciaSemana.data || []);
+        if (rankingAlertas) {
+            pintarRankingAlertas(rankingAlertas.data || []);
+            pintarPaginacion("pagerRankingAlertas", rankingAlertas.pagination, "rankingAlertas");
+        }
 
-        pintarResumenAlertasSemana(
-            resumenSemana
-        );
-
-        pintarTendenciaAlertas(
-            tendenciaSemana.data || []
-        );
-
-        pintarRankingAlertas(
-            rankingAlertas.data || []
-        );
-
-        pintarPaginacion(
-            "pagerRankingAlertas",
-            rankingAlertas.pagination,
-            "rankingAlertas"
-        );
-
-        cargarPanelesComplementarios(
-            params
-        );
-    }
-    catch (error) {
-        console.error(
-            "Error actualizando dashboard:",
-            error
-        );
-    }
-    finally {
-        mostrarLoader(
-            false
-        );
+        // Independiente: un error en calidad no debe ocultar la consulta mensual.
+        await cargarPanelesComplementarios(params);
+    } finally {
+        mostrarLoader(false);
     }
 
     await cargarDetalleCue();
 }
 
 
+
+
 async function actualizarAlertasSemanales() {
     paginationState.rankingAlertas = 1;
     paginationState.alertasAlumnos = 1;
+    const params = new URLSearchParams(obtenerParametros());
+    const rankingParams = new URLSearchParams(params);
+    rankingParams.set("page", 1);
 
-    const params = new URLSearchParams(
-        obtenerParametros()
-    );
+    const resultados = await Promise.allSettled([
+        fetchJSON(`${CFG.urls.resumenAlertasSemana}?${params}`, 30000),
+        fetchJSON(`${CFG.urls.tendenciaAlertas}?${params}`, 30000),
+        fetchJSON(`${CFG.urls.rankingAlertas}?${rankingParams}`, 30000)
+    ]);
 
-    const rankingParams = new URLSearchParams(
-        params
-    );
+    if (resultados[0].status === "fulfilled") pintarResumenAlertasSemana(resultados[0].value);
+    else console.error("Error resumen semanal:", resultados[0].reason);
 
-    rankingParams.set(
-        "page",
-        1
-    );
+    if (resultados[1].status === "fulfilled") pintarTendenciaAlertas(resultados[1].value.data || []);
+    else console.error("Error tendencia semanal:", resultados[1].reason);
 
-    try {
-        const [
-            resumenSemana,
-            tendenciaSemana,
-            rankingAlertas
-        ] = await Promise.all([
-            fetchJSON(
-                `${CFG.urls.resumenAlertasSemana}?${params}`
-            ),
-            fetchJSON(
-                `${CFG.urls.tendenciaAlertas}?${params}`
-            ),
-            fetchJSON(
-                `${CFG.urls.rankingAlertas}?${rankingParams}`
-            )
-        ]);
+    if (resultados[2].status === "fulfilled") {
+        pintarRankingAlertas(resultados[2].value.data || []);
+        pintarPaginacion("pagerRankingAlertas", resultados[2].value.pagination, "rankingAlertas");
+    } else console.error("Error ranking semanal:", resultados[2].reason);
 
-        pintarResumenAlertasSemana(
-            resumenSemana
-        );
-
-        pintarTendenciaAlertas(
-            tendenciaSemana.data || []
-        );
-
-        pintarRankingAlertas(
-            rankingAlertas.data || []
-        );
-
-        pintarPaginacion(
-            "pagerRankingAlertas",
-            rankingAlertas.pagination,
-            "rankingAlertas"
-        );
-
-        await cargarDetalleCue();
-    }
-    catch (error) {
-        console.error(
-            "Error actualizando alertas semanales:",
-            error
-        );
-    }
+    await cargarDetalleCue();
 }
+
+
 
 
 function configurarEventos() {
@@ -1729,6 +1288,22 @@ function configurarEventos() {
         }
     );
 
+    $(document).on("click", ".alert-filter-btn", async function () {
+        const nivel = String($(this).data("alerta") || "");
+        filtroAlertaInstitucional = filtroAlertaInstitucional === nivel ? "" : nivel;
+        paginationState.alertas = 1;
+        actualizarEstadoBotonesFiltros();
+        await cargarPaginaAlertas();
+    });
+
+    $(document).on("click", ".quality-filter-btn", async function () {
+        const estado = String($(this).data("calidad-estado") || "");
+        filtroCalidadEstado = filtroCalidadEstado === estado ? "" : estado;
+        paginationState.calidad = 1;
+        actualizarEstadoBotonesFiltros();
+        await cargarPaginaCalidad();
+    });
+
     $("#btnLimpiar").on(
         "click",
         async function () {
@@ -1745,6 +1320,12 @@ function configurarEventos() {
                     .val(null)
                     .trigger("change.select2");
             });
+
+            filtroAlertaInstitucional = "";
+            filtroCalidadEstado = "";
+            paginationState.alertas = 1;
+            paginationState.calidad = 1;
+            actualizarEstadoBotonesFiltros();
 
             await actualizarDashboard();
         }
@@ -1781,14 +1362,7 @@ function configurarPaginacion() {
     configurarPager(
         "pagerCalidad",
         "calidad",
-        async () => {
-            const params = new URLSearchParams(
-                obtenerParametros()
-            );
-            await cargarPanelesComplementarios(
-                params
-            );
-        }
+        cargarPaginaCalidad
     );
 
     configurarPager(
@@ -1847,106 +1421,44 @@ async function cargarPaginaRankingAlertas() {
 
 
 function pintarResumen(data) {
-    $("#kpiMatricula")
-        .text(
-            formatNumero(
-                data.matricula
-            )
-        );
+    $("#kpiMatricula").text(formatNumero(data.matricula));
+    $("#kpiEstablecimientos").text(formatNumero(data.establecimientos));
+    $("#kpiSecciones").text(formatNumero(data.secciones));
+    $("#kpiDias").text(data.dias_registrados == null ? "—" : formatNumero(data.dias_registrados));
+    $("#kpiDiasDetalle").text(
+        data.dias_habiles == null
+            ? "Calendario efectivo pendiente de procesar"
+            : `de ${formatNumero(data.dias_habiles)} días hábiles · máximo por sección`
+    );
 
-    $("#kpiEstablecimientos")
-        .text(
-            formatNumero(
-                data.establecimientos
-            )
-        );
+    $("#kpiAsistencia").text(formatPorcentaje(data.porcentaje_asistencia));
+    $("#kpiAusentismo").text(formatPorcentaje(data.porcentaje_ausentismo));
+    $("#kpiPresentes").text(`${formatNumero(data.alumno_jornadas)} alumno-jornadas analizadas`);
+    $("#kpiAusentes").text(`${formatNumero(Number(data.ausentes || 0) + Number(data.ausentes_justificados || 0))} alumno-jornadas ausentes`);
+    $("#kpiPresentesTotal").text(formatNumero(data.presentes));
+    $("#kpiAusentesTotal").text(formatNumero(data.ausentes));
+    $("#kpiJustificadas").text(formatNumero(data.ausentes_justificados));
 
-    $("#kpiDias")
-        .text(
-            formatNumero(
-                data.dias_con_registro
-            )
-        );
+    $("#kpiCobertura").text(
+        data.porcentaje_cobertura == null ? "—" : formatPorcentaje(data.porcentaje_cobertura)
+    );
+    $("#kpiCoberturaDetalle").text(
+        data.porcentaje_cobertura == null
+            ? "Calidad del período pendiente de procesar"
+            : `${formatNumero(data.secciones_completas || 0)} de ${formatNumero(data.secciones_calidad || 0)} secciones completas`
+    );
 
-    $("#kpiSecciones")
-        .text(
-            formatNumero(
-                data.secciones
-            )
-        );
-
-    $("#kpiAsistencia")
-        .text(
-            formatPorcentaje(
-                data.porcentaje_asistencia
-            )
-        );
-
-    $("#kpiAusentismo")
-        .text(
-            formatPorcentaje(
-                data.porcentaje_ausentismo
-            )
-        );
-
-    $("#kpiPresentes")
-        .text(
-            `${formatNumero(
-                data.alumno_jornadas
-            )} alumno-jornadas analizadas`
-        );
-
-    $("#kpiAusentes")
-        .text(
-            `${formatNumero(
-                Number(data.ausentes || 0)
-                +
-                Number(data.ausentes_justificados || 0)
-            )} alumno-jornadas ausentes`
-        );
-
-    $("#kpiPresentesTotal")
-        .text(
-            formatNumero(
-                data.presentes
-            )
-        );
-
-    $("#kpiAusentesTotal")
-        .text(
-            formatNumero(
-                data.ausentes
-            )
-        );
-
-    $("#kpiJustificadas")
-        .text(
-            formatNumero(
-                data.ausentes_justificados
-            )
-        );
-
-    $("#kpiCobertura")
-        .text(
-            data.porcentaje_cobertura !== null
-            && data.porcentaje_cobertura !== undefined
-            ?
-            formatPorcentaje(
-                data.porcentaje_cobertura
-            )
-            :
-            "Sin procesar"
-        );
-
-    $("#kpiCoberturaDetalle")
-        .text(
-            `${formatNumero(
-                data.secciones_completas || 0
-            )} de ${formatNumero(
-                data.secciones_calidad || 0
-            )} secciones completas`
-        );
+    const fuente = data.matricula_fuente || "";
+    $("#kpiMatriculaDetalle").text(
+        fuente === "INSCRIPCIONES"
+            ? "Alumnos únicos inscriptos por sección"
+            : fuente === "NOMINAL_OBSERVADA"
+                ? "Alumnos únicos observados en asistencia (respaldo)"
+                : "Matrícula pendiente de procesar"
+    );
 }
+
+
 
 
 function pintarResumenAlertasSemana(data) {

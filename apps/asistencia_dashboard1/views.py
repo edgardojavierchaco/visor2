@@ -776,91 +776,35 @@ def api_establecimientos(request):
 def api_calidad_registro(request):
     filtros = _filtros_request(request)
     page, page_size, offset = _pagination_request(request)
-
     if not _relation_exists(TABLA_CALIDAD):
-        return JsonResponse({
-            "data": [],
-            "resumen": {},
-            "procesado": False,
-            "message": "La tabla de calidad todavía no está instalada.",
-            "pagination": _pagination_meta(page, page_size, 0),
-        })
-
+        return JsonResponse({"data": [], "resumen": {}, "procesado": False, "message": "La tabla de calidad todavía no está instalada.", "pagination": _pagination_meta(page, page_size, 0)})
     where, params = _build_where_calidad(filtros, request)
-
     base = f"""
-        SELECT
-            cueanexo,
-            MAX(escuela) AS escuela,
-            MAX(departamento) AS departamento,
-            MAX(localidad) AS localidad,
-            COUNT(DISTINCT id_seccion) AS cantidad_secciones,
-            MAX(dias_habiles_calendario) AS dias_habiles_calendario,
-            SUM(dias_excepcion) AS jornadas_excepcion,
-            SUM(dias_evento_excluyente) AS jornadas_evento_excluyente,
-            SUM(dias_esperados) AS jornadas_esperadas,
-            SUM(dias_registrados) AS jornadas_registradas,
-            SUM(dias_sin_registro) AS jornadas_sin_registro,
-            ROUND(100.0 * SUM(dias_registrados) / NULLIF(SUM(dias_esperados), 0), 2)
-                AS porcentaje_cumplimiento,
-            CASE
-                WHEN SUM(dias_esperados) = 0 THEN 'SIN_DIAS_ESPERADOS'
-                WHEN SUM(dias_registrados) = 0 THEN 'SIN_CARGA'
-                WHEN SUM(dias_sin_registro) > 0 THEN 'PARCIAL'
-                ELSE 'COMPLETO'
-            END AS estado_registro
-        FROM {TABLA_CALIDAD}
-        WHERE {where}
-        GROUP BY cueanexo
+        SELECT cueanexo, MAX(escuela) AS escuela, MAX(departamento) AS departamento, MAX(localidad) AS localidad,
+               COUNT(DISTINCT id_seccion) AS cantidad_secciones,
+               MAX(dias_habiles_calendario) AS dias_habiles_calendario,
+               SUM(dias_excepcion) AS jornadas_excepcion,
+               SUM(dias_evento_excluyente) AS jornadas_evento_excluyente,
+               SUM(dias_esperados) AS jornadas_esperadas,
+               SUM(dias_registrados) AS jornadas_registradas,
+               SUM(dias_sin_registro) AS jornadas_sin_registro,
+               ROUND(100.0*SUM(dias_registrados)/NULLIF(SUM(dias_esperados),0),2) AS porcentaje_cumplimiento,
+               CASE WHEN SUM(dias_esperados)=0 THEN 'SIN_DIAS_ESPERADOS'
+                    WHEN SUM(dias_registrados)=0 THEN 'SIN_CARGA'
+                    WHEN SUM(dias_sin_registro)>0 THEN 'PARCIAL' ELSE 'COMPLETO' END AS estado_registro
+        FROM {TABLA_CALIDAD} WHERE {where} GROUP BY cueanexo
     """
-
-    # El resumen siempre representa el universo completo alcanzado por los
-    # filtros generales. El botón de estado sólo filtra la tabla/paginación.
-    estado = (request.GET.get("estado_registro") or "").strip().upper()
-    estados_validos = {"COMPLETO", "PARCIAL", "SIN_CARGA", "SIN_DIAS_ESPERADOS"}
-    if estado not in estados_validos:
-        estado = ""
-
-    consulta_datos = f"SELECT * FROM ({base}) q"
-    params_datos = list(params)
-
-    if estado:
-        consulta_datos += " WHERE estado_registro = %s"
-        params_datos.append(estado)
-
     with connections[DB_ALIAS].cursor() as cursor:
-        cursor.execute(
-            f"SELECT estado_registro, COUNT(*) FROM ({base}) q GROUP BY estado_registro",
-            params,
-        )
-        resumen = {
-            "COMPLETO": 0,
-            "PARCIAL": 0,
-            "SIN_CARGA": 0,
-            "SIN_DIAS_ESPERADOS": 0,
-        }
+        cursor.execute(f"SELECT COUNT(*) FROM ({base}) q", params)
+        total = cursor.fetchone()[0]
+        cursor.execute(f"SELECT estado_registro, COUNT(*) FROM ({base}) q GROUP BY estado_registro", params)
+        resumen = {"COMPLETO": 0, "PARCIAL": 0, "SIN_CARGA": 0, "SIN_DIAS_ESPERADOS": 0}
         for e, c in cursor.fetchall():
             if e in resumen:
                 resumen[e] = c
-
-        cursor.execute(f"SELECT COUNT(*) FROM ({consulta_datos}) z", params_datos)
-        total = cursor.fetchone()[0]
-
-        cursor.execute(
-            consulta_datos
-            + " ORDER BY jornadas_sin_registro DESC, escuela LIMIT %s OFFSET %s",
-            params_datos + [page_size, offset],
-        )
+        cursor.execute(base + " ORDER BY jornadas_sin_registro DESC, escuela LIMIT %s OFFSET %s", params + [page_size, offset])
         datos = _dictfetchall(cursor)
-
-    return JsonResponse({
-        "data": datos,
-        "resumen": resumen,
-        "procesado": sum(resumen.values()) > 0,
-        "filtro_estado": estado or None,
-        "message": None if sum(resumen.values()) > 0 else "No hay calidad procesada para el período.",
-        "pagination": _pagination_meta(page, page_size, total),
-    })
+    return JsonResponse({"data": datos, "resumen": resumen, "procesado": total > 0, "message": None if total else "No hay calidad procesada para el período.", "pagination": _pagination_meta(page, page_size, total)})
 
 
 def _nivel_severidad(nivel):
