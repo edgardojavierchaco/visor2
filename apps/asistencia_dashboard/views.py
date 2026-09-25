@@ -497,6 +497,21 @@ def dashboard(request):
 
 
 @login_required
+def guia(request):
+    scope = get_access_scope(request.user)
+    role_name = scope.role_name or "Usuario"
+
+    return render(request, "asistencia_dashboard/guia.html", {
+        "perfil_acceso": role_name,
+        "acceso_total": scope.full_access,
+        "regiones_acceso": scope.regiones,
+        "cantidad_cues_acceso": len(scope.cueanexos),
+        "url_dashboard": reverse("asistencia_dashboard:dashboard"),
+        "url_volver": _url_volver_por_rol(request.user),
+    })
+
+
+@login_required
 def api_filtros(request):
     filtros = _filtros_request(request)
     desde, hasta = _rango_mes(filtros["anio"], filtros["mes"])
