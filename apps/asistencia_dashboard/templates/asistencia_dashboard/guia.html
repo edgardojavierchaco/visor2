@@ -1,0 +1,388 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Guía de uso · Monitoreo de Asistencia</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{% static 'asistencia_dashboard/css/dashboard.css' %}?v=20260925.4">
+    <link rel="stylesheet" href="{% static 'asistencia_dashboard/css/guia.css' %}?v=20260925.2">
+</head>
+<body>
+
+<div class="guide-shell">
+
+    <header class="guide-hero">
+        <div class="guide-hero-top">
+            <a href="{{ url_dashboard }}" class="guide-back-btn">
+                <i class="bi bi-arrow-left"></i>
+                Volver al tablero
+            </a>
+
+            <div class="guide-profile-chip">
+                <i class="bi bi-person-badge"></i>
+                <span>Perfil actual</span>
+                <strong>{{ perfil_acceso|default:"Usuario" }}</strong>
+            </div>
+        </div>
+
+        <div class="guide-hero-content">
+            <div>
+                <div class="guide-eyebrow">GUÍA DE USO · ASISTENCIA DASHBOARD</div>
+                <h1>Cómo leer y utilizar el Monitoreo Ministerial de Asistencia</h1>
+                <p>
+                    Una guía práctica para interpretar indicadores, aplicar filtros, analizar alertas
+                    y revisar la calidad de registración según el nivel de acceso asignado.
+                </p>
+            </div>
+
+            <div class="guide-hero-icon">
+                <i class="bi bi-journal-check"></i>
+            </div>
+        </div>
+    </header>
+
+    <nav class="guide-nav" aria-label="Índice de la guía">
+        <a href="#inicio"><i class="bi bi-play-circle"></i> Primeros pasos</a>
+        <a href="#acceso"><i class="bi bi-shield-check"></i> Niveles de acceso</a>
+        <a href="#indicadores"><i class="bi bi-speedometer2"></i> Indicadores</a>
+        <a href="#alertas"><i class="bi bi-exclamation-triangle"></i> Alertas</a>
+        <a href="#calidad"><i class="bi bi-clipboard2-check"></i> Cobertura</a>
+        <a href="#lectura"><i class="bi bi-lightbulb"></i> Cómo interpretar</a>
+    </nav>
+
+    <main>
+
+        <section class="guide-section" id="inicio">
+            <div class="guide-section-heading">
+                <span class="guide-section-number">01</span>
+                <div>
+                    <span class="guide-kicker">PRIMEROS PASOS</span>
+                    <h2>Cómo comenzar el análisis</h2>
+                    <p>El tablero está pensado para ir de una visión general hacia el detalle institucional y nominal.</p>
+                </div>
+            </div>
+
+            <div class="guide-steps">
+                <article class="guide-step-card">
+                    <span class="step-number">1</span>
+                    <i class="bi bi-calendar3"></i>
+                    <h3>Elegí el período</h3>
+                    <p>Seleccioná año y mes para la lectura mensual, y año/semana para las alertas nominales.</p>
+                </article>
+                <article class="guide-step-card">
+                    <span class="step-number">2</span>
+                    <i class="bi bi-funnel"></i>
+                    <h3>Aplicá filtros</h3>
+                    <p>Podés segmentar por establecimiento, regional, departamento, localidad, nivel, ámbito y oferta.</p>
+                </article>
+                <article class="guide-step-card">
+                    <span class="step-number">3</span>
+                    <i class="bi bi-graph-up-arrow"></i>
+                    <h3>Leé los indicadores</h3>
+                    <p>Revisá matrícula, asistencia, cobertura y alertas antes de entrar al detalle de escuelas o alumnos.</p>
+                </article>
+                <article class="guide-step-card">
+                    <span class="step-number">4</span>
+                    <i class="bi bi-search"></i>
+                    <h3>Profundizá</h3>
+                    <p>Usá rankings, filtros rápidos y tablas paginadas para identificar dónde intervenir o verificar cargas.</p>
+                </article>
+            </div>
+
+            <figure class="guide-screenshot-card">
+                <img src="{% static 'asistencia_dashboard/img/guia/resumen_dashboard.png' %}" alt="Vista general del dashboard de asistencia">
+                <figcaption>
+                    <strong>Vista general.</strong>
+                    Los indicadores superiores resumen el universo analizado antes de recorrer los cuadros de detalle.
+                </figcaption>
+            </figure>
+        </section>
+
+        <section class="guide-section" id="acceso">
+            <div class="guide-section-heading">
+                <span class="guide-section-number">02</span>
+                <div>
+                    <span class="guide-kicker">NIVELES DE ACCESO</span>
+                    <h2>Qué información puede consultar cada perfil</h2>
+                    <p>El contenido visible se restringe automáticamente según el rol y la asignación territorial o institucional.</p>
+                </div>
+            </div>
+
+            <div class="guide-current-access">
+                <div class="guide-current-icon"><i class="bi bi-person-check-fill"></i></div>
+                <div>
+                    <span>Tu perfil de acceso</span>
+                    <strong>{{ perfil_acceso|default:"Usuario" }}</strong>
+                    {% if acceso_total %}
+                        <p>Acceso general a la información disponible del tablero.</p>
+                    {% elif regiones_acceso %}
+                        <p>Acceso restringido a las Regionales Educativas asignadas: {{ regiones_acceso|join:", " }}.</p>
+                    {% elif cantidad_cues_acceso %}
+                        <p>Acceso restringido a {{ cantidad_cues_acceso }} establecimiento{{ cantidad_cues_acceso|pluralize:"s" }} asignado{{ cantidad_cues_acceso|pluralize:"s" }}.</p>
+                    {% else %}
+                        <p>El tablero aplicará automáticamente el alcance autorizado para tu usuario.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="access-grid">
+                <article class="access-card access-full">
+                    <div class="access-icon"><i class="bi bi-globe2"></i></div>
+                    <h3>Autoridades y gestión central</h3>
+                    <p>Administrador, Gestor, Ministro, Secretario, Subsecretario y Director General.</p>
+                    <ul>
+                        <li>Visión jurisdiccional completa.</li>
+                        <li>Todos los filtros territoriales e institucionales.</li>
+                        <li>Comparación entre establecimientos, regiones y niveles.</li>
+                    </ul>
+                </article>
+
+                <article class="access-card">
+                    <div class="access-icon"><i class="bi bi-map"></i></div>
+                    <h3>Regional</h3>
+                    <p>Consulta únicamente los establecimientos pertenecientes a las regionales asignadas.</p>
+                    <ul>
+                        <li>Análisis regional y por departamento/localidad.</li>
+                        <li>Ranking de escuelas del ámbito autorizado.</li>
+                        <li>Alertas y cobertura dentro de su territorio.</li>
+                    </ul>
+                </article>
+
+                <article class="access-card">
+                    <div class="access-icon"><i class="bi bi-binoculars"></i></div>
+                    <h3>Supervisor</h3>
+                    <p>Visualiza los CUEANEXO específicamente asignados a su supervisión.</p>
+                    <ul>
+                        <li>Seguimiento comparativo de sus establecimientos.</li>
+                        <li>Detección de alertas institucionales.</li>
+                        <li>Control de calidad de registración.</li>
+                    </ul>
+                </article>
+
+                <article class="access-card">
+                    <div class="access-icon"><i class="bi bi-building-check"></i></div>
+                    <h3>Director</h3>
+                    <p>Consulta la información correspondiente a su establecimiento o establecimientos asociados.</p>
+                    <ul>
+                        <li>Asistencia mensual de su institución.</li>
+                        <li>Detalle por secciones.</li>
+                        <li>Alertas nominales y cumplimiento de carga.</li>
+                    </ul>
+                </article>
+            </div>
+        </section>
+
+        <section class="guide-section" id="indicadores">
+            <div class="guide-section-heading">
+                <span class="guide-section-number">03</span>
+                <div>
+                    <span class="guide-kicker">INDICADORES PRINCIPALES</span>
+                    <h2>Qué significa cada dato del tablero</h2>
+                    <p>Los indicadores sintetizan el período y los filtros seleccionados.</p>
+                </div>
+            </div>
+
+            <div class="indicator-grid">
+                <article class="indicator-card green">
+                    <i class="bi bi-people-fill"></i>
+                    <h3>Matrícula</h3>
+                    <p>Alumnos de referencia inscriptos en las secciones alcanzadas por el análisis.</p>
+                    <small>No debe confundirse con alumno-jornadas.</small>
+                </article>
+                <article class="indicator-card blue">
+                    <i class="bi bi-building"></i>
+                    <h3>Establecimientos</h3>
+                    <p>Cantidad de CUEANEXO con registros de asistencia en el período seleccionado.</p>
+                </article>
+                <article class="indicator-card blue">
+                    <i class="bi bi-diagram-3"></i>
+                    <h3>Secciones</h3>
+                    <p>Secciones que cuentan con información de asistencia dentro del universo filtrado.</p>
+                </article>
+                <article class="indicator-card blue">
+                    <i class="bi bi-calendar-check"></i>
+                    <h3>Días efectivos registrados</h3>
+                    <p>Máximo de días esperados con carga, respetando calendario escolar, fines de semana y exclusiones.</p>
+                </article>
+                <article class="indicator-card green">
+                    <i class="bi bi-person-check-fill"></i>
+                    <h3>Asistencia</h3>
+                    <p>Porcentaje de alumno-jornadas presentes sobre las alumno-jornadas computadas.</p>
+                </article>
+                <article class="indicator-card cyan">
+                    <i class="bi bi-clipboard2-check-fill"></i>
+                    <h3>Cobertura de carga</h3>
+                    <p>Proporción entre jornadas-sección esperadas y jornadas-sección efectivamente registradas.</p>
+                </article>
+            </div>
+
+            <div class="guide-note">
+                <i class="bi bi-info-circle-fill"></i>
+                <div>
+                    <strong>Dos conceptos diferentes</strong>
+                    <p><b>Asistencia</b> describe la concurrencia de estudiantes. <b>Cobertura</b> describe cuánto del calendario esperado fue efectivamente cargado. Una escuela puede tener alta asistencia y, al mismo tiempo, baja cobertura de registración.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="guide-section" id="alertas">
+            <div class="guide-section-heading">
+                <span class="guide-section-number">04</span>
+                <div>
+                    <span class="guide-kicker">SISTEMA DE ALERTAS</span>
+                    <h2>Cómo usar Normal, Atención, Alto y Crítico</h2>
+                    <p>Los niveles funcionan como lectura rápida y también como botones de filtrado.</p>
+                </div>
+            </div>
+
+            <div class="alert-level-grid">
+                <article class="alert-level normal"><span>Normal</span><p>Situación sin señal de alerta relevante dentro de los criterios aplicados.</p></article>
+                <article class="alert-level attention"><span>Atención</span><p>Requiere observación y seguimiento preventivo.</p></article>
+                <article class="alert-level high"><span>Alto</span><p>Indica una situación que requiere seguimiento prioritario.</p></article>
+                <article class="alert-level critical"><span>Crítico</span><p>Señala los casos de mayor prioridad para análisis e intervención.</p></article>
+            </div>
+
+            <div class="guide-two-cols">
+                <div class="guide-text-card">
+                    <div class="mini-icon"><i class="bi bi-building-exclamation"></i></div>
+                    <h3>Alertas institucionales</h3>
+                    <p>Permiten ordenar establecimientos según su situación de asistencia. Los botones <b>Normal, Atención, Alto y Crítico</b> filtran la tabla sin perder los totales generales.</p>
+                    <p>Al seleccionar un nivel, la paginación continúa trabajando únicamente sobre ese subconjunto.</p>
+                </div>
+                <div class="guide-text-card">
+                    <div class="mini-icon"><i class="bi bi-person-exclamation"></i></div>
+                    <h3>Alertas nominales</h3>
+                    <p>Trabajan con alumnos únicos por semana. Sirven para analizar incidencia, continuidad de inasistencias y evolución semanal.</p>
+                    <p>La lectura nominal debe hacerse junto con la matrícula de referencia y la cobertura de registro.</p>
+                </div>
+            </div>
+
+            <figure class="guide-screenshot-card">
+                <img src="{% static 'asistencia_dashboard/img/guia/alertas_institucionales.png' %}" alt="Sección de alertas institucionales del dashboard">
+                <figcaption>
+                    <strong>Seguimiento institucional prioritario.</strong>
+                    Usá los botones de nivel para concentrarte en un grupo específico de establecimientos.
+                </figcaption>
+            </figure>
+        </section>
+
+        <section class="guide-section" id="calidad">
+            <div class="guide-section-heading">
+                <span class="guide-section-number">05</span>
+                <div>
+                    <span class="guide-kicker">CALIDAD DEL DATO</span>
+                    <h2>Cobertura y cumplimiento de registración</h2>
+                    <p>Esta sección permite diferenciar problemas de asistencia de problemas de carga.</p>
+                </div>
+            </div>
+
+            <div class="quality-grid">
+                <article class="quality-card complete">
+                    <div><i class="bi bi-check-circle-fill"></i><strong>Completo</strong></div>
+                    <p>La sección registró todas las jornadas que correspondían según el calendario efectivo.</p>
+                </article>
+                <article class="quality-card partial">
+                    <div><i class="bi bi-circle-half"></i><strong>Parcial</strong></div>
+                    <p>Existe registración, pero faltan una o más jornadas esperadas.</p>
+                </article>
+                <article class="quality-card empty">
+                    <div><i class="bi bi-x-circle-fill"></i><strong>Sin carga</strong></div>
+                    <p>No se registró asistencia para las jornadas que correspondían en el período.</p>
+                </article>
+            </div>
+
+            <div class="guide-note guide-note-warning">
+                <i class="bi bi-calendar2-week-fill"></i>
+                <div>
+                    <strong>Calendario efectivo</strong>
+                    <p>La cobertura no computa fines de semana ni días excluidos por calendario, excepciones o eventos excluyentes. Por eso “días hábiles” y “días esperados” pueden no coincidir para todas las secciones.</p>
+                </div>
+            </div>
+
+            <figure class="guide-screenshot-card">
+                <img src="{% static 'asistencia_dashboard/img/guia/calidad_registro.png' %}" alt="Sección de calidad y cobertura de registración">
+                <figcaption>
+                    <strong>Cumplimiento del calendario efectivo.</strong>
+                    Los botones Completos, Parciales y Sin carga permiten filtrar rápidamente las instituciones según su nivel de registración.
+                </figcaption>
+            </figure>
+        </section>
+
+        <section class="guide-section" id="lectura">
+            <div class="guide-section-heading">
+                <span class="guide-section-number">06</span>
+                <div>
+                    <span class="guide-kicker">LECTURA RECOMENDADA</span>
+                    <h2>Cómo interpretar el tablero sin sacar conclusiones apresuradas</h2>
+                    <p>Una secuencia simple ayuda a distinguir fenómenos de asistencia de problemas de completitud del dato.</p>
+                </div>
+            </div>
+
+            <div class="reading-flow">
+                <article><span>1</span><div><strong>Verificá cobertura</strong><p>Antes de interpretar ausentismo, comprobá que la carga sea suficientemente completa.</p></div></article>
+                <article><span>2</span><div><strong>Observá asistencia</strong><p>Analizá porcentaje general, presentes, ausentes y justificadas del período.</p></div></article>
+                <article><span>3</span><div><strong>Localizá dónde ocurre</strong><p>Usá Regional, Departamento, Localidad, Nivel, Oferta y Establecimiento.</p></div></article>
+                <article><span>4</span><div><strong>Revisá alertas</strong><p>Filtrá por criticidad y verificá instituciones o alumnos que requieren seguimiento.</p></div></article>
+                <article><span>5</span><div><strong>Bajá al detalle</strong><p>Consultá secciones y registros nominales para contextualizar el indicador agregado.</p></div></article>
+            </div>
+
+            <div class="guide-glossary">
+                <h3><i class="bi bi-book"></i> Glosario rápido</h3>
+                <dl>
+                    <div><dt>Alumno-jornada</dt><dd>Una observación de un alumno en una jornada de asistencia.</dd></div>
+                    <div><dt>Jornada-sección</dt><dd>Una jornada que debía ser registrada para una sección determinada.</dd></div>
+                    <div><dt>Incidencia nominal</dt><dd>Proporción de alumnos únicos alcanzados por niveles de alerta respecto de la matrícula de referencia.</dd></div>
+                    <div><dt>Cobertura</dt><dd>Porcentaje de jornadas-sección registradas sobre las jornadas-sección esperadas.</dd></div>
+                    <div><dt>Día esperado</dt><dd>Día hábil que corresponde registrar luego de aplicar calendario y exclusiones.</dd></div>
+                    <div><dt>CUEANEXO</dt><dd>Identificador utilizado para reconocer una unidad o establecimiento educativo en el tablero.</dd></div>
+                </dl>
+            </div>
+        </section>
+
+        <section class="guide-section guide-faq">
+            <div class="guide-section-heading">
+                <span class="guide-section-number">07</span>
+                <div>
+                    <span class="guide-kicker">PREGUNTAS FRECUENTES</span>
+                    <h2>Dudas comunes</h2>
+                </div>
+            </div>
+
+            <div class="accordion" id="faqGuide">
+                <div class="accordion-item">
+                    <h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">¿Por qué la cantidad de establecimientos cambia al aplicar filtros?</button></h2>
+                    <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqGuide"><div class="accordion-body">Porque todos los indicadores se recalculan sobre el universo permitido por tu perfil y por los filtros activos.</div></div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">¿Por qué una escuela puede tener buena asistencia pero baja cobertura?</button></h2>
+                    <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqGuide"><div class="accordion-body">Porque asistencia mide la concurrencia registrada, mientras cobertura mide cuánto del calendario esperado fue cargado. Si faltan jornadas por registrar, el porcentaje de asistencia puede apoyarse en información incompleta.</div></div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">¿Los botones de alertas y calidad cambian los totales?</button></h2>
+                    <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqGuide"><div class="accordion-body">No. Los totales visibles corresponden al universo filtrado. Al pulsar un botón se filtra la tabla para facilitar la lectura, manteniendo los contadores generales como referencia.</div></div>
+                </div>
+                <div class="accordion-item">
+                    <h2 class="accordion-header"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">¿Qué hago si observo “Sin carga”?</button></h2>
+                    <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqGuide"><div class="accordion-body">Primero verificá el período y los filtros. Luego identificá el establecimiento y las secciones involucradas para determinar si corresponde regularizar la registración.</div></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="guide-footer">
+        <div>
+            <strong>Sistema de Gestión Educativa</strong>
+            <span>Guía de uso · Seguimiento Ministerial de Asistencia Escolar</span>
+        </div>
+        <div>Departamento de Estadística Educativa · 2026</div>
+    </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
