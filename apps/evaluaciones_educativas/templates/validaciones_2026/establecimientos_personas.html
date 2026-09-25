@@ -492,7 +492,7 @@
             </p>
             <div class="rol-options">
               <div class="rol-btn veedor" onclick="abrirFormVeedor()">
-                <div class="rol-icon">👁️</div>
+                <div class="rol-icon">📄</div>
                 <div class="rol-title" style="color:var(--purple);">Veedor</div>
                 <div class="rol-sub">Asignado al establecimiento</div>
                 <div class="rol-sub fw-bold" id="rolVeedorCupo" style="color:var(--purple);"></div>
@@ -982,7 +982,7 @@
           if (data.ok) {
             modalFormVeedorBS.hide();
             showToast(data.mensaje);
-            actualizarCardPersonas(cueActual);
+            await actualizarCardPersonas(cueActual);
           } else {
             showToast('Error: ' + (data.error || 'Ocurrió un problema.'), 'danger');
           }
@@ -1089,7 +1089,7 @@
           if (data.ok) {
             modalFormAplicadorBS.hide();
             showToast(data.mensaje);
-            actualizarCardPersonas(cueActual);
+            await actualizarCardPersonas(cueActual);
           } else {
             showToast('Error: ' + (data.error || 'Ocurrió un problema.'), 'danger');
           }
@@ -1221,7 +1221,7 @@
           if (data.ok) {
             modalEditarPersonaBS.hide();
             showToast(data.mensaje);
-            actualizarCardPersonas(cueActual);
+            await actualizarCardPersonas(cueActual);
             setTimeout(() => abrirModalListaPersonas(cueActual, nombreEscuelaActual), 400);
           } else {
             showToast('Error: ' + (data.error || 'Ocurrió un problema.'), 'danger');
@@ -1260,7 +1260,7 @@
           if (data.ok) {
             modalConfirmarEliminarBS.hide();
             showToast(data.mensaje);
-            actualizarCardPersonas(cueActual);
+            await actualizarCardPersonas(cueActual);
             setTimeout(() => abrirModalListaPersonas(cueActual, nombreEscuelaActual), 400);
           } else {
             showToast('Error: ' + (data.error || 'Ocurrió un problema.'), 'danger');

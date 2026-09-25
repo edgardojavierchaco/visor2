@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 from django.core.validators import RegexValidator
 
@@ -15,10 +17,7 @@ solo_numeros = RegexValidator(
     message='Solo se permiten números.',
 )
 
-cuil_validator = RegexValidator(
-    regex=r'^\d{2}-\d{7,8}-\d{1}$',
-    message='El CUIL debe tener el formato XX-XXXXXXXX-X (ej: 20-12345678-9).',
-)
+CUIL_DIGITOS = 11
 
 
 # ---------------------------------------------------------------------------
@@ -53,11 +52,11 @@ class ValPersonaBaseForm(forms.Form):
     cuil = forms.CharField(
         label='CUIL',
         max_length=20,
-        validators=[cuil_validator],
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '20-12345678-9',
+            'placeholder': '20123456789',
         }),
+        help_text='11 dígitos, con o sin guiones.',
     )
     correo = forms.EmailField(
         label='Correo electrónico',
@@ -72,7 +71,6 @@ class ValPersonaBaseForm(forms.Form):
         validators=[solo_numeros],
         error_messages={
             'max_length': 'El código de área no puede tener más de 5 dígitos.',
-            'required': 'El código de área es obligatorio.',
         },
         widget=forms.TextInput(attrs={
             'class': 'form-control',
@@ -89,7 +87,6 @@ class ValPersonaBaseForm(forms.Form):
         validators=[solo_numeros],
         error_messages={
             'max_length': 'El número de teléfono no puede tener más de 10 dígitos.',
-            'required': 'El número de teléfono es obligatorio.',
         },
         widget=forms.TextInput(attrs={
             'class': 'form-control',
@@ -100,6 +97,26 @@ class ValPersonaBaseForm(forms.Form):
         }),
         help_text='Máximo 10 dígitos. Solo números.',
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # "Campo obligatorio" en español para todos los campos. Alcanza con
+        # esto porque errores_legibles() ya antepone la etiqueta del campo.
+        for campo in self.fields.values():
+            campo.error_messages['required'] = 'Campo obligatorio.'
+
+    def clean_cuil(self):
+        """
+        Acepta el CUIL con o sin guiones (20-12345678-9 / 20123456789) y lo
+        devuelve solo con los 11 dígitos, que es como se guarda en la base.
+        """
+        valor = self.cleaned_data['cuil'].strip()
+        if re.search(r'[^\d\-\s]', valor):
+            raise forms.ValidationError('El CUIL solo puede contener números y guiones.')
+        digitos = re.sub(r'\D', '', valor)
+        if len(digitos) != CUIL_DIGITOS:
+            raise forms.ValidationError(f'El CUIL debe tener {CUIL_DIGITOS} dígitos.')
+        return digitos
 
     def errores_legibles(self):
         """

@@ -181,8 +181,8 @@ def dashboard(request):
        # ── Validaciones Aprender 2026 ───────────────────────────────
         {
             'id':          'validaciones_2026',
-            'titulo':      'Validaciones Aprender',
-            'descripcion': 'Validaciones sobre operativo Aprender',
+            'titulo':      'APRENDER Censal 2026',
+            'descripcion': 'Gestión sobre operativo Aprender',
             'icono':       'bi-check2-circle',
             'color':       '#06b6d4',
             'anios': [
@@ -204,7 +204,7 @@ def dashboard(request):
                         # },
                         {
                             'mes':         'Aprender 2026',
-                            'descripcion': 'Validaciones de aplicadores y veedores',
+                            'descripcion': 'Gestión de aplicadores y veedores',
                             'icono':       'bi-calendar-check',
                             'links': [
                                 {
