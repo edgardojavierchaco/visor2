@@ -1,0 +1,265 @@
+{% extends "superv/home.html" %}
+
+{% load static %}
+
+
+{% block body %}
+
+
+<div class="content-wrapper">
+
+
+<section class="content-header">
+
+<div class="container-fluid">
+
+
+<h1>
+
+<i class="fas fa-school text-primary"></i>
+
+Escuelas asignadas al supervisor
+
+</h1>
+
+
+</div>
+
+</section>
+
+
+
+
+<section class="content">
+
+
+<div class="container-fluid">
+
+
+
+<div class="card card-primary card-outline">
+
+
+<div class="card-header">
+
+<h3 class="card-title">
+
+<i class="fas fa-user-tie"></i>
+
+Datos del Supervisor
+
+</h3>
+
+</div>
+
+
+<div class="card-body">
+
+
+<div class="row">
+
+
+<div class="col-md-3">
+
+<strong>CUIL:</strong>
+
+{{ supervisor.usuario.username }}
+
+</div>
+
+
+<div class="col-md-3">
+
+<strong>Apellido:</strong>
+
+{{ supervisor.usuario.apellido }}
+
+</div>
+
+
+<div class="col-md-3">
+
+<strong>Nombres:</strong>
+
+{{ supervisor.usuario.nombres }}
+
+</div>
+
+
+<div class="col-md-3">
+
+<strong>Email:</strong>
+
+{{ supervisor.email|default:"-" }}
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="card shadow-sm">
+
+
+<div class="card-header">
+
+<h3 class="card-title">
+
+<i class="fas fa-school"></i>
+
+Escuelas asignadas
+
+</h3>
+
+</div>
+
+
+
+<div class="card-body">
+
+
+<div class="table-responsive">
+
+
+<table class="table table-bordered table-striped">
+
+
+<thead>
+
+<tr>
+
+<th>
+Regional
+</th>
+
+
+<th>
+CUEANEXO
+</th>
+
+
+<th>
+Escuela
+</th>
+
+
+<th>
+Oferta
+</th>
+
+
+<th>
+Acrónimo
+</th>
+
+
+</tr>
+
+
+</thead>
+
+
+
+<tbody>
+
+
+{% for e in escuelas %}
+
+
+<tr>
+
+
+<td>
+{{ e.region }}
+</td>
+
+
+<td>
+{{ e.cueanexo }}
+</td>
+
+
+<td>
+{{ e.escuela }}
+</td>
+
+
+<td>
+{{ e.oferta }}
+</td>
+
+
+<td>
+{{ e.acronimo|default:"-" }}
+</td>
+
+
+</tr>
+
+
+{% empty %}
+
+
+<tr>
+
+<td colspan="5" class="text-center">
+
+No posee escuelas asignadas
+
+</td>
+
+
+</tr>
+
+
+{% endfor %}
+
+
+</tbody>
+
+
+
+</table>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+<a href="{% url 'supervisor_registro:listado_supervisores' %}"
+
+class="btn btn-secondary">
+
+<i class="fas fa-arrow-left"></i>
+
+Volver
+
+</a>
+
+
+</div>
+
+
+</section>
+
+
+
+</div>
+
+
+{% endblock %}
