@@ -1,10 +1,11 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.views.decorators.http import require_POST
 from django.urls import reverse
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Value
+from django.db.models.functions import Replace
 
 from apps.evaluaciones_educativas.forms.validaciones_2026 import (
     ValVeedorForm,
@@ -20,6 +21,7 @@ from apps.evaluaciones_educativas.models.validaciones_2026 import (
     ValCabecera,
     ValHistorialMatriculas,
     ValHistorialCambiosEstablecimiento,
+    ValPersona,
     ValAplicador,
     ValVeedor,
 )
@@ -58,6 +60,51 @@ def _cant_secciones(est):
 def _max_veedores(cant_secciones):
     """Cuántos veedores admite un establecimiento según sus secciones."""
     return MAX_VEEDORES_AMPLIADO if cant_secciones >= 2 else MAX_VEEDORES_BASE
+
+
+def _error_cuil_duplicado(cuil_persona, excluir_pk=None):
+    """
+    Un CUIL solo puede estar una vez entre veedores y aplicadores: quien es
+    aplicador no puede ser veedor ni aplicador de otra sección, y quien es
+    veedor no puede serlo de otra escuela ni ser aplicador.
+
+    Compara sin guiones porque hay registros viejos guardados con guiones.
+    `excluir_pk` es la persona que se está editando, para que no choque
+    consigo misma. Devuelve el mensaje de error, o None si el CUIL está libre.
+    """
+    existente = (
+        ValPersona.objects
+        .annotate(cuil_normalizado=Replace('cuil', Value('-'), Value('')))
+        .filter(cuil_normalizado=cuil_persona)
+        .exclude(pk=excluir_pk)
+        .select_related(
+            'valveedor__establecimiento',
+            'valaplicador__seccion__grado__establecimiento',
+        )
+        .first()
+    )
+    if not existente:
+        return None
+
+    quien = f'{existente.apellido}, {existente.nombre}'
+    if hasattr(existente, 'valveedor'):
+        escuela = existente.valveedor.establecimiento
+        donde = f'como veedor en {escuela.escuela} ({escuela.cueanexo})'
+    elif hasattr(existente, 'valaplicador'):
+        seccion = existente.valaplicador.seccion
+        escuela = seccion.grado.establecimiento
+        donde = (
+            f'como aplicador en {escuela.escuela} ({escuela.cueanexo}), '
+            f'Sección {seccion.seccion} — {seccion.turno}'
+        )
+    else:
+        donde = 'en el sistema'
+    return f'El CUIL ya está registrado para {quien} {donde}. Una persona no puede estar cargada dos veces.'
+
+
+# Si dos altas con el mismo CUIL pasan el chequeo al mismo tiempo, la segunda
+# choca contra el unique de ValPersona.cuil. Se responde igual que un duplicado.
+ERROR_CUIL_CONCURRENTE = 'El CUIL ya está registrado. Una persona no puede estar cargada dos veces.'
 
 
 
@@ -1097,17 +1144,24 @@ def crear_veedor(request, cueanexo):
     form = ValVeedorForm(request.POST)
     if not form.is_valid():
         return JsonResponse({'ok': False, 'error': form.errores_legibles()}, status=400)
-
+    # CUIL único entre veedores y aplicadores
     cd = form.cleaned_data
-    veedor = ValVeedor.objects.create(
-        nombre=cd['nombre'],
-        apellido=cd['apellido'],
-        cuil=cd['cuil'],
-        correo=cd['correo'],
-        codigo_area=cd['codigo_area'],
-        numero_telefono=cd['numero_telefono'],
-        establecimiento=est,
-    )
+    error_cuil = _error_cuil_duplicado(cd['cuil'])
+    if error_cuil:
+        return JsonResponse({'ok': False, 'error': error_cuil}, status=400)
+
+    try:
+        veedor = ValVeedor.objects.create(
+            nombre=cd['nombre'],
+            apellido=cd['apellido'],
+            cuil=cd['cuil'],
+            correo=cd['correo'],
+            codigo_area=cd['codigo_area'],
+            numero_telefono=cd['numero_telefono'],
+            establecimiento=est,
+        )
+    except IntegrityError:
+        return JsonResponse({'ok': False, 'error': ERROR_CUIL_CONCURRENTE}, status=400)
 
     return JsonResponse({
         'ok': True,
@@ -1138,14 +1192,22 @@ def editar_veedor(request, veedor_id):
     if not form.is_valid():
         return JsonResponse({'ok': False, 'error': form.errores_legibles()}, status=400)
 
+    # CUIL único entre veedores y aplicadores (sin contar al propio veedor)
     cd = form.cleaned_data
+    error_cuil = _error_cuil_duplicado(cd['cuil'], excluir_pk=veedor.pk)
+    if error_cuil:
+        return JsonResponse({'ok': False, 'error': error_cuil}, status=400)
+
     veedor.nombre = cd['nombre']
     veedor.apellido = cd['apellido']
     veedor.cuil = cd['cuil']
     veedor.correo = cd['correo']
     veedor.codigo_area = cd['codigo_area']
     veedor.numero_telefono = cd['numero_telefono']
-    veedor.save()
+    try:
+        veedor.save()
+    except IntegrityError:
+        return JsonResponse({'ok': False, 'error': ERROR_CUIL_CONCURRENTE}, status=400)
 
     return JsonResponse({
         'ok': True,
@@ -1206,16 +1268,24 @@ def crear_aplicador(request, cueanexo):
     # Verificar que la sección no tenga ya un aplicador
     if ValAplicador.objects.filter(seccion=seccion).exists():
         return JsonResponse({'ok': False, 'error': 'Esta sección ya tiene un aplicador asignado.'}, status=400)
+    
+    # CUIL único entre veedores y aplicadores
+    error_cuil = _error_cuil_duplicado(cd['cuil'])
+    if error_cuil:
+        return JsonResponse({'ok': False, 'error': error_cuil}, status=400)
 
-    aplicador = ValAplicador.objects.create(
-        nombre=cd['nombre'],
-        apellido=cd['apellido'],
-        cuil=cd['cuil'],
-        correo=cd['correo'],
-        codigo_area=cd['codigo_area'],
-        numero_telefono=cd['numero_telefono'],
-        seccion=seccion,
-    )
+    try:
+        aplicador = ValAplicador.objects.create(
+            nombre=cd['nombre'],
+            apellido=cd['apellido'],
+            cuil=cd['cuil'],
+            correo=cd['correo'],
+            codigo_area=cd['codigo_area'],
+            numero_telefono=cd['numero_telefono'],
+            seccion=seccion,
+        )
+    except IntegrityError:
+        return JsonResponse({'ok': False, 'error': ERROR_CUIL_CONCURRENTE}, status=400)
 
     return JsonResponse({
         'ok': True,
@@ -1251,14 +1321,22 @@ def editar_aplicador(request, aplicador_id):
     if not form.is_valid():
         return JsonResponse({'ok': False, 'error': form.errores_legibles()}, status=400)
 
+    # CUIL único entre veedores y aplicadores (sin contar al propio aplicador)
     cd = form.cleaned_data
+    error_cuil = _error_cuil_duplicado(cd['cuil'], excluir_pk=aplicador.pk)
+    if error_cuil:
+        return JsonResponse({'ok': False, 'error': error_cuil}, status=400)
+
     aplicador.nombre = cd['nombre']
     aplicador.apellido = cd['apellido']
     aplicador.cuil = cd['cuil']
     aplicador.correo = cd['correo']
     aplicador.codigo_area = cd['codigo_area']
     aplicador.numero_telefono = cd['numero_telefono']
-    aplicador.save()
+    try:
+        aplicador.save()
+    except IntegrityError:
+        return JsonResponse({'ok': False, 'error': ERROR_CUIL_CONCURRENTE}, status=400)
 
     return JsonResponse({
         'ok': True,
