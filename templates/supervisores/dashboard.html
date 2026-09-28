@@ -296,6 +296,137 @@
     }
 
     /* ========================================================
+    LEYENDA DESPLEGABLE DEL MAPA
+    ======================================================== */
+
+    .mapa-leyenda-control {
+        border: 0 !important;
+        border-radius: .55rem !important;
+        overflow: hidden;
+        background: transparent !important;
+        box-shadow: 0 .25rem 1rem rgba(0, 0, 0, .18) !important;
+        min-width: 0;
+    }
+
+    .mapa-leyenda-toggle {
+        width: 100%;
+        min-width: 118px;
+        height: 38px;
+        padding: 0 .75rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .5rem;
+        border: 0;
+        border-radius: .55rem;
+        background: rgba(255, 255, 255, .97);
+        color: #343a40;
+        font-size: .86rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background-color .15s ease, color .15s ease;
+    }
+
+    .mapa-leyenda-toggle:hover,
+    .mapa-leyenda-toggle:focus {
+        background: #f8f9fa;
+        color: #0d6efd;
+        outline: none;
+    }
+
+    .mapa-leyenda-toggle-icon {
+        font-size: .95rem;
+        line-height: 1;
+    }
+
+    .mapa-leyenda-chevron {
+        display: inline-block;
+        font-size: .82rem;
+        line-height: 1;
+        transform: rotate(180deg);
+        transition: transform .2s ease;
+    }
+
+    .mapa-leyenda-control.abierta .mapa-leyenda-chevron {
+        transform: rotate(0deg);
+    }
+
+    .mapa-leyenda-contenido {
+        display: none;
+        width: min(310px, calc(100vw - 42px));
+        max-height: 360px;
+        overflow-y: auto;
+        padding: .7rem .8rem .8rem;
+        background: rgba(255, 255, 255, .98);
+        border-top: 1px solid #e9ecef;
+        font-size: .82rem;
+        line-height: 1.25rem;
+    }
+
+    .mapa-leyenda-control.abierta .mapa-leyenda-contenido {
+        display: block;
+    }
+
+    .mapa-leyenda-control.abierta .mapa-leyenda-toggle {
+        border-radius: .55rem .55rem 0 0;
+    }
+
+    .mapa-leyenda-seccion + .mapa-leyenda-seccion {
+        margin-top: .7rem;
+        padding-top: .65rem;
+        border-top: 1px solid #e9ecef;
+    }
+
+    .mapa-leyenda-titulo {
+        margin-bottom: .35rem;
+        color: #495057;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .025em;
+        font-size: .72rem;
+    }
+
+    .mapa-leyenda-item {
+        display: flex;
+        align-items: flex-start;
+        gap: .45rem;
+        margin: .18rem 0;
+        color: #343a40;
+    }
+
+    .mapa-leyenda-muestra {
+        flex: 0 0 auto;
+        width: 12px;
+        height: 12px;
+        margin-top: 3px;
+    }
+
+    .mapa-leyenda-muestra-region {
+        border: 1px solid rgba(73, 80, 87, .65);
+        border-radius: 2px;
+    }
+
+    .mapa-leyenda-muestra-marcador {
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, .9);
+        box-shadow: 0 0 0 1px rgba(73, 80, 87, .25);
+    }
+
+    .mapa-leyenda-vacia {
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    .mapa-leyenda-contenido::-webkit-scrollbar {
+        width: 7px;
+    }
+
+    .mapa-leyenda-contenido::-webkit-scrollbar-thumb {
+        background: #adb5bd;
+        border-radius: 10px;
+    }
+
+    /* ========================================================
     KPIs
     ======================================================== */
 
@@ -1516,7 +1647,7 @@
 ========================================================= -->
 
 <script
-    src="{% static 'superv/supervisor/js/mapa_supervisores.js' %}">
+    src="{% static 'supervisores/js/mapa_supervisores.js' %}">
 </script>
 
 {% endblock %}

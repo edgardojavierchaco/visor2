@@ -1,0 +1,2770 @@
+{% extends "bnh/base.html" %}
+{% load static %}
+
+{% block title %}
+Seguimiento y Monitoreo · BNH Personal Educativo
+{% endblock %}
+
+
+{% block extra_css %}
+
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+>
+
+<link
+    rel="stylesheet"
+    href="{% static 'bnh/css/monitoring.css' %}?v=20260919.6"
+>
+
+<style>
+    #modalPofBnh .modal-content {
+        border: 0;
+        border-radius: 1.1rem;
+        overflow: hidden;
+        box-shadow: 0 1.5rem 4rem rgba(15, 49, 72, .18);
+    }
+
+    #modalPofBnh .modal-header {
+        background: linear-gradient(135deg, #f7fbfd 0%, #eef5f9 100%);
+        border-bottom: 1px solid #dfe8ee;
+    }
+
+    #modalPofBnh .pof-bnh-summary-card {
+        border: 1px solid #dfe8ee;
+        border-radius: .95rem;
+        background: #fff;
+        box-shadow: 0 .5rem 1.4rem rgba(26, 59, 82, .06);
+    }
+
+    #modalPofBnh .pof-bnh-kpi-label {
+        color: #71808c;
+        font-size: .72rem;
+        font-weight: 700;
+        letter-spacing: .045em;
+        text-transform: uppercase;
+    }
+
+    #modalPofBnh .pof-bnh-kpi-value {
+        color: #173954;
+        font-size: 1.65rem;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+
+    #modalPofBnh .table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #f7fafc;
+        color: #466173;
+        font-size: .72rem;
+        letter-spacing: .035em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    #modalPofBnh .pof-bnh-ceic {
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+        color: #244b67;
+    }
+
+    #modalPofBnh .pof-bnh-note {
+        color: #6d7d88;
+        font-size: .76rem;
+    }
+
+    .monitoring-pof-btn {
+        white-space: nowrap;
+    }
+</style>
+
+{% endblock %}
+
+
+{% block content %}
+
+<div class="monitoring-page">
+
+
+    <!-- =========================================================
+         CABECERA
+    ========================================================== -->
+
+    <section class="monitoring-hero mb-4">
+
+        <div class="row g-4 align-items-center">
+
+
+            <div class="col-xl-8">
+
+                <div class="d-flex align-items-center gap-2 mb-2">
+
+                    <span class="monitoring-kicker">
+
+                        <i class="bi bi-building-check"></i>
+
+                        BNH · PERSONAL EDUCATIVO
+
+                    </span>
+
+                </div>
+
+
+                <h1 class="monitoring-title mb-2">
+                    Seguimiento y Monitoreo
+                </h1>
+
+
+                <p class="monitoring-subtitle mb-0">
+
+                    Tablero institucional para el seguimiento de cobertura,
+                    registración, validación y actualización del personal
+                    educativo.
+
+                </p>
+
+            </div>
+
+
+
+            <div class="col-xl-4">
+
+                <div class="monitoring-scope-card">
+
+                    <div class="d-flex align-items-start gap-3">
+
+                        <div class="monitoring-scope-icon">
+
+                            <i class="bi bi-shield-check"></i>
+
+                        </div>
+
+
+                        <div>
+
+                            <div class="monitoring-scope-label">
+                                Ámbito efectivo de acceso
+                            </div>
+
+                            <div class="monitoring-scope-value">
+                                {{ scope.label }}
+                            </div>
+
+                            <div class="monitoring-scope-help">
+
+                                La información visible se limita automáticamente
+                                al nivel de acceso del usuario.
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================================================
+         RESUMEN EJECUTIVO
+    ========================================================== -->
+
+    <section
+        class="executive-summary mb-4"
+        aria-label="Resumen ejecutivo"
+    >
+
+        <div class="executive-heading mb-3">
+
+            <div>
+
+                <span class="executive-eyebrow">
+                    RESUMEN EJECUTIVO
+                </span>
+
+                <h2 class="executive-title mb-1">
+                    Estado general de registración
+                </h2>
+
+                <p class="executive-subtitle mb-0">
+
+                    Indicadores consolidados del universo institucional
+                    bajo su ámbito de acceso.
+
+                </p>
+
+            </div>
+
+
+            {% if kpis.ultima_actualizacion %}
+
+                <div class="executive-update">
+
+                    <i class="bi bi-clock-history"></i>
+
+                    <span>
+                        Última actualización
+                        <strong>
+                            {{ kpis.ultima_actualizacion|date:"d/m/Y H:i" }}
+                        </strong>
+                    </span>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+
+        <div class="row g-3">
+
+            {% include "bnh/monitoreo/_kpi_card.html" with cls="primary" icon="bi-buildings-fill" pill="ALCANCE" value=kpis.instituciones|default:0 title="Unidades alcanzadas" text="Establecimientos comprendidos en el ámbito autorizado." foot_icon="bi-shield-check" foot="Universo autorizado" %}
+
+            {% include "bnh/monitoreo/_kpi_card.html" with cls="success" icon="bi-check2-circle" pill="COBERTURA" value=kpis.instituciones_con_carga|default:0 title="Instituciones con carga" text="Unidades con al menos una actividad registrada." foot_icon="bi-graph-up-arrow" foot="Avance de registración" percent=kpis.cobertura|default:0 %}
+
+            {% include "bnh/monitoreo/_kpi_card.html" with cls="warning" icon="bi-exclamation-triangle-fill" pill="SEGUIMIENTO" value=kpis.instituciones_sin_carga|default:0 title="Instituciones sin carga" text="Unidades sin actividades registradas al momento." foot_icon="bi-bell" foot="Requieren intervención" %}
+
+            {% include "bnh/monitoreo/_kpi_card.html" with cls="info" icon="bi-people-fill" pill="NOMINAL" value=kpis.personas_unicas|default:0 title="Personas únicas" text="Personas nominales sin duplicación por múltiples cargos." foot_icon="bi-person-check" foot="Base nominal consolidada" %}
+
+            {% include "bnh/monitoreo/_kpi_card.html" with cls="neutral" icon="bi-person-vcard-fill" pill="ACTIVIDAD" value=kpis.cargos|default:0 title="Cargos / actividades" text="Asignaciones registradas del personal educativo." foot_icon="bi-diagram-3" foot="Asignaciones registradas" %}
+
+            {% include "bnh/monitoreo/_kpi_card.html" with cls="pending" icon="bi-hourglass-split" pill="PENDIENTE" value=kpis.borradores|default:0 title="Registros pendientes" text="Actividades en borrador que todavía requieren cierre." foot_icon="bi-pencil-square" foot="En proceso de carga" %}
+
+            {% include "bnh/monitoreo/_kpi_card.html" with cls="danger" icon="bi-exclamation-octagon-fill" pill="ALERTA" value=kpis.observados|default:0 title="Registros observados" text="Casos que requieren revisión o regularización." foot_icon="bi-flag-fill" foot="Atención prioritaria" %}
+
+            {% include "bnh/monitoreo/_kpi_card.html" with cls="validated" icon="bi-patch-check-fill" pill="VALIDACIÓN" value=kpis.validados|default:0 title="Registros validados" text="Actividades revisadas y conformadas en el circuito." foot_icon="bi-check-all" foot="Información conformada" %}
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================================================
+         COBERTURA RA 2026
+    ========================================================== -->
+
+    <section class="ra-coverage-section mb-4">
+
+        <div class="ra-coverage-heading mb-3">
+
+            <div>
+
+                <span class="executive-eyebrow">
+                    COBERTURA RA 2026
+                </span>
+
+                <h2 class="executive-title mb-1">
+                    Avance respecto del universo del Relevamiento Anual
+                </h2>
+
+                <p class="executive-subtitle mb-0">
+
+                    Comparación entre el universo informado en el
+                    Relevamiento Anual 2026 y la registración vigente en BNH.
+                    Cargos y horas cátedra se analizan por separado.
+
+                </p>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="row g-3">
+
+
+            <!-- =================================================
+                 COBERTURA CARGOS
+            ================================================== -->
+
+            <div class="col-12 col-xl-6">
+
+                <article class="ra-coverage-card h-100">
+
+                    <div class="ra-coverage-top">
+
+                        <div>
+
+                            <span class="ra-coverage-kicker">
+                                CARGOS DOCENTES
+                            </span>
+
+                            <h3>
+                                Cobertura de cargos
+                            </h3>
+
+                        </div>
+
+
+                        <span class="ra-state">
+
+                            {{ ra_coverage.estado_cargos }}
+
+                        </span>
+
+                    </div>
+
+
+
+                    <div class="ra-coverage-main">
+
+                        <div>
+
+                            {% if ra_coverage.porcentaje_cargos != None %}
+
+                                <strong>
+                                    {{ ra_coverage.porcentaje_cargos|floatformat:2 }}%
+                                </strong>
+
+                            {% else %}
+
+                                <strong>
+                                    —
+                                </strong>
+
+                            {% endif %}
+
+
+                            <span>
+                                BNH / RA
+                            </span>
+
+                        </div>
+
+
+
+                        <div class="ra-stat-grid">
+
+                            <div>
+
+                                <small>
+                                    RA
+                                </small>
+
+                                <b>
+                                    {{ ra_coverage.total_cargos_ra|default:0 }}
+                                </b>
+
+                            </div>
+
+
+                            <div>
+
+                                <small>
+                                    BNH
+                                </small>
+
+                                <b>
+                                    {{ ra_coverage.total_cargos_bnh|default:0 }}
+                                </b>
+
+                            </div>
+
+
+                            <div>
+
+                                <small>
+                                    Diferencia
+                                </small>
+
+                                <b>
+                                    {{ ra_coverage.diferencia_cargos|default:0 }}
+                                </b>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="progress ra-progress mt-3">
+
+                        <div
+                            class="progress-bar"
+                            role="progressbar"
+                            style="width: {{ ra_coverage.progreso_cargos|default:0 }}%;"
+                            aria-valuenow="{{ ra_coverage.progreso_cargos|default:0 }}"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                        ></div>
+
+                    </div>
+
+
+                    <div class="ra-coverage-footer">
+
+                        <span>
+                            <i class="bi bi-circle me-1"></i>
+                            {{ ra_coverage.cue_sin_carga_cargos|default:0 }}
+                            CUE sin carga
+                        </span>
+
+                        <span>
+                            <i class="bi bi-check-circle me-1"></i>
+                            {{ ra_coverage.cue_completos_cargos|default:0 }}
+                            completos
+                        </span>
+
+                        <span>
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            {{ ra_coverage.cue_excedidos_cargos|default:0 }}
+                            exceden RA
+                        </span>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+
+
+            <!-- =================================================
+                 COBERTURA HORAS CÁTEDRA
+            ================================================== -->
+
+            <div class="col-12 col-xl-6">
+
+                <article class="ra-coverage-card h-100">
+
+                    <div class="ra-coverage-top">
+
+                        <div>
+
+                            <span class="ra-coverage-kicker">
+                                HORAS CÁTEDRA
+                            </span>
+
+                            <h3>
+                                Cobertura de horas cátedra
+                            </h3>
+
+                        </div>
+
+
+                        <span class="ra-state">
+
+                            {{ ra_coverage.estado_horas }}
+
+                        </span>
+
+                    </div>
+
+
+
+                    <div class="ra-coverage-main">
+
+                        <div>
+
+                            {% if ra_coverage.porcentaje_horas != None %}
+
+                                <strong>
+                                    {{ ra_coverage.porcentaje_horas|floatformat:2 }}%
+                                </strong>
+
+                            {% else %}
+
+                                <strong>
+                                    —
+                                </strong>
+
+                            {% endif %}
+
+
+                            <span>
+                                BNH / RA
+                            </span>
+
+                        </div>
+
+
+
+                        <div class="ra-stat-grid">
+
+                            <div>
+
+                                <small>
+                                    RA
+                                </small>
+
+                                <b>
+                                    {{ ra_coverage.total_horas_ra|default:0|floatformat:0 }}
+                                </b>
+
+                            </div>
+
+
+                            <div>
+
+                                <small>
+                                    BNH
+                                </small>
+
+                                <b>
+                                    {{ ra_coverage.total_horas_bnh|default:0|floatformat:2 }}
+                                </b>
+
+                            </div>
+
+
+                            <div>
+
+                                <small>
+                                    Diferencia
+                                </small>
+
+                                <b>
+                                    {{ ra_coverage.diferencia_horas|default:0|floatformat:2 }}
+                                </b>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="progress ra-progress mt-3">
+
+                        <div
+                            class="progress-bar"
+                            role="progressbar"
+                            style="width: {{ ra_coverage.progreso_horas|default:0 }}%;"
+                            aria-valuenow="{{ ra_coverage.progreso_horas|default:0 }}"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                        ></div>
+
+                    </div>
+
+
+                    <div class="ra-coverage-footer">
+
+                        <span>
+                            <i class="bi bi-circle me-1"></i>
+                            {{ ra_coverage.cue_sin_carga_horas|default:0 }}
+                            CUE sin carga
+                        </span>
+
+                        <span>
+                            <i class="bi bi-check-circle me-1"></i>
+                            {{ ra_coverage.cue_completos_horas|default:0 }}
+                            completos
+                        </span>
+
+                        <span>
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            {{ ra_coverage.cue_excedidos_horas|default:0 }}
+                            exceden RA
+                        </span>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================================================
+         FILTROS
+    ========================================================== -->
+
+    <section class="card monitoring-card mb-4">
+
+        <div class="card-header monitoring-card-header">
+
+            <div>
+
+                <h2 class="monitoring-section-title mb-1">
+
+                    <i class="bi bi-funnel me-2"></i>
+
+                    Filtros de seguimiento
+
+                </h2>
+
+
+                <p class="monitoring-section-subtitle mb-0">
+
+                    Refiná la consulta dentro del universo autorizado.
+
+                </p>
+
+            </div>
+
+
+            <div class="monitoring-result-badge">
+
+                {{ result_count }}
+                resultados
+
+            </div>
+
+        </div>
+
+
+
+        <div class="card-body">
+
+            <form
+                method="get"
+                id="monitoring-filter-form"
+            >
+
+                <div class="row g-3 align-items-end">
+
+
+                    <div class="col-12 col-xl-5">
+
+                        <label
+                            for="id_q"
+                            class="form-label"
+                        >
+                            Buscar establecimiento
+                        </label>
+
+
+                        <div class="input-group monitoring-input-group">
+
+                            <span class="input-group-text">
+
+                                <i class="bi bi-search"></i>
+
+                            </span>
+
+
+                            <input
+                                type="search"
+                                id="id_q"
+                                name="q"
+                                class="form-control"
+                                value="{{ query.q|default:'' }}"
+                                placeholder="CUEANEXO, institución, oferta..."
+                                autocomplete="off"
+                            >
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div class="col-12 col-md-6 col-xl-3">
+
+                        <label
+                            for="id_region"
+                            class="form-label"
+                        >
+                            Regional Educativa
+                        </label>
+
+
+                        <select
+                            id="id_region"
+                            name="region"
+                            class="form-select js-monitor-select"
+                            data-placeholder="Todas las regionales"
+                        >
+
+                            <option value=""></option>
+
+
+                            {% for region in filters.regiones %}
+
+                                <option
+                                    value="{{ region }}"
+                                    {% if query.region == region %}
+                                        selected
+                                    {% endif %}
+                                >
+
+                                    {{ region }}
+
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+
+                    <div class="col-12 col-md-6 col-xl-2">
+
+                        <label
+                            for="id_estado"
+                            class="form-label"
+                        >
+                            Estado
+                        </label>
+
+
+                        <select
+                            id="id_estado"
+                            name="estado"
+                            class="form-select js-monitor-select"
+                            data-placeholder="Todos"
+                        >
+
+                            <option value=""></option>
+
+
+                            {% for value, label in filters.estados %}
+
+                                <option
+                                    value="{{ value }}"
+                                    {% if query.estado == value %}
+                                        selected
+                                    {% endif %}
+                                >
+
+                                    {{ label }}
+
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+
+                    <div class="col-12 col-xl-2">
+
+                        <div class="d-grid gap-2">
+
+
+                            <button
+                                type="submit"
+                                class="btn btn-primary monitoring-btn-primary"
+                            >
+
+                                <i class="bi bi-search me-2"></i>
+
+                                Aplicar
+
+                            </button>
+
+
+
+                            <a
+                                href="{% url 'bnhpersonas:monitoring:dashboard' %}"
+                                class="btn btn-light border"
+                            >
+
+                                <i class="bi bi-arrow-counterclockwise me-2"></i>
+
+                                Limpiar
+
+                            </a>
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =========================================================
+         RESUMEN TERRITORIAL + AUDITORÍA
+    ========================================================== -->
+
+    <section class="row g-4 mb-4">
+
+
+        <!-- =====================================================
+             RESUMEN TERRITORIAL
+        ====================================================== -->
+
+        <div class="col-12 col-xxl-8">
+
+            <div class="card monitoring-card h-100">
+
+
+                <div class="card-header monitoring-card-header">
+
+                    <div>
+
+                        <h2 class="monitoring-section-title mb-1">
+
+                            <i class="bi bi-geo-alt me-2"></i>
+
+                            Resumen territorial
+
+                        </h2>
+
+
+                        <p class="monitoring-section-subtitle mb-0">
+
+                            Cobertura institucional y avance RA por
+                            Regional Educativa.
+
+                        </p>
+
+                    </div>
+
+
+                    <span
+                        class="
+                            badge
+                            rounded-pill
+                            text-bg-light
+                            border
+                            px-3
+                            py-2
+                        "
+                    >
+
+                        {{ regional_summary|length }}
+                        regionales
+
+                    </span>
+
+                </div>
+
+
+
+                <div class="card-body p-0">
+
+                    <div class="table-responsive">
+
+                        <table
+                            class="
+                                table
+                                table-hover
+                                align-middle
+                                mb-0
+                                monitoring-table
+                            "
+                        >
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+                                        Regional
+                                    </th>
+
+                                    <th class="text-center">
+                                        Unidades
+                                    </th>
+
+                                    <th class="text-center">
+                                        Con carga
+                                    </th>
+
+                                    <th class="text-center">
+                                        Sin carga
+                                    </th>
+
+                                    <th style="min-width: 160px;">
+                                        Inicio de carga
+                                    </th>
+
+                                    <th style="min-width: 190px;">
+                                        Cargos RA / BNH
+                                    </th>
+
+                                    <th style="min-width: 190px;">
+                                        Horas RA / BNH
+                                    </th>
+
+                                    <th>
+                                        Alertas
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+
+
+                            <tbody>
+
+                                {% for row in regional_summary %}
+
+                                    <tr>
+
+
+                                        <td>
+
+                                            <div class="fw-semibold text-dark">
+
+                                                {{ row.region }}
+
+                                            </div>
+
+                                        </td>
+
+
+
+                                        <td class="text-center">
+
+                                            {{ row.instituciones }}
+
+                                        </td>
+
+
+
+                                        <td class="text-center">
+
+                                            <span
+                                                class="
+                                                    badge
+                                                    bg-success-subtle
+                                                    text-success-emphasis
+                                                    border
+                                                    border-success-subtle
+                                                "
+                                            >
+
+                                                {{ row.con_carga }}
+
+                                            </span>
+
+                                        </td>
+
+
+
+                                        <td class="text-center">
+
+                                            <span
+                                                class="
+                                                    badge
+                                                    bg-secondary-subtle
+                                                    text-secondary-emphasis
+                                                    border
+                                                "
+                                            >
+
+                                                {{ row.sin_carga }}
+
+                                            </span>
+
+                                        </td>
+
+
+
+                                        <!-- COBERTURA INSTITUCIONAL -->
+
+                                        <td>
+
+                                            <div class="d-flex align-items-center gap-2">
+
+                                                <div
+                                                    class="
+                                                        progress
+                                                        monitoring-progress
+                                                        flex-grow-1
+                                                    "
+                                                    role="progressbar"
+                                                    aria-valuenow="{{ row.cobertura }}"
+                                                    aria-valuemin="0"
+                                                    aria-valuemax="100"
+                                                >
+
+                                                    <div
+                                                        class="progress-bar"
+                                                        style="width: {{ row.cobertura }}%;"
+                                                    ></div>
+
+                                                </div>
+
+
+                                                <span class="monitoring-progress-label">
+
+                                                    {{ row.cobertura }}%
+
+                                                </span>
+
+                                            </div>
+
+                                        </td>
+
+
+
+                                        <!-- COBERTURA CARGOS RA -->
+
+                                        <td>
+
+                                            <div class="ra-mini">
+
+                                                <div>
+
+                                                    <span>
+                                                        RA {{ row.total_cargos_ra|default:0 }}
+                                                    </span>
+
+                                                    <span>
+                                                        BNH {{ row.total_cargos_bnh|default:0 }}
+                                                    </span>
+
+                                                </div>
+
+
+                                                <div class="progress ra-mini-progress">
+
+                                                    <div
+                                                        class="progress-bar"
+                                                        style="width: {{ row.progreso_cargos|default:0 }}%;"
+                                                    ></div>
+
+                                                </div>
+
+
+                                                <small>
+
+                                                    {% if row.porcentaje_cargos != None %}
+
+                                                        {{ row.porcentaje_cargos|floatformat:2 }}%
+
+                                                    {% else %}
+
+                                                        —
+
+                                                    {% endif %}
+
+                                                    ·
+
+                                                    {{ row.estado_cargos }}
+
+                                                </small>
+
+                                            </div>
+
+                                        </td>
+
+
+
+                                        <!-- COBERTURA HORAS RA -->
+
+                                        <td>
+
+                                            <div class="ra-mini">
+
+                                                <div>
+
+                                                    <span>
+
+                                                        RA
+                                                        {{ row.total_horas_ra|default:0|floatformat:0 }}
+
+                                                    </span>
+
+
+                                                    <span>
+
+                                                        BNH
+                                                        {{ row.total_horas_bnh|default:0|floatformat:2 }}
+
+                                                    </span>
+
+                                                </div>
+
+
+                                                <div class="progress ra-mini-progress">
+
+                                                    <div
+                                                        class="progress-bar"
+                                                        style="width: {{ row.progreso_horas|default:0 }}%;"
+                                                    ></div>
+
+                                                </div>
+
+
+                                                <small>
+
+                                                    {% if row.porcentaje_horas != None %}
+
+                                                        {{ row.porcentaje_horas|floatformat:2 }}%
+
+                                                    {% else %}
+
+                                                        —
+
+                                                    {% endif %}
+
+                                                    ·
+
+                                                    {{ row.estado_horas }}
+
+                                                </small>
+
+                                            </div>
+
+                                        </td>
+
+
+
+                                        <!-- ALERTAS -->
+
+                                        <td>
+
+                                            <div class="d-flex flex-wrap gap-1">
+
+
+                                                {% if row.observados %}
+
+                                                    <span
+                                                        class="
+                                                            badge
+                                                            rounded-pill
+                                                            bg-danger-subtle
+                                                            text-danger-emphasis
+                                                            border
+                                                            border-danger-subtle
+                                                        "
+                                                    >
+
+                                                        <i
+                                                            class="
+                                                                bi
+                                                                bi-exclamation-circle
+                                                                me-1
+                                                            "
+                                                        ></i>
+
+                                                        {{ row.observados }}
+                                                        obs.
+
+                                                    </span>
+
+                                                {% endif %}
+
+
+
+                                                {% if row.borradores %}
+
+                                                    <span
+                                                        class="
+                                                            badge
+                                                            rounded-pill
+                                                            bg-warning-subtle
+                                                            text-warning-emphasis
+                                                            border
+                                                            border-warning-subtle
+                                                        "
+                                                    >
+
+                                                        <i
+                                                            class="
+                                                                bi
+                                                                bi-hourglass
+                                                                me-1
+                                                            "
+                                                        ></i>
+
+                                                        {{ row.borradores }}
+                                                        pend.
+
+                                                    </span>
+
+                                                {% endif %}
+
+
+
+                                                {% if not row.observados and not row.borradores %}
+
+                                                    <span class="text-muted small">
+
+                                                        Sin alertas
+
+                                                    </span>
+
+                                                {% endif %}
+
+                                            </div>
+
+                                        </td>
+
+
+                                    </tr>
+
+
+                                {% empty %}
+
+
+                                    <tr>
+
+                                        <td
+                                            colspan="8"
+                                            class="
+                                                text-center
+                                                py-5
+                                                text-muted
+                                            "
+                                        >
+
+                                            <i
+                                                class="
+                                                    bi
+                                                    bi-inbox
+                                                    display-6
+                                                    d-block
+                                                    mb-2
+                                                "
+                                            ></i>
+
+                                            No hay datos territoriales
+                                            para los filtros aplicados.
+
+                                        </td>
+
+                                    </tr>
+
+
+                                {% endfor %}
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =====================================================
+             AUDITORÍA
+        ====================================================== -->
+
+        <div class="col-12 col-xxl-4">
+
+            <div class="card monitoring-card h-100">
+
+
+                <div class="card-header monitoring-card-header">
+
+                    <div>
+
+                        <h2 class="monitoring-section-title mb-1">
+
+                            <i class="bi bi-clock-history me-2"></i>
+
+                            Actividad reciente
+
+                        </h2>
+
+
+                        <p class="monitoring-section-subtitle mb-0">
+
+                            Últimos movimientos auditados.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="card-body">
+
+                    <div class="monitoring-timeline">
+
+
+                        {% for event in audit %}
+
+                            <div class="monitoring-timeline-item">
+
+
+                                <div class="monitoring-timeline-marker">
+
+                                    <i class="bi bi-dot"></i>
+
+                                </div>
+
+
+
+                                <div class="monitoring-timeline-content">
+
+                                    <div class="fw-semibold">
+
+                                        {{ event.accion }}
+
+                                    </div>
+
+
+                                    <div class="small text-muted mt-1">
+
+                                        {% if event.cueanexo %}
+
+                                            <span class="font-monospace">
+
+                                                {{ event.cueanexo }}
+
+                                            </span>
+
+                                            ·
+
+                                        {% endif %}
+
+                                        {{ event.fecha|date:"d/m/Y H:i" }}
+
+                                    </div>
+
+
+                                    <div class="small mt-1">
+
+                                        {{ event.usuario }}
+
+                                    </div>
+
+
+                                    {% if event.motivo %}
+
+                                        <div class="small text-secondary mt-1">
+
+                                            {{ event.motivo|truncatechars:95 }}
+
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                            </div>
+
+
+                        {% empty %}
+
+
+                            <div class="text-center text-muted py-4">
+
+                                <i
+                                    class="
+                                        bi
+                                        bi-clock-history
+                                        display-6
+                                        d-block
+                                        mb-2
+                                    "
+                                ></i>
+
+                                Sin eventos recientes.
+
+                            </div>
+
+
+                        {% endfor %}
+
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+    </section>
+
+
+
+    <!-- =========================================================
+         UNIDADES DE SERVICIO
+    ========================================================== -->
+
+    <section class="card monitoring-card mb-4">
+
+
+        <div class="card-header monitoring-card-header flex-wrap">
+
+
+            <div>
+
+                <h2 class="monitoring-section-title mb-1">
+
+                    <i class="bi bi-list-check me-2"></i>
+
+                    Unidades de servicio
+
+                </h2>
+
+
+                <p class="monitoring-section-subtitle mb-0">
+
+                    Estado de registración y cobertura RA
+                    por establecimiento.
+
+                </p>
+
+            </div>
+
+
+
+            <div class="d-flex flex-wrap gap-2">
+
+
+                <a
+                    class="btn btn-outline-primary"
+                    href="{% url 'bnhpersonas:monitoring:export_institutions' %}?{{ request.GET.urlencode }}"
+                >
+
+                    <i class="bi bi-file-earmark-spreadsheet me-2"></i>
+
+                    Exportar instituciones
+
+                </a>
+
+
+
+                <a
+                    class="btn btn-outline-primary"
+                    href="{% url 'bnhpersonas:monitoring:export_personnel' %}?{{ request.GET.urlencode }}"
+                >
+
+                    <i class="bi bi-people me-2"></i>
+
+                    Exportar personal
+
+                </a>
+
+
+            </div>
+
+        </div>
+
+
+
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table
+                    class="
+                        table
+                        table-hover
+                        align-middle
+                        mb-0
+                        monitoring-table
+                        monitoring-table-institutions
+                    "
+                >
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                CUEANEXO
+                            </th>
+
+                            <th>
+                                Institución
+                            </th>
+
+                            <th>
+                                Regional
+                            </th>
+
+                            <th>
+                                Estado
+                            </th>
+
+                            <th class="text-center">
+                                Personas
+                            </th>
+
+                            <th class="text-center">
+                                Actividades
+                            </th>
+
+                            <th style="min-width: 155px;">
+                                Cobertura cargos RA
+                            </th>
+
+                            <th style="min-width: 155px;">
+                                Cobertura horas RA
+                            </th>
+
+                            <th>
+                                Validación
+                            </th>
+
+                            <th>
+                                Última actualización
+                            </th>
+
+                            <th class="text-end">
+                                Acción
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+
+                    <tbody>
+
+
+                        {% for row in page_obj %}
+
+
+                            <tr>
+
+
+                                <td>
+
+                                    <span class="monitoring-cue">
+
+                                        {{ row.cueanexo }}
+
+                                    </span>
+
+                                </td>
+
+
+
+                                <td>
+
+                                    <div class="monitoring-school-name">
+
+                                        {{ row.nom_est|default:"Sin denominación" }}
+
+                                    </div>
+
+
+                                    {% if row.ofertas %}
+
+                                        <div class="monitoring-school-sub">
+
+                                            {{ row.ofertas|join:" · " }}
+
+                                        </div>
+
+                                    {% endif %}
+
+                                </td>
+
+
+
+                                <td>
+
+                                    <span class="text-body-secondary">
+
+                                        {{ row.region|default:"—" }}
+
+                                    </span>
+
+                                </td>
+
+
+
+                                <td>
+
+
+                                    {% if row.estado_carga == "SIN_CARGA" %}
+
+                                        <span
+                                            class="
+                                                badge
+                                                monitoring-status
+                                                monitoring-status-empty
+                                            "
+                                        >
+
+                                            <i class="bi bi-dash-circle me-1"></i>
+
+                                            Sin carga
+
+                                        </span>
+
+
+                                    {% elif row.estado_carga == "OBSERVADO" %}
+
+                                        <span
+                                            class="
+                                                badge
+                                                monitoring-status
+                                                monitoring-status-observed
+                                            "
+                                        >
+
+                                            <i
+                                                class="
+                                                    bi
+                                                    bi-exclamation-triangle
+                                                    me-1
+                                                "
+                                            ></i>
+
+                                            Observado
+
+                                        </span>
+
+
+                                    {% elif row.estado_carga == "VALIDADO" %}
+
+                                        <span
+                                            class="
+                                                badge
+                                                monitoring-status
+                                                monitoring-status-valid
+                                            "
+                                        >
+
+                                            <i class="bi bi-check-circle me-1"></i>
+
+                                            Validado
+
+                                        </span>
+
+
+                                    {% else %}
+
+                                        <span
+                                            class="
+                                                badge
+                                                monitoring-status
+                                                monitoring-status-progress
+                                            "
+                                        >
+
+                                            <i
+                                                class="
+                                                    bi
+                                                    bi-hourglass-split
+                                                    me-1
+                                                "
+                                            ></i>
+
+                                            En proceso
+
+                                        </span>
+
+                                    {% endif %}
+
+
+
+                                    {% if row.desactualizada %}
+
+                                        <div class="mt-1">
+
+                                            <span
+                                                class="
+                                                    badge
+                                                    rounded-pill
+                                                    bg-light
+                                                    text-secondary
+                                                    border
+                                                "
+                                            >
+
+                                                <i class="bi bi-clock me-1"></i>
+
+                                                Sin actualización reciente
+
+                                            </span>
+
+                                        </div>
+
+                                    {% endif %}
+
+                                </td>
+
+
+
+                                <td class="text-center fw-semibold">
+
+                                    {{ row.personas }}
+
+                                </td>
+
+
+
+                                <td class="text-center fw-semibold">
+
+                                    {{ row.cargos }}
+
+                                </td>
+
+
+
+                                <!-- =====================================
+                                     COBERTURA CARGOS
+                                ====================================== -->
+
+                                <td>
+
+                                    <div class="ra-table-coverage">
+
+                                        <strong>
+
+                                            {% if row.porcentaje_cargos != None %}
+
+                                                {{ row.porcentaje_cargos|floatformat:2 }}%
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </strong>
+
+
+                                        <small>
+
+                                            BNH
+                                            {{ row.total_cargos_bnh|default:0 }}
+
+                                            /
+
+                                            RA
+                                            {{ row.total_cargos_ra|default:0 }}
+
+                                        </small>
+
+
+                                        <small>
+
+                                            {{ row.estado_cargos }}
+
+                                        </small>
+
+                                    </div>
+
+                                </td>
+
+
+
+                                <!-- =====================================
+                                     COBERTURA HORAS
+                                ====================================== -->
+
+                                <td>
+
+                                    <div class="ra-table-coverage">
+
+                                        <strong>
+
+                                            {% if row.porcentaje_horas != None %}
+
+                                                {{ row.porcentaje_horas|floatformat:2 }}%
+
+                                            {% else %}
+
+                                                —
+
+                                            {% endif %}
+
+                                        </strong>
+
+
+                                        <small>
+
+                                            BNH
+                                            {{ row.total_horas_bnh|default:0|floatformat:2 }}
+
+                                            /
+
+                                            RA
+                                            {{ row.total_horas_ra|default:0|floatformat:0 }}
+
+                                        </small>
+
+
+                                        <small>
+
+                                            {{ row.estado_horas }}
+
+                                        </small>
+
+                                    </div>
+
+                                </td>
+
+
+
+                                <!-- =====================================
+                                     VALIDACIÓN
+                                ====================================== -->
+
+                                <td>
+
+                                    <div class="monitoring-validation">
+
+                                        <span>
+
+                                            <strong>
+                                                {{ row.borradores }}
+                                            </strong>
+
+                                            pendientes
+
+                                        </span>
+
+
+                                        <span>
+
+                                            <strong>
+                                                {{ row.observados }}
+                                            </strong>
+
+                                            observados
+
+                                        </span>
+
+
+                                        <span>
+
+                                            <strong>
+                                                {{ row.validados }}
+                                            </strong>
+
+                                            validados
+
+                                        </span>
+
+                                    </div>
+
+                                </td>
+
+
+
+                                <td>
+
+
+                                    {% if row.ultima_actualizacion %}
+
+                                        <div class="fw-semibold">
+
+                                            {{ row.ultima_actualizacion|date:"d/m/Y" }}
+
+                                        </div>
+
+
+                                        <div class="small text-muted">
+
+                                            {{ row.ultima_actualizacion|date:"H:i" }}
+                                            hs
+
+                                        </div>
+
+
+                                    {% else %}
+
+                                        <span class="text-muted">
+
+                                            Sin registración
+
+                                        </span>
+
+                                    {% endif %}
+
+
+                                </td>
+
+
+
+                                <td class="text-end">
+
+                                    <div class="d-flex flex-wrap justify-content-end gap-2">
+
+                                        <button
+                                            type="button"
+                                            class="
+                                                btn
+                                                btn-sm
+                                                btn-outline-secondary
+                                                monitoring-action-btn
+                                                monitoring-pof-btn
+                                                js-pof-bnh
+                                            "
+                                            data-cue="{{ row.cueanexo }}"
+                                            data-url="{% url 'bnhpersonas:monitoring:pof_bnh_breakdown' row.cueanexo %}"
+                                            title="Comparar cargos y horas de POF con BNH"
+                                        >
+                                            <i class="bi bi-columns-gap me-1"></i>
+                                            POF vs BNH
+                                        </button>
+
+                                        <a
+                                            href="{% url 'bnhpersonas:monitoring:institution_detail' row.cueanexo %}"
+                                            class="
+                                                btn
+                                                btn-sm
+                                                btn-outline-primary
+                                                monitoring-action-btn
+                                            "
+                                            title="Ver detalle"
+                                        >
+
+                                            <i class="bi bi-eye me-1"></i>
+
+                                            Ver detalle
+
+                                        </a>
+
+                                    </div>
+
+                                </td>
+
+
+                            </tr>
+
+
+                        {% empty %}
+
+
+                            <tr>
+
+                                <td
+                                    colspan="11"
+                                    class="text-center py-5"
+                                >
+
+                                    <div class="monitoring-empty-state">
+
+                                        <i class="bi bi-search"></i>
+
+                                        <h3>
+                                            No se encontraron resultados
+                                        </h3>
+
+                                        <p>
+
+                                            Modificá los filtros para ampliar
+                                            la búsqueda dentro de tu ámbito
+                                            autorizado.
+
+                                        </p>
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+
+                        {% endfor %}
+
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =====================================================
+             PAGINACIÓN
+        ====================================================== -->
+
+        {% if page_obj.paginator.num_pages > 1 %}
+
+            <div class="card-footer monitoring-card-footer">
+
+                <nav aria-label="Paginación de unidades de servicio">
+
+                    <ul
+                        class="
+                            pagination
+                            pagination-sm
+                            justify-content-center
+                            mb-0
+                        "
+                    >
+
+
+                        <li
+                            class="
+                                page-item
+                                {% if not page_obj.has_previous %}
+                                    disabled
+                                {% endif %}
+                            "
+                        >
+
+                            {% if page_obj.has_previous %}
+
+                                <a
+                                    class="page-link"
+                                    href="?page={{ page_obj.previous_page_number }}&q={{ query.q|urlencode }}&region={{ query.region|urlencode }}&estado={{ query.estado|urlencode }}"
+                                >
+
+                                    <i class="bi bi-chevron-left"></i>
+
+                                    Anterior
+
+                                </a>
+
+                            {% else %}
+
+                                <span class="page-link">
+
+                                    <i class="bi bi-chevron-left"></i>
+
+                                    Anterior
+
+                                </span>
+
+                            {% endif %}
+
+                        </li>
+
+
+
+                        <li class="page-item active">
+
+                            <span class="page-link">
+
+                                {{ page_obj.number }}
+
+                            </span>
+
+                        </li>
+
+
+
+                        <li class="page-item disabled">
+
+                            <span class="page-link">
+
+                                de
+                                {{ page_obj.paginator.num_pages }}
+
+                            </span>
+
+                        </li>
+
+
+
+                        <li
+                            class="
+                                page-item
+                                {% if not page_obj.has_next %}
+                                    disabled
+                                {% endif %}
+                            "
+                        >
+
+                            {% if page_obj.has_next %}
+
+                                <a
+                                    class="page-link"
+                                    href="?page={{ page_obj.next_page_number }}&q={{ query.q|urlencode }}&region={{ query.region|urlencode }}&estado={{ query.estado|urlencode }}"
+                                >
+
+                                    Siguiente
+
+                                    <i class="bi bi-chevron-right"></i>
+
+                                </a>
+
+                            {% else %}
+
+                                <span class="page-link">
+
+                                    Siguiente
+
+                                    <i class="bi bi-chevron-right"></i>
+
+                                </span>
+
+                            {% endif %}
+
+                        </li>
+
+
+                    </ul>
+
+                </nav>
+
+            </div>
+
+        {% endif %}
+
+
+    </section>
+
+
+
+
+<!-- =========================================================
+     MODAL · COMPARATIVA REUNIDAS POF vs BNH
+========================================================== -->
+
+<div
+    class="modal fade"
+    id="modalPofBnh"
+    tabindex="-1"
+    aria-labelledby="modalPofBnhTitle"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+
+        <div class="modal-content">
+
+            <div class="modal-header px-4 py-3">
+
+                <div>
+
+                    <div class="small text-uppercase text-muted fw-bold mb-1">
+                        Comparativa de planta por CEIC
+                    </div>
+
+                    <h5
+                        class="modal-title fw-bold mb-1"
+                        id="modalPofBnhTitle"
+                    >
+                        Reunidas POF vs BNH
+                    </h5>
+
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+
+                        <span
+                            id="pofBnhCue"
+                            class="small text-muted"
+                        ></span>
+
+                        <span
+                            id="pofBnhPeriodo"
+                            class="badge rounded-pill text-bg-primary"
+                        ></span>
+
+                    </div>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Cerrar"
+                ></button>
+
+            </div>
+
+            <div class="modal-body p-4">
+
+                <div
+                    id="pofBnhLoading"
+                    class="text-center py-5"
+                >
+                    <div
+                        class="spinner-border text-primary"
+                        role="status"
+                    >
+                        <span class="visually-hidden">
+                            Cargando...
+                        </span>
+                    </div>
+
+                    <div class="mt-3 text-muted">
+                        Consultando Reunidas POF y BNH...
+                    </div>
+                </div>
+
+                <div
+                    id="pofBnhError"
+                    class="alert alert-danger d-none"
+                    role="alert"
+                ></div>
+
+                <div
+                    id="pofBnhContent"
+                    class="d-none"
+                >
+
+                    <div
+                        id="pofBnhAvisoAnio"
+                        class="alert alert-warning d-none mb-4"
+                        role="alert"
+                    >
+                        <div class="d-flex gap-3">
+
+                            <div class="fs-4">
+                                <i class="bi bi-info-circle-fill"></i>
+                            </div>
+
+                            <div>
+                                <div
+                                    id="pofBnhAvisoTitulo"
+                                    class="fw-bold mb-1"
+                                >
+                                    POF 2026 aún no disponible
+                                </div>
+
+                                <div
+                                    id="pofBnhAvisoTexto"
+                                    class="small"
+                                ></div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+
+                        <div class="col-lg-6">
+                            <div class="pof-bnh-summary-card h-100 p-3 p-lg-4">
+
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div>
+                                        <div class="pof-bnh-kpi-label">
+                                            Comparativa
+                                        </div>
+                                        <div class="fw-bold text-dark">
+                                            Cargos
+                                        </div>
+                                    </div>
+                                    <i class="bi bi-person-badge fs-3 text-primary"></i>
+                                </div>
+
+                                <div class="row g-3 text-center">
+                                    <div class="col-4">
+                                        <div
+                                            id="pofBnhCargosPofLabel"
+                                            class="pof-bnh-kpi-label"
+                                        >POF</div>
+                                        <div
+                                            id="pofBnhCargosPof"
+                                            class="pof-bnh-kpi-value"
+                                        >0</div>
+                                    </div>
+
+                                    <div class="col-4">
+                                        <div
+                                            id="pofBnhCargosBnhLabel"
+                                            class="pof-bnh-kpi-label"
+                                        >BNH 2026</div>
+                                        <div
+                                            id="pofBnhCargosBnh"
+                                            class="pof-bnh-kpi-value"
+                                        >0</div>
+                                    </div>
+
+                                    <div class="col-4">
+                                        <div class="pof-bnh-kpi-label">
+                                            POF - BNH
+                                        </div>
+                                        <div
+                                            id="pofBnhCargosDif"
+                                            class="pof-bnh-kpi-value"
+                                        >0</div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <div class="pof-bnh-summary-card h-100 p-3 p-lg-4">
+
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div>
+                                        <div class="pof-bnh-kpi-label">
+                                            Comparativa
+                                        </div>
+                                        <div class="fw-bold text-dark">
+                                            Horas cátedra
+                                        </div>
+                                    </div>
+                                    <i class="bi bi-clock-history fs-3 text-primary"></i>
+                                </div>
+
+                                <div class="row g-3 text-center">
+                                    <div class="col-4">
+                                        <div
+                                            id="pofBnhHorasPofLabel"
+                                            class="pof-bnh-kpi-label"
+                                        >POF</div>
+                                        <div
+                                            id="pofBnhHorasPof"
+                                            class="pof-bnh-kpi-value"
+                                        >0</div>
+                                    </div>
+
+                                    <div class="col-4">
+                                        <div
+                                            id="pofBnhHorasBnhLabel"
+                                            class="pof-bnh-kpi-label"
+                                        >BNH 2026</div>
+                                        <div
+                                            id="pofBnhHorasBnh"
+                                            class="pof-bnh-kpi-value"
+                                        >0</div>
+                                    </div>
+
+                                    <div class="col-4">
+                                        <div class="pof-bnh-kpi-label">
+                                            POF - BNH
+                                        </div>
+                                        <div
+                                            id="pofBnhHorasDif"
+                                            class="pof-bnh-kpi-value"
+                                        >0</div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <ul
+                        class="nav nav-tabs"
+                        id="pofBnhTabs"
+                        role="tablist"
+                    >
+                        <li class="nav-item" role="presentation">
+                            <button
+                                class="nav-link active"
+                                id="pofBnhCargosTab"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tabPofBnhCargos"
+                                type="button"
+                                role="tab"
+                            >
+                                <i class="bi bi-person-badge me-1"></i>
+                                Cargos
+                                <span
+                                    id="pofBnhCargosCount"
+                                    class="badge text-bg-light ms-1"
+                                >0</span>
+                            </button>
+                        </li>
+
+                        <li class="nav-item" role="presentation">
+                            <button
+                                class="nav-link"
+                                id="pofBnhHorasTab"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tabPofBnhHoras"
+                                type="button"
+                                role="tab"
+                            >
+                                <i class="bi bi-clock-history me-1"></i>
+                                Horas cátedra
+                                <span
+                                    id="pofBnhHorasCount"
+                                    class="badge text-bg-light ms-1"
+                                >0</span>
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content pt-3">
+
+                        <div
+                            class="tab-pane fade show active"
+                            id="tabPofBnhCargos"
+                            role="tabpanel"
+                        >
+                            <div class="table-responsive" style="max-height: 430px;">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>CEIC</th>
+                                            <th>Cargo</th>
+                                            <th
+                                                id="pofBnhCargoAnioHeader"
+                                                class="text-end"
+                                            >POF</th>
+                                            <th class="text-end">BNH 2026</th>
+                                            <th class="text-end">POF - BNH</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pofBnhCargosBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div
+                            class="tab-pane fade"
+                            id="tabPofBnhHoras"
+                            role="tabpanel"
+                        >
+                            <div class="table-responsive" style="max-height: 430px;">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>CEIC</th>
+                                            <th>Cargo</th>
+                                            <th
+                                                id="pofBnhHorasAnioHeader"
+                                                class="text-end"
+                                            >POF</th>
+                                            <th class="text-end">BNH 2026</th>
+                                            <th class="text-end">POF - BNH</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pofBnhHorasBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="pof-bnh-note mt-4">
+                        <i class="bi bi-info-circle me-1"></i>
+                        POF considera únicamente cargos AFECTADOS de Reunidas POF.
+                        BNH considera actividades ACTIVO, no eliminadas, de personas no archivadas,
+                        con Tipo de designación CARGO u HORAS CÁTEDRAS y vigentes en 2026.
+                        Una diferencia positiva significa que POF supera a BNH; una diferencia
+                        negativa significa que BNH supera a POF.
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+
+{% endblock %}
+
+
+
+{% block extra_js %}
+
+<script>
+
+(function () {
+
+    "use strict";
+
+
+    function initMonitoringSelect2() {
+
+        if (
+            !window.jQuery
+            ||
+            !jQuery.fn.select2
+        ) {
+            return;
+        }
+
+
+        $(".js-monitor-select").each(
+            function () {
+
+                const $select = $(this);
+
+
+                if (
+                    $select.hasClass(
+                        "select2-hidden-accessible"
+                    )
+                ) {
+                    return;
+                }
+
+
+                $select.select2({
+
+                    width:
+                        "100%",
+
+                    theme:
+                        "bootstrap-5",
+
+                    placeholder:
+                        $select.data(
+                            "placeholder"
+                        )
+                        || "",
+
+                    allowClear:
+                        true,
+
+                    minimumResultsForSearch:
+                        8
+
+                });
+
+            }
+        );
+
+    }
+
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        initMonitoringSelect2
+    );
+
+
+})();
+
+</script>
+
+
+<script>
+(function () {
+
+    "use strict";
+
+    const modalElement = document.getElementById("modalPofBnh");
+
+    if (!modalElement || !window.bootstrap) {
+        return;
+    }
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+
+    const byId = function (id) {
+        return document.getElementById(id);
+    };
+
+    const escapeHtml = function (value) {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    };
+
+    const numero = function (value) {
+        const n = Number(value || 0);
+
+        return n.toLocaleString(
+            "es-AR",
+            {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+            }
+        );
+    };
+
+    const badgeEstado = function (estado) {
+        const mapa = {
+            "COINCIDE": ["text-bg-success", "Coincide"],
+            "SIN_BNH": ["text-bg-danger", "Sin carga BNH"],
+            "FALTA_BNH": ["text-bg-warning", "Falta en BNH"],
+            "EXCEDE_BNH": ["text-bg-danger", "BNH excede POF"],
+            "SOLO_BNH": ["text-bg-info", "Sólo BNH"],
+        };
+
+        const item = mapa[estado] || ["text-bg-secondary", estado || "—"];
+
+        return `<span class="badge rounded-pill ${item[0]}">${escapeHtml(item[1])}</span>`;
+    };
+
+    const diferenciaClass = function (value) {
+        const diff = Number(value || 0);
+
+        if (diff > 0) {
+            return "text-warning-emphasis";
+        }
+
+        if (diff < 0) {
+            return "text-danger";
+        }
+
+        return "text-success";
+    };
+
+    const fila = function (item) {
+        return `
+            <tr>
+                <td>
+                    <span class="pof-bnh-ceic">${escapeHtml(item.ceic)}</span>
+                </td>
+                <td>${escapeHtml(item.descripcion || "—")}</td>
+                <td class="text-end">${numero(item.pof)}</td>
+                <td class="text-end">${numero(item.bnh)}</td>
+                <td class="text-end fw-bold ${diferenciaClass(item.diferencia)}">
+                    ${numero(item.diferencia)}
+                </td>
+                <td>${badgeEstado(item.estado)}</td>
+            </tr>
+        `;
+    };
+
+    const renderTabla = function (bodyId, rows) {
+        const body = byId(bodyId);
+
+        if (!body) {
+            return;
+        }
+
+        if (!rows || !rows.length) {
+            body.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        Sin registros para comparar.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        body.innerHTML = rows.map(fila).join("");
+    };
+
+    const resetModal = function (cue) {
+        byId("pofBnhCue").textContent = `CUEANEXO ${cue}`;
+        byId("pofBnhPeriodo").textContent = "Consultando período...";
+        byId("pofBnhPeriodo").className = "badge rounded-pill text-bg-secondary";
+
+        byId("pofBnhLoading").classList.remove("d-none");
+        byId("pofBnhError").classList.add("d-none");
+        byId("pofBnhContent").classList.add("d-none");
+        byId("pofBnhAvisoAnio").classList.add("d-none");
+        byId("pofBnhAvisoTexto").textContent = "";
+
+        renderTabla("pofBnhCargosBody", []);
+        renderTabla("pofBnhHorasBody", []);
+    };
+
+    const renderData = function (data) {
+        const anioBnh = data.anio_bnh || 2026;
+        const anioPof = data.anio_pof;
+        const pofLabel = anioPof ? `POF ${anioPof}` : "POF sin datos";
+
+        byId("pofBnhPeriodo").textContent = anioPof
+            ? `POF ${anioPof} · BNH ${anioBnh}`
+            : `POF sin datos · BNH ${anioBnh}`;
+
+        byId("pofBnhPeriodo").className = data.usa_anio_anterior || !data.pof_disponible
+            ? "badge rounded-pill text-bg-warning"
+            : "badge rounded-pill text-bg-primary";
+
+        byId("pofBnhCargoAnioHeader").textContent = pofLabel;
+        byId("pofBnhHorasAnioHeader").textContent = pofLabel;
+        byId("pofBnhCargosPofLabel").textContent = pofLabel;
+        byId("pofBnhHorasPofLabel").textContent = pofLabel;
+        byId("pofBnhCargosBnhLabel").textContent = `BNH ${anioBnh}`;
+        byId("pofBnhHorasBnhLabel").textContent = `BNH ${anioBnh}`;
+
+        if (data.mensaje_pof) {
+            byId("pofBnhAvisoTitulo").textContent = data.pof_disponible
+                ? `POF ${data.anio_objetivo} aún no disponible`
+                : "Sin datos POF disponibles";
+
+            byId("pofBnhAvisoTexto").textContent = data.mensaje_pof;
+            byId("pofBnhAvisoAnio").classList.remove("d-none");
+        } else {
+            byId("pofBnhAvisoAnio").classList.add("d-none");
+        }
+
+        const r = data.resumen || {};
+
+        byId("pofBnhCargosPof").textContent = numero(r.cargos_pof);
+        byId("pofBnhCargosBnh").textContent = numero(r.cargos_bnh);
+        byId("pofBnhCargosDif").textContent = numero(r.diferencia_cargos);
+        byId("pofBnhCargosDif").className = `pof-bnh-kpi-value ${diferenciaClass(r.diferencia_cargos)}`;
+
+        byId("pofBnhHorasPof").textContent = numero(r.horas_pof);
+        byId("pofBnhHorasBnh").textContent = numero(r.horas_bnh);
+        byId("pofBnhHorasDif").textContent = numero(r.diferencia_horas);
+        byId("pofBnhHorasDif").className = `pof-bnh-kpi-value ${diferenciaClass(r.diferencia_horas)}`;
+
+        byId("pofBnhCargosCount").textContent = (data.cargos || []).length;
+        byId("pofBnhHorasCount").textContent = (data.horas || []).length;
+
+        renderTabla("pofBnhCargosBody", data.cargos || []);
+        renderTabla("pofBnhHorasBody", data.horas || []);
+
+        byId("pofBnhLoading").classList.add("d-none");
+        byId("pofBnhContent").classList.remove("d-none");
+    };
+
+    document.addEventListener(
+        "click",
+        async function (event) {
+            const button = event.target.closest(".js-pof-bnh");
+
+            if (!button) {
+                return;
+            }
+
+            const url = button.dataset.url;
+            const cue = button.dataset.cue;
+
+            resetModal(cue);
+            modal.show();
+
+            try {
+                const response = await fetch(
+                    url,
+                    {
+                        method: "GET",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                            "Accept": "application/json",
+                        },
+                        credentials: "same-origin",
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                renderData(data);
+
+            } catch (error) {
+                byId("pofBnhLoading").classList.add("d-none");
+                byId("pofBnhContent").classList.add("d-none");
+
+                const errorBox = byId("pofBnhError");
+                errorBox.textContent = (
+                    "No fue posible cargar la comparativa POF vs BNH. "
+                    + "Verifique la disponibilidad de los datos e intente nuevamente."
+                );
+                errorBox.classList.remove("d-none");
+            }
+        }
+    );
+
+})();
+</script>
+
+{% endblock %}

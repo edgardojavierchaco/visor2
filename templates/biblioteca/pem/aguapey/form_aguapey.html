@@ -2,7 +2,7 @@
 {% load static %}
 {% load widget_tweaks %}
 {% block head %}
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260908-6">
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260923-responsive-crud-1">
     {% block head_form %}
     {% endblock %}
 
@@ -11,8 +11,8 @@
 {% block content_header %}{% endblock %}
 
 {% block content %}
-<main class="biblioteca-crud biblioteca-crud--formulario">
-    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='dns' %}
+<main class="biblioteca-crud biblioteca-crud--formulario biblioteca-form-standard">
+    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='dns' section_return_url=list_url section_return_label='Volver a Aguapey' %}
     <form id="formulario" method="post" action="?periodo={{ periodo_activo_id }}" enctype="multipart/form-data" class="biblioteca-crud__form">
         <div class="card biblioteca-crud__panel">
             <div class="card-header">
@@ -44,67 +44,40 @@
                     </div>
                 {% endif %}
 
-                <!-- Botón para mostrar el popup en la fila superior -->
-            <div class="form-group row biblioteca-crud__info-row">
-                    <div class="col-md-12 text-right">
-                        <button type="button" class="btn btn-info" id="showPopupBtn">
-                            <span class="biblioteca-symbol" aria-hidden="true">info</span> Información
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Campo CUE Anexo (Solo lectura) -->
-                <div class="form-group row">
-                    <div class="col-md-4">
-                        <label for="id_cueanexo">CUE Anexo:</label>
-                        <input type="text" id="id_cueanexo" name="cueanexo" class="form-control" value="{{ cueanexo }}" readonly>
-                    </div>                
-                    <div class="col-md-4">
-                        <label for="id_mes">Mes:</label>
-                        {{ form.mes|add_class:"form-control" }}
-                    </div>
-                    <div class="col-md-4">
-                        <label for="id_anio">Año:</label>
-                        {{ form.anio|add_class:"form-control" }}
-                    </div>                    
-                </div>
-                
-               <div class="card mt-4 border-success shadow">
-                    <div class="card-header bg-success text-white fw-bold">
-                        AGUAPEY u Otra Base de Datos
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3">
-                        <label for="id_total_mes" class="fw-semibold">Total Mes:</label>
+                <section class="biblioteca-form__block" aria-labelledby="biblioteca-form-datos">
+                    {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' block_subtitle='AGUAPEY u otra base de datos' show_info=1 info_title='Aguapey' info_section_icon='dns' info_text='Registrá los datos de uso de la base durante el período.' info_item_1='Total del mes' info_icon_1='calendar_month' info_item_2='Total de la base' info_icon_2='database' info_item_3='Total de usuarios' info_icon_3='groups' info_item_4='Observaciones' info_icon_4='notes' only %}
+                    <div class="biblioteca-form__block-body">
+                        <div class="biblioteca-form__grid">
+                            <div>
+                                <label for="id_total_mes">Total del mes</label>
                                 {{ form.total_mes|add_class:"form-control text-center" }}
                             </div>
-                            <div class="col-md-2">
-                        <label for="id_total_base" class="fw-semibold">Total Base:</label>
+                            <div>
+                                <label for="id_total_base">Total de la base</label>
                                 {{ form.total_base|add_class:"form-control text-center" }}
-                            </div>                    
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="card mt-4 border-danger shadow">
-                    <div class="card-header bg-danger text-white fw-bold">
-                        REGISTRO DE USUARIOS EN EL MES
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3">
-                        <label for="id_total_usuarios" class="fw-semibold">Total Población Asistida:</label>
+                </section>
+
+                <section class="biblioteca-form__block" aria-labelledby="biblioteca-form-usuarios">
+                    {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-usuarios' block_icon='groups' block_title='Registro de usuarios en el mes' only %}
+                    <div class="biblioteca-form__block-body">
+                        <div class="biblioteca-form__grid">
+                            <div>
+                                <label for="id_total_usuarios">Total población asistida</label>
                                 {{ form.total_usuarios|add_class:"form-control text-center" }}
                             </div>
-                            <div class="col-md-6">
-                        <label for="id_observaciones" class="fw-semibold">Observaciones:</label>
-                                {{ form.observaciones|add_class:"form-control text-justify" }}
-                            </div>                    
+                            <div class="biblioteca-form__span-3">
+                                <label for="id_observaciones">Observaciones</label>
+                                {{ form.observaciones|add_class:"form-control" }}
+                            </div>
                         </div>
                     </div>
-                </div>
-            
-                <div class="card-footer">
+                </section>
+            </div>
+
+            <div class="card-footer">
                 <button type="submit" id="btnSubmit" class="btn btn-primary btn-flat">
                     <span class="biblioteca-symbol" aria-hidden="true">save</span> Guardar registro
                 </button>
@@ -166,7 +139,11 @@
             errores++;
         }
 
-        btnSubmit.disabled = errores > 0;
+        if (window.biblioteca_form_state) {
+            window.biblioteca_form_state.setValidationValid(btnSubmit.form, errores === 0);
+        } else {
+            btnSubmit.disabled = errores > 0;
+        }
         return errores === 0;
     }
 
@@ -219,10 +196,10 @@
 
         var parameters = new FormData(this);
 
-        submit_with_ajax(
+        biblioteca_submit_with_ajax(
             window.location.pathname + window.location.search,
-            'Notificación',
-            '¿Estás seguro de realizar la siguiente acción?',
+            'Confirmar guardado',
+            '¿Querés guardar los datos cargados en este registro?',
             parameters,
             function () {
                 location.href = '{{ list_url }}';
@@ -233,13 +210,7 @@
     // =========================
     // INFO POPUP
     // =========================
-    $('#showPopupBtn').click(function () {
-        Swal.fire({
-            title: 'Información',
-            html: `<p>En esta sección se cargan los registros de Aguapey u otra base de datos del período.</p>`,
-            icon: 'info'
-        });
-    });
+
 
     // =========================
     // BLOQUEO (SI VIENE DEL BACKEND)
@@ -251,13 +222,6 @@
             text: 'Este período ya fue enviado y no puede modificarse.'
         });
     {% endif %}
-
-    // ===============================
-// 📌 AUTO FILL CAMPOS
-// ===============================
-document.getElementById("id_cueanexo").value = "{{ cueanexo }}";
-document.getElementById("id_mes").value = "{{ mes }}";
-document.getElementById("id_anio").value = "{{ anno }}";
 
     </script>   
 

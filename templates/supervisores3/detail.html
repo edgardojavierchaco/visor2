@@ -1,0 +1,66 @@
+{% extends "archivos/base/layout.html" %}
+
+{% block content %}
+
+<div class="container">
+
+<div class="card shadow">
+
+<div class="card-header">
+
+<h4>
+
+{{ supervisor.usuario.apellido }},
+{{ supervisor.usuario.nombres }}
+
+</h4>
+
+</div>
+
+<div class="card-body">
+
+<div class="row">
+
+<div class="col-md-3">
+<b>CUIL</b><br>
+{{ supervisor.usuario.username }}
+</div>
+
+<div class="col-md-3">
+<b>Teléfono</b><br>
+{{ supervisor.telefono }}
+</div>
+
+<div class="col-md-3">
+<b>Email</b><br>
+{{ supervisor.email }}
+</div>
+
+<div class="col-md-3">
+<b>Activo</b><br>
+{{ supervisor.activo }}
+</div>
+
+</div>
+
+<hr>
+
+<a
+href="{% url 'regional_create' supervisor.id %}"
+class="btn btn-success">
+
+Agregar Regional
+
+</a>
+
+<hr>
+
+{% include "supervisores/partials/regionales.html" %}
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}

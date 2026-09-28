@@ -14,27 +14,49 @@
     <th>TOTAL BASE</th>
     <th>TOTAL USUARIOS</th>
     <th>OBSERVACIONES</th>
-    <th>BOTONES</th>
+    <th>ACCIÓN</th>
 </tr>
 {% endblock %}
 
 {% block footer %}
-<tr>
-    <th></th> <!-- CUEANEXO -->
-    <th></th> <!-- MES -->
-    <th class="text-end">Totales:</th> <!-- AÑO -->
-    <th>0</th> <!-- TOTAL MES -->
-    <th>0</th> <!-- TOTAL BASE -->
-    <th>0</th> <!-- TOTAL USUARIOS -->
-    <th></th> <!-- OBS -->
-    <th></th> <!-- BOTONES -->
+<tr class="biblioteca-crud__legacy-totals">
+    <th></th>
+    <th></th>
+    <th>Totales:</th>
+    <th id="total_mes">0</th>
+    <th id="total_base">0</th>
+    <th id="total_usuarios">0</th>
+    <th></th>
+    <th></th>
 </tr>
 {% endblock %}
 
+{% block section_totals %}
+    <div class="biblioteca-crud__totals" data-biblioteca-section-totals>
+        <div class="biblioteca-crud__totals-title">
+            <span class="biblioteca-symbol" aria-hidden="true">functions</span>
+            <span>Totales de la sección</span>
+        </div>
+        <div class="biblioteca-crud__totals-metrics">
+            <div class="biblioteca-crud__total-metric">
+                <span>Total mes</span>
+                <strong data-biblioteca-total-field="total_mes">0</strong>
+            </div>
+            <div class="biblioteca-crud__total-metric">
+                <span>Total base</span>
+                <strong data-biblioteca-total-field="total_base">0</strong>
+            </div>
+            <div class="biblioteca-crud__total-metric">
+                <span>Total usuarios</span>
+                <strong data-biblioteca-total-field="total_usuarios">0</strong>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
 {% block javascript %}
-<script src="{% static 'biblioteca/pem/aguapey/js/list.js' %}"></script>
-<!-- 🔥 CSRF TOKEN (OCULTO PERO EXISTE) -->
-<form style="display:none;">
-    {% csrf_token %}
-</form>
+    <script src="{% static 'biblioteca/pem/aguapey/js/list.js' %}"></script>
+    <form style="display:none;">
+        {% csrf_token %}
+    </form>
 {% endblock %}
