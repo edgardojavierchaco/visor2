@@ -4,6 +4,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from django.contrib import messages
 from django.core.cache import cache
+from django.db import DatabaseError, connection
 from django.db.models import F, Func, Value
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect
@@ -17,7 +18,7 @@ from .models import GenerarInforme
 PERIODO_ACTIVO_SESSION_KEY = "biblioteca_periodo_activo_id"
 IDENTIDAD_ESTABLECIMIENTO_CACHE_TTL = 15 * 60
 _IDENTIDAD_ESTABLECIMIENTO_CACHE_KEY_PREFIX = (
-    "biblioteca:identidad_establecimiento:v1"
+    "biblioteca:identidad_establecimiento:v2"
 )
 _IDENTIDAD_ESTABLECIMIENTO_CACHE_FIELDS = (
     "cueanexo",
@@ -73,6 +74,63 @@ def _identidad_establecimiento_cache_valida(identidad, cueanexo):
     )
 
 
+def _normalizar_numero_biblioteca_visual(valor):
+    numero = str(valor or "").strip()
+    if not numero:
+        return ""
+    if numero.isdigit():
+        return str(int(numero))
+    return numero
+
+
+def _resolver_numero_biblioteca_materializada(cueanexo):
+    cueanexo_limpio = re.sub(r"\D", "", str(cueanexo or ""))
+    if len(cueanexo_limpio) != 9:
+        return ""
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT DISTINCT BTRIM(COALESCE(vl.nro_biblioteca::text, ''))
+                  FROM padroninterno.mv_localizaciones vl
+                 WHERE CONCAT(
+                           REGEXP_REPLACE(
+                               COALESCE(vl.cue::text, ''),
+                               '[^0-9]',
+                               '',
+                               'g'
+                           ),
+                           RIGHT(
+                               '00' || REGEXP_REPLACE(
+                                   COALESCE(vl.anexo::text, ''),
+                                   '[^0-9]',
+                                   '',
+                                   'g'
+                               ),
+                               2
+                           )
+                       ) = %s
+                   AND NULLIF(
+                           BTRIM(COALESCE(vl.nro_biblioteca::text, '')),
+                           ''
+                       ) IS NOT NULL
+                """,
+                [cueanexo_limpio],
+            )
+            numeros = set()
+            for fila in cursor.fetchall():
+                numero = _normalizar_numero_biblioteca_visual(fila[0])
+                if numero:
+                    numeros.add(numero)
+    except DatabaseError:
+        return ""
+
+    if len(numeros) == 1:
+        return next(iter(numeros))
+    return ""
+
+
 def resolver_identidad_establecimiento(
     request: HttpRequest,
     periodo=_PERIODO_NO_RESUELTO,
@@ -111,21 +169,25 @@ def resolver_identidad_establecimiento(
         request._biblioteca_identidad_establecimiento = identidad_cache
         return identidad_cache
 
-    nombres = list(
-        CapaUnicaOfertas.objects.filter(
-            cueanexo=cueanexo,
-            oferta="Común - Servicios complementarios ",
-            acronimo__startswith="BI",
-        ).values_list("nom_est", flat=True).distinct()
-    )
-    nombres_inequivocos = {
-        nombre for nombre in nombres if nombre and nombre.strip()
-    }
-    if len(nombres_inequivocos) != 1:
-        request._biblioteca_identidad_establecimiento = None
-        return None
+    numero_biblioteca = _resolver_numero_biblioteca_materializada(cueanexo)
+    if numero_biblioteca:
+        nombre = f"BIBLIOTECA N.º {numero_biblioteca}"
+    else:
+        nombres = list(
+            CapaUnicaOfertas.objects.filter(
+                cueanexo=cueanexo,
+                oferta="Común - Servicios complementarios ",
+                acronimo__startswith="BI",
+            ).values_list("nom_est", flat=True).distinct()
+        )
+        nombres_inequivocos = {
+            nombre for nombre in nombres if nombre and nombre.strip()
+        }
+        if len(nombres_inequivocos) != 1:
+            request._biblioteca_identidad_establecimiento = None
+            return None
 
-    nombre = nombres_inequivocos.pop()
+        nombre = nombres_inequivocos.pop()
     nombre_navbar = re.sub(
         r"^BIBLIOTECA ",
         "",
@@ -323,11 +385,13 @@ class PeriodoActivoMixin(View):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        self.aplicar_periodo_activo(form.instance)
+        if hasattr(form, "instance"):
+            self.aplicar_periodo_activo(form.instance)
         return form
 
     def form_valid(self, form):
-        self.aplicar_periodo_activo(form.instance)
+        if hasattr(form, "instance"):
+            self.aplicar_periodo_activo(form.instance)
         return super().form_valid(form)
 
     def get_success_url(self):

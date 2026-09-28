@@ -1466,21 +1466,49 @@ class BibliotecariosCue(models.Model):
     cueanexo = models.CharField(max_length=9, verbose_name='cueanexo')
     cuil = models.CharField(max_length=11, verbose_name='cuil')
 
-    t_doc = models.CharField(max_length=3, choices=T_DOC_CHOICES, verbose_name='t_doc')
+    t_doc = models.CharField(
+        max_length=3,
+        choices=T_DOC_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name='t_doc'
+    )
     n_doc = models.CharField(max_length=8, verbose_name='n_doc')
 
     apellidos = models.CharField(max_length=255, verbose_name='apellidos')
     nombres = models.CharField(max_length=255, verbose_name='nombres')
 
-    f_nac = models.DateField(verbose_name='f_nac')
+    f_nac = models.DateField(blank=True, null=True, verbose_name='f_nac')
 
-    cargo = models.CharField(max_length=255, choices=CARGO_CHOICES, verbose_name='cargo')
-    situacion_revista = models.CharField(max_length=255, choices=SIT_REVISTA_CHOICES, verbose_name='situacion_revista')
+    cargo = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name='cargo'
+    )
+    situacion_revista = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name='situacion_revista'
+    )
 
-    f_ingreso = models.DateField(verbose_name='f_ingreso')
-    f_hasta = models.DateField(default=date(2039, 12, 31), verbose_name='f_hasta')
+    f_ingreso = models.DateField(blank=True, null=True, verbose_name='f_ingreso')
+    f_hasta = models.DateField(blank=True, null=True, verbose_name='f_hasta')
 
-    turno = models.ForeignKey(turno, on_delete=models.CASCADE, verbose_name='turno')
+    turno = models.ForeignKey(
+        turno,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        verbose_name='turno'
+    )
+    turno_bnh = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        verbose_name='turno_bnh'
+    )
 
     cuof = models.CharField(max_length=4, blank=True, null=True, verbose_name='cuof')
     cuof_anexo = models.CharField(max_length=4, blank=True, null=True, verbose_name='cuof_anexo')
@@ -1528,6 +1556,13 @@ class BibliotecariosCue(models.Model):
 
     def __str__(self):
         return f"{self.n_doc} - {self.apellidos}, {self.nombres}"
+
+    @property
+    def turno_texto(self):
+        turno_bnh = (self.turno_bnh or '').strip()
+        if turno_bnh:
+            return turno_bnh
+        return self.turno.nom_turno if self.turno_id and self.turno else None
 
     # =========================
     # 🔥 VALIDACIONES
@@ -1583,24 +1618,25 @@ class BibliotecariosCue(models.Model):
     # =========================
     def toJSON(self):
         item = model_to_dict(self)
+        item['id'] = self.id
 
         item['cueanexo'] = self.cueanexo
         item['cuil'] = self.cuil
 
-        item['t_doc'] = self.t_doc
+        item['t_doc'] = self.t_doc or '—'
         item['n_doc'] = self.n_doc
 
         item['apellidos'] = self.apellidos
         item['nombres'] = self.nombres
 
-        item['f_nac'] = self.f_nac
-        item['cargo'] = self.cargo
-        item['situacion_revista'] = self.situacion_revista
+        item['f_nac'] = self.f_nac or '—'
+        item['cargo'] = self.cargo or '—'
+        item['situacion_revista'] = self.situacion_revista or '—'
 
-        item['f_ingreso'] = self.f_ingreso
-        item['f_hasta'] = self.f_hasta
+        item['f_ingreso'] = self.f_ingreso or '—'
+        item['f_hasta'] = self.f_hasta or '—'
 
-        item['turno'] = self.turno.nom_turno if self.turno else ''
+        item['turno'] = self.turno_texto or '—'
 
         item['cuof'] = self.cuof
         item['cuof_anexo'] = self.cuof_anexo

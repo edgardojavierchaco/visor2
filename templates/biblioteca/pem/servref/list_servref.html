@@ -18,17 +18,36 @@
     <th>TURNOS</th>
     <th>VARONES</th>
     <th>TOTAL</th>
-    <th>ACCIONES</th>
+    <th>ACCIÓN</th>
 </tr>
 {% endblock %}
 
 {% block footer %}
-<tr>
+<tr class="biblioteca-crud__legacy-totals">
     <th colspan="5">TOTAL</th>
     <th id="total_varones">0</th>
     <th id="totales">0</th>
     <th></th>
 </tr>
+{% endblock %}
+
+{% block section_totals %}
+<div class="biblioteca-crud__totals" data-biblioteca-section-totals>
+    <div class="biblioteca-crud__totals-title">
+        <span class="biblioteca-symbol" aria-hidden="true">functions</span>
+        <span>Totales de la sección</span>
+    </div>
+    <div class="biblioteca-crud__totals-metrics">
+        <div class="biblioteca-crud__total-metric">
+            <span>Varones</span>
+            <strong data-biblioteca-total-field="varones">0</strong>
+        </div>
+        <div class="biblioteca-crud__total-metric">
+            <span>Total</span>
+            <strong data-biblioteca-total-field="total">0</strong>
+        </div>
+    </div>
+</div>
 {% endblock %}
 {% block javascript %}
 
