@@ -2,9 +2,62 @@
 "use strict";
 
 (() => {
-    const VERSION = "20260919.1";
+    const VERSION = "20260927.1";
     const jq = () => window.jQuery;
     const hasSelect2 = () => Boolean(jq() && jq().fn && jq().fn.select2);
+
+
+    // ============================================================
+    // OPCIONES DESTACADAS EN DESPLEGABLES
+    // ============================================================
+    const normalizeOptionText = text => String(text || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .replace(/\s+/g, " ")
+        .trim();
+
+    function highlightedOptionKind(text) {
+        const normalized = normalizeOptionText(text);
+        if (/(^|[^A-Z])EN ACTIVIDAD([^A-Z]|$)/.test(normalized)) return "active";
+        if (/(^|[^A-Z])NO CORRESPONDE([^A-Z]|$)/.test(normalized)) return "not-applicable";
+        return "";
+    }
+
+    function markNativeHighlightedOptions(select) {
+        if (!select) return;
+        Array.from(select.options || []).forEach(option => {
+            option.classList.remove(
+                "bnh-native-option-highlight",
+                "bnh-native-option-active",
+                "bnh-native-option-not-applicable"
+            );
+            const kind = highlightedOptionKind(option.textContent);
+            if (!kind) return;
+            option.classList.add(
+                "bnh-native-option-highlight",
+                kind === "active"
+                    ? "bnh-native-option-active"
+                    : "bnh-native-option-not-applicable"
+            );
+        });
+    }
+
+    function renderHighlightedSelect2Option(data) {
+        const $ = jq();
+        if (!$) return data?.text || "";
+
+        const text = String(data?.text || "");
+        const kind = highlightedOptionKind(text);
+        const node = $("<span>").text(text);
+        if (!kind) return node;
+
+        node.addClass(
+            "bnh-option-highlight " +
+            (kind === "active" ? "bnh-option-active" : "bnh-option-not-applicable")
+        );
+        return node;
+    }
 
     function refresh(select) {
         if (select && hasSelect2()) jq()(select).trigger("change.select2");
@@ -17,6 +70,7 @@
         }
         select.replaceChildren(new Option(placeholder, ""));
         rows.forEach(row => select.add(new Option(String(row[label] ?? ""), String(row[key] ?? ""))));
+        markNativeHighlightedOptions(select);
         const target = String(selected ?? "");
         select.value = Array.from(select.options).some(o => o.value === target) ? target : "";
         refresh(select);
@@ -58,7 +112,14 @@
         if (hasSelect2()) {
             document.querySelectorAll("select.select2").forEach(select => {
                 try {
-                    if (!jq()(select).data("select2")) jq()(select).select2({ width: "100%" });
+                    markNativeHighlightedOptions(select);
+                    if (!jq()(select).data("select2")) {
+                        jq()(select).select2({
+                            width: "100%",
+                            templateResult: renderHighlightedSelect2Option,
+                            templateSelection: renderHighlightedSelect2Option
+                        });
+                    }
                 } catch (error) {
                     console.warn("No se pudo inicializar Select2 en", select.name, error);
                 }
