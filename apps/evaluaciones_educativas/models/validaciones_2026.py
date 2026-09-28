@@ -326,7 +326,10 @@ class ValHistorialCambiosEstablecimiento(models.Model):
 class ValPersona(models.Model):
 	nombre = models.CharField(max_length=100)
 	apellido = models.CharField(max_length=100)
-	cuil = models.CharField(max_length=20)
+	# Único entre veedores y aplicadores: una persona no puede estar cargada
+	# dos veces. Las vistas lo validan antes de guardar; este unique cubre el
+	# caso de dos altas simultáneas con el mismo CUIL.
+	cuil = models.CharField(max_length=20, unique=True)
 	correo = models.EmailField()
 	codigo_area = models.CharField(max_length=5)
 	numero_telefono = models.CharField(max_length=10)
