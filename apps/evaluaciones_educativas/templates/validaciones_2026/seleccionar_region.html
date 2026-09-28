@@ -301,8 +301,8 @@
       <div class="hero-logo">
         <img src="{% static 'evaluaciones_educativas/img/logo_evaluaciones_educativas.png' %}" alt="Logo Departamento Evaluación Educativa" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
       </div>
-      <h1>Validación <span>Aprender</span> 2026</h1>
-      <p>Proceso de validación de matrículas y secciones educativas</p>
+      <h1>{% if modo_personas %}Gestión de <span>Aplicadores y Veedores</span>{% else %}Validación <span>Aprender</span> 2026{% endif %}</h1>
+      <p>{% if modo_personas %}Asignación de aplicadores y veedores por establecimiento{% else %}Proceso de validación de matrículas y secciones educativas{% endif %}</p>
       <div class="hero-cuil"><i class="bi bi-person-badge"></i>Referente: <strong>{{ cuil }}</strong></div>
     </div>
 
@@ -348,12 +348,12 @@
       {% else %}
 
       <div class="instruccion">
-        Seleccioná la <strong>región</strong> con la que querés trabajar hoy:
+        Seleccioná la <strong>región</strong> {% if modo_personas %}para gestionar aplicadores y veedores{% else %}con la que querés trabajar hoy{% endif %}:
       </div>
 
       <div class="regions-grid">
         {% for r in regiones_info %}
-        <a href="{% url 'evaluaciones_educativas:validaciones_2026:lista_establecimientos' r.nombre %}"
+        <a href="{% if modo_personas %}{% url 'evaluaciones_educativas:validaciones_2026:personas_establecimientos' r.nombre %}{% else %}{% url 'evaluaciones_educativas:validaciones_2026:lista_establecimientos' r.nombre %}{% endif %}"
            class="region-card"
            id="region-card-{{ forloop.counter }}">
 
@@ -369,8 +369,18 @@
           <div class="region-stats">
             <div class="r-stat">
               <div class="v">{{ r.total }}</div>
-              <div class="l">Total</div>
+              <div class="l">Establec.</div>
             </div>
+            {% if modo_personas %}
+            <div class="r-stat">
+              <div class="v" style="color: #6366f1;">{{ r.veedores }}</div>
+              <div class="l">Veedores</div>
+            </div>
+            <div class="r-stat">
+              <div class="v" style="color: #00bcd4;">{{ r.aplicadores }}</div>
+              <div class="l">Aplicadores</div>
+            </div>
+            {% else %}
             <div class="r-stat">
               <div class="v" style="color: #22c55e;">{{ r.procesados }}</div>
               <div class="l">Procesados</div>
@@ -379,8 +389,10 @@
               <div class="v" style="color: #f59e0b;">{{ r.sin_procesar }}</div>
               <div class="l">Pendientes</div>
             </div>
+            {% endif %}
           </div>
 
+          {% if not modo_personas %}
           <div class="region-progress">
             <div class="rp-label">
               <span>Progreso</span>
@@ -390,6 +402,7 @@
               <div class="rp-fill" style="width: {{ r.pct }}%"></div>
             </div>
           </div>
+          {% endif %}
 
           <div class="region-card-arrow">
             <i class="bi bi-arrow-right"></i>
