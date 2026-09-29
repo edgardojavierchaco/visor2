@@ -20,6 +20,8 @@ TIPOS_MOVIMIENTO_LABELS = {
     "AFECTADO": "Afectado",
     "MODIFICACION": "Modificación",
     "DESAFECTADO": "Desafectado",
+    "ZONA_EDUCATIVA": "Zona Educativa",
+    "ANEXO_POF": "Anexo POF",
 }
 
 NIVEL_TODOS = "__todos__"
@@ -427,16 +429,16 @@ def obtener_mensaje_filtros_insuficientes_historial(filtros):
     if activos == ["ceic"]:
         return "Para buscar por CEIC, agregá Año, CUEANEXO o CUOF."
     if activos == ["tipo"] and filtros.get("tipo") == TIPO_MOVIMIENTO_TODOS:
-        return "Agregá Año, CUEANEXO o CUOF para consultar todos los movimientos."
+        return "Agregá Año, CUEANEXO o CUOF para consultar todos los eventos."
     if activos == ["tipo"]:
-        return "Para buscar por tipo de movimiento, agregá Año, CUEANEXO o CUOF."
+        return "Para buscar por tipo de evento, agregá Año, CUEANEXO o CUOF."
     if activos == ["anio"]:
-        return "Agregá otro filtro para consultar movimientos del año seleccionado."
+        return "Agregá otro filtro para consultar eventos del año seleccionado."
     if activos == ["nivel"] and _nivel_es_todos(filtros):
         return "Agregá Año, CUEANEXO o CUOF para consultar todos los niveles."
     if activos == ["nivel"] and _nivel_especifico(filtros):
-        return "Agregá Año, CUEANEXO o CUOF para consultar movimientos por nivel."
-    return "Agregá al menos otro filtro o ingresá un CUEANEXO/CUOF válido para consultar movimientos."
+        return "Agregá Año, CUEANEXO o CUOF para consultar eventos por nivel."
+    return "Agregá al menos otro filtro o ingresá un CUEANEXO/CUOF válido para consultar eventos."
 
 
 def obtener_mensaje_filtros_insuficientes_cargos(filtros):
@@ -496,8 +498,8 @@ def construir_chips_filtros_historial(request, filtros, errores=None):
         ("cuil", "CUIL", filtros.get("cuil")),
         (
             "tipo",
-            "Movimiento",
-            "Todos los movimientos"
+            "Tipo de evento",
+            "Todos los eventos"
             if filtros.get("tipo") == TIPO_MOVIMIENTO_TODOS
             else TIPOS_MOVIMIENTO_LABELS.get(filtros.get("tipo", ""), ""),
         ),

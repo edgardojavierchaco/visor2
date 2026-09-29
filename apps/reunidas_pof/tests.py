@@ -2,9 +2,11 @@ from inspect import unwrap
 from decimal import Decimal
 from io import BytesIO
 from types import SimpleNamespace
+from unittest import TestCase as UnitTestCase
 from unittest.mock import MagicMock, Mock, patch
 
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.test import RequestFactory, SimpleTestCase
 from openpyxl import load_workbook
@@ -21,10 +23,18 @@ from .models import (
     obtener_cueanexos_director_pof,
     obtener_regiones_usuario_pof,
 )
+from .services import anexo_pof_service
 from .services import carga_service
+from .services import exportacion_columnas_config as exportacion_columnas_service
 from .services import exportacion_reunida as exportacion_service
+from .services import exportacion_rows as exportacion_rows_service
 from .services import guardado_pof_service
+from .services import historial_service
+from .services import reunidas_service
 from .services import visualizacion_cargos_localizacion_service as visualizacion_service
+from .services import zona_educativa_service
+from .services.grilla_pof.detalle_politicas import obtener_politicas_detalle_reunida
+from .services.grilla_pof.detalle_rows import construir_grupos_operativos_detalle
 
 
 class RolesPofTests(SimpleTestCase):
@@ -327,9 +337,9 @@ class ExportacionReunidaExcelTests(SimpleTestCase):
         self.assertTrue(
             any(
                 regla.dxf
-                and regla.dxf.numFmt
-                and regla.dxf.numFmt.formatCode == ";;;"
-                and regla.dxf.font is None
+                and regla.dxf.font
+                and regla.dxf.font.color.rgb == "FFFFFFFF"
+                and regla.dxf.numFmt is None
                 for regla in reglas_condicionales
             )
         )
@@ -440,6 +450,43 @@ class ExportacionReunidaExcelTests(SimpleTestCase):
             )
         )
 
+    def test_excel_separa_zona_ambito_puntos_cargo_y_zona_educativa(self):
+        columnas_config = [
+            {"source": "zona", "titulo": "Zona", "repetir": "por_cueanexo"},
+            {
+                "source": "zona_educativa",
+                "titulo": "Zona Educativa",
+                "repetir": "por_cueanexo",
+            },
+            {"source": "puntos", "titulo": "Puntos", "repetir": "siempre"},
+            {
+                "source": "puntos_zona_educativa",
+                "titulo": "Puntos Zona Educativa",
+                "repetir": "por_cueanexo",
+            },
+        ]
+        fila = {
+            "cueanexo": "123456700",
+            "cue": "1234567",
+            "zona": "RURAL",
+            "zona_educativa": "ZR2",
+            "puntos": Decimal("100"),
+            "puntos_zona_educativa": 1067,
+            "estado_pof_codigo": views.CargoPof.EstadoPof.AFECTADO,
+            "total": Decimal("100"),
+        }
+
+        ws = self._abrir_excel_comun(
+            columnas_config,
+            [fila],
+            {"columnas": [], "grupo_total_general": ("cue",)},
+        )
+
+        self.assertEqual(ws["A5"].value, "RURAL")
+        self.assertEqual(ws["B5"].value, "ZR2")
+        self.assertEqual(ws["C5"].value, 100)
+        self.assertEqual(ws["D5"].value, 1067)
+
 
 class AniosDisponiblesCargaPofTests(SimpleTestCase):
     def test_validacion_cabecera_admite_anio_posterior_si_la_pof_existe(self):
@@ -468,9 +515,45 @@ class AniosDisponiblesCargaPofTests(SimpleTestCase):
                 "anio": 2099,
                 "nivel": "ADULTOS",
                 "tipo_operacion": "AFECTADO",
+                "zona_educativa_tipo": "RURAL",
+                "zona_educativa": "ZR1",
             })
 
             self.assertTrue(formulario.is_valid(), formulario.errors)
+
+    def test_formulario_guardado_reunida_exige_zona_educativa(self):
+        formulario = pof_forms.GuardarCargaPofForm({
+            "cabecera_tipo": "REUNIDA",
+            "anio": 2099,
+            "nivel": "ADULTOS",
+            "tipo_operacion": "AFECTADO",
+        })
+
+        self.assertFalse(formulario.is_valid())
+        self.assertIn("zona_educativa_tipo", formulario.errors)
+        self.assertIn("zona_educativa", formulario.errors)
+
+    def test_formulario_guardado_proyecto_especial_exige_zona_educativa(self):
+        formulario = pof_forms.GuardarCargaPofForm({
+            "cabecera_tipo": "PROYECTO_ESPECIAL",
+            "proyecto_especial_id": 1,
+            "tipo_operacion": "AFECTADO",
+        })
+
+        self.assertFalse(formulario.is_valid())
+        self.assertIn("zona_educativa_tipo", formulario.errors)
+        self.assertIn("zona_educativa", formulario.errors)
+
+    def test_formulario_guardado_proyecto_especial_admite_zona_educativa(self):
+        formulario = pof_forms.GuardarCargaPofForm({
+            "cabecera_tipo": "PROYECTO_ESPECIAL",
+            "proyecto_especial_id": 1,
+            "tipo_operacion": "AFECTADO",
+            "zona_educativa_tipo": "URBANA",
+            "zona_educativa": "ZU 1",
+        })
+
+        self.assertTrue(formulario.is_valid(), formulario.errors)
 
     def test_servicio_guardado_admite_anio_posterior_si_la_pof_existe(self):
         manager = MagicMock()
@@ -480,6 +563,8 @@ class AniosDisponiblesCargaPofTests(SimpleTestCase):
             "anio": 2099,
             "nivel": "ADULTOS",
             "tipo_operacion": "AFECTADO",
+            "zona_educativa_tipo": "RURAL",
+            "zona_educativa": "ZR1",
             "padron": {
                 "padron_cueanexo": "123456700",
                 "cuof_loc": "123",
@@ -498,7 +583,7 @@ class AniosDisponiblesCargaPofTests(SimpleTestCase):
         self.assertNotIn("anio", errores)
 
 
-class AsociacionesPofTests(SimpleTestCase):
+class AsociacionesPofTests(UnitTestCase):
     def test_regiones_elimina_nulos_espacios_y_duplicados(self):
         cursor = MagicMock()
         cursor.fetchall.return_value = [
@@ -858,7 +943,7 @@ class VisualizacionOrdenamientoTests(SimpleTestCase):
 
 class AlcanceVisualizacionPofTests(SimpleTestCase):
     def test_acceso_completo_y_consulta_general_no_reciben_filtro_de_datos(self):
-        for rol in ("Pof", "Administrador", "Director de Nivel Inicial"):
+        for rol in ("Pof", "Administrador", "Director General", "Subsecretario", "Gestor"):
             with self.subTest(rol=rol):
                 queryset = Mock()
                 with patch.object(
@@ -961,3 +1046,1564 @@ class AlcanceVisualizacionPofTests(SimpleTestCase):
             )
 
         self.assertIs(resultado, queryset.none.return_value)
+
+class ZonaEducativaDetalleTests(SimpleTestCase):
+    def test_grupo_operativo_expone_zona_y_localizacion(self):
+        filas = [{
+            "cueanexo": "123456700",
+            "cuof": "CUOF-1",
+            "cui": "CUI-1",
+            "localizacion_id": 77,
+            "zona_educativa_tipo": "RURAL",
+            "zona_educativa": "ZR2",
+            "puntos_zona_educativa": 1067,
+            "nombre": "Escuela de prueba",
+            "oferta": "Común",
+            "ceic": "1",
+            "cargo": "Cargo de prueba",
+            "cantidad": 1,
+            "unidad_cantidad": "CARGO",
+            "puntos": Decimal("100"),
+            "total": Decimal("100"),
+            "estado_pof_codigo": "AFECTADO",
+            "estado_pof": "Afectado",
+            "observacion_cargo": "",
+            "cargo_ids": [1],
+        }]
+
+        grupos = construir_grupos_operativos_detalle(
+            filas_normalizadas=filas,
+            detalle_politicas=obtener_politicas_detalle_reunida(),
+        )
+
+        anexo = grupos[0]["anexos"][0]
+        self.assertEqual(anexo["localizacion_id"], 77)
+        self.assertEqual(anexo["zona_educativa_tipo"], "RURAL")
+        self.assertEqual(anexo["zona_educativa"], "ZR2")
+        self.assertEqual(anexo["puntos_zona_educativa"], 1067)
+
+
+class ZonaEducativaVisualizacionTests(SimpleTestCase):
+    def test_columnas_zona_estan_disponibles_y_no_se_repitien_por_identidad(self):
+        columnas = {
+            columna["id"]
+            for columna in visualizacion_service.VISUALIZACION_CARGOS_COLUMNAS
+        }
+
+        self.assertIn("zona_educativa", columnas)
+        self.assertIn("puntos_zona_educativa", columnas)
+        self.assertEqual(
+            visualizacion_service.SNAPSHOT_COLUMNAS["zona_educativa"],
+            "zona_educativa",
+        )
+        self.assertEqual(
+            visualizacion_service.SNAPSHOT_COLUMNAS["puntos_zona_educativa"],
+            "puntos_zona_educativa",
+        )
+        self.assertIn(
+            "zona_educativa",
+            visualizacion_service.COLUMNAS_NO_REPETIR_POR_LOCALIZACION,
+        )
+        self.assertIn(
+            "puntos_zona_educativa",
+            visualizacion_service.COLUMNAS_NO_REPETIR_POR_LOCALIZACION,
+        )
+
+    def test_conflicto_zona_no_muestra_un_valor_arbitrario(self):
+        clave_identidad = (2026, "CUEANEXO", "123456700")
+        fila_raw = {
+            "id": 1,
+            "estado_pof_codigo": "AFECTADO",
+            "_clave_localizacion_grupo": "CUEANEXO:123456700",
+            "_clave_identidad_zona": clave_identidad,
+            "_clave_total_general": "CUEANEXO:123456700",
+            "_cueanexo_visual": "123456700",
+            "zona_educativa": "ZR1",
+            "puntos_zona_educativa": 713,
+        }
+        columnas = [
+            {"id": "zona_educativa", "visible": True},
+            {"id": "puntos_zona_educativa", "visible": True},
+        ]
+
+        with patch.object(
+            visualizacion_service,
+            "_serializar_cargo",
+            return_value=fila_raw,
+        ):
+            filas = visualizacion_service._armar_filas_tabla(
+                [SimpleNamespace()],
+                columnas,
+                {},
+                estados_zona_identidades={
+                    clave_identidad: {
+                        "conflicto": True,
+                        "asignacion": None,
+                    }
+                },
+            )
+
+        valores = {
+            celda["id"]: celda["valor"]
+            for celda in filas[0]["celdas"]
+        }
+        self.assertEqual(valores["zona_educativa"], "CONFLICTO")
+        self.assertEqual(valores["puntos_zona_educativa"], "CONFLICTO")
+
+
+class ZonaEducativaExportacionTests(SimpleTestCase):
+    def test_todos_los_niveles_exponen_zona_educativa_y_puntos(self):
+        for nivel in exportacion_columnas_service.COLUMNAS_REUNIDA_POR_NIVEL:
+            columnas = exportacion_columnas_service.obtener_columnas_config_nivel(nivel)
+            sources = [columna["source"] for columna in columnas]
+
+            self.assertIn("zona_educativa", sources, nivel)
+            self.assertIn("puntos_zona_educativa", sources, nivel)
+
+            zona = next(
+                columna
+                for columna in columnas
+                if columna["source"] == "zona_educativa"
+            )
+            puntos = next(
+                columna
+                for columna in columnas
+                if columna["source"] == "puntos_zona_educativa"
+            )
+            self.assertEqual(
+                zona["repetir"],
+                exportacion_columnas_service.REPETIR_POR_CUEANEXO,
+            )
+            self.assertEqual(
+                puntos["repetir"],
+                exportacion_columnas_service.REPETIR_POR_CUEANEXO,
+            )
+
+    def test_proyecto_especial_explicita_zona_educativa_y_puntos(self):
+        sources = [
+            columna["source"]
+            for columna in exportacion_service.COLUMNAS_EXPORTACION_PROYECTO_ESPECIAL
+        ]
+
+        self.assertIn("zona_educativa", sources)
+        self.assertIn("puntos_zona_educativa", sources)
+        self.assertIn(
+            "zona_educativa",
+            exportacion_service.FUENTES_NO_REPETIR_PROYECTO_ESPECIAL,
+        )
+        self.assertIn(
+            "puntos_zona_educativa",
+            exportacion_service.FUENTES_NO_REPETIR_PROYECTO_ESPECIAL,
+        )
+
+        columnas_zona = [
+            columna
+            for columna in exportacion_service.COLUMNAS_EXPORTACION_PROYECTO_ESPECIAL
+            if columna["source"] in {
+                "zona_educativa",
+                "puntos_zona_educativa",
+            }
+        ]
+        proyectadas = exportacion_service._proyectar_filas_exportacion_proyecto(
+            [
+                {
+                    "cueanexo": "123456700",
+                    "cuof": "CUOF-1",
+                    "zona_educativa": "ZR2",
+                    "puntos_zona_educativa": 1067,
+                },
+                {
+                    "cueanexo": "123456700",
+                    "cuof": "CUOF-1",
+                    "zona_educativa": "ZR2",
+                    "puntos_zona_educativa": 1067,
+                },
+            ],
+            columnas_zona,
+        )
+        self.assertEqual(proyectadas, [["ZR2", 1067], ["", ""]])
+
+    def test_mapeo_exportacion_no_confunde_ambito_puntos_cargo_y_zona(self):
+        snapshot = SimpleNamespace(
+            region="",
+            numero_establecimiento="1",
+            nombre_establecimiento="Escuela",
+            oferta="Común",
+            categoria="",
+            jornada="",
+            acronimo="",
+            ambito="RURAL",
+            ubicacion="",
+            localidad="",
+            departamento="",
+            ubicacion_localidad_departamento="",
+            zona_educativa_tipo="RURAL",
+            zona_educativa="ZR2",
+            puntos_zona_educativa=1067,
+        )
+        localizacion = SimpleNamespace(
+            reunida=SimpleNamespace(anio=2026),
+            proyecto_especial=None,
+            cueanexo="123456700",
+            cue_base="1234567",
+            anexo_localizacion="00",
+            cui="CUI-1",
+            cuof="CUOF-1",
+            snapshots_vigentes=[snapshot],
+            id=77,
+        )
+        cargo = SimpleNamespace(
+            localizacion=localizacion,
+            localizacion_id=77,
+            ofertas_seleccionadas=[],
+            oferta="",
+            cantidad=1,
+            unidad_cantidad=models.CargoPof.UnidadCantidad.CARGO,
+            puntos_asignados=Decimal("100"),
+            total=Decimal("100"),
+            ceic=1,
+            cargo="Cargo",
+            id=9,
+            estado_pof=models.CargoPof.EstadoPof.AFECTADO,
+            observacion="",
+            get_unidad_cantidad_display=lambda: "Cargo",
+            get_estado_pof_display=lambda: "Afectado",
+        )
+
+        fila = exportacion_rows_service.construir_datos_normalizados_cargo(cargo)
+
+        self.assertEqual(fila["zona"], "RURAL")
+        self.assertEqual(fila["puntos"], Decimal("100"))
+        self.assertEqual(fila["zona_educativa"], "ZR2")
+        self.assertEqual(fila["puntos_zona_educativa"], 1067)
+
+class ZonaEducativaGestionCargoTests(SimpleTestCase):
+    def test_detalle_cargo_expone_localizacion_y_zona_para_edicion_directa(self):
+        snapshot = SimpleNamespace(
+            nombre_establecimiento="Escuela",
+            numero_establecimiento="1",
+            zona_educativa_tipo="RURAL",
+            zona_educativa="ZR2",
+            puntos_zona_educativa=1067,
+        )
+        reunida = SimpleNamespace(
+            anio=2026,
+            get_nivel_display=lambda: "Primario",
+        )
+        localizacion = SimpleNamespace(
+            id=77,
+            cueanexo="123456700",
+            cuof="CUOF-1",
+            reunida=reunida,
+            proyecto_especial=None,
+        )
+        cargo = SimpleNamespace(
+            id=9,
+            localizacion=localizacion,
+            ceic=1,
+            cargo="Cargo",
+            cantidad=1,
+            unidad_cantidad=models.CargoPof.UnidadCantidad.CARGO,
+            puntos_asignados=Decimal("100"),
+            total=Decimal("100"),
+            estado_pof=models.CargoPof.EstadoPof.AFECTADO,
+            observacion="",
+            actualizado_en=None,
+            get_unidad_cantidad_display=lambda: "Cargo",
+            get_estado_pof_display=lambda: "Afectado",
+        )
+
+        with patch.object(
+            guardado_pof_service,
+            "_obtener_snapshot_vigente",
+            return_value=snapshot,
+        ), patch.object(
+            guardado_pof_service,
+            "_catalogo_ofertas_cargo",
+            return_value=([], [], ""),
+        ), patch.object(
+            guardado_pof_service,
+            "_cargo_requiere_ofertas",
+            return_value=False,
+        ):
+            detalle = guardado_pof_service._serializar_cargo_detalle(cargo)
+
+        self.assertEqual(detalle["localizacion"]["id"], 77)
+        self.assertEqual(detalle["localizacion"]["tipo_identidad"], "CUEANEXO")
+        self.assertTrue(detalle["zona_educativa"]["asignada"])
+        self.assertEqual(detalle["zona_educativa"]["tipo"], "RURAL")
+        self.assertEqual(detalle["zona_educativa"]["zona"], "ZR2")
+        self.assertEqual(detalle["zona_educativa"]["puntos"], 1067)
+
+    def test_detalle_cargo_proyecto_con_cueanexo_expone_identidad_cuof(self):
+        proyecto = SimpleNamespace(
+            anio=2026,
+            nombre="Proyecto Especial",
+        )
+        localizacion = SimpleNamespace(
+            id=88,
+            cueanexo="220000500",
+            cuof="PE-100",
+            reunida=None,
+            proyecto_especial=proyecto,
+        )
+        cargo = SimpleNamespace(
+            id=10,
+            localizacion=localizacion,
+            ceic=2,
+            cargo="Cargo Proyecto",
+            cantidad=1,
+            unidad_cantidad=models.CargoPof.UnidadCantidad.CARGO,
+            puntos_asignados=Decimal("100"),
+            total=Decimal("100"),
+            estado_pof=models.CargoPof.EstadoPof.AFECTADO,
+            observacion="",
+            actualizado_en=None,
+            get_unidad_cantidad_display=lambda: "Cargo",
+            get_estado_pof_display=lambda: "Afectado",
+        )
+
+        with patch.object(
+            guardado_pof_service,
+            "_obtener_snapshot_vigente",
+            return_value=None,
+        ), patch.object(
+            guardado_pof_service,
+            "_catalogo_ofertas_cargo",
+            return_value=([], [], ""),
+        ), patch.object(
+            guardado_pof_service,
+            "_cargo_requiere_ofertas",
+            return_value=False,
+        ):
+            detalle = guardado_pof_service._serializar_cargo_detalle(cargo)
+
+        self.assertEqual(detalle["localizacion"]["tipo_identidad"], "CUOF")
+        self.assertEqual(detalle["localizacion"]["cueanexo"], "220000500")
+        self.assertEqual(detalle["localizacion"]["cuof"], "PE-100")
+
+    def test_cambio_zona_permite_quitar_asignacion_con_tipo_y_zona_vacios(self):
+        self.assertIsNone(
+            zona_educativa_service._resolver_asignacion_cambio_zona("", "")
+        )
+
+    def test_cambio_zona_rechaza_estado_parcial(self):
+        with self.assertRaises(ValidationError):
+            zona_educativa_service._resolver_asignacion_cambio_zona(
+                "RURAL",
+                "",
+            )
+
+    def test_cambio_zona_con_seleccion_resuelve_catalogo(self):
+        asignacion = {
+            "tipo": "RURAL",
+            "zona": "ZR2",
+            "puntos": 1067,
+        }
+        with patch.object(
+            zona_educativa_service,
+            "resolver_zona_educativa_catalogo",
+            return_value=asignacion,
+        ) as resolver:
+            resultado = zona_educativa_service._resolver_asignacion_cambio_zona(
+                "RURAL",
+                "ZR2",
+            )
+
+        self.assertEqual(resultado, asignacion)
+        resolver.assert_called_once_with("RURAL", "ZR2")
+
+
+class GestionCargoHistorialContextualTests(SimpleTestCase):
+    def test_historial_localizacion_reunida_agrupa_por_cueanexo_en_misma_cabecera(self):
+        reunida = SimpleNamespace(
+            id=14,
+            anio=2025,
+            get_nivel_display=lambda: "Adultos",
+        )
+        localizacion = SimpleNamespace(
+            id=77,
+            reunida_id=14,
+            proyecto_especial_id=None,
+            reunida=reunida,
+            proyecto_especial=None,
+            cueanexo="220000500",
+            cuof="121200",
+        )
+        movimientos_base = MagicMock()
+        movimientos_cabecera = MagicMock()
+        movimientos_base.filter.return_value = movimientos_cabecera
+        movimientos_cabecera.filter.return_value = []
+
+        with patch.object(
+            historial_service.LocalizacionPof.objects,
+            "select_related",
+        ) as select_related, patch.object(
+            historial_service,
+            "_obtener_movimientos_queryset",
+            return_value=movimientos_base,
+        ):
+            select_related.return_value.get.return_value = localizacion
+            resultado = historial_service.obtener_historial_localizacion_cargos_pof(77)
+
+        movimientos_base.filter.assert_called_once_with(
+            cargo__localizacion__reunida_id=14
+        )
+        movimientos_cabecera.filter.assert_called_once_with(
+            cargo__localizacion__cueanexo="220000500"
+        )
+        self.assertEqual(resultado["localizacion"]["tipo_identidad"], "CUEANEXO")
+        self.assertEqual(resultado["localizacion"]["identidad"], "220000500")
+        self.assertEqual(resultado["movimientos"], [])
+
+    def test_historial_localizacion_proyecto_con_cueanexo_usa_cuof(self):
+        proyecto = SimpleNamespace(id=31, anio=2026, nombre="Proyecto Especial")
+        localizacion = SimpleNamespace(
+            id=88,
+            reunida_id=None,
+            proyecto_especial_id=31,
+            reunida=None,
+            proyecto_especial=proyecto,
+            cueanexo="220000500",
+            cuof="PE-100",
+        )
+        movimientos_base = MagicMock()
+        movimientos_cabecera = MagicMock()
+        movimientos_base.filter.return_value = movimientos_cabecera
+        movimientos_cabecera.filter.return_value = []
+
+        with patch.object(
+            historial_service.LocalizacionPof.objects,
+            "select_related",
+        ) as select_related, patch.object(
+            historial_service,
+            "_obtener_movimientos_queryset",
+            return_value=movimientos_base,
+        ):
+            select_related.return_value.get.return_value = localizacion
+            resultado = historial_service.obtener_historial_localizacion_cargos_pof(88)
+
+        movimientos_base.filter.assert_called_once_with(
+            cargo__localizacion__proyecto_especial_id=31
+        )
+        movimientos_cabecera.filter.assert_called_once_with(
+            cargo__localizacion__cuof__iexact="PE-100"
+        )
+        self.assertEqual(resultado["localizacion"]["tipo_identidad"], "CUOF")
+        self.assertEqual(resultado["localizacion"]["identidad"], "PE-100")
+        self.assertEqual(resultado["movimientos"], [])
+
+
+class ExportacionReunidaPreviewGestionCargoTests(SimpleTestCase):
+    def test_preview_conserva_cargo_id_para_accion_directa(self):
+        fila = exportacion_service._construir_fila_preview(
+            ["Cargo de prueba"],
+            [{"key": "cargo", "source": "cargo"}],
+            ["cargo"],
+            fila_normalizada={
+                "cargo_ids": [321],
+                "estado_pof_codigo": models.CargoPof.EstadoPof.AFECTADO,
+            },
+        )
+
+        self.assertEqual(fila["cargo_ids"], [321])
+
+
+class ExportacionAfectarAtajoTests(SimpleTestCase):
+    def test_reunida_muestra_afectar_una_vez_por_cueanexo(self):
+        secciones = [{
+            "filas": [["A"], ["B"], ["C"], ["D"]],
+            "indices_filas": [0, 1, 2, 3],
+        }]
+        filas_normalizadas = [
+            {"cueanexo": "220000500", "cuof": "CUOF-A"},
+            {"cueanexo": "220000500", "cuof": "CUOF-B"},
+            {"cueanexo": "220000501", "cuof": "CUOF-C"},
+            {"cueanexo": "220000500", "cuof": "CUOF-D"},
+        ]
+
+        resultado = exportacion_service._construir_secciones_preview(
+            secciones,
+            [{"key": "cargo", "source": "cargo"}],
+            ["cargo"],
+            filas_normalizadas=filas_normalizadas,
+        )
+
+        filas = resultado[0]["filas"]
+        self.assertEqual(
+            [fila["mostrar_afectar"] for fila in filas],
+            [True, False, True, False],
+        )
+        self.assertEqual(filas[0]["cueanexo"], "220000500")
+
+    def test_proyecto_especial_muestra_afectar_una_vez_por_cuof(self):
+        secciones = [{
+            "filas": [["A"], ["B"], ["C"]],
+            "indices_filas": [0, 1, 2],
+        }]
+        filas_normalizadas = [
+            {"cueanexo": "", "cuof": "PE-100"},
+            {"cueanexo": "", "cuof": "PE-100"},
+            {"cueanexo": "", "cuof": "PE-200"},
+        ]
+
+        resultado = exportacion_service._construir_secciones_preview(
+            secciones,
+            [{"key": "cargo", "source": "cargo"}],
+            ["cargo"],
+            filas_normalizadas=filas_normalizadas,
+            identidad_afectar="CUOF",
+        )
+
+        filas = resultado[0]["filas"]
+        self.assertEqual(
+            [fila["mostrar_afectar"] for fila in filas],
+            [True, False, True],
+        )
+        self.assertEqual(filas[0]["cuof"], "PE-100")
+
+
+class CargaDesdeExportarTests(SimpleTestCase):
+    def setUp(self):
+        self.request_factory = RequestFactory()
+
+    def test_reunida_precarga_cueanexo_solo_desde_exportar(self):
+        request = self.request_factory.get(
+            "/reunida/cargar/",
+            {
+                "anio": "2025",
+                "nivel": "ADULTOS",
+                "cueanexo": "220000500",
+                "origen": "exportar",
+            },
+        )
+
+        with (
+            patch.object(
+                carga_service,
+                "obtener_anios_reunidas_disponibles",
+                return_value=["2025"],
+            ),
+            patch.object(
+                carga_service,
+                "obtener_anio_activo",
+                return_value="2025",
+            ),
+            patch.object(
+                carga_service,
+                "obtener_nivel_activo",
+                return_value="ADULTOS",
+            ),
+            patch.object(
+                carga_service,
+                "obtener_lista_niveles",
+                return_value=[],
+            ),
+        ):
+            contexto = carga_service.construir_contexto_carga(request)
+
+        self.assertEqual(contexto["cueanexo_inicial"], "220000500")
+
+        request_sin_origen = self.request_factory.get(
+            "/reunida/cargar/",
+            {
+                "anio": "2025",
+                "nivel": "ADULTOS",
+                "cueanexo": "220000500",
+            },
+        )
+
+        with (
+            patch.object(
+                carga_service,
+                "obtener_anios_reunidas_disponibles",
+                return_value=["2025"],
+            ),
+            patch.object(
+                carga_service,
+                "obtener_anio_activo",
+                return_value="2025",
+            ),
+            patch.object(
+                carga_service,
+                "obtener_nivel_activo",
+                return_value="ADULTOS",
+            ),
+            patch.object(
+                carga_service,
+                "obtener_lista_niveles",
+                return_value=[],
+            ),
+        ):
+            contexto_sin_origen = carga_service.construir_contexto_carga(
+                request_sin_origen
+            )
+
+        self.assertEqual(contexto_sin_origen["cueanexo_inicial"], "")
+
+    def test_reunida_no_reubica_atajo_a_otro_anio_si_la_cabecera_ya_no_existe(self):
+        request = self.request_factory.get(
+            "/reunida/cargar/",
+            {
+                "anio": "2025",
+                "nivel": "ADULTOS",
+                "cueanexo": "220000500",
+                "origen": "exportar",
+            },
+        )
+
+        with (
+            patch.object(
+                carga_service,
+                "obtener_anios_reunidas_disponibles",
+                return_value=["2026"],
+            ),
+            patch.object(
+                carga_service,
+                "obtener_anio_activo",
+                return_value="2025",
+            ),
+            patch.object(
+                carga_service,
+                "obtener_nivel_activo",
+                return_value="ADULTOS",
+            ),
+            patch.object(
+                carga_service,
+                "obtener_lista_niveles",
+                return_value=[],
+            ),
+        ):
+            contexto = carga_service.construir_contexto_carga(request)
+
+        self.assertEqual(contexto["anio_activo"], "")
+        self.assertEqual(contexto["nivel_activo"], "")
+        self.assertEqual(contexto["cueanexo_inicial"], "")
+
+    def test_proyecto_especial_precarga_cuof_solo_desde_exportar(self):
+        request = self.request_factory.get(
+            "/proyectos-especiales/cargar/",
+            {
+                "proyecto_especial_id": "12",
+                "cuof": "110400",
+                "origen": "exportar",
+            },
+        )
+        proyecto = SimpleNamespace(id=12, resolucion="123/26")
+        queryset = MagicMock()
+        queryset.order_by.return_value = []
+
+        with (
+            patch.object(
+                views.ProyectosEspecialesPof.objects,
+                "all",
+                return_value=queryset,
+            ),
+            patch.object(
+                views.ProyectosEspecialesPof.objects,
+                "get",
+                return_value=proyecto,
+            ),
+            patch.object(views, "render", return_value=Mock()) as render_mock,
+        ):
+            unwrap(views.cargar_cargos_proyecto_especial)(request)
+
+        contexto = render_mock.call_args.args[2]
+        self.assertEqual(contexto["cuof_inicial"], "110400")
+        self.assertIs(contexto["proyecto_especial"], proyecto)
+
+
+class GestionCargoUnificadaTests(UnitTestCase):
+    @staticmethod
+    def _atomic_context():
+        contexto = MagicMock()
+        contexto.__enter__.return_value = None
+        contexto.__exit__.return_value = False
+        return contexto
+
+    def test_guardado_solo_zona_no_revalida_datos_del_cargo(self):
+        detalle = {
+            "id": 25,
+            "zona_educativa": {
+                "asignada": True,
+                "tipo": "URBANA",
+                "zona": "ZU 2",
+                "puntos": 432,
+            },
+        }
+        resultado_zona = {
+            "ok": True,
+            "mensaje": "Zona Educativa actualizada correctamente.",
+            "zona_educativa": detalle["zona_educativa"],
+        }
+        only_result = MagicMock()
+        only_result.get.return_value = SimpleNamespace(localizacion_id=77)
+        locked_qs = MagicMock()
+        locked_qs.only.return_value = only_result
+
+        with (
+            patch.object(
+                guardado_pof_service.transaction,
+                "atomic",
+                return_value=self._atomic_context(),
+            ),
+            patch.object(
+                guardado_pof_service.CargoPof.objects,
+                "select_for_update",
+                return_value=locked_qs,
+            ),
+            patch.object(
+                guardado_pof_service,
+                "modificar_cargo_pof",
+            ) as modificar,
+            patch.object(
+                guardado_pof_service,
+                "cambiar_zona_educativa_localizacion",
+                return_value=resultado_zona,
+            ) as cambiar_zona,
+            patch.object(
+                guardado_pof_service,
+                "obtener_detalle_cargo_pof",
+                return_value=detalle,
+            ),
+        ):
+            resultado = guardado_pof_service.guardar_gestion_cargo_pof(
+                25,
+                {
+                    "zona_educativa": {
+                        "tipo": "URBANA",
+                        "zona": "ZU 2",
+                    }
+                },
+            )
+
+        self.assertTrue(resultado["ok"])
+        modificar.assert_not_called()
+        cambiar_zona.assert_called_once_with(
+            77,
+            "URBANA",
+            "ZU 2",
+            usuario=None,
+        )
+        self.assertEqual(resultado["cargo"], detalle)
+
+    def test_guardado_con_cargo_y_zona_reutiliza_ambas_operaciones(self):
+        detalle = {
+            "id": 31,
+            "zona_educativa": {
+                "asignada": True,
+                "tipo": "RURAL",
+                "zona": "ZR2",
+                "puntos": 1067,
+            },
+        }
+        resultado_cargo = {
+            "ok": True,
+            "mensaje": "Cargo modificado correctamente.",
+            "lote_carga_id": 900,
+        }
+        resultado_zona = {
+            "ok": True,
+            "mensaje": "Zona Educativa actualizada correctamente.",
+            "zona_educativa": detalle["zona_educativa"],
+        }
+        only_result = MagicMock()
+        only_result.get.return_value = SimpleNamespace(localizacion_id=88)
+        locked_qs = MagicMock()
+        locked_qs.only.return_value = only_result
+
+        with (
+            patch.object(
+                guardado_pof_service.transaction,
+                "atomic",
+                return_value=self._atomic_context(),
+            ),
+            patch.object(
+                guardado_pof_service.CargoPof.objects,
+                "select_for_update",
+                return_value=locked_qs,
+            ),
+            patch.object(
+                guardado_pof_service,
+                "modificar_cargo_pof",
+                return_value=resultado_cargo,
+            ) as modificar,
+            patch.object(
+                guardado_pof_service,
+                "cambiar_zona_educativa_localizacion",
+                return_value=resultado_zona,
+            ) as cambiar_zona,
+            patch.object(
+                guardado_pof_service,
+                "obtener_detalle_cargo_pof",
+                return_value=detalle,
+            ),
+        ):
+            payload = {
+                "cantidad": "2",
+                "unidad_cantidad": "CARGO",
+                "estado_pof": "AFECTADO",
+                "observacion": "",
+                "zona_educativa": {
+                    "tipo": "RURAL",
+                    "zona": "ZR2",
+                },
+            }
+            resultado = guardado_pof_service.guardar_gestion_cargo_pof(
+                31,
+                payload,
+            )
+
+        self.assertTrue(resultado["ok"])
+        self.assertEqual(
+            resultado["mensaje"],
+            "Cargo y Zona Educativa actualizados correctamente.",
+        )
+        modificar.assert_called_once()
+        cambiar_zona.assert_called_once_with(
+            88,
+            "RURAL",
+            "ZR2",
+            usuario=None,
+        )
+        self.assertEqual(resultado["lote_carga_id"], 900)
+
+
+class PaginacionIdentidadReunidaTests(SimpleTestCase):
+    def test_detalle_pagina_por_cueanexo_completo(self):
+        cargos_queryset = MagicMock()
+        orden_inicial = MagicMock()
+        valores = MagicMock()
+        distintos = MagicMock()
+        cueanexos = [
+            "111111100",
+            "111111101",
+            "111111102",
+            "111111103",
+            "111111104",
+            "111111105",
+        ]
+
+        cargos_queryset.order_by.return_value = orden_inicial
+        orden_inicial.values_list.return_value = valores
+        valores.distinct.return_value = distintos
+        distintos.order_by.return_value = cueanexos
+
+        unidades, metadata = reunidas_service._paginar_cueanexos_coincidentes_detalle(
+            cargos_queryset,
+            1,
+        )
+
+        orden_inicial.values_list.assert_called_once_with(
+            "localizacion__cueanexo",
+            flat=True,
+        )
+        self.assertEqual(unidades, cueanexos[:5])
+        self.assertEqual(metadata["total"], 6)
+        self.assertEqual(metadata["showing_start"], 1)
+        self.assertEqual(metadata["showing_end"], 5)
+
+    def test_exportar_preview_informa_total_cueanexo(self):
+        request = RequestFactory().get("/exportar/", {"anio": "2026"})
+        page_obj = Paginator(
+            [
+                "CUEANEXO:111111100",
+                "CUEANEXO:111111101",
+                "CUEANEXO:111111102",
+                "CUEANEXO:111111103",
+                "CUEANEXO:111111104",
+                "CUEANEXO:111111105",
+            ],
+            exportacion_service.CUEANEXOS_POR_PAGINA_EXPORTACION,
+        ).get_page(1)
+
+        metadata = exportacion_service._construir_paginacion_preview_reunida(
+            page_obj,
+            request,
+        )
+
+        self.assertEqual(metadata["total_cueanexo"], 6)
+        self.assertEqual(metadata["primer_cueanexo"], 1)
+        self.assertEqual(metadata["ultimo_cueanexo"], 5)
+        self.assertEqual(metadata["cueanexos_por_pagina"], 5)
+
+    def test_visualizador_expone_identidad_funcional_y_proyecto_cuof(self):
+        page_obj = Paginator(
+            ["CUEANEXO:1", "CUEANEXO:2", "CUEANEXO:3"],
+            visualizacion_service.UNIDADES_POR_PAGINA_VISUALIZACION,
+        ).get_page(1)
+
+        general = visualizacion_service._construir_metadatos_paginacion(
+            page_obj,
+            12,
+            es_proyecto_especial=False,
+        )
+        proyecto = visualizacion_service._construir_metadatos_paginacion(
+            page_obj,
+            12,
+            es_proyecto_especial=True,
+        )
+
+        self.assertEqual(general["total_unidades"], 3)
+        self.assertEqual(general["unidad_label"], "CUEANEXO / CUOF")
+        self.assertEqual(proyecto["unidad_label"], "CUOF")
+
+
+class HistorialResumenCompactoTests(SimpleTestCase):
+    def test_alta_muestra_valores_iniciales_sin_flechas(self):
+        diff = [
+            {"clave": "cantidad", "anterior": "—", "nuevo": "1", "tipo": "agregado"},
+            {"clave": "unidad_cantidad", "anterior": "—", "nuevo": "CARGO", "tipo": "agregado"},
+            {"clave": "puntos_asignados", "anterior": "—", "nuevo": "2097.00", "tipo": "agregado"},
+            {"clave": "total", "anterior": "—", "nuevo": "2097.00", "tipo": "agregado"},
+        ]
+
+        partes = historial_service._partes_diff_resumen_compacto(diff, "alta")
+
+        self.assertEqual(
+            partes,
+            [
+                "Cantidad: 1",
+                "Unidad: CARGO",
+                "Puntos: 2097.00",
+                "Total: 2097.00",
+            ],
+        )
+        self.assertTrue(all(historial_service.FLECHA_CAMBIO not in parte for parte in partes))
+
+    def test_modificacion_conserva_flechas_entre_valores(self):
+        diff = [
+            {"clave": "cantidad", "anterior": "1", "nuevo": "2", "tipo": "modificado"},
+            {"clave": "total", "anterior": "2097.00", "nuevo": "4194.00", "tipo": "modificado"},
+        ]
+
+        partes = historial_service._partes_diff_resumen_compacto(diff, "modificacion")
+
+        self.assertEqual(
+            partes,
+            [
+                f"Cantidad 1 {historial_service.FLECHA_CAMBIO} 2",
+                f"Total 2097.00 {historial_service.FLECHA_CAMBIO} 4194.00",
+            ],
+        )
+
+    def test_historial_contextual_expone_resumen_visual_estructurado(self):
+        movimiento = SimpleNamespace(
+            id=10,
+            fecha="2026-09-22",
+            tipo_movimiento="AFECTADO",
+            tipo_movimiento_display="Afectado",
+            tipo_movimiento_clase="afectado",
+            detalle_resumen="Se añadió el cargo CEIC 80.",
+            detalle_resumen_visual={
+                "accion": "Se añadió el cargo CEIC 80.",
+                "partes": ["Cantidad: 1", "Unidad: CARGO"],
+            },
+            usuario_movimiento={"nombre": "Usuario"},
+            observacion="",
+            cargo=SimpleNamespace(id=5, ceic=80, cargo="MAESTRO"),
+        )
+
+        with (
+            patch.object(
+                historial_service,
+                "_preparar_movimiento_para_listado",
+            ),
+            patch.object(
+                historial_service,
+                "_normalizar_observacion_real",
+                return_value="",
+            ),
+            patch.object(
+                historial_service,
+                "_construir_diff_movimiento",
+                return_value=[],
+            ),
+        ):
+            resultado = historial_service._serializar_movimiento_historial_contextual(
+                movimiento
+            )
+
+        self.assertEqual(resultado["detalle_visual"], movimiento.detalle_resumen_visual)
+        self.assertEqual(resultado["detalle"], movimiento.detalle_resumen)
+
+
+class HistorialObservacionTimelineTests(SimpleTestCase):
+    def test_evento_inicial_usa_observacion_del_snapshot(self):
+        movimiento = SimpleNamespace(
+            id=1,
+            fecha="2026-03-10 09:42",
+            tipo_movimiento=models.MovimientoCargoPof.TipoMovimiento.AFECTADO,
+            valores_nuevos={"observacion": "  Cargo pendiente de revisión  "},
+            usuario=SimpleNamespace(),
+        )
+
+        with patch.object(
+            historial_service,
+            "_serializar_usuario_movimiento",
+            return_value={"nombre": "Juan Pérez"},
+        ):
+            evento = historial_service._serializar_evento_observacion_inicial(
+                movimiento
+            )
+
+        self.assertEqual(
+            historial_service._observacion_inicial_movimiento(movimiento),
+            "Cargo pendiente de revisión",
+        )
+        self.assertEqual(evento["tipo_evento"], "inicial")
+        self.assertEqual(evento["label"], "Observación inicial")
+        self.assertEqual(evento["valor_inicial"], "Cargo pendiente de revisión")
+        self.assertEqual(evento["resumen"], "Cargo pendiente de revisión")
+
+    def test_evento_inicial_vacio_no_genera_valor_real(self):
+        movimiento = SimpleNamespace(
+            tipo_movimiento=models.MovimientoCargoPof.TipoMovimiento.AFECTADO,
+            valores_nuevos={"observacion": "   "},
+        )
+
+        self.assertEqual(
+            historial_service._observacion_inicial_movimiento(movimiento),
+            "",
+        )
+
+    def test_modificacion_expone_antes_despues_y_resumen(self):
+        movimiento = SimpleNamespace(
+            id=2,
+            fecha="2026-04-18 11:15",
+            tipo_movimiento=models.MovimientoCargoPof.TipoMovimiento.MODIFICACION,
+            valores_anteriores={"observacion": "Cargo pendiente de revisión"},
+            valores_nuevos={"observacion": "Documentación presentada"},
+            usuario=SimpleNamespace(),
+        )
+
+        with patch.object(
+            historial_service,
+            "_serializar_usuario_movimiento",
+            return_value={"nombre": "María Gómez"},
+        ):
+            evento = historial_service._serializar_movimiento_observacion(
+                movimiento
+            )
+
+        self.assertEqual(evento["tipo_evento"], "modificacion")
+        self.assertEqual(evento["label"], "Observación modificada")
+        self.assertEqual(evento["observacion_anterior"], "Cargo pendiente de revisión")
+        self.assertEqual(evento["observacion_nueva"], "Documentación presentada")
+        self.assertEqual(evento["resumen"], "Documentación presentada")
+
+    def test_servicio_devuelve_timeline_descendente_con_inicial(self):
+        localizacion = SimpleNamespace(
+            reunida_id=14,
+            proyecto_especial_id=None,
+            cueanexo="220000500",
+            cuof="121200",
+        )
+        cargo = SimpleNamespace(
+            id=7,
+            ceic=80,
+            cargo="MAESTRO",
+            observacion="Documentación aprobada",
+            localizacion=localizacion,
+        )
+        inicial = SimpleNamespace(
+            id=10,
+            cargo_id=7,
+            fecha="2026-03-10 09:42",
+            tipo_movimiento=models.MovimientoCargoPof.TipoMovimiento.AFECTADO,
+            valores_anteriores={},
+            valores_nuevos={"observacion": "Cargo pendiente de revisión"},
+            usuario=SimpleNamespace(),
+        )
+        cambio_uno = SimpleNamespace(
+            id=11,
+            cargo_id=7,
+            fecha="2026-04-18 11:15",
+            tipo_movimiento=models.MovimientoCargoPof.TipoMovimiento.MODIFICACION,
+            valores_anteriores={"observacion": "Cargo pendiente de revisión"},
+            valores_nuevos={"observacion": "Documentación presentada"},
+            usuario=SimpleNamespace(),
+        )
+        cambio_dos = SimpleNamespace(
+            id=12,
+            cargo_id=7,
+            fecha="2026-06-02 08:31",
+            tipo_movimiento=models.MovimientoCargoPof.TipoMovimiento.MODIFICACION,
+            valores_anteriores={"observacion": "Documentación presentada"},
+            valores_nuevos={"observacion": "Documentación aprobada"},
+            usuario=SimpleNamespace(),
+        )
+
+        cargos_queryset = MagicMock()
+        cargos_queryset.filter.return_value.order_by.return_value = [cargo]
+        movimientos_queryset = MagicMock()
+        movimientos_queryset.filter.return_value.order_by.return_value = [
+            inicial,
+            cambio_uno,
+            cambio_dos,
+        ]
+
+        with (
+            patch.object(
+                historial_service.CargoPof.objects,
+                "select_related",
+                return_value=cargos_queryset,
+            ),
+            patch.object(
+                historial_service.MovimientoCargoPof.objects,
+                "select_related",
+                return_value=movimientos_queryset,
+            ),
+            patch.object(historial_service, "_validar_cargos_historial"),
+            patch.object(
+                historial_service,
+                "_serializar_usuario_movimiento",
+                return_value={"nombre": "Usuario"},
+            ),
+        ):
+            resultado = historial_service.obtener_historial_observacion_cargos_pof(
+                [7]
+            )
+
+        eventos = resultado["cargos"][0]["movimientos"]
+        self.assertEqual(
+            [evento["tipo_evento"] for evento in eventos],
+            ["modificacion", "modificacion", "inicial"],
+        )
+        self.assertEqual(eventos[0]["resumen"], "Documentación aprobada")
+        self.assertEqual(eventos[1]["resumen"], "Documentación presentada")
+        self.assertEqual(eventos[2]["valor_inicial"], "Cargo pendiente de revisión")
+        self.assertTrue(resultado["modificado"])
+
+
+class ExportacionFiltrosAvanzadosTests(SimpleTestCase):
+    def setUp(self):
+        self.request_factory = RequestFactory()
+
+    def test_filtro_avanzado_tiene_precedencia_sobre_busqueda_del_mismo_campo(self):
+        busquedas = {
+            "cargo": "Maestro",
+            "observacion": "Titular",
+        }
+        filtros = [
+            {
+                "campo": "cargo",
+                "operador": "2",
+                "valor": "Profesor",
+            }
+        ]
+
+        resultado = exportacion_service._obtener_busquedas_columnas_exportacion_efectivas(
+            busquedas,
+            filtros,
+        )
+
+        self.assertEqual(resultado, {"observacion": "Titular"})
+
+    def test_filtro_avanzado_tiene_precedencia_sobre_filtro_simple_proyecto(self):
+        filtros_simples = {
+            "cuof": "ABC",
+            "localidad": "Resistencia",
+            "cargo": "Maestro",
+        }
+        filtros_avanzados = [
+            {
+                "campo": "cargo",
+                "operador": "0",
+                "valor": "Profesor",
+            }
+        ]
+
+        resultado = exportacion_service._obtener_filtros_simples_proyecto_efectivos(
+            filtros_simples,
+            filtros_avanzados,
+        )
+
+        self.assertEqual(resultado["cargo"], "")
+        self.assertEqual(resultado["cuof"], "ABC")
+        self.assertEqual(resultado["localidad"], "Resistencia")
+
+    def test_excel_vista_reunida_conserva_busqueda_y_filtros_avanzados(self):
+        from urllib.parse import parse_qs
+
+        request = self.request_factory.get(
+            "/exportar/",
+            [
+                ("col_cargo", "Maestro"),
+                ("campo_filtro", "region"),
+                ("operador_filtro", "2"),
+                ("valor_filtro", "R.E. 1"),
+            ],
+        )
+
+        querystring = exportacion_service._armar_excel_querystring_reunida(
+            "2026",
+            "SECUNDARIA",
+            ["cueanexo", "cargo"],
+            request=request,
+            alcance="vista",
+        )
+        params = parse_qs(querystring)
+
+        self.assertEqual(params["col_cargo"], ["Maestro"])
+        self.assertEqual(params["campo_filtro"], ["region"])
+        self.assertEqual(params["operador_filtro"], ["2"])
+        self.assertEqual(params["valor_filtro"], ["R.E. 1"])
+        self.assertEqual(params["alcance"], ["vista"])
+
+    def test_excel_todos_elimina_filtros_en_reunida_y_proyecto(self):
+        from urllib.parse import parse_qs
+
+        request = self.request_factory.get(
+            "/exportar/",
+            [
+                ("col_cargo", "Maestro"),
+                ("cuof", "ABC"),
+                ("campo_filtro", "region"),
+                ("operador_filtro", "2"),
+                ("valor_filtro", "R.E. 1"),
+            ],
+        )
+
+        reunida = parse_qs(
+            exportacion_service._armar_excel_querystring_reunida(
+                "2026",
+                "SECUNDARIA",
+                ["cueanexo"],
+                request=request,
+                alcance="todos",
+            )
+        )
+        proyecto = parse_qs(
+            exportacion_service._armar_excel_querystring_proyecto(
+                15,
+                ["proyecto_especial_cuof"],
+                request=request,
+                alcance="todos",
+            )
+        )
+
+        for params in (reunida, proyecto):
+            self.assertNotIn("col_cargo", params)
+            self.assertNotIn("campo_filtro", params)
+            self.assertNotIn("operador_filtro", params)
+            self.assertNotIn("valor_filtro", params)
+            self.assertNotIn("cuof", params)
+            self.assertEqual(params["alcance"], ["todos"])
+
+    def test_exportar_incorpora_zona_educativa_sin_modificar_campos_de_detalle(self):
+        campos_exportar = [
+            campo["id"]
+            for campo in exportacion_service.FILTROS_AVANZADOS_EXPORTACION_CAMPOS
+        ]
+        campos_detalle = [
+            campo["id"]
+            for campo in reunidas_service.FILTROS_AVANZADOS_DETALLE_CAMPOS
+        ]
+
+        self.assertIn("zona_educativa", campos_exportar)
+        self.assertNotIn("zona_educativa", campos_detalle)
+        self.assertEqual(
+            campos_exportar.index("zona_educativa"),
+            campos_exportar.index("departamento") + 1,
+        )
+
+    def test_exportar_acepta_filtro_exact_zona_educativa(self):
+        request = self.request_factory.get(
+            "/exportar/",
+            [
+                ("campo_filtro", "zona_educativa"),
+                ("operador_filtro", "2"),
+                ("valor_filtro", "ZU 5 c/ ZUE 4"),
+            ],
+        )
+
+        filtros = exportacion_service._obtener_filtros_avanzados_exportacion(
+            request
+        )
+
+        self.assertEqual(
+            filtros,
+            [{
+                "indice": 0,
+                "campo": "zona_educativa",
+                "operador": "2",
+                "valor": "ZU 5 c/ ZUE 4",
+            }],
+        )
+
+    def test_exportar_filtra_zona_sobre_snapshot_vigente(self):
+        queryset = MagicMock()
+        queryset.filter.return_value = queryset
+        queryset.exclude.return_value = queryset
+        queryset.distinct.return_value = queryset
+
+        with patch.object(
+            exportacion_service,
+            "_aplicar_filtros_avanzados_detalle_reunida",
+            return_value=queryset,
+        ) as aplicar_compartidos:
+            resultado = exportacion_service._aplicar_filtros_avanzados_exportacion(
+                queryset,
+                [{
+                    "campo": "zona_educativa",
+                    "operador": "2",
+                    "valor": "ZR9",
+                }],
+            )
+
+        aplicar_compartidos.assert_called_once_with(queryset, [])
+        filtro_q = queryset.filter.call_args.args[0]
+        self.assertIn("snapshots_padron__vigente", str(filtro_q))
+        self.assertIn("snapshots_padron__zona_educativa__iexact", str(filtro_q))
+        self.assertIn("ZR9", str(filtro_q))
+        self.assertIs(resultado, queryset)
+
+    def test_opciones_exportar_precargan_zonas_educativas_reales(self):
+        queryset = MagicMock()
+        queryset.exclude.return_value = queryset
+        queryset.order_by.return_value = queryset
+        queryset.values_list.return_value = queryset
+        queryset.distinct.return_value = queryset
+        queryset.__getitem__.return_value = [
+            "ZR9",
+            "ZU 5 c/ ZUE 4",
+            "ZR9",
+        ]
+        with (
+            patch.object(
+                exportacion_service,
+                "_construir_opciones_filtros_detalle_reunida",
+                return_value={"estado_pof": []},
+            ),
+            patch.object(
+                exportacion_service.SnapshotPadronLocalizacionPof.objects,
+                "filter",
+                return_value=queryset,
+            ),
+        ):
+            opciones = exportacion_service._construir_opciones_filtros_exportacion()
+
+        self.assertEqual(
+            opciones["zona_educativa"],
+            ["ZR9", "ZU 5 c/ ZUE 4"],
+        )
+
+
+class AnexoPofPosicionTests(SimpleTestCase):
+    """Mantiene Código(s) Anexo POF inmediatamente junto a CUEANEXO."""
+
+    def test_visualizacion_ubica_anexo_pof_despues_de_cueanexo(self):
+        ids = [
+            columna["id"]
+            for columna in visualizacion_service.VISUALIZACION_CARGOS_COLUMNAS
+        ]
+
+        self.assertEqual(ids.index("anexo_pof"), ids.index("cueanexo") + 1)
+
+    def test_exportacion_reunida_ubica_anexo_pof_despues_de_cueanexo(self):
+        for nivel in exportacion_columnas_service.COLUMNAS_REUNIDA_POR_NIVEL:
+            columnas = exportacion_columnas_service.obtener_columnas_config_nivel(nivel)
+            sources = [columna["source"] for columna in columnas]
+
+            self.assertEqual(
+                sources.index("anexo_pof"),
+                sources.index("cueanexo") + 1,
+                nivel,
+            )
+
+    def test_exportacion_reunida_mantiene_oferta_despues_de_anexo_pof(self):
+        columnas = exportacion_columnas_service.obtener_columnas_disponibles_nivel(
+            "PRIMARIA"
+        )
+        columnas_default = exportacion_columnas_service.obtener_columnas_default_ids(
+            "PRIMARIA"
+        )
+        columnas_visibles = list(columnas_default)
+
+        (
+            columnas_resultado,
+            _,
+            columnas_visibles_resultado,
+            columna_oferta,
+        ) = exportacion_service._agregar_columna_oferta_exportacion(
+            columnas,
+            columnas_default,
+            columnas_visibles,
+        )
+
+        sources = [columna["source"] for columna in columnas_resultado]
+        self.assertEqual(
+            sources[:3],
+            ["cueanexo", "anexo_pof", "oferta"],
+        )
+
+        keys_por_source = {
+            columna["source"]: columna["key"]
+            for columna in columnas_resultado
+        }
+        self.assertEqual(
+            columnas_visibles_resultado[:3],
+            [
+                keys_por_source["cueanexo"],
+                keys_por_source["anexo_pof"],
+                columna_oferta["key"],
+            ],
+        )
+
+    def test_exportacion_proyecto_especial_ubica_anexo_pof_despues_de_cueanexo(self):
+        sources = [
+            columna["source"]
+            for columna in exportacion_service.COLUMNAS_EXPORTACION_PROYECTO_ESPECIAL
+        ]
+
+        self.assertEqual(
+            sources.index("anexo_pof"),
+            sources.index("cueanexo") + 1,
+        )
+
+
+class AnexoPofPureTests(UnitTestCase):
+    """Cobertura pura de Anexo POF: no usar ORM ni acceso a base de datos."""
+
+    def test_normalizacion_conserva_ceros_y_rechaza_formatos_no_permitidos(self):
+        self.assertEqual(
+            anexo_pof_service.normalizar_codigo_anexo_pof(" 001 "),
+            "001",
+        )
+
+        with self.assertRaises(ValidationError):
+            anexo_pof_service.normalizar_codigo_anexo_pof("01,02")
+
+        with self.assertRaises(ValidationError):
+            anexo_pof_service.normalizar_codigo_anexo_pof("01\n02")
+
+        with self.assertRaises(ValidationError):
+            anexo_pof_service.normalizar_codigo_anexo_pof("A" * 51)
+
+    def test_normalizacion_cue_exige_siete_digitos(self):
+        self.assertEqual(
+            anexo_pof_service.normalizar_cue_anexo_pof(" 2200006 "),
+            "2200006",
+        )
+
+        for valor in ("", "220006", "22000060", "22000A6"):
+            with self.assertRaises(ValidationError):
+                anexo_pof_service.normalizar_cue_anexo_pof(valor)
+
+    def test_normalizacion_cuof_conserva_texto_y_rechaza_controles(self):
+        self.assertEqual(
+            anexo_pof_service.normalizar_cuof_anexo_pof(" CUOF-PE-1 "),
+            "CUOF-PE-1",
+        )
+
+        with self.assertRaises(ValidationError):
+            anexo_pof_service.normalizar_cuof_anexo_pof("")
+
+        with self.assertRaises(ValidationError):
+            anexo_pof_service.normalizar_cuof_anexo_pof("CUOF\n1")
+
+    def test_propietario_reunida_usa_cue_y_no_cae_a_cuof(self):
+        propietario = anexo_pof_service.resolver_propietario_anexo_pof(
+            cue="2200006",
+            cuof="CUOF-IGNORADO",
+            es_proyecto_especial=False,
+        )
+
+        self.assertEqual(
+            propietario,
+            {
+                "tipo": anexo_pof_service.TIPO_PROPIETARIO_CUE,
+                "valor": "2200006",
+            },
+        )
+
+        with self.assertRaises(ValidationError):
+            anexo_pof_service.resolver_propietario_anexo_pof(
+                cue="",
+                cuof="CUOF-PE-1",
+                es_proyecto_especial=False,
+            )
+
+    def test_propietario_proyecto_prioriza_cue_sobre_cuof(self):
+        propietario = anexo_pof_service.resolver_propietario_anexo_pof(
+            cue="2200006",
+            cuof="CUOF-PE-1",
+            es_proyecto_especial=True,
+        )
+
+        self.assertEqual(
+            propietario,
+            {
+                "tipo": anexo_pof_service.TIPO_PROPIETARIO_CUE,
+                "valor": "2200006",
+            },
+        )
+
+    def test_propietario_proyecto_sin_cue_usa_cuof(self):
+        propietario = anexo_pof_service.resolver_propietario_anexo_pof(
+            cue="",
+            cuof="CUOF-PE-1",
+            es_proyecto_especial=True,
+        )
+
+        self.assertEqual(
+            propietario,
+            {
+                "tipo": anexo_pof_service.TIPO_PROPIETARIO_CUOF,
+                "valor": "CUOF-PE-1",
+            },
+        )
+
+    def test_localizacion_reunida_resuelve_cue_base(self):
+        localizacion = SimpleNamespace(
+            cue_base="2200006",
+            cuof="CUOF-1",
+            proyecto_especial_id=None,
+        )
+
+        self.assertEqual(
+            anexo_pof_service.resolver_propietario_anexo_pof_localizacion(
+                localizacion
+            ),
+            {
+                "tipo": anexo_pof_service.TIPO_PROPIETARIO_CUE,
+                "valor": "2200006",
+            },
+        )
+
+    def test_localizacion_proyecto_con_cue_prioriza_cue(self):
+        localizacion = SimpleNamespace(
+            cue_base="2200006",
+            cuof="CUOF-PE-1",
+            proyecto_especial_id=27,
+        )
+
+        self.assertEqual(
+            anexo_pof_service.resolver_propietario_anexo_pof_localizacion(
+                localizacion
+            ),
+            {
+                "tipo": anexo_pof_service.TIPO_PROPIETARIO_CUE,
+                "valor": "2200006",
+            },
+        )
+
+    def test_localizacion_proyecto_sin_cue_usa_cuof(self):
+        localizacion = SimpleNamespace(
+            cue_base="",
+            cuof="CUOF-PE-1",
+            proyecto_especial_id=27,
+        )
+
+        self.assertEqual(
+            anexo_pof_service.resolver_propietario_anexo_pof_localizacion(
+                localizacion
+            ),
+            {
+                "tipo": anexo_pof_service.TIPO_PROPIETARIO_CUOF,
+                "valor": "CUOF-PE-1",
+            },
+        )
+
+

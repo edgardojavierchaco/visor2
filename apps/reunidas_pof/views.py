@@ -62,13 +62,15 @@ from .services.guardado_pof_service import (
     eliminar_proyecto_especial_pof,
     eliminar_reunida_pof,
     guardar_carga_pof as guardar_carga_pof_service,
-    modificar_cargo_pof,
+    guardar_gestion_cargo_pof,
     obtener_detalle_cargo_pof,
 )
 from .services.historial_service import (
     construir_contexto_historial,
     obtener_detalle_movimiento_pof,
     obtener_historial_cantidad_cargos_pof,
+    obtener_historial_completo_cargo_pof,
+    obtener_historial_localizacion_cargos_pof,
     obtener_historial_observacion_cargos_pof,
     obtener_historial_estado_cargos_pof,
 )
@@ -85,8 +87,28 @@ from .services.padron_materializadas_service import (
 from .services.proyecto_especial_manual_service import (
     buscar_cuof_manual_proyecto_especial as buscar_cuof_manual_proyecto_especial_service,
 )
+from .services.anexo_pof_service import (
+    asociar_codigo as asociar_codigo_anexo_pof,
+    crear_codigo_catalogo as crear_codigo_catalogo_anexo_pof,
+    desactivar_asociacion as desactivar_asociacion_anexo_pof,
+    desactivar_codigo_catalogo as desactivar_codigo_catalogo_anexo_pof,
+    listar_asociaciones_propietario as listar_asociaciones_anexo_pof,
+    listar_catalogo_anexo_pof,
+    normalizar_propietario_anexo_pof,
+    obtener_historial_catalogo as obtener_historial_catalogo_anexo_pof,
+    obtener_historial_propietario as obtener_historial_propietario_anexo_pof,
+    reactivar_asociacion as reactivar_asociacion_anexo_pof,
+    reactivar_codigo_catalogo as reactivar_codigo_catalogo_anexo_pof,
+)
+from .services.zona_educativa_service import (
+    cambiar_zona_educativa_localizacion,
+    listar_zonas_educativas,
+    obtener_estado_zona_identidad,
+    obtener_estado_zona_localizacion,
+    obtener_historial_zona_localizacion,
+)
 from .services.niveles import obtener_niveles_ceic_para_reunida
-from .services.niveles_service import normalizar_nivel
+from .services.niveles_service import limpiar_texto, normalizar_nivel
 from .services.reunidas_service import (
     construir_contexto_detalle_reunida,
     construir_contexto_reunidas,
@@ -380,9 +402,8 @@ def _escribir_excel_reunida_filtrable(
     visibles y encadenan sus aportes por grupo sin rangos crecientes.
     """
     from openpyxl.formatting.rule import FormulaRule, Rule
-    from openpyxl.styles import Alignment, Border, Side
+    from openpyxl.styles import Alignment, Border, Font, Side
     from openpyxl.styles.differential import DifferentialStyle
-    from openpyxl.styles.numbers import NumberFormat
     from openpyxl.utils import get_column_letter
 
     columnas_config = columnas_config or []
@@ -774,7 +795,7 @@ def _escribir_excel_reunida_filtrable(
     hay_filas_datos = ultima_fila_datos >= fila_inicio
     if hay_filas_datos:
         ocultar_repetido_dxf = DifferentialStyle(
-            numFmt=NumberFormat(numFmtId=164, formatCode=";;;"),
+            font=Font(color="FFFFFFFF"),
         )
         for repeticion, clave_estado, indices in (
             (REPETIR_POR_CUEANEXO, letra_ultimo_grupo_visible, []),
@@ -790,27 +811,24 @@ def _escribir_excel_reunida_filtrable(
             )
             if not indices:
                 continue
-            rangos = " ".join(
-                f"{get_column_letter(indice)}{fila_inicio}:"
-                f"{get_column_letter(indice)}{ultima_fila_datos}"
-                for indice in indices
-            )
             clave_actual = (
                 letra_clave_grupo
                 if repeticion == REPETIR_POR_CUEANEXO
                 else letra_clave_cue
             )
-            ws.conditional_formatting.add(
-                rangos,
-                Rule(
-                    type="expression",
-                    formula=[
-                        f"AND(SUBTOTAL(103,${letra_fila_visible}{fila_inicio})=1,"
-                        f"${clave_actual}{fila_inicio}=${clave_estado}{fila_encabezado})"
-                    ],
-                    dxf=ocultar_repetido_dxf,
-                ),
-            )
+            for indice in indices:
+                letra = get_column_letter(indice)
+                ws.conditional_formatting.add(
+                    f"{letra}{fila_inicio}:{letra}{ultima_fila_datos}",
+                    Rule(
+                        type="expression",
+                        formula=[
+                            f"AND(SUBTOTAL(103,${letra_fila_visible}{fila_inicio})=1,"
+                            f"${clave_actual}{fila_inicio}=${clave_estado}{fila_encabezado})"
+                        ],
+                        dxf=ocultar_repetido_dxf,
+                    ),
+                )
 
         rango_datos = (
             f"A{fila_inicio}:{get_column_letter(total_columnas)}{ultima_fila_datos}"
@@ -1019,29 +1037,10 @@ def _aplicar_bordes_grupos_visual_excel(
 
 
 def _texto_filtros_excel_exportacion(contexto):
-    """Describe el alcance y el filtro aplicado a una exportación POF."""
-    if contexto.get("es_proyecto_especial"):
-        return contexto.get("filtros_excel") or "Sin filtros"
-
+    """Describe el alcance y los filtros aplicados a una exportación POF."""
     if contexto.get("alcance_excel") == "todos":
         return "Ninguno (exportación completa)"
-
-    busquedas = contexto.get("busquedas_columnas") or {}
-    if not busquedas:
-        return "Sin filtros"
-
-    partes = []
-    for columna_id, valor in busquedas.items():
-        etiqueta = next(
-            (
-                columna["label"]
-                for columna in COLUMNAS_BUSQUEDA_EXPORTACION
-                if columna["id"] == columna_id
-            ),
-            columna_id,
-        )
-        partes.append(f"{etiqueta}: {valor}")
-    return " · ".join(partes)
+    return contexto.get("filtros_excel") or "Sin filtros"
 
 
 def _crear_respuesta_excel_exportacion(contexto):
@@ -1180,6 +1179,16 @@ def inicio(request):
 
 
 @pof_required
+def administrar_anexo_pof(request):
+    """Renderiza la administración central de catálogo y asociaciones Anexo POF."""
+    return render(
+        request,
+        "reunidas_pof/anexo_pof_admin.html",
+        {"pof_solo_visualizacion": False},
+    )
+
+
+@pof_required
 def cargar_cargos(request):
     """
     Renderiza la pantalla de Alta de Cargos POF para Reunida.
@@ -1229,6 +1238,12 @@ def cargar_cargos_proyecto_especial(request):
     - Muestra un error en la misma plantilla cuando el identificador informado no existe o no es valido.
     """
     proyecto_especial_id = str(request.GET.get("proyecto_especial_id", "") or "").strip()
+    origen_exportar = str(request.GET.get("origen", "") or "").strip().lower() == "exportar"
+    cuof_inicial = (
+        limpiar_texto(request.GET.get("cuof", ""), 100)
+        if origen_exportar
+        else ""
+    )
     proyectos_especiales = ProyectosEspecialesPof.objects.all().order_by(
         "-anio", "nombre", "resolucion"
     )
@@ -1237,6 +1252,7 @@ def cargar_cargos_proyecto_especial(request):
         "proyecto_especial": None,
         "proyecto_especial_resolucion": "",
         "proyectos_especiales": proyectos_especiales,
+        "cuof_inicial": cuof_inicial,
     }
 
     if not proyecto_especial_id:
@@ -1647,6 +1663,52 @@ def detalle_movimiento_pof(request, movimiento_id):
 
 @pof_api_required
 @require_GET
+def historial_completo_cargo_pof(request, cargo_id):
+    """Devuelve todos los movimientos del cargo fisico abierto en Gestion Cargo."""
+    try:
+        historial = obtener_historial_completo_cargo_pof(cargo_id)
+    except CargoPof.DoesNotExist:
+        return api_error_no_encontrado(
+            "No se encontro el cargo solicitado.",
+            {"cargo_id": ["El cargo indicado no existe."]},
+        )
+    except Exception:
+        logger.exception(
+            "Error interno al obtener historial completo del cargo POF %s",
+            cargo_id,
+        )
+        return api_error_interno(
+            "Ocurrio un error interno al obtener el historial del cargo."
+        )
+
+    return api_ok(data=historial)
+
+
+@pof_api_required
+@require_GET
+def historial_localizacion_cargos_pof(request, localizacion_id):
+    """Devuelve movimientos de todos los cargos de la localizacion y cabecera actuales."""
+    try:
+        historial = obtener_historial_localizacion_cargos_pof(localizacion_id)
+    except LocalizacionPof.DoesNotExist:
+        return api_error_no_encontrado(
+            "No se encontro la localizacion solicitada.",
+            {"localizacion_id": ["La localizacion indicada no existe."]},
+        )
+    except Exception:
+        logger.exception(
+            "Error interno al obtener historial de cargos de localizacion POF %s",
+            localizacion_id,
+        )
+        return api_error_interno(
+            "Ocurrio un error interno al obtener el historial de la localizacion."
+        )
+
+    return api_ok(data=historial)
+
+
+@pof_api_required
+@require_GET
 def historial_cantidad_cargos_pof(request):
     """
     Devuelve el historial real de modificaciones de cantidad de cargos POF.
@@ -1799,6 +1861,636 @@ def _respuesta_api_desde_resultado(resultado):
     if tipo == "interno":
         return api_error_interno(mensaje)
     return api_error_validacion(mensaje, errores)
+
+
+
+def _parametro_booleano(valor):
+    return str(valor or "").strip().lower() in {"1", "true", "si", "sí", "on"}
+
+
+def _serializar_usuario_api(usuario):
+    if usuario is None:
+        return None
+    return {
+        "id": getattr(usuario, "pk", None),
+        "texto": str(usuario),
+    }
+
+
+def _serializar_catalogo_anexo_pof(catalogo):
+    return {
+        "id": catalogo.pk,
+        "codigo": catalogo.codigo,
+        "activo": bool(catalogo.activo),
+        "creado_en": catalogo.creado_en.isoformat() if catalogo.creado_en else None,
+        "actualizado_en": (
+            catalogo.actualizado_en.isoformat()
+            if catalogo.actualizado_en
+            else None
+        ),
+    }
+
+
+def _serializar_asociacion_anexo_pof(asociacion):
+    return {
+        "id": asociacion.pk,
+        "tipo_propietario": asociacion.tipo_propietario,
+        "propietario": asociacion.propietario,
+        "catalogo_id": asociacion.codigo_catalogo_id,
+        "codigo": asociacion.codigo_catalogo.codigo,
+        "catalogo_activo": bool(asociacion.codigo_catalogo.activo),
+        "activo": bool(asociacion.activo),
+        "creado_en": (
+            asociacion.creado_en.isoformat()
+            if asociacion.creado_en
+            else None
+        ),
+        "actualizado_en": (
+            asociacion.actualizado_en.isoformat()
+            if asociacion.actualizado_en
+            else None
+        ),
+    }
+
+
+def _serializar_historial_catalogo_anexo_pof(item):
+    return {
+        "id": item.pk,
+        "catalogo_id": item.catalogo_id,
+        "codigo": item.catalogo.codigo,
+        "accion": item.accion,
+        "accion_texto": item.get_accion_display(),
+        "origen": item.origen,
+        "origen_texto": item.get_origen_display(),
+        "usuario": _serializar_usuario_api(item.usuario),
+        "fecha": item.fecha.isoformat() if item.fecha else None,
+    }
+
+
+def _serializar_historial_asociacion_anexo_pof(item):
+    asociacion = item.asociacion
+    return {
+        "id": item.pk,
+        "asociacion_id": item.asociacion_id,
+        "tipo_propietario": asociacion.tipo_propietario,
+        "propietario": asociacion.propietario,
+        "catalogo_id": asociacion.codigo_catalogo_id,
+        "codigo": asociacion.codigo_catalogo.codigo,
+        "accion": item.accion,
+        "accion_texto": item.get_accion_display(),
+        "origen": item.origen,
+        "origen_texto": item.get_origen_display(),
+        "usuario": _serializar_usuario_api(item.usuario),
+        "fecha": item.fecha.isoformat() if item.fecha else None,
+    }
+
+
+def _propietario_anexo_pof_desde_valores(tipo, valor):
+    return normalizar_propietario_anexo_pof({
+        "tipo": tipo,
+        "valor": valor,
+    })
+
+
+def _propietario_anexo_pof_desde_payload(payload):
+    return _propietario_anexo_pof_desde_valores(
+        payload.get("tipo_propietario", payload.get("tipo", "")),
+        payload.get("propietario", payload.get("valor", "")),
+    )
+
+
+@pof_api_required
+@require_GET
+def anexo_pof_catalogo(request):
+    incluir_inactivos = _parametro_booleano(
+        request.GET.get("incluir_inactivos")
+    )
+
+    try:
+        catalogo = listar_catalogo_anexo_pof(
+            incluir_inactivos=incluir_inactivos
+        )
+        data = [
+            _serializar_catalogo_anexo_pof(item)
+            for item in catalogo
+        ]
+    except Exception:
+        logger.exception("Error interno al listar el catálogo Anexo POF.")
+        return api_error_interno(
+            "Ocurrió un error interno al cargar el catálogo Anexo POF."
+        )
+
+    return api_ok(data={
+        "incluir_inactivos": incluir_inactivos,
+        "codigos": data,
+    })
+
+
+@pof_api_required
+@require_POST
+def crear_anexo_pof_catalogo(request):
+    payload, respuesta_error = _obtener_payload_json(request)
+    if respuesta_error:
+        return respuesta_error
+    if not isinstance(payload, dict):
+        return api_error_validacion(
+            "El cuerpo de la solicitud no es válido.",
+            {"payload": ["Debe enviar un objeto JSON."]},
+        )
+
+    try:
+        catalogo = crear_codigo_catalogo_anexo_pof(
+            codigo=payload.get("codigo", ""),
+            usuario=request.user,
+        )
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudo crear el Código Anexo POF.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except Exception:
+        logger.exception("Error interno al crear un Código Anexo POF.")
+        return api_error_interno(
+            "Ocurrió un error interno al crear el Código Anexo POF."
+        )
+
+    return api_ok(
+        "Código Anexo POF creado correctamente.",
+        data={"codigo": _serializar_catalogo_anexo_pof(catalogo)},
+        status=201,
+    )
+
+
+@pof_api_required
+@require_POST
+def desactivar_anexo_pof_catalogo(request, catalogo_id):
+    try:
+        resultado = desactivar_codigo_catalogo_anexo_pof(
+            catalogo_id=catalogo_id,
+            usuario=request.user,
+        )
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudo desactivar el Código Anexo POF.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except Exception:
+        logger.exception(
+            "Error interno al desactivar Código Anexo POF %s.",
+            catalogo_id,
+        )
+        return api_error_interno(
+            "Ocurrió un error interno al desactivar el Código Anexo POF."
+        )
+
+    mensaje = (
+        "Código Anexo POF desactivado correctamente."
+        if resultado["modificado"]
+        else "El Código Anexo POF ya estaba desactivado."
+    )
+    return api_ok(
+        mensaje,
+        data={
+            "modificado": resultado["modificado"],
+            "codigo": _serializar_catalogo_anexo_pof(resultado["catalogo"]),
+        },
+    )
+
+
+@pof_api_required
+@require_POST
+def reactivar_anexo_pof_catalogo(request, catalogo_id):
+    try:
+        resultado = reactivar_codigo_catalogo_anexo_pof(
+            catalogo_id=catalogo_id,
+            usuario=request.user,
+        )
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudo reactivar el Código Anexo POF.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except Exception:
+        logger.exception(
+            "Error interno al reactivar Código Anexo POF %s.",
+            catalogo_id,
+        )
+        return api_error_interno(
+            "Ocurrió un error interno al reactivar el Código Anexo POF."
+        )
+
+    mensaje = (
+        "Código Anexo POF reactivado correctamente."
+        if resultado["modificado"]
+        else "El Código Anexo POF ya estaba activo."
+    )
+    return api_ok(
+        mensaje,
+        data={
+            "modificado": resultado["modificado"],
+            "codigo": _serializar_catalogo_anexo_pof(resultado["catalogo"]),
+        },
+    )
+
+
+@pof_api_required
+@require_GET
+def historial_catalogo_anexo_pof(request, catalogo_id):
+    try:
+        historial = obtener_historial_catalogo_anexo_pof(
+            catalogo_id=catalogo_id
+        )
+        data = [
+            _serializar_historial_catalogo_anexo_pof(item)
+            for item in historial
+        ]
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudo obtener el historial del Código Anexo POF.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except Exception:
+        logger.exception(
+            "Error interno al obtener historial del Código Anexo POF %s.",
+            catalogo_id,
+        )
+        return api_error_interno(
+            "Ocurrió un error interno al obtener el historial de Anexo POF."
+        )
+
+    return api_ok(data={
+        "catalogo_id": catalogo_id,
+        "historial": data,
+    })
+
+
+@pof_api_required
+@require_GET
+def anexo_pof_asociaciones(request):
+    try:
+        propietario = _propietario_anexo_pof_desde_valores(
+            request.GET.get("tipo", ""),
+            request.GET.get("valor", ""),
+        )
+        incluir_inactivas = _parametro_booleano(
+            request.GET.get("incluir_inactivas")
+        )
+        asociaciones = listar_asociaciones_anexo_pof(
+            propietario=propietario,
+            incluir_inactivas=incluir_inactivas,
+        )
+        data = [
+            _serializar_asociacion_anexo_pof(item)
+            for item in asociaciones
+        ]
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudieron cargar las asociaciones Anexo POF.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except Exception:
+        logger.exception(
+            "Error interno al listar asociaciones Anexo POF."
+        )
+        return api_error_interno(
+            "Ocurrió un error interno al cargar las asociaciones Anexo POF."
+        )
+
+    return api_ok(data={
+        "propietario": propietario,
+        "incluir_inactivas": incluir_inactivas,
+        "asociaciones": data,
+    })
+
+
+def _payload_mutacion_asociacion_anexo_pof(request):
+    payload, respuesta_error = _obtener_payload_json(request)
+    if respuesta_error:
+        return None, None, None, respuesta_error
+    if not isinstance(payload, dict):
+        return None, None, None, api_error_validacion(
+            "El cuerpo de la solicitud no es válido.",
+            {"payload": ["Debe enviar un objeto JSON."]},
+        )
+
+    try:
+        propietario = _propietario_anexo_pof_desde_payload(payload)
+        catalogo_id = int(payload.get("catalogo_id"))
+        if catalogo_id <= 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return None, None, None, api_error_validacion(
+            "La asociación Anexo POF no es válida.",
+            {"catalogo_id": ["Debe indicar un identificador válido."]},
+        )
+    except ValidationError as error:
+        return None, None, None, api_error_validacion(
+            "La asociación Anexo POF no es válida.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+
+    return payload, propietario, catalogo_id, None
+
+
+@pof_api_required
+@require_POST
+def asociar_anexo_pof(request):
+    _, propietario, catalogo_id, respuesta_error = (
+        _payload_mutacion_asociacion_anexo_pof(request)
+    )
+    if respuesta_error:
+        return respuesta_error
+
+    try:
+        resultado = asociar_codigo_anexo_pof(
+            propietario=propietario,
+            catalogo_id=catalogo_id,
+            usuario=request.user,
+        )
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudo asociar el Código Anexo POF.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except Exception:
+        logger.exception("Error interno al asociar Código Anexo POF.")
+        return api_error_interno(
+            "Ocurrió un error interno al asociar el Código Anexo POF."
+        )
+
+    if resultado["creado"]:
+        mensaje = "Código Anexo POF asociado correctamente."
+    elif resultado["reactivado"]:
+        mensaje = "Asociación Anexo POF reactivada correctamente."
+    else:
+        mensaje = "El Código Anexo POF ya estaba asociado."
+
+    return api_ok(
+        mensaje,
+        data={
+            "creado": resultado["creado"],
+            "reactivado": resultado["reactivado"],
+            "modificado": resultado["modificado"],
+            "asociacion": _serializar_asociacion_anexo_pof(
+                resultado["asociacion"]
+            ),
+        },
+        status=201 if resultado["creado"] else 200,
+    )
+
+
+@pof_api_required
+@require_POST
+def desactivar_asociacion_anexo_pof_view(request):
+    _, propietario, catalogo_id, respuesta_error = (
+        _payload_mutacion_asociacion_anexo_pof(request)
+    )
+    if respuesta_error:
+        return respuesta_error
+
+    try:
+        resultado = desactivar_asociacion_anexo_pof(
+            propietario=propietario,
+            catalogo_id=catalogo_id,
+            usuario=request.user,
+        )
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudo desactivar la asociación Anexo POF.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except Exception:
+        logger.exception(
+            "Error interno al desactivar asociación Anexo POF."
+        )
+        return api_error_interno(
+            "Ocurrió un error interno al desactivar la asociación Anexo POF."
+        )
+
+    mensaje = (
+        "Asociación Anexo POF desactivada correctamente."
+        if resultado["modificado"]
+        else "La asociación Anexo POF ya estaba desactivada."
+    )
+    return api_ok(
+        mensaje,
+        data={
+            "modificado": resultado["modificado"],
+            "asociacion": _serializar_asociacion_anexo_pof(
+                resultado["asociacion"]
+            ),
+        },
+    )
+
+
+@pof_api_required
+@require_POST
+def reactivar_asociacion_anexo_pof_view(request):
+    _, propietario, catalogo_id, respuesta_error = (
+        _payload_mutacion_asociacion_anexo_pof(request)
+    )
+    if respuesta_error:
+        return respuesta_error
+
+    try:
+        resultado = reactivar_asociacion_anexo_pof(
+            propietario=propietario,
+            catalogo_id=catalogo_id,
+            usuario=request.user,
+        )
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudo reactivar la asociación Anexo POF.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except Exception:
+        logger.exception(
+            "Error interno al reactivar asociación Anexo POF."
+        )
+        return api_error_interno(
+            "Ocurrió un error interno al reactivar la asociación Anexo POF."
+        )
+
+    mensaje = (
+        "Asociación Anexo POF reactivada correctamente."
+        if resultado["modificado"]
+        else "La asociación Anexo POF ya estaba activa."
+    )
+    return api_ok(
+        mensaje,
+        data={
+            "modificado": resultado["modificado"],
+            "asociacion": _serializar_asociacion_anexo_pof(
+                resultado["asociacion"]
+            ),
+        },
+    )
+
+
+@pof_api_required
+@require_GET
+def historial_asociaciones_anexo_pof(request):
+    try:
+        propietario = _propietario_anexo_pof_desde_valores(
+            request.GET.get("tipo", ""),
+            request.GET.get("valor", ""),
+        )
+        historial = obtener_historial_propietario_anexo_pof(
+            propietario=propietario
+        )
+        data = [
+            _serializar_historial_asociacion_anexo_pof(item)
+            for item in historial
+        ]
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudo obtener el historial de asociaciones Anexo POF.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except Exception:
+        logger.exception(
+            "Error interno al obtener historial de asociaciones Anexo POF."
+        )
+        return api_error_interno(
+            "Ocurrió un error interno al obtener el historial de Anexo POF."
+        )
+
+    return api_ok(data={
+        "propietario": propietario,
+        "historial": data,
+    })
+
+
+@pof_api_required
+@require_GET
+def zona_educativa_catalogo(request):
+    tipo = (request.GET.get("tipo") or "").strip()
+    try:
+        zonas = listar_zonas_educativas(tipo)
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudo cargar el catálogo de Zona Educativa.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except Exception:
+        logger.exception("Error interno al cargar el catálogo de Zona Educativa.")
+        return api_error_interno(
+            "Ocurrió un error interno al cargar el catálogo de Zona Educativa."
+        )
+
+    return api_ok(data={
+        "tipo": tipo.upper(),
+        "zonas": zonas,
+    })
+
+
+@pof_visualizacion_api_required
+@require_GET
+def zona_educativa_vigente(request):
+    localizacion_id = (request.GET.get("localizacion_id") or "").strip()
+
+    try:
+        if localizacion_id:
+            if not localizacion_id.isdigit():
+                return api_error_validacion(
+                    "La localización indicada no es válida.",
+                    {"localizacion_id": ["Debe indicar un identificador numérico."]},
+                )
+            estado = obtener_estado_zona_localizacion(int(localizacion_id))
+        else:
+            estado = obtener_estado_zona_identidad(
+                request.GET.get("anio"),
+                cueanexo=request.GET.get("cueanexo", ""),
+                cuof=request.GET.get("cuof", ""),
+            )
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudo resolver la Zona Educativa vigente.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except LocalizacionPof.DoesNotExist:
+        return api_error_no_encontrado(
+            "No se encontró la localización solicitada.",
+            {"localizacion_id": ["La localización indicada no existe."]},
+        )
+    except Exception:
+        logger.exception("Error interno al resolver la Zona Educativa vigente.")
+        return api_error_interno(
+            "Ocurrió un error interno al resolver la Zona Educativa vigente."
+        )
+
+    return api_ok(data=estado)
+
+
+@pof_api_required
+@require_POST
+def cambiar_zona_educativa(request, localizacion_id):
+    payload, respuesta_error = _obtener_payload_json(request)
+    if respuesta_error:
+        return respuesta_error
+    if not isinstance(payload, dict):
+        return api_error_validacion(
+            "El cuerpo de la solicitud no es válido.",
+            {"payload": ["Debe enviar un objeto JSON."]},
+        )
+
+    tipo = (payload.get("tipo") or "").strip()
+    zona = (payload.get("zona") or "").strip()
+
+    try:
+        resultado = cambiar_zona_educativa_localizacion(
+            localizacion_id,
+            tipo,
+            zona,
+            usuario=request.user,
+        )
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudo cambiar la Zona Educativa.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except LocalizacionPof.DoesNotExist:
+        return api_error_no_encontrado(
+            "No se encontró la localización solicitada.",
+            {"localizacion_id": ["La localización indicada no existe."]},
+        )
+    except Exception:
+        logger.exception(
+            "Error interno al cambiar Zona Educativa para localizacion %s.",
+            localizacion_id,
+        )
+        return api_error_interno(
+            "Ocurrió un error interno al cambiar la Zona Educativa."
+        )
+
+    return _respuesta_api_desde_resultado(resultado)
+
+
+@pof_visualizacion_api_required
+@require_GET
+def historial_zona_educativa(request, localizacion_id):
+    try:
+        historial = obtener_historial_zona_localizacion(localizacion_id)
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudo obtener el historial de Zona Educativa.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except LocalizacionPof.DoesNotExist:
+        return api_error_no_encontrado(
+            "No se encontró la localización solicitada.",
+            {"localizacion_id": ["La localización indicada no existe."]},
+        )
+    except Exception:
+        logger.exception(
+            "Error interno al obtener historial de Zona Educativa para localizacion %s.",
+            localizacion_id,
+        )
+        return api_error_interno(
+            "Ocurrió un error interno al obtener el historial de Zona Educativa."
+        )
+
+    return api_ok(data=historial)
 
 
 def _validar_parametros_grupo_detalle(cueanexo, cuof):
@@ -1969,7 +2661,7 @@ def modificar_cargo_pof_view(request, cargo_id):
 
     usuario = request.user if request.user.is_authenticated else None
     try:
-        resultado = modificar_cargo_pof(cargo_id, payload, usuario=usuario)
+        resultado = guardar_gestion_cargo_pof(cargo_id, payload, usuario=usuario)
     except ValidationError as error:
         logger.warning(
             "Validacion no controlada al modificar cargo POF %s: %s",

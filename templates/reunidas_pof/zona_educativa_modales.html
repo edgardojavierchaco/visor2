@@ -1,0 +1,107 @@
+<div class="pof-modal-backdrop pof-hidden"
+     aria-hidden="true"
+     data-pof-zone-change-modal
+     data-vigente-url="{% url 'reunidas_pof:zona_educativa_vigente' %}"
+     data-catalogo-url="{% url 'reunidas_pof:zona_educativa_catalogo' %}"
+     data-cambio-url-base="{% url 'reunidas_pof:cambiar_zona_educativa' 0 %}">
+    <div class="pof-modal pof-history-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="pofZoneChangeTitle">
+        <div class="pof-modal-header">
+            <div>
+                <h2 id="pofZoneChangeTitle">Cambiar Zona Educativa</h2>
+                <p class="pof-help" data-pof-zone-change-label></p>
+            </div>
+            <button type="button"
+                    class="pof-modal-close"
+                    aria-label="Cerrar"
+                    data-pof-zone-change-close>&times;</button>
+        </div>
+
+        <div class="pof-detail-grid pof-hidden" data-pof-zone-change-current></div>
+        <div class="pof-status pof-api-status"
+             role="status"
+             aria-live="polite"
+             data-pof-zone-change-status></div>
+
+        <div class="pof-grid">
+            <div class="pof-field pof-col-4">
+                <label for="pofZoneChangeType">Tipo de Zona</label>
+                <span class="pof-native-select-wrap">
+                    <select id="pofZoneChangeType" class="pof-form-select" data-pof-zone-change-type>
+                        <option value="">Seleccioná un tipo</option>
+                        <option value="URBANA">Urbana</option>
+                        <option value="RURAL">Rural</option>
+                    </select>
+                </span>
+            </div>
+
+            <div class="pof-field pof-col-4">
+                <label for="pofZoneChangeZone">Zona Educativa</label>
+                <span class="pof-native-select-wrap">
+                    <select id="pofZoneChangeZone"
+                            class="pof-form-select"
+                            data-pof-zone-change-zone
+                            disabled>
+                        <option value="">Seleccioná una zona</option>
+                    </select>
+                </span>
+            </div>
+
+            <div class="pof-field pof-col-4">
+                <label for="pofZoneChangePoints">Puntos Zona Educativa</label>
+                <input type="number"
+                       id="pofZoneChangePoints"
+                       min="1"
+                       step="1"
+                       readonly
+                       data-pof-zone-change-points>
+            </div>
+        </div>
+
+        <div class="pof-modal-actions">
+            <button type="button"
+                    class="pof-btn pof-btn-light"
+                    data-pof-zone-change-close>Cancelar</button>
+            <button type="button"
+                    class="pof-btn pof-btn-primary"
+                    data-pof-zone-change-save
+                    disabled>Guardar cambio</button>
+        </div>
+    </div>
+</div>
+
+<div class="pof-modal-backdrop pof-hidden"
+     aria-hidden="true"
+     data-pof-zone-history-modal
+     data-historial-url-base="{% url 'reunidas_pof:historial_zona_educativa' 0 %}">
+    <div class="pof-modal pof-history-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="pofZoneHistoryTitle">
+        <div class="pof-modal-header">
+            <div>
+                <h2 id="pofZoneHistoryTitle">Historial de Zona Educativa</h2>
+                <p class="pof-help" data-pof-zone-history-label></p>
+            </div>
+            <button type="button"
+                    class="pof-modal-close"
+                    aria-label="Cerrar"
+                    data-pof-zone-history-close>&times;</button>
+        </div>
+
+        <div class="pof-detail-grid pof-hidden" data-pof-zone-history-summary></div>
+        <div class="pof-status pof-api-status"
+             role="status"
+             aria-live="polite"
+             data-pof-zone-history-status></div>
+        <div data-pof-zone-history-content></div>
+
+        <div class="pof-modal-actions">
+            <button type="button"
+                    class="pof-btn pof-btn-light"
+                    data-pof-zone-history-close>Cerrar</button>
+        </div>
+    </div>
+</div>

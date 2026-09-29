@@ -290,6 +290,13 @@
         <div class="pof-note">La tabla de cargos todav&iacute;a no est&aacute; disponible. Se muestra la pantalla sin registros hasta aplicar migraciones.</div>
     {% endif %}
 
+    <div id="visualizacionZonaConflictoWarning"
+         class="pof-filter-warning"
+         {% if not mensaje_conflictos_zona_educativa %}hidden{% endif %}>
+        <span class="pof-filter-warning-icon pof-material-symbol pof-icon-warning material-symbols-outlined" aria-hidden="true">warning</span>
+        <span id="visualizacionZonaConflictoWarningText">{{ mensaje_conflictos_zona_educativa }}</span>
+    </div>
+
     <div class="pof-visual-preview">
         <div class="pof-visual-preview-toolbar pof-filter-summary">
             <div class="pof-filter-summary-left">
@@ -361,7 +368,7 @@
                   aria-live="polite"></span>
             <nav class="pof-pagination"
                  id="visualizacionPaginacion"
-                 aria-label="Paginaci&oacute;n del visualizador por CUE"></nav>
+                 aria-label="Paginaci&oacute;n del visualizador por localizaci&oacute;n"></nav>
         </div>
     </div>
 </div>
@@ -372,11 +379,13 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}?v=20260924-1"></script>
 <script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260829-1"></script>
 <script>
 (function () {
     const form = document.getElementById("visualizacionCargosForm");
-    if (!form) {
+    const apiVisual = window.pofApi || null;
+    if (!form || !apiVisual) {
         return;
     }
 
@@ -401,6 +410,8 @@
     const paginacionResumen = document.getElementById("visualizacionPaginacionResumen");
     const contraerBtn = document.getElementById("visualizacionContraerColumnas");
     const filtrosActivos = document.getElementById("visualizacionFiltrosActivos");
+    const zonaConflictoWarning = document.getElementById("visualizacionZonaConflictoWarning");
+    const zonaConflictoWarningText = document.getElementById("visualizacionZonaConflictoWarningText");
     const dialog = document.getElementById("visualizacionDialogFiltro");
     const dialogBackdrop = document.getElementById("visualizacionFiltroBackdrop");
     const dialogTitulo = document.getElementById("visualizacionDialogTitulo");
@@ -417,7 +428,7 @@
     const SIMPLE_FILTER_PARAMS = [
         "cueanexo", "cue", "anexo", "cuof", "cui", "ceic", "cargo",
         "nombre_establecimiento", "numero_establecimiento", "estado_pof",
-        "region", "localidad", "departamento", "ambito", "categoria",
+        "region", "localidad", "departamento", "zona_educativa", "ambito", "categoria",
         "jornada", "oferta", "acronimo", "estado_localizacion_padron",
         "estado_oferta_padron", "estado_establecimiento_padron"
     ];
@@ -1216,8 +1227,22 @@
      */
     function normalizePagination(metadata) {
         const data = metadata && typeof metadata === "object" ? metadata : {};
-        const totalCues = Math.max(0, Number.parseInt(data.total_cues, 10) || 0);
-        const cuesPerPage = Math.max(1, Number.parseInt(data.cues_por_pagina, 10) || 5);
+        const totalUnits = Math.max(
+            0,
+            Number.parseInt(
+                data.total_unidades !== undefined ? data.total_unidades : data.total_cues,
+                10
+            ) || 0
+        );
+        const unitsPerPage = Math.max(
+            1,
+            Number.parseInt(
+                data.unidades_por_pagina !== undefined
+                    ? data.unidades_por_pagina
+                    : data.cues_por_pagina,
+                10
+            ) || 5
+        );
         const totalPages = Math.max(1, Number.parseInt(data.total_paginas, 10) || 1);
         const currentPage = Math.min(
             totalPages,
@@ -1226,8 +1251,9 @@
         return {
             currentPage: currentPage,
             totalPages: totalPages,
-            cuesPerPage: cuesPerPage,
-            totalCues: totalCues
+            unitsPerPage: unitsPerPage,
+            totalUnits: totalUnits,
+            unitLabel: String(data.unidad_label || "CUEANEXO")
         };
     }
 
@@ -1290,7 +1316,7 @@
     }
 
     /**
-     * Renderiza resumen y controles accesibles de paginacion por CUE.
+     * Renderiza resumen y controles accesibles de paginacion por identidad funcional.
      *
      * - Reutiliza las clases POF para estados normal, activo, deshabilitado y elipsis.
      * - Crea nodos con `textContent` para no interpretar metadatos como HTML.
@@ -1302,18 +1328,21 @@
         }
 
         const pagination = normalizePagination(metadata);
-        const firstCue = pagination.totalCues
-            ? ((pagination.currentPage - 1) * pagination.cuesPerPage) + 1
+        const firstUnit = pagination.totalUnits
+            ? ((pagination.currentPage - 1) * pagination.unitsPerPage) + 1
             : 0;
-        const lastCue = pagination.totalCues
-            ? Math.min(pagination.currentPage * pagination.cuesPerPage, pagination.totalCues)
+        const lastUnit = pagination.totalUnits
+            ? Math.min(
+                pagination.currentPage * pagination.unitsPerPage,
+                pagination.totalUnits
+            )
             : 0;
-        paginacionResumen.textContent = "Mostrando CUE " + firstCue + "-" + lastCue
-            + " de " + pagination.totalCues + ".";
+        paginacionResumen.textContent = "Mostrando " + pagination.unitLabel + " "
+            + firstUnit + "-" + lastUnit + " de " + pagination.totalUnits + ".";
         paginacionNav.replaceChildren();
-        paginacionNav.hidden = pagination.totalCues === 0;
+        paginacionNav.hidden = pagination.totalUnits === 0;
 
-        if (pagination.totalCues === 0) {
+        if (pagination.totalUnits === 0) {
             return;
         }
 
@@ -1384,6 +1413,11 @@
         if (contadorTop) {
             contadorTop.dataset.visualRowCount = payload.total_registros || 0;
         }
+        if (zonaConflictoWarning && zonaConflictoWarningText) {
+            const mensajeZona = String(payload.mensaje_conflictos_zona_educativa || "").trim();
+            zonaConflictoWarningText.textContent = mensajeZona;
+            zonaConflictoWarning.hidden = !mensajeZona;
+        }
         applyPayloadColumns(payload.columnas);
         renderRows(payload.filas, payload.columnas_colspan);
         renderBadges(payload.filtros_activos);
@@ -1418,16 +1452,10 @@
         activeController = new AbortController();
         setQueryBusy(true);
 
-        return fetch(buildDataUrl(targetUrl).toString(), {
-            headers: { "X-Requested-With": "XMLHttpRequest" },
-            signal: activeController.signal
-        })
-            .then(function (response) {
-                if (!response.ok) {
-                    throw new Error("Error al actualizar la visualizacion.");
-                }
-                return response.json();
-            })
+        return apiVisual.requestJsonRead(
+            buildDataUrl(targetUrl).toString(),
+            { signal: activeController.signal }
+        )
             .then(function (payload) {
                 if (token !== requestToken) {
                     return false;
@@ -1444,7 +1472,14 @@
                 return true;
             })
             .catch(function (error) {
-                if (error.name !== "AbortError") {
+                const abortado = Boolean(
+                    error &&
+                    (
+                        error.name === "AbortError" ||
+                        (error.original && error.original.name === "AbortError")
+                    )
+                );
+                if (!abortado) {
                     window.console.error(error);
                     if (typeof opts.onError === "function") {
                         opts.onError(error);

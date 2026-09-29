@@ -213,6 +213,10 @@ def construir_grupos_operativos_detalle(*, filas_normalizadas, detalle_politicas
                 if descriptor.get("campo") != "cantidad_cargos"
             }
             grupo_anexo["cui"] = fila_normalizada.get("cui", "")
+            grupo_anexo["localizacion_id"] = fila_normalizada.get("localizacion_id", "")
+            grupo_anexo["zona_educativa_tipo"] = fila_normalizada.get("zona_educativa_tipo", "")
+            grupo_anexo["zona_educativa"] = fila_normalizada.get("zona_educativa", "")
+            grupo_anexo["puntos_zona_educativa"] = fila_normalizada.get("puntos_zona_educativa")
             grupo_anexo["cantidad_cargos"] = 0
             grupo_anexo["cargos"] = []
             grupo_anexo["acciones_grupo"] = acciones_grupo_anexo

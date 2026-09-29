@@ -4,11 +4,16 @@ from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
-from django.db import OperationalError, ProgrammingError
-from django.db.models import Case, CharField, F, Min, Prefetch, Q, Sum, Value, When
-from django.db.models.functions import Cast, Concat, Substr, Trim
+from django.db import DatabaseError, OperationalError, ProgrammingError
+from django.db.models import Case, CharField, Min, Prefetch, Q, Sum, Value, When
+from django.db.models.functions import Cast, Concat, Trim
 
 from ..models import CargoPof, ProyectosEspecialesPof, ReunidaPof, SnapshotPadronLocalizacionPof
+from .anexo_pof_service import (
+    TIPO_PROPIETARIO_CUE,
+    TIPO_PROPIETARIO_CUOF,
+    obtener_codigos_activos_propietarios,
+)
 from .exportacion_politicas import (
     obtener_clave_seccion_exportacion,
     obtener_clave_seccion_normalizada_exportacion,
@@ -47,12 +52,20 @@ from .niveles_service import (
     obtener_nombre_nivel,
 )
 from .reunidas_service import (
+    FILTROS_AVANZADOS_DETALLE_CAMPOS,
+    FILTROS_AVANZADOS_DETALLE_LABELS,
     FILTROS_DETALLE_PROYECTO,
+    OPERADORES_FILTRO_DETALLE,
+    _aplicar_filtros_avanzados_detalle_reunida,
     _aplicar_filtros_cargo_detalle_reunida,
     _aplicar_filtros_detalle_reunida,
+    _construir_chips_filtros_detalle,
+    _construir_opciones_filtros_detalle_reunida,
     _construir_querystring_detalle_con_filtros,
     _hay_filtros_detalle_reunida,
+    _obtener_filtros_avanzados_detalle_reunida,
     _obtener_filtros_detalle_reunida,
+    _valor_filtro_avanzado_detalle_label,
 )
 
 
@@ -75,12 +88,15 @@ COLUMNAS_EXPORTACION_PROYECTO_ESPECIAL = (
         "required": True,
         "visible_default": True,
     },
+    {"key": "proyecto_especial_anexo_pof", "titulo": "Código(s) Anexo POF", "source": "anexo_pof", "visible_default": True},
     {"key": "proyecto_especial_cue", "titulo": "CUE", "source": "cue", "visible_default": True},
     {"key": "proyecto_especial_anexo", "titulo": "Anexo", "source": "anexo", "visible_default": True},
     {"key": "proyecto_especial_cuof", "titulo": "CUOF", "source": "cuof", "visible_default": True},
     {"key": "proyecto_especial_cui", "titulo": "CUI", "source": "cui", "visible_default": True},
     {"key": "proyecto_especial_establecimiento", "titulo": "Establecimiento", "source": "establecimiento", "visible_default": True},
     {"key": "proyecto_especial_oferta", "titulo": "Oferta", "source": "oferta", "visible_default": True},
+    {"key": "proyecto_especial_zona_educativa", "titulo": "Zona Educativa", "source": "zona_educativa", "visible_default": True},
+    {"key": "proyecto_especial_puntos_zona_educativa", "titulo": "Puntos Zona Educativa", "source": "puntos_zona_educativa", "visible_default": True},
     {"key": "proyecto_especial_ceic", "titulo": "CEIC", "source": "ceic", "visible_default": True},
     {"key": "proyecto_especial_cargo", "titulo": "Cargo", "source": "cargo", "visible_default": True},
     {"key": "proyecto_especial_cantidad", "titulo": "Cantidad", "source": "cantidad", "visible_default": True},
@@ -98,10 +114,12 @@ FUENTES_NO_REPETIR_PROYECTO_ESPECIAL = {
     "cuof",
     "cui",
     "establecimiento",
+    "zona_educativa",
+    "puntos_zona_educativa",
     "total_general",
 }
 
-CUES_POR_PAGINA_EXPORTACION = 5
+CUEANEXOS_POR_PAGINA_EXPORTACION = 5
 
 COLUMNAS_BUSQUEDA_EXPORTACION = (
     {"id": "cueanexo", "label": "CUE-Anexo"},
@@ -113,6 +131,299 @@ COLUMNAS_BUSQUEDA_EXPORTACION = (
     {"id": "estado_pof", "label": "Estado POF"},
     {"id": "observacion", "label": "Observación"},
 )
+
+FILTROS_AVANZADOS_QUERY_PARAMS = {
+    "campo_filtro",
+    "operador_filtro",
+    "valor_filtro",
+}
+
+BUSQUEDA_EXPORTACION_A_FILTRO_AVANZADO = {
+    "cueanexo": "cueanexo",
+    "cuof": "cuof",
+    "ceic": "ceic",
+    "cargo": "cargo",
+    "puntos": "puntos_asignados",
+    "oferta": "oferta",
+    "estado_pof": "estado_pof",
+}
+
+FILTRO_SIMPLE_PROYECTO_A_AVANZADO = {
+    "cueanexo": "cueanexo",
+    "cue_busqueda": "cue",
+    "anexo": "anexo",
+    "cuof": "cuof",
+    "cui": "cui",
+    "establecimiento": "nombre_establecimiento",
+    "localidad": "localidad",
+    "departamento": "departamento",
+    "region": "region",
+    "jornada": "jornada",
+    "categoria": "categoria",
+    "ambito": "ambito",
+    "ceic": "ceic",
+    "cargo": "cargo",
+    "estado_pof": "estado_pof",
+    "unidad_cantidad": "unidad_cantidad",
+}
+
+FILTRO_ZONA_EDUCATIVA_EXPORTACION = {
+    "id": "zona_educativa",
+    "label": "Zona Educativa",
+    "tipo": "checklist",
+    "operadores": "exact",
+}
+
+FILTROS_AVANZADOS_EXPORTACION_CAMPOS = []
+for _filtro_exportacion in FILTROS_AVANZADOS_DETALLE_CAMPOS:
+    FILTROS_AVANZADOS_EXPORTACION_CAMPOS.append(_filtro_exportacion)
+    if _filtro_exportacion["id"] == "departamento":
+        FILTROS_AVANZADOS_EXPORTACION_CAMPOS.append(
+            FILTRO_ZONA_EDUCATIVA_EXPORTACION
+        )
+
+FILTROS_AVANZADOS_EXPORTACION_LABELS = {
+    **FILTROS_AVANZADOS_DETALLE_LABELS,
+    "zona_educativa": "Zona Educativa",
+}
+
+
+def _obtener_filtros_simples_proyecto_efectivos(
+    filtros_simples,
+    filtros_avanzados,
+):
+    """Da precedencia al criterio avanzado equivalente sobre filtros legacy."""
+    campos_avanzados = {
+        filtro.get("campo")
+        for filtro in (filtros_avanzados or [])
+        if filtro.get("campo")
+    }
+    return {
+        clave: (
+            ""
+            if FILTRO_SIMPLE_PROYECTO_A_AVANZADO.get(clave) in campos_avanzados
+            else valor
+        )
+        for clave, valor in (filtros_simples or {}).items()
+    }
+
+
+def _obtener_busquedas_columnas_exportacion_efectivas(
+    busquedas,
+    filtros_avanzados,
+):
+    """
+    Evita aplicar dos criterios simultaneos sobre el mismo campo funcional.
+
+    El filtro avanzado tiene precedencia sobre la busqueda rapida, igual que en
+    Visualizacion. La URL puede conservar un col_* legacy, pero el queryset no
+    queda accidentalmente restringido por ambos criterios.
+    """
+    campos_avanzados = {
+        filtro.get("campo")
+        for filtro in (filtros_avanzados or [])
+        if filtro.get("campo")
+    }
+    return {
+        columna_id: valor
+        for columna_id, valor in (busquedas or {}).items()
+        if BUSQUEDA_EXPORTACION_A_FILTRO_AVANZADO.get(columna_id)
+        not in campos_avanzados
+    }
+
+
+def _obtener_filtros_avanzados_exportacion(request):
+    """
+    Reutiliza los filtros avanzados de Detalle y agrega Zona Educativa solo
+    para Exportar, sin ampliar la UI de Detalle ni duplicar el resto del motor.
+    """
+    filtros = list(_obtener_filtros_avanzados_detalle_reunida(request))
+    indices_existentes = {
+        filtro.get("indice")
+        for filtro in filtros
+        if filtro.get("indice") is not None
+    }
+    campos = request.GET.getlist("campo_filtro")
+    operadores = request.GET.getlist("operador_filtro")
+    valores = request.GET.getlist("valor_filtro")
+
+    for indice, campo_id in enumerate(campos):
+        if indice in indices_existentes:
+            continue
+        if str(campo_id or "").strip() != "zona_educativa":
+            continue
+
+        operador = str(
+            operadores[indice] if indice < len(operadores) else "2"
+        ).strip()
+        valor = str(
+            valores[indice] if indice < len(valores) else ""
+        ).strip()[:240]
+
+        if not valor or operador not in {"2", "7"}:
+            continue
+
+        filtros.append({
+            "indice": indice,
+            "campo": "zona_educativa",
+            "operador": operador,
+            "valor": valor,
+        })
+
+    return sorted(
+        filtros,
+        key=lambda filtro: (
+            filtro.get("indice") is None,
+            filtro.get("indice") if filtro.get("indice") is not None else 0,
+        ),
+    )
+
+
+def _aplicar_filtros_avanzados_exportacion(queryset, filtros_avanzados):
+    """
+    Aplica el motor compartido de Detalle y resuelve Zona Educativa sobre el
+    snapshot vigente de la localizacion.
+    """
+    filtros_zona = [
+        filtro
+        for filtro in (filtros_avanzados or [])
+        if filtro.get("campo") == "zona_educativa"
+    ]
+    filtros_compartidos = [
+        filtro
+        for filtro in (filtros_avanzados or [])
+        if filtro.get("campo") != "zona_educativa"
+    ]
+
+    queryset = _aplicar_filtros_avanzados_detalle_reunida(
+        queryset,
+        filtros_compartidos,
+    )
+
+    valores_iguales = [
+        filtro["valor"]
+        for filtro in filtros_zona
+        if filtro.get("operador") == "2"
+    ]
+    if valores_iguales:
+        consulta_zona = Q()
+        for valor in valores_iguales:
+            consulta_zona |= Q(
+                localizacion__snapshots_padron__vigente=True,
+                localizacion__snapshots_padron__zona_educativa__iexact=valor,
+            )
+        queryset = queryset.filter(consulta_zona)
+
+    for filtro in filtros_zona:
+        if filtro.get("operador") != "7":
+            continue
+        queryset = queryset.exclude(
+            Q(
+                localizacion__snapshots_padron__vigente=True,
+                localizacion__snapshots_padron__zona_educativa__iexact=filtro["valor"],
+            )
+        )
+
+    return queryset.distinct() if filtros_zona else queryset
+
+
+def _construir_opciones_filtros_exportacion():
+    """
+    Conserva las opciones lazy de Padrón y precarga únicamente Zona Educativa.
+
+    Zona Educativa vive en snapshots POF, no en Padrón, y su catálogo es pequeño;
+    una consulta DISTINCT evita agregar otro endpoint o tocar el de Detalle.
+    """
+    opciones = _construir_opciones_filtros_detalle_reunida(
+        incluir_opciones_padron=False,
+    )
+    try:
+        valores = (
+            SnapshotPadronLocalizacionPof.objects
+            .filter(vigente=True)
+            .exclude(zona_educativa="")
+            .exclude(zona_educativa__isnull=True)
+            .order_by("zona_educativa")
+            .values_list("zona_educativa", flat=True)
+            .distinct()[:500]
+        )
+        opciones["zona_educativa"] = sorted(
+            {
+                str(valor).strip()
+                for valor in valores
+                if str(valor or "").strip()
+            },
+            key=str.casefold,
+        )
+    except (DatabaseError, ProgrammingError, OperationalError):
+        opciones["zona_educativa"] = []
+
+    return opciones
+
+
+def _iterar_parametros_filtros_exportacion(request, incluir_simples=False):
+    """
+    Extrae solamente parametros funcionales de filtros para el Excel de vista.
+
+    Conserva el orden y multiplicidad de las tripletas avanzadas, las busquedas
+    col_* y, para Proyecto Especial, los filtros simples heredados de Detalle.
+    """
+    if request is None:
+        return []
+
+    filtros_simples = set(FILTROS_DETALLE_PROYECTO) if incluir_simples else set()
+    parametros = []
+    for clave, valores in request.GET.lists():
+        if (
+            clave.startswith("col_")
+            or clave in FILTROS_AVANZADOS_QUERY_PARAMS
+            or clave in filtros_simples
+        ):
+            parametros.extend((clave, valor) for valor in valores)
+    return parametros
+
+
+def _descripcion_filtros_exportacion(
+    busquedas=None,
+    filtros_avanzados=None,
+    filtros_simples=None,
+    nombres_filtros_simples=(),
+):
+    """Construye una descripcion legible y fiel del alcance filtrado."""
+    partes = []
+
+    etiquetas_busqueda = {
+        columna["id"]: columna["label"]
+        for columna in COLUMNAS_BUSQUEDA_EXPORTACION
+    }
+    for columna_id, valor in (busquedas or {}).items():
+        partes.append(f"{etiquetas_busqueda.get(columna_id, columna_id)}: {valor}")
+
+    if filtros_simples:
+        chips_simples = _construir_chips_filtros_detalle(
+            filtros_simples,
+            {},
+            {},
+            nombres_filtros_simples,
+        )
+        partes.extend(
+            f"{chip['etiqueta']}: {chip['valor']}"
+            for chip in chips_simples
+        )
+
+    for filtro in filtros_avanzados or []:
+        campo_id = filtro.get("campo", "")
+        operador = filtro.get("operador", "0")
+        valor = filtro.get("valor", "")
+        etiqueta = FILTROS_AVANZADOS_EXPORTACION_LABELS.get(campo_id, campo_id)
+        operador_label = OPERADORES_FILTRO_DETALLE.get(
+            operador,
+            OPERADORES_FILTRO_DETALLE["0"],
+        )
+        valor_label = _valor_filtro_avanzado_detalle_label(campo_id, valor)
+        partes.append(f"{etiqueta} {operador_label}: {valor_label}")
+
+    return " · ".join(partes) if partes else "Sin filtros"
 
 
 def _obtener_busquedas_columnas_exportacion(request):
@@ -235,10 +546,11 @@ def _aplicar_busquedas_columnas_exportacion(cargos_queryset, busquedas):
 
 def _obtener_columna_oferta_exportacion():
     """
-    Define Oferta como segunda columna obligatoria de Exportar Reunida.
+    Define Oferta como columna obligatoria de Exportar Reunida.
 
     - Se muestra en todos los niveles de Reunidas comunes.
     - Repite el valor en cada fila de cargo.
+    - Se ubica después del bloque CUEANEXO + Código(s) Anexo POF.
     - No modifica los schemas compartidos ni Proyecto Especial.
     """
     return {
@@ -257,7 +569,12 @@ def _agregar_columna_oferta_exportacion(
     columnas_default_keys,
     columnas_visibles_keys,
 ):
-    """Inserta Oferta inmediatamente despues de la columna CUE-Anexo."""
+    """
+    Inserta Oferta después de Anexo POF cuando está visible.
+
+    Si Anexo POF no forma parte del conjunto visible, conserva el fallback
+    histórico inmediatamente después de CUEANEXO.
+    """
     columna_oferta = _obtener_columna_oferta_exportacion()
     columna_key = columna_oferta["key"]
 
@@ -266,17 +583,45 @@ def _agregar_columna_oferta_exportacion(
         for columna in columnas_disponibles
         if columna.get("key") != columna_key
     ]
-    columnas_disponibles_resultado.insert(1, columna_oferta)
+    columna_anexo_pof = next(
+        (
+            columna
+            for columna in columnas_disponibles_resultado
+            if columna.get("source") == "anexo_pof"
+        ),
+        None,
+    )
+    anexo_pof_key = (
+        columna_anexo_pof.get("key")
+        if columna_anexo_pof
+        else None
+    )
+    indice_disponible = (
+        columnas_disponibles_resultado.index(columna_anexo_pof) + 1
+        if columna_anexo_pof
+        else 1
+    )
+    columnas_disponibles_resultado.insert(indice_disponible, columna_oferta)
 
     columnas_default_resultado = [
         key for key in columnas_default_keys if key != columna_key
     ]
-    columnas_default_resultado.insert(1, columna_key)
+    indice_default = (
+        columnas_default_resultado.index(anexo_pof_key) + 1
+        if anexo_pof_key in columnas_default_resultado
+        else 1
+    )
+    columnas_default_resultado.insert(indice_default, columna_key)
 
     columnas_visibles_resultado = [
         key for key in columnas_visibles_keys if key != columna_key
     ]
-    columnas_visibles_resultado.insert(1, columna_key)
+    indice_visible = (
+        columnas_visibles_resultado.index(anexo_pof_key) + 1
+        if anexo_pof_key in columnas_visibles_resultado
+        else 1
+    )
+    columnas_visibles_resultado.insert(indice_visible, columna_key)
 
     return (
         columnas_disponibles_resultado,
@@ -526,6 +871,81 @@ def normalizar_cueanexo_exportacion(valor):
     return ""
 
 
+def _resolver_propietario_anexo_pof_fila_exportacion(
+    fila,
+    *,
+    es_proyecto_especial,
+):
+    cue = str(fila.get("cue") or "").strip()
+    if len(cue) == 7 and cue.isdigit():
+        return {
+            "tipo": TIPO_PROPIETARIO_CUE,
+            "valor": cue,
+        }
+
+    if es_proyecto_especial:
+        cuof = str(fila.get("cuof") or "").strip()
+        if cuof:
+            return {
+                "tipo": TIPO_PROPIETARIO_CUOF,
+                "valor": cuof,
+            }
+
+    return None
+
+
+def _enriquecer_filas_exportacion_con_anexo_pof(
+    filas_normalizadas,
+    *,
+    es_proyecto_especial,
+):
+    """
+    Agrega el texto de Código(s) Anexo POF a filas normalizadas en una sola consulta.
+
+    Reunida usa exclusivamente CUE. Proyecto Especial usa CUE con precedencia
+    estricta y CUOF sólo cuando la fila no dispone de un CUE válido.
+    """
+    filas = list(filas_normalizadas or [])
+    propietarios = []
+    claves_por_indice = {}
+
+    for indice, fila in enumerate(filas):
+        fila["anexo_pof"] = ""
+        propietario = _resolver_propietario_anexo_pof_fila_exportacion(
+            fila,
+            es_proyecto_especial=es_proyecto_especial,
+        )
+        if propietario is None:
+            continue
+
+        clave = (propietario["tipo"], propietario["valor"])
+        claves_por_indice[indice] = clave
+        propietarios.append(propietario)
+
+    mapa_codigos = obtener_codigos_activos_propietarios(
+        propietarios=propietarios,
+    )
+
+    for indice, clave in claves_por_indice.items():
+        filas[indice]["anexo_pof"] = ", ".join(
+            mapa_codigos.get(clave, [])
+        )
+
+    return filas
+
+
+def _obtener_clave_propietario_anexo_pof_proyecto(fila, indice=None):
+    propietario = _resolver_propietario_anexo_pof_fila_exportacion(
+        fila,
+        es_proyecto_especial=True,
+    )
+    if propietario is not None:
+        return (propietario["tipo"], propietario["valor"])
+
+    identificador = fila.get("localizacion_id") or fila.get("cargo_id") or indice
+    return ("LOCALIZACION", identificador)
+
+
 def _agregar_metadata_grupo_visual_reunida(filas_normalizadas):
     filas = []
     for fila in filas_normalizadas:
@@ -722,6 +1142,8 @@ def _construir_fila_preview(
     celdas = []
     for indice, columna in enumerate(columnas_disponibles):
         valor = fila[indice] if indice < len(fila) else ""
+        if valor is None:
+            valor = ""
         es_columna_cantidad = bool(columna.get("es_columna_cantidad"))
         es_columna_estado_pof = columna.get("source") == "estado_pof"
         es_columna_observacion = bool(columna.get("es_columna_observacion"))
@@ -751,6 +1173,9 @@ def _construir_fila_preview(
     return {
         "es_inicio_cue": bool(separador.get("es_inicio_cue")),
         "es_inicio_anexo": bool(separador.get("es_inicio_anexo")),
+        "cueanexo": str(fila_normalizada.get("cueanexo", "") or "").strip(),
+        "cuof": str(fila_normalizada.get("cuof", "") or "").strip(),
+        "mostrar_afectar": False,
         "cargo_ids": list(fila_normalizada.get("cargo_ids", [])),
         "tiene_modificacion_cantidad": bool(
             fila_normalizada.get("tiene_modificacion_cantidad")
@@ -771,10 +1196,13 @@ def _construir_secciones_preview(
     columnas_visibles_keys,
     separadores_filas=None,
     filas_normalizadas=None,
+    identidad_afectar="CUEANEXO",
 ):
     separadores_filas = separadores_filas or []
     filas_normalizadas = filas_normalizadas or []
     secciones_preview = []
+    claves_afectar_vistas = set()
+
     for seccion in secciones:
         seccion_preview = seccion.copy()
         indices_filas = seccion.get("indices_filas") or []
@@ -785,57 +1213,64 @@ def _construir_secciones_preview(
                 if indice_local < len(indices_filas)
                 else indice_local
             )
-            filas_preview.append(
-                _construir_fila_preview(
-                    fila,
-                    columnas_disponibles,
-                    columnas_visibles_keys,
-                    separadores_filas[indice_fila]
-                    if indice_fila < len(separadores_filas)
-                    else None,
-                    filas_normalizadas[indice_fila]
-                    if indice_fila < len(filas_normalizadas)
-                    else None,
-                )
+            fila_preview = _construir_fila_preview(
+                fila,
+                columnas_disponibles,
+                columnas_visibles_keys,
+                separadores_filas[indice_fila]
+                if indice_fila < len(separadores_filas)
+                else None,
+                filas_normalizadas[indice_fila]
+                if indice_fila < len(filas_normalizadas)
+                else None,
             )
+
+            if identidad_afectar == "CUOF":
+                clave_afectar = fila_preview["cuof"]
+            else:
+                clave_afectar = normalizar_cueanexo_exportacion(
+                    fila_preview["cueanexo"]
+                )
+
+            fila_preview["mostrar_afectar"] = bool(
+                clave_afectar
+                and clave_afectar not in claves_afectar_vistas
+            )
+            if clave_afectar:
+                claves_afectar_vistas.add(clave_afectar)
+
+            filas_preview.append(fila_preview)
+
         seccion_preview["filas"] = filas_preview
         secciones_preview.append(seccion_preview)
+
     return secciones_preview
 
 
 def _anotar_claves_preview_reunida(cargos_queryset):
     """
-    Anota las claves DB-first usadas para elegir las paginas del preview.
+    Anota la unidad DB-first usada para paginar el preview de Reunida.
 
-    - Replica el CUE base derivado por la normalizacion, tomando los primeros
-      siete caracteres del CUEANEXO disponible.
-    - Aisla por localizacion los cargos sin CUEANEXO utilizable, como hace la
-      agrupacion visual existente para sus casos de fallback.
-    - Mantiene la consulta perezosa para que el queryset completo no se
-      materialice antes de elegir la pagina.
+    - Usa CUEANEXO completo como unidad funcional de establecimiento/localizacion.
+    - Aisla por localizacion cualquier fila legacy sin CUEANEXO utilizable.
+    - Mantiene la consulta perezosa para no materializar cargos fuera de pagina.
     """
-    cue_disponible = Q(localizacion__cueanexo__regex=r"^.{7,}$")
+    cueanexo_disponible = (
+        ~Q(localizacion__cueanexo="")
+        & Q(localizacion__cueanexo__isnull=False)
+    )
     return cargos_queryset.annotate(
-        _cue_paginacion_exportacion=Case(
-            When(
-                cue_disponible,
-                then=Substr("localizacion__cueanexo", 1, 7),
-            ),
-            default=Cast("localizacion_id", CharField()),
-            output_field=CharField(),
-        ),
-    ).annotate(
         _unidad_paginacion_exportacion=Case(
             When(
-                cue_disponible,
+                cueanexo_disponible,
                 then=Concat(
-                    Value("CUE:"),
-                    F("_cue_paginacion_exportacion"),
+                    Value("CUEANEXO:"),
+                    "localizacion__cueanexo",
                     output_field=CharField(),
                 ),
             ),
             default=Concat(
-                Value("_sin_cue:"),
+                Value("_sin_cueanexo:"),
                 Cast("localizacion_id", CharField()),
                 output_field=CharField(),
             ),
@@ -846,7 +1281,7 @@ def _anotar_claves_preview_reunida(cargos_queryset):
 
 def _paginar_unidades_preview_reunida(cargos_queryset, request):
     """
-    Selecciona primero los cinco CUE del preview mediante una consulta agrupada.
+    Selecciona primero los cinco CUEANEXO del preview mediante una consulta agrupada.
 
     - Respeta el orden funcional actual usando la primera aparicion de cada
       unidad y sus desempates de localizacion, CEIC e identificador.
@@ -874,7 +1309,7 @@ def _paginar_unidades_preview_reunida(cargos_queryset, request):
     )
     paginator = Paginator(
         unidades_queryset,
-        CUES_POR_PAGINA_EXPORTACION,
+        CUEANEXOS_POR_PAGINA_EXPORTACION,
     )
     page_obj = paginator.get_page(request.GET.get("page", 1))
     return list(page_obj.object_list), page_obj
@@ -882,10 +1317,9 @@ def _paginar_unidades_preview_reunida(cargos_queryset, request):
 
 def _restringir_queryset_preview_reunida(cargos_queryset, unidades_pagina):
     """
-    Restringe el queryset de cargos a las unidades CUE de la pagina actual.
+    Restringe el queryset de cargos a los CUEANEXO de la pagina actual.
 
-    - Mantiene todos los cargos y CUEANEXO pertenecientes a cada unidad
-      seleccionada.
+    - Mantiene todos los cargos pertenecientes a cada CUEANEXO seleccionado.
     - Conserva el orden de consulta base antes de aplicar la politica exacta
       de orden de cada nivel en `ordenar_cargos_exportacion`.
     - Devuelve un queryset vacio cuando la pagina no tiene unidades.
@@ -946,7 +1380,7 @@ def _obtener_totales_generales_preview_reunida(
     """
     Obtiene los totales generales completos de los grupos de la pagina.
 
-    - Suma exclusivamente cargos AFECTADOS de las unidades CUE seleccionadas.
+    - Suma exclusivamente cargos AFECTADOS de los CUEANEXO seleccionados.
     - Agrupa cada CUEANEXO de manera independiente, con fallback a CUOF y
       localización, igual que el Visualizador.
     - Con `unidades_pagina` limita la lectura al preview; sin ese argumento
@@ -1012,10 +1446,11 @@ def _construir_paginacion_preview_reunida(page_obj, request):
     """
     Serializa los metadatos del paginador DB-first del preview común.
 
-    - Mantiene el rango de CUE, anterior/siguiente y el rango elidido de
+    - Mantiene el rango de CUEANEXO, anterior/siguiente y el rango elidido de
       paginas sin recorrer filas normalizadas.
     - Excluye `page` y `accion` de los enlaces de preview para no limitar ni
       contaminar Excel.
+    - Conserva alias legacy de CUE para compatibilidad interna transitoria.
     """
     paginator = page_obj.paginator
 
@@ -1025,32 +1460,39 @@ def _construir_paginacion_preview_reunida(page_obj, request):
             continue
         parametros_preview.extend((clave, valor) for valor in valores)
 
-    total_cue = paginator.count
+    total_cueanexo = paginator.count
     total_paginas = (
-        (total_cue + CUES_POR_PAGINA_EXPORTACION - 1)
-        // CUES_POR_PAGINA_EXPORTACION
-        if total_cue
+        (total_cueanexo + CUEANEXOS_POR_PAGINA_EXPORTACION - 1)
+        // CUEANEXOS_POR_PAGINA_EXPORTACION
+        if total_cueanexo
         else 0
     )
-    primer_cue = (
-        ((page_obj.number - 1) * CUES_POR_PAGINA_EXPORTACION) + 1
-        if total_cue
+    primer_cueanexo = (
+        ((page_obj.number - 1) * CUEANEXOS_POR_PAGINA_EXPORTACION) + 1
+        if total_cueanexo
         else 0
     )
-    ultimo_cue = (
-        min(page_obj.number * CUES_POR_PAGINA_EXPORTACION, total_cue)
-        if total_cue
+    ultimo_cueanexo = (
+        min(
+            page_obj.number * CUEANEXOS_POR_PAGINA_EXPORTACION,
+            total_cueanexo,
+        )
+        if total_cueanexo
         else 0
     )
 
     return {
-        "mostrar": bool(total_cue),
+        "mostrar": bool(total_cueanexo),
         "pagina_actual": page_obj.number,
         "total_paginas": total_paginas,
-        "cues_por_pagina": CUES_POR_PAGINA_EXPORTACION,
-        "total_cue": total_cue,
-        "primer_cue": primer_cue,
-        "ultimo_cue": ultimo_cue,
+        "cueanexos_por_pagina": CUEANEXOS_POR_PAGINA_EXPORTACION,
+        "total_cueanexo": total_cueanexo,
+        "primer_cueanexo": primer_cueanexo,
+        "ultimo_cueanexo": ultimo_cueanexo,
+        "cues_por_pagina": CUEANEXOS_POR_PAGINA_EXPORTACION,
+        "total_cue": total_cueanexo,
+        "primer_cue": primer_cueanexo,
+        "ultimo_cue": ultimo_cueanexo,
         "tiene_anterior": page_obj.has_previous(),
         "pagina_anterior": (
             page_obj.previous_page_number() if page_obj.has_previous() else None
@@ -1061,11 +1503,46 @@ def _construir_paginacion_preview_reunida(page_obj, request):
         ),
         "page_range": (
             list(paginator.get_elided_page_range(number=page_obj.number))
-            if total_cue
+            if total_cueanexo
             else []
         ),
         "querystring_base": urlencode(parametros_preview),
     }
+
+
+def _armar_excel_querystring_base(
+    base_params,
+    columnas_visibles_keys,
+    request=None,
+    alcance="vista",
+    incluir_filtros_simples=False,
+):
+    """
+    Construye un enlace Excel coherente con Vista actual / Todos los datos.
+
+    Vista actual conserva únicamente filtros funcionales; Todos los datos ignora
+    cualquier filtro aunque la URL origen todavía los contenga.
+    """
+    if not columnas_visibles_keys:
+        return ""
+
+    params = [
+        *base_params.items(),
+        ("accion", "excel"),
+        ("alcance", alcance),
+    ]
+    if request is not None and alcance == "vista":
+        params.extend(
+            _iterar_parametros_filtros_exportacion(
+                request,
+                incluir_simples=incluir_filtros_simples,
+            )
+        )
+    params.extend(
+        ("visible_col", key)
+        for key in columnas_visibles_keys
+    )
+    return urlencode(params)
 
 
 def _armar_excel_querystring_reunida(
@@ -1075,27 +1552,33 @@ def _armar_excel_querystring_reunida(
     request=None,
     alcance="vista",
 ):
-    """Construye el enlace Excel común con filtros solo para el alcance vista."""
-    if not columnas_visibles_keys:
-        return ""
-    params = [
-        ("anio", anio),
-        ("nivel", nivel_codigo),
-        ("accion", "excel"),
-        ("alcance", alcance),
-    ]
-    if request is not None and alcance == "vista":
-        params.extend(
-            (clave, valor)
-            for clave, valores in request.GET.lists()
-            if clave.startswith("col_")
-            for valor in valores
-        )
-    params.extend(
-        ("visible_col", key)
-        for key in columnas_visibles_keys
+    return _armar_excel_querystring_base(
+        {
+            "anio": anio,
+            "nivel": nivel_codigo,
+        },
+        columnas_visibles_keys,
+        request=request,
+        alcance=alcance,
     )
-    return urlencode(params)
+
+
+def _armar_excel_querystring_proyecto(
+    proyecto_especial_id,
+    columnas_visibles_keys,
+    request=None,
+    alcance="vista",
+):
+    return _armar_excel_querystring_base(
+        {
+            "cabecera_tipo": "PROYECTO_ESPECIAL",
+            "proyecto_especial_id": proyecto_especial_id,
+        },
+        columnas_visibles_keys,
+        request=request,
+        alcance=alcance,
+        incluir_filtros_simples=True,
+    )
 
 
 
@@ -1251,6 +1734,10 @@ def _obtener_filas_normalizadas_exportacion_proyecto(
         key=_clave_orden_cargo_proyecto_especial,
     )
     filas_normalizadas = construir_filas_normalizadas(cargos_ordenados)
+    filas_normalizadas = _enriquecer_filas_exportacion_con_anexo_pof(
+        filas_normalizadas,
+        es_proyecto_especial=True,
+    )
     if incluir_historial_cantidad:
         enriquecer_filas_con_historial_cantidad(filas_normalizadas)
     if incluir_historial_observacion:
@@ -1274,23 +1761,37 @@ def _obtener_clave_grupo_proyecto_especial(fila, indice=None):
 def _proyectar_filas_exportacion_proyecto(filas_normalizadas, columnas):
     filas = []
     clave_anterior = None
+    clave_propietario_anexo_pof_anterior = None
 
     for indice, fila in enumerate(filas_normalizadas):
         clave_actual = _obtener_clave_grupo_proyecto_especial(fila, indice)
+        clave_propietario_anexo_pof_actual = (
+            _obtener_clave_propietario_anexo_pof_proyecto(fila, indice)
+        )
         misma_localizacion = clave_actual == clave_anterior
+        mismo_propietario_anexo_pof = (
+            clave_propietario_anexo_pof_actual
+            == clave_propietario_anexo_pof_anterior
+        )
         fila_render = []
 
         for columna in columnas:
-            valor = fila.get(columna["source"], "")
-            if (
+            source = columna["source"]
+            valor = fila.get(source, "")
+            if source == "anexo_pof" and mismo_propietario_anexo_pof:
+                valor = ""
+            elif (
                 misma_localizacion
-                and columna["source"] in FUENTES_NO_REPETIR_PROYECTO_ESPECIAL
+                and source in FUENTES_NO_REPETIR_PROYECTO_ESPECIAL
             ):
                 valor = ""
             fila_render.append(valor)
 
         filas.append(fila_render)
         clave_anterior = clave_actual
+        clave_propietario_anexo_pof_anterior = (
+            clave_propietario_anexo_pof_actual
+        )
 
     return filas
 
@@ -1427,6 +1928,10 @@ def _obtener_filas_reales_exportacion(
             incluir_historial_estado=incluir_historial_estado,
         )
         filas_normalizadas = grilla["filas_normalizadas"]
+        filas_normalizadas = _enriquecer_filas_exportacion_con_anexo_pof(
+            filas_normalizadas,
+            es_proyecto_especial=False,
+        )
         if incluir_historial_observacion:
             enriquecer_filas_con_historial_observacion(filas_normalizadas)
         _aplicar_totales_generales_preview_reunida(
@@ -1488,9 +1993,31 @@ def _construir_contexto_exportacion_proyecto(proyecto_especial_id, request=None)
     separadores_filas_exportacion = []
     mensaje_exportacion = ""
     proyecto_obj = None
+    es_excel = bool(request and request.GET.get("accion") == "excel")
+    alcance_solicitado = request.GET.get("alcance") if request else ""
+    alcance_excel = (
+        alcance_solicitado
+        if alcance_solicitado in {"vista", "todos"}
+        else "todos"
+    )
     filtros_detalle = _obtener_filtros_detalle_reunida(request) if request else {}
+    filtros_avanzados_exportacion = (
+        _obtener_filtros_avanzados_exportacion(request)
+        if request
+        else []
+    )
+    filtros_detalle_efectivos = _obtener_filtros_simples_proyecto_efectivos(
+        filtros_detalle,
+        filtros_avanzados_exportacion,
+    )
     filtros_detalle_activos = (
-        _hay_filtros_detalle_reunida(filtros_detalle, FILTROS_DETALLE_PROYECTO)
+        (
+            _hay_filtros_detalle_reunida(
+                filtros_detalle_efectivos,
+                FILTROS_DETALLE_PROYECTO,
+            )
+            or bool(filtros_avanzados_exportacion)
+        )
         if request
         else False
     )
@@ -1501,15 +2028,22 @@ def _construir_contexto_exportacion_proyecto(proyecto_especial_id, request=None)
         try:
             proyecto_obj = ProyectosEspecialesPof.objects.get(pk=proyecto_especial_id)
             cargos_exportacion = _obtener_cargos_exportacion_proyecto(proyecto_especial_id)
-            if request:
+            aplicar_filtros = request is not None and (
+                not es_excel or alcance_excel == "vista"
+            )
+            if aplicar_filtros:
                 cargos_exportacion, _mensaje_filtros, _errores_filtros = _aplicar_filtros_detalle_reunida(
                     cargos_exportacion,
-                    filtros_detalle,
+                    filtros_detalle_efectivos,
                     incluir_cui=True,
+                )
+                cargos_exportacion = _aplicar_filtros_avanzados_exportacion(
+                    cargos_exportacion,
+                    filtros_avanzados_exportacion,
                 )
                 cargos_exportacion, _mensaje_cargo, _errores_cargo = _aplicar_filtros_cargo_detalle_reunida(
                     cargos_exportacion,
-                    filtros_detalle,
+                    filtros_detalle_efectivos,
                 )
             filas_normalizadas_exportacion = _obtener_filas_normalizadas_exportacion_proyecto(
                 cargos_exportacion,
@@ -1558,6 +2092,7 @@ def _construir_contexto_exportacion_proyecto(proyecto_especial_id, request=None)
         columnas_visibles_keys,
         separadores_filas_exportacion,
         filas_normalizadas=filas_normalizadas_exportacion,
+        identidad_afectar="CUOF",
     )
     anio = str(proyecto_obj.anio) if proyecto_obj else ""
     nombre = proyecto_obj.nombre if proyecto_obj else "-"
@@ -1580,16 +2115,14 @@ def _construir_contexto_exportacion_proyecto(proyecto_especial_id, request=None)
         if base_params
         else ""
     )
-    parametros_excel = urlencode([
-        ("accion", "excel"),
-        *(
-            ("visible_col", key)
-            for key in columnas_visibles_keys
-        ),
-    ])
     excel_querystring = (
-        f"{detalle_querystring}&{parametros_excel}"
-        if detalle_querystring
+        _armar_excel_querystring_proyecto(
+            proyecto_obj.id,
+            columnas_visibles_keys,
+            request=request,
+            alcance="vista",
+        )
+        if proyecto_obj
         else ""
     )
     titulo_excel = (
@@ -1607,11 +2140,17 @@ def _construir_contexto_exportacion_proyecto(proyecto_especial_id, request=None)
         "descripcion_exportacion": "Valida los datos cargados y prepara la exportacion final del Proyecto Especial POF.",
         "cabecera_querystring": detalle_querystring or cabecera_querystring,
         "excel_querystring": excel_querystring,
-        "filtros_excel": (
-            "Filtros propios del Proyecto Especial"
-            if filtros_detalle_activos
-            else "Sin filtros"
+        "alcance_excel": alcance_excel,
+        "filtros_excel": _descripcion_filtros_exportacion(
+            filtros_avanzados=filtros_avanzados_exportacion,
+            filtros_simples=filtros_detalle_efectivos,
+            nombres_filtros_simples=FILTROS_DETALLE_PROYECTO,
         ),
+        "filtros_exportacion_activos": filtros_detalle_activos,
+        "filtros_avanzados_exportacion": filtros_avanzados_exportacion,
+        "filtros_exportacion_campos": FILTROS_AVANZADOS_EXPORTACION_CAMPOS,
+        "filtros_exportacion_opciones": _construir_opciones_filtros_exportacion(),
+        "filtros_simple_exportacion_nombres": FILTROS_DETALLE_PROYECTO,
         "reunida": {
             "anio": anio,
             "nivel": nombre,
@@ -1651,7 +2190,7 @@ def construir_contexto_exportacion(request):
     """
     Construye el contexto de exportación manteniendo separado el preview del Excel.
 
-    - Usa solo los cinco CUE de la pagina para el preview web de Reunidas comunes.
+    - Usa solo los cinco CUEANEXO de la pagina para el preview web de Reunidas comunes.
     - Conserva todas las filas normalizadas y proyectadas del alcance Excel solicitado.
     - Mantiene sin cambios Proyecto Especial, calculos, agrupaciones y orden de exportacion.
     """
@@ -1758,7 +2297,19 @@ def construir_contexto_exportacion(request):
     )
     paginacion_preview = {}
     busqueda_sin_resultados = False
+    filtros_avanzados_exportacion = _obtener_filtros_avanzados_exportacion(
+        request
+    )
     busquedas_columnas = _obtener_busquedas_columnas_exportacion(request)
+    busquedas_columnas_efectivas = (
+        _obtener_busquedas_columnas_exportacion_efectivas(
+            busquedas_columnas,
+            filtros_avanzados_exportacion,
+        )
+    )
+    filtros_exportacion_activos = bool(
+        busquedas_columnas_efectivas or filtros_avanzados_exportacion
+    )
     busqueda_columna_id = next(
         iter(busquedas_columnas),
         COLUMNAS_BUSQUEDA_EXPORTACION[0]["id"],
@@ -1775,9 +2326,13 @@ def construir_contexto_exportacion(request):
             if es_excel:
                 cargos_queryset_excel = cargos_queryset_reunida
                 if alcance_excel == "vista":
+                    cargos_queryset_excel = _aplicar_filtros_avanzados_exportacion(
+                        cargos_queryset_excel,
+                        filtros_avanzados_exportacion,
+                    )
                     cargos_queryset_excel = _aplicar_busquedas_columnas_exportacion(
                         cargos_queryset_excel,
-                        busquedas_columnas,
+                        busquedas_columnas_efectivas,
                     )
                 _filas_schema, filas_normalizadas_exportacion = _obtener_filas_reales_exportacion(
                     obtener_columnas_por_nivel(nivel_exportacion),
@@ -1785,9 +2340,13 @@ def construir_contexto_exportacion(request):
                     nivel_codigo=nivel_codigo,
                 )
             else:
-                cargos_queryset = _aplicar_busquedas_columnas_exportacion(
+                cargos_queryset = _aplicar_filtros_avanzados_exportacion(
                     cargos_queryset_reunida,
-                    busquedas_columnas,
+                    filtros_avanzados_exportacion,
+                )
+                cargos_queryset = _aplicar_busquedas_columnas_exportacion(
+                    cargos_queryset,
+                    busquedas_columnas_efectivas,
                 )
                 unidades_pagina, page_obj = _paginar_unidades_preview_reunida(
                     cargos_queryset,
@@ -1833,13 +2392,13 @@ def construir_contexto_exportacion(request):
             if not filas_exportacion:
                 if (
                     not es_excel
-                    and busquedas_columnas
+                    and filtros_exportacion_activos
                     and cargos_queryset_reunida is not None
                     and cargos_queryset_reunida.exists()
                 ):
                     busqueda_sin_resultados = True
                     mensaje_exportacion = (
-                        "No se encontraron resultados para la búsqueda actual."
+                        "No se encontraron resultados para los filtros aplicados."
                     )
                 else:
                     mensaje_exportacion = (
@@ -1912,9 +2471,19 @@ def construir_contexto_exportacion(request):
         "secciones_preview": secciones_preview,
         "columnas_busqueda": COLUMNAS_BUSQUEDA_EXPORTACION,
         "busquedas_columnas": busquedas_columnas,
+        "busquedas_columnas_efectivas": busquedas_columnas_efectivas,
         "busqueda_columna_id": busqueda_columna_id,
         "busqueda_columna_valor": busqueda_columna_valor,
         "alcance_excel": alcance_excel,
+        "filtros_excel": _descripcion_filtros_exportacion(
+            busquedas=busquedas_columnas_efectivas,
+            filtros_avanzados=filtros_avanzados_exportacion,
+        ),
+        "filtros_exportacion_activos": filtros_exportacion_activos,
+        "filtros_avanzados_exportacion": filtros_avanzados_exportacion,
+        "filtros_exportacion_campos": FILTROS_AVANZADOS_EXPORTACION_CAMPOS,
+        "filtros_exportacion_opciones": _construir_opciones_filtros_exportacion(),
+        "filtros_simple_exportacion_nombres": (),
         "busqueda_sin_resultados": busqueda_sin_resultados,
         "filas_preview_count": len(filas_exportacion_globales),
         "paginacion_preview": paginacion_preview,

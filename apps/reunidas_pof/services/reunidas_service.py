@@ -13,6 +13,11 @@ from .filtros_pof_service import (
 )
 
 from ..models import CargoPof, ProyectosEspecialesPof, ReunidaPof, SnapshotPadronLocalizacionPof
+from .anexo_pof_service import (
+    TIPO_PROPIETARIO_CUE,
+    TIPO_PROPIETARIO_CUOF,
+    obtener_codigos_activos_propietarios,
+)
 from .exportacion_rows import construir_filas_normalizadas
 from .grilla_pof import construir_grilla_pof_desde_cargos, obtener_cargos_grilla_reunida
 from .grilla_pof.detalle_politicas import obtener_politicas_detalle_reunida
@@ -46,7 +51,7 @@ from .padron_materializadas_service import obtener_opciones_filtros_visualizacio
 from .visualizacion_cargos_localizacion_service import OFERTAS_FILTRO_VISUALIZACION
 
 
-CUES_POR_PAGINA_DETALLE = 5
+UNIDADES_POR_PAGINA_DETALLE = 5
 
 FILTROS_DETALLE_REUNIDA = (
     "cueanexo",
@@ -911,7 +916,7 @@ def _normalizar_pagina_detalle(valor_pagina):
 
 def _construir_query_params_paginacion_detalle(request):
     """
-    Construye la base de querystring para paginar CUEs del Detalle comun.
+    Construye la base de querystring para paginar CUEANEXO del Detalle comun.
 
     - Conserva filtros y parametros de contexto vigentes.
     - Quita solo `page` para que cada link reemplace la pagina actual.
@@ -924,7 +929,7 @@ def _construir_query_params_paginacion_detalle(request):
 
 def _obtener_page_range_detalle(paginator, page_obj):
     """
-    Devuelve un rango compacto de paginas para grupos CUE del Detalle.
+    Devuelve un rango compacto de paginas para CUEANEXO del Detalle.
 
     - Usa rangos elididos para evitar cientos de links.
     - Mantiene paginas cercanas a la actual y extremos.
@@ -939,15 +944,14 @@ def _obtener_page_range_detalle(paginator, page_obj):
     )
 
 
-def _paginar_grupos_cue_detalle(grupos_cue, valor_pagina):
+def _paginar_grupos_detalle_fallback(grupos, valor_pagina):
     """
-    Pagina grupos CUE ya armados para el Detalle de Reunida comun.
+    Fallback de paginacion para estructuras ya materializadas.
 
-    - Pagina CUEs completos, no cargos ni grupos Anexo/CUOF internos.
-    - Mantiene intactos totales, filas y estructuras publicas de cada grupo.
-    - Devuelve contadores para mostrar el rango visible sin recalcular datos.
+    El flujo normal de Reunida pagina CUEANEXO directamente en base de datos;
+    este helper solo conserva una salida segura cuando no hay metadata DB-first.
     """
-    paginator = Paginator(grupos_cue, CUES_POR_PAGINA_DETALLE)
+    paginator = Paginator(grupos, UNIDADES_POR_PAGINA_DETALLE)
     page_obj = paginator.get_page(_normalizar_pagina_detalle(valor_pagina))
     total = paginator.count
 
@@ -958,37 +962,35 @@ def _paginar_grupos_cue_detalle(grupos_cue, valor_pagina):
         "total": total,
         "showing_start": page_obj.start_index() if total else 0,
         "showing_end": page_obj.end_index() if total else 0,
-        "page_size": CUES_POR_PAGINA_DETALLE,
+        "page_size": UNIDADES_POR_PAGINA_DETALLE,
         "page_range": _obtener_page_range_detalle(paginator, page_obj),
+        "unidades_pagina": [],
     }
 
 
 def _obtener_cargos_pagina_detalle_sin_filtros(cargos_queryset, valor_pagina):
     """
-    Selecciona en base de datos la pagina de CUE del Detalle comun sin filtros.
+    Selecciona en base de datos la pagina de CUEANEXO del Detalle comun.
 
-    - Deriva la clave CUE desde los primeros siete digitos de `cueanexo`.
-    - Cuenta y pagina claves CUE distintas, sin materializar todos los cargos.
-    - Restringe el queryset original a los CUE de la pagina antes de normalizar,
-      enriquecer historial y construir la grilla.
-    - Conserva el `select_related`/`prefetch_related` del queryset recibido.
+    - Cuenta y pagina CUEANEXO distintos, que son la unidad funcional de
+      establecimiento/localizacion de una Reunida.
+    - Restringe el queryset original a los CUEANEXO de la pagina antes de
+      normalizar, enriquecer historial y construir la grilla.
+    - Conserva el CUE como agrupador visual, no como unidad de conteo.
     """
-    cargos_anotados = cargos_queryset.annotate(
-        _cue_paginacion_detalle=Substr("localizacion__cueanexo", 1, 7),
-    )
-    cues_queryset = (
-        cargos_anotados
+    cueanexos_queryset = (
+        cargos_queryset
         .order_by()
-        .values_list("_cue_paginacion_detalle", flat=True)
+        .values_list("localizacion__cueanexo", flat=True)
         .distinct()
-        .order_by("_cue_paginacion_detalle")
+        .order_by("localizacion__cueanexo")
     )
-    paginator = Paginator(cues_queryset, CUES_POR_PAGINA_DETALLE)
+    paginator = Paginator(cueanexos_queryset, UNIDADES_POR_PAGINA_DETALLE)
     page_obj = paginator.get_page(_normalizar_pagina_detalle(valor_pagina))
-    cues_pagina = list(page_obj.object_list)
+    cueanexos_pagina = list(page_obj.object_list)
     cargos_pagina = (
-        cargos_anotados.filter(_cue_paginacion_detalle__in=cues_pagina)
-        if cues_pagina
+        cargos_queryset.filter(localizacion__cueanexo__in=cueanexos_pagina)
+        if cueanexos_pagina
         else cargos_queryset.none()
     )
     total = paginator.count
@@ -1000,57 +1002,75 @@ def _obtener_cargos_pagina_detalle_sin_filtros(cargos_queryset, valor_pagina):
         "total": total,
         "showing_start": page_obj.start_index() if total else 0,
         "showing_end": page_obj.end_index() if total else 0,
-        "page_size": CUES_POR_PAGINA_DETALLE,
+        "page_size": UNIDADES_POR_PAGINA_DETALLE,
         "page_range": _obtener_page_range_detalle(paginator, page_obj),
+        "unidades_pagina": cueanexos_pagina,
     }
 
 
-def _paginar_cues_coincidentes_detalle(cargos_queryset, valor_pagina):
+def _paginar_cueanexos_coincidentes_detalle(cargos_queryset, valor_pagina):
     """
-    Pagina en base de datos los CUE presentes en un resultado filtrado.
+    Pagina los CUEANEXO presentes en un resultado filtrado.
 
     El queryset recibido define las coincidencias globales; la grilla se limita
-    despues a las cinco claves de la pagina mediante la metadata retornada.
+    despues a los cinco CUEANEXO de la pagina.
     """
-    cargos_anotados = cargos_queryset.annotate(
-        _cue_paginacion_detalle=Substr("localizacion__cueanexo", 1, 7),
-    )
-    cues_queryset = (
-        cargos_anotados
+    cueanexos_queryset = (
+        cargos_queryset
         .order_by()
-        .values_list("_cue_paginacion_detalle", flat=True)
+        .values_list("localizacion__cueanexo", flat=True)
         .distinct()
-        .order_by("_cue_paginacion_detalle")
+        .order_by("localizacion__cueanexo")
     )
-    paginator = Paginator(cues_queryset, CUES_POR_PAGINA_DETALLE)
+    paginator = Paginator(cueanexos_queryset, UNIDADES_POR_PAGINA_DETALLE)
     page_obj = paginator.get_page(_normalizar_pagina_detalle(valor_pagina))
-    cues_pagina = list(page_obj.object_list)
+    cueanexos_pagina = list(page_obj.object_list)
     total = paginator.count
 
-    return cues_pagina, {
+    return cueanexos_pagina, {
         "page_obj": page_obj,
         "paginator": paginator,
         "grupos": [],
         "total": total,
         "showing_start": page_obj.start_index() if total else 0,
         "showing_end": page_obj.end_index() if total else 0,
-        "page_size": CUES_POR_PAGINA_DETALLE,
+        "page_size": UNIDADES_POR_PAGINA_DETALLE,
         "page_range": _obtener_page_range_detalle(paginator, page_obj),
+        "unidades_pagina": cueanexos_pagina,
     }
 
 
-def _restringir_queryset_detalle_a_cues(cargos_queryset, cues):
-    """
-    Limita un queryset base o coincidente a los CUE de la pagina.
+def _restringir_queryset_detalle_a_cueanexos(cargos_queryset, cueanexos):
+    """Limita un queryset a los CUEANEXO exactos de la pagina."""
+    if not cueanexos:
+        return cargos_queryset.none()
+    return cargos_queryset.filter(localizacion__cueanexo__in=cueanexos)
 
-    Conserva filtros, relaciones precargadas y orden del queryset recibido.
+
+def _restringir_queryset_detalle_a_cues_de_cueanexos(cargos_queryset, cueanexos):
     """
-    if not cues:
+    Mantiene el CUE completo para encabezados y totales mientras la pagina
+    muestra solamente los CUEANEXO seleccionados.
+    """
+    if not cueanexos:
         return cargos_queryset.none()
 
-    return cargos_queryset.annotate(
-        _cue_paginacion_detalle=Substr("localizacion__cueanexo", 1, 7),
-    ).filter(_cue_paginacion_detalle__in=cues)
+    cues = {
+        str(cueanexo or "").strip()[:7]
+        for cueanexo in cueanexos
+        if len(str(cueanexo or "").strip()) >= 7
+    }
+    exactos = {
+        str(cueanexo or "").strip()
+        for cueanexo in cueanexos
+        if len(str(cueanexo or "").strip()) < 7
+    }
+    criterio = Q()
+    for cue in cues:
+        criterio |= Q(localizacion__cueanexo__startswith=cue)
+    if exactos:
+        criterio |= Q(localizacion__cueanexo__in=exactos)
+    return cargos_queryset.filter(criterio)
 
 
 def _aplicar_filtros_detalle_reunida(queryset, filtros, incluir_cui=False):
@@ -1372,27 +1392,30 @@ def _aplicar_filtros_cargo_detalle_reunida(queryset, filtros):
     return queryset, " ".join(mensajes), errores
 
 
-def _calcular_resumen_resultado_detalle_queryset(cargos_queryset, cantidad_cues):
+def _calcular_resumen_resultado_detalle_queryset(cargos_queryset, cantidad_cueanexos):
     """
-    Calcula el resumen global filtrado sin construir grupos en Python.
+    Calcula el resumen global filtrado con CUEANEXO como unidad principal.
 
-    Cuenta cargos y CUEANEXO distintos sobre todas las coincidencias, mientras
-    la cantidad de CUE reutiliza el total del paginador de claves distintas.
+    - Cuenta cargos y CUE distintos sobre todas las coincidencias.
+    - Reutiliza el total del paginador para la cantidad de CUEANEXO.
+    - Conserva "anexos" como alias temporal para no romper consumidores internos.
     """
     cantidad_cargos = cargos_queryset.count()
-    cantidad_anexos = (
+    cantidad_cues = (
         cargos_queryset
         .exclude(localizacion__cueanexo="")
+        .annotate(_cue_resumen_detalle=Substr("localizacion__cueanexo", 1, 7))
         .order_by()
-        .values_list("localizacion__cueanexo", flat=True)
+        .values_list("_cue_resumen_detalle", flat=True)
         .distinct()
         .count()
     )
 
     return {
         "cargos": cantidad_cargos,
+        "cueanexos": cantidad_cueanexos,
         "cues": cantidad_cues,
-        "anexos": cantidad_anexos,
+        "anexos": cantidad_cueanexos,
     }
 
 
@@ -1565,6 +1588,60 @@ def _es_cueanexo_oficial_detalle(cueanexo):
     return len(cueanexo) == 9 and cueanexo.isdigit()
 
 
+def _enriquecer_grupos_detalle_con_anexo_pof(grupos, *, es_proyecto_especial):
+    """
+    Agrega los códigos Anexo POF vigentes a los grupos visibles del Detalle.
+
+    - Reunida usa exclusivamente CUE como propietario.
+    - Proyecto Especial usa CUE cuando existe y CUOF sólo como fallback sin CUE.
+    - Resuelve todos los propietarios visibles mediante una única consulta bulk.
+    - Mantiene listas vacías cuando el grupo no tiene códigos o propietario válido.
+    """
+    grupos = list(grupos or [])
+    propietarios = []
+    clave_propietario_por_indice = {}
+
+    for indice, grupo in enumerate(grupos):
+        grupo["codigos_anexo_pof"] = []
+        grupo["anexo_pof_propietario_tipo"] = ""
+        grupo["anexo_pof_propietario_valor"] = ""
+
+        cue = str(grupo.get("cue") or "").strip()
+        cuof = str(grupo.get("cuof") or "").strip()
+
+        propietario = None
+        if len(cue) == 7 and cue.isdigit():
+            propietario = {
+                "tipo": TIPO_PROPIETARIO_CUE,
+                "valor": cue,
+            }
+        elif es_proyecto_especial and cuof:
+            propietario = {
+                "tipo": TIPO_PROPIETARIO_CUOF,
+                "valor": cuof,
+            }
+
+        if propietario is None:
+            continue
+
+        clave = (propietario["tipo"], propietario["valor"])
+        clave_propietario_por_indice[indice] = clave
+        propietarios.append(propietario)
+        grupo["anexo_pof_propietario_tipo"] = propietario["tipo"]
+        grupo["anexo_pof_propietario_valor"] = propietario["valor"]
+
+    mapa_codigos = obtener_codigos_activos_propietarios(
+        propietarios=propietarios,
+    )
+
+    for indice, clave in clave_propietario_por_indice.items():
+        grupos[indice]["codigos_anexo_pof"] = list(
+            mapa_codigos.get(clave, [])
+        )
+
+    return grupos
+
+
 def _obtener_info_cue_proyecto(cargos):
     filas_normalizadas = construir_filas_normalizadas(cargos)
     grupos_operativos = construir_grupos_operativos_detalle(
@@ -1630,6 +1707,21 @@ def _construir_grupos_detalle_proyecto(cargos, proyecto_especial_id):
                 "cuof": cuof,
                 "cui": str(localizacion.cui or "").strip(),
                 "establecimiento": establecimiento,
+                "zona_educativa_tipo": (
+                    str(snapshot.zona_educativa_tipo or "").strip()
+                    if snapshot
+                    else ""
+                ),
+                "zona_educativa": (
+                    str(snapshot.zona_educativa or "").strip()
+                    if snapshot
+                    else ""
+                ),
+                "puntos_zona_educativa": (
+                    snapshot.puntos_zona_educativa
+                    if snapshot
+                    else None
+                ),
                 "cantidad_cargos": 0,
                 "admin_querystring": _construir_querystring_administrar_proyecto(
                     proyecto_especial_id,
@@ -1911,13 +2003,17 @@ def construir_contexto_detalle_reunida(request):
             errores_filtros_detalle,
             errores_filtros_cargo_detalle,
         )
-        paginacion_grupos_detalle = _paginar_grupos_cue_detalle([], 1)
+        paginacion_grupos_detalle = _paginar_grupos_detalle_fallback([], 1)
         if not filtros_detalle_invalidos:
-            paginacion_grupos_detalle = _paginar_grupos_cue_detalle(
+            paginacion_grupos_detalle = _paginar_grupos_detalle_fallback(
                 grupos_detalle_proyecto,
                 request.GET.get("page", 1),
             )
             grupos_detalle_proyecto = paginacion_grupos_detalle["grupos"]
+            grupos_detalle_proyecto = _enriquecer_grupos_detalle_con_anexo_pof(
+                grupos_detalle_proyecto,
+                es_proyecto_especial=True,
+            )
         paginacion_grupos_detalle["query_params_base"] = (
             _construir_query_params_paginacion_detalle(request)
         )
@@ -2011,6 +2107,7 @@ def construir_contexto_detalle_reunida(request):
     grupos_coincidentes_detalle = []
     resumen_coincidencias_detalle = {
         "cargos": 0,
+        "cueanexos": 0,
         "cues": 0,
         "anexos": 0,
     }
@@ -2052,8 +2149,8 @@ def construir_contexto_detalle_reunida(request):
                         filtros_detalle,
                     )
 
-                cues_pagina, paginacion_grupos_detalle = (
-                    _paginar_cues_coincidentes_detalle(
+                cueanexos_pagina, paginacion_grupos_detalle = (
+                    _paginar_cueanexos_coincidentes_detalle(
                         cargos_coincidentes,
                         request.GET.get("page", 1),
                     )
@@ -2064,57 +2161,68 @@ def construir_contexto_detalle_reunida(request):
                         paginacion_grupos_detalle["total"],
                     )
                 )
-                cargos_alcance_detalle = _restringir_queryset_detalle_a_cues(
-                    cargos_alcance_detalle,
-                    cues_pagina,
+                cargos_visibles_detalle = _restringir_queryset_detalle_a_cueanexos(
+                    cargos_coincidentes,
+                    cueanexos_pagina,
                 )
-                if filtros_cargo_detalle_activos:
-                    cargos_coincidentes = _restringir_queryset_detalle_a_cues(
-                        cargos_coincidentes,
-                        cues_pagina,
+                cargos_base_cues_detalle = (
+                    _restringir_queryset_detalle_a_cues_de_cueanexos(
+                        cargos_alcance_detalle,
+                        cueanexos_pagina,
                     )
+                )
             else:
                 (
-                    cargos_alcance_detalle,
+                    cargos_visibles_detalle,
                     paginacion_grupos_detalle,
                 ) = _obtener_cargos_pagina_detalle_sin_filtros(
                     cargos_queryset_detalle,
                     request.GET.get("page", 1),
                 )
-            grilla_detalle = construir_grilla_pof_desde_cargos(
-                cargos=cargos_alcance_detalle,
+                cueanexos_pagina = paginacion_grupos_detalle.get("unidades_pagina", [])
+                cargos_base_cues_detalle = (
+                    _restringir_queryset_detalle_a_cues_de_cueanexos(
+                        cargos_queryset_detalle,
+                        cueanexos_pagina,
+                    )
+                )
+
+            grilla_base_detalle = construir_grilla_pof_desde_cargos(
+                cargos=cargos_base_cues_detalle,
                 nivel_codigo=nivel_codigo,
                 contexto="DETALLE_REUNIDA",
                 espejo=False,
             )
-            columnas_detalle = list(grilla_detalle["columnas"])
-            detalle_politicas = grilla_detalle.get("detalle_politicas", {})
-            grupos_operativos_detalle = grilla_detalle.get("grupos_operativos_detalle", [])
+            grilla_visible_detalle = construir_grilla_pof_desde_cargos(
+                cargos=cargos_visibles_detalle,
+                nivel_codigo=nivel_codigo,
+                contexto="DETALLE_REUNIDA",
+                espejo=False,
+            )
+            columnas_detalle = list(grilla_base_detalle["columnas"])
+            detalle_politicas = grilla_base_detalle.get("detalle_politicas", {})
+            grupos_operativos_detalle = _fusionar_grupos_detalle_con_coincidencias(
+                grilla_base_detalle.get("grupos_operativos_detalle", []),
+                grilla_visible_detalle.get("grupos_operativos_detalle", []),
+            )
             cantidad_grupos_operativos_detalle = (
                 paginacion_grupos_detalle["total"]
                 if paginacion_grupos_detalle is not None
-                else grilla_detalle.get("cantidad_grupos_operativos_detalle", 0)
+                else 0
             )
-            if paginacion_grupos_detalle is not None:
-                paginacion_grupos_detalle["grupos"] = grupos_operativos_detalle
             grupos_cueanexo = _construir_grupos_cueanexo_desde_grilla(
-                grilla_detalle,
+                grilla_visible_detalle,
                 anio_parametro,
                 nivel_codigo,
             )
             if filtros_cargo_detalle_activos:
-                grilla_coincidencias = construir_grilla_pof_desde_cargos(
-                    cargos=cargos_coincidentes,
-                    nivel_codigo=nivel_codigo,
-                    contexto="DETALLE_REUNIDA",
-                    espejo=False,
-                )
-                grupos_coincidentes_detalle = _fusionar_grupos_detalle_con_coincidencias(
-                    grupos_operativos_detalle,
-                    grilla_coincidencias.get("grupos_operativos_detalle", []),
-                )
-                if paginacion_grupos_detalle is not None:
-                    paginacion_grupos_detalle["grupos"] = grupos_coincidentes_detalle
+                grupos_coincidentes_detalle = grupos_operativos_detalle
+                grupos_paginacion = grupos_coincidentes_detalle
+            else:
+                grupos_paginacion = grupos_operativos_detalle
+
+            if paginacion_grupos_detalle is not None:
+                paginacion_grupos_detalle["grupos"] = grupos_paginacion
         except ReunidaPof.DoesNotExist:
             mensaje_detalle = "No existe una POF para el año y nivel seleccionados."
             paginacion_grupos_detalle = None
@@ -2174,19 +2282,31 @@ def construir_contexto_detalle_reunida(request):
 
     if not filtros_detalle_invalidos and paginacion_grupos_detalle is None:
         if filtros_cargo_detalle_activos:
-            paginacion_grupos_detalle = _paginar_grupos_cue_detalle(
+            paginacion_grupos_detalle = _paginar_grupos_detalle_fallback(
                 grupos_coincidentes_detalle,
                 request.GET.get("page", 1),
             )
             grupos_coincidentes_detalle = paginacion_grupos_detalle["grupos"]
         else:
-            paginacion_grupos_detalle = _paginar_grupos_cue_detalle(
+            paginacion_grupos_detalle = _paginar_grupos_detalle_fallback(
                 grupos_operativos_detalle,
                 request.GET.get("page", 1),
             )
             grupos_operativos_detalle = paginacion_grupos_detalle["grupos"]
     if paginacion_grupos_detalle is None:
-        paginacion_grupos_detalle = _paginar_grupos_cue_detalle([], 1)
+        paginacion_grupos_detalle = _paginar_grupos_detalle_fallback([], 1)
+
+    if filtros_cargo_detalle_activos:
+        grupos_coincidentes_detalle = _enriquecer_grupos_detalle_con_anexo_pof(
+            grupos_coincidentes_detalle,
+            es_proyecto_especial=False,
+        )
+    else:
+        grupos_operativos_detalle = _enriquecer_grupos_detalle_con_anexo_pof(
+            grupos_operativos_detalle,
+            es_proyecto_especial=False,
+        )
+
     paginacion_grupos_detalle["query_params_base"] = _construir_query_params_paginacion_detalle(request)
 
     return {

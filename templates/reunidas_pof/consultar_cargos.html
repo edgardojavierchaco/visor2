@@ -140,6 +140,8 @@
                     <th>CUE</th>
                     <th>Anexo</th>
                     <th>Establecimiento</th>
+                    <th>Zona Educativa</th>
+                    <th>Puntos Zona</th>
                     <th>Unidad</th>
                     <th>CEIC</th>
                     <th>Cargo</th>
@@ -167,6 +169,14 @@
                         <td class="pof-grid-cell-center">{{ cargo.cue }}</td>
                         <td class="pof-grid-cell-center">{{ cargo.anexo }}</td>
                         <td>{{ cargo.establecimiento }}</td>
+                        <td class="pof-grid-cell-center">
+                            {% if cargo.zona_educativa != "—" %}
+                                {{ cargo.zona_educativa_tipo }} &middot; {{ cargo.zona_educativa }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td class="pof-grid-cell-center">{{ cargo.puntos_zona_educativa }}</td>
                         <td class="pof-grid-cell-center">{{ cargo.unidad }}</td>
                         <td class="pof-grid-cell-center">{{ cargo.ceic }}</td>
                         <td>{{ cargo.cargo }}</td>
@@ -185,7 +195,7 @@
                     </tr>
                 {% empty %}
                     <tr>
-                        <td colspan="12" class="pof-grid-empty">No se encontraron cargos asociados.</td>
+                        <td colspan="14" class="pof-grid-empty">No se encontraron cargos asociados.</td>
                     </tr>
                 {% endfor %}
             </tbody>
@@ -226,7 +236,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}?v=20260924-1"></script>
 <script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260829-1"></script>
-<script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20260717-2"></script>
+<script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20260924-7"></script>
 {% endblock %}

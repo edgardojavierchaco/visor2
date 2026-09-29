@@ -7,13 +7,11 @@ from .niveles_service import normalizar_nivel, normalizar_texto_comparable
 # - REPETIR_POR_CUEANEXO: la columna se muestra solo en la primera fila
 #   del mismo CUEANEXO/anexo y se vacía en las siguientes.
 #
-# Reservadas / legacy:
-# - REPETIR_POR_CUE
-# - REPETIR_POR_GRUPO_TOTAL
+# También implementada:
+# - REPETIR_POR_CUE: se muestra solo en la primera fila visible del CUE.
 #
-# Estas dos últimas quedan declaradas para compatibilidad o uso futuro,
-# pero no deben asignarse a columnas activas hasta implementar su lógica
-# correspondiente en exportacion_reunida.py.
+# Reservada / legacy:
+# - REPETIR_POR_GRUPO_TOTAL
 
 
 REPETIR_SIEMPRE = "siempre"
@@ -40,6 +38,7 @@ SOURCES_EXPORTACION = {
     "cue": "CUE",
     "subcue": "SUBCUE",
     "cueanexo": "CUEANEXO",
+    "anexo_pof": "Código(s) Anexo POF",
     "cue_bloque_final": "CUE bloque final",
     "cue_anexo": "CUE anexo",
     "cui": "CUI",
@@ -63,7 +62,12 @@ SOURCES_EXPORTACION = {
     "departamento": "Departamento",
     "departamento_anexo": "Departamento anexo",
     "ubicacion_completa": "Ubicación - Localidad - Departamento",
+    # "zona" conserva su semántica histórica: Ámbito.
     "zona": "Zona",
+    # Zona Educativa y sus puntos son fuentes distintas y no se mezclan con
+    # "zona" (ámbito) ni con "puntos" (puntos CEIC del cargo).
+    "zona_educativa": "Zona Educativa",
+    "puntos_zona_educativa": "Puntos Zona Educativa",
     "ceic": "CEIC",
     "cargo": "Cargo",
     "cantidad": "Cantidad",
@@ -219,6 +223,97 @@ def _normalizar_columnas_cueanexo_principal(nivel_codigo, columnas):
         columna_principal = _construir_columna_cueanexo_principal(nivel_codigo)
 
     return [columna_principal, *columnas_normalizadas]
+
+
+def _agregar_columna_anexo_pof(nivel_codigo, columnas):
+    """
+    Incorpora Código(s) Anexo POF inmediatamente después de CUEANEXO.
+
+    Es un dato del propietario CUE, por lo que se muestra una sola vez por CUE
+    en preview y Excel filtrable. La cercanía visual con CUEANEXO se mantiene
+    igual en todos los niveles.
+    """
+    if any(columna.get("source") == "anexo_pof" for columna in columnas):
+        return columnas
+
+    columna_anexo_pof = _col(
+        nivel_codigo,
+        "Código(s) Anexo POF",
+        "anexo_pof",
+        repetir=REPETIR_POR_CUE,
+    )
+    indice_cueanexo = next(
+        (
+            indice
+            for indice, columna in enumerate(columnas)
+            if columna.get("source") == "cueanexo"
+        ),
+        None,
+    )
+    indice_insercion = (
+        indice_cueanexo + 1
+        if indice_cueanexo is not None
+        else 0
+    )
+    return [
+        *columnas[:indice_insercion],
+        columna_anexo_pof,
+        *columnas[indice_insercion:],
+    ]
+
+
+def _agregar_columnas_zona_educativa(nivel_codigo, columnas):
+    """
+    Incorpora Zona Educativa a todos los esquemas de Reunida sin reescribir
+    manualmente cada formato histórico.
+
+    Se insertan antes de CEIC/cargos y se consideran datos de localización:
+    se muestran una vez por CUEANEXO en preview/Excel compacto.
+    """
+    sources_existentes = {columna.get("source") for columna in columnas}
+    nuevas = []
+
+    if "zona_educativa" not in sources_existentes:
+        nuevas.append(
+            _col(
+                nivel_codigo,
+                "Zona Educativa",
+                "zona_educativa",
+                repetir=REPETIR_POR_CUEANEXO,
+            )
+        )
+    if "puntos_zona_educativa" not in sources_existentes:
+        nuevas.append(
+            _col(
+                nivel_codigo,
+                "Puntos Zona Educativa",
+                "puntos_zona_educativa",
+                repetir=REPETIR_POR_CUEANEXO,
+            )
+        )
+
+    if not nuevas:
+        return columnas
+
+    indice_insercion = next(
+        (
+            indice
+            for indice, columna in enumerate(columnas)
+            if columna.get("source") in {
+                "ceic",
+                "cargo",
+                "cantidad",
+                "cantidad_cargos",
+                "cantidad_horas",
+            }
+        ),
+        len(columnas),
+    )
+    return [
+        *columnas[:indice_insercion],
+        *nuevas,
+        *columnas[indice_insercion:],
+    ]
 
 
 COLUMNAS_REUNIDA_POR_NIVEL = {
@@ -670,7 +765,9 @@ def obtener_columnas_config_nivel(nivel_codigo):
         _copia_columna_config(columna)
         for columna in COLUMNAS_REUNIDA_POR_NIVEL[codigo]
     ]
-    return _normalizar_columnas_cueanexo_principal(codigo, columnas)
+    columnas = _normalizar_columnas_cueanexo_principal(codigo, columnas)
+    columnas = _agregar_columnas_zona_educativa(codigo, columnas)
+    return _agregar_columna_anexo_pof(codigo, columnas)
 
 
 def obtener_columnas_disponibles_nivel(nivel_codigo):
@@ -768,7 +865,8 @@ def obtener_keys_columnas(nivel_codigo):
 def validar_configuracion_columnas():
     errores = []
 
-    for nivel_codigo, columnas in COLUMNAS_REUNIDA_POR_NIVEL.items():
+    for nivel_codigo in COLUMNAS_REUNIDA_POR_NIVEL:
+        columnas = obtener_columnas_config_nivel(nivel_codigo)
         ids = set()
         for indice, columna in enumerate(columnas, start=1):
             prefijo = f"{nivel_codigo} columna {indice}"

@@ -187,6 +187,13 @@ def construir_datos_normalizados_cargo(cargo, total_general=None, totales_especi
     ubicacion = _valor_snapshot_o_localizacion(snapshot, localizacion, "ubicacion")
     localidad = _valor_snapshot_o_localizacion(snapshot, localizacion, "localidad")
     departamento = _valor_snapshot_o_localizacion(snapshot, localizacion, "departamento")
+    zona_educativa_tipo = texto(getattr(snapshot, "zona_educativa_tipo", "")) if snapshot else ""
+    zona_educativa = texto(getattr(snapshot, "zona_educativa", "")) if snapshot else ""
+    puntos_zona_educativa = (
+        getattr(snapshot, "puntos_zona_educativa", None)
+        if snapshot
+        else None
+    )
     ubicacion_completa = _valor_snapshot_o_localizacion(
         snapshot,
         localizacion,
@@ -234,6 +241,9 @@ def construir_datos_normalizados_cargo(cargo, total_general=None, totales_especi
         "departamento_anexo": departamento,
         "ubicacion_completa": ubicacion_completa,
         "zona": ambito,
+        "zona_educativa_tipo": zona_educativa_tipo,
+        "zona_educativa": zona_educativa,
+        "puntos_zona_educativa": puntos_zona_educativa,
         "ceic": getattr(cargo, "ceic", ""),
         "cargo": texto(getattr(cargo, "cargo", "")),
         "cantidad": cantidad,
