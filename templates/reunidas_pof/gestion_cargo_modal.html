@@ -5,6 +5,15 @@
         data-detalle-url-base="{% url 'reunidas_pof:detalle_cargo_pof' 0 %}"
         data-modificar-url-base="{% url 'reunidas_pof:modificar_cargo_pof' 0 %}"
         data-eliminar-url-base="{% url 'reunidas_pof:eliminar_cargo_pof' 0 %}"
+        data-historial-cargo-url-base="{% url 'reunidas_pof:historial_completo_cargo_pof' 0 %}"
+        data-historial-localizacion-url-base="{% url 'reunidas_pof:historial_localizacion_cargos_pof' 0 %}"
+        data-historial-zona-url-base="{% url 'reunidas_pof:historial_zona_educativa' 0 %}"
+        data-historial-observacion-url="{% url 'reunidas_pof:historial_observacion_cargos_pof' %}"
+        data-zona-catalogo-url="{% url 'reunidas_pof:zona_educativa_catalogo' %}"
+        data-anexo-catalogo-url="{% url 'reunidas_pof:anexo_pof_catalogo' %}"
+        data-anexo-catalogo-crear-url="{% url 'reunidas_pof:crear_anexo_pof_catalogo' %}"
+        data-anexo-asociaciones-url="{% url 'reunidas_pof:anexo_pof_asociaciones' %}"
+        data-anexo-historial-url="{% url 'reunidas_pof:historial_asociaciones_anexo_pof' %}"
         data-success-mode="{{ gestion_cargo_success_mode|default:'reload' }}">
         <div class="pof-modal" role="dialog" aria-modal="true" aria-labelledby="modalGestionCargoTitulo">
             <div class="pof-modal-header">
@@ -20,7 +29,20 @@
 
             <div id="estadoGestionCargo" class="pof-status"></div>
 
-            <form id="formGestionCargo">
+            <div class="pof-admin-cargo-tabs pof-admin-cargo-main-tabs" role="tablist" aria-label="Gestión del cargo">
+                <button type="button"
+                        class="pof-admin-cargo-tab pof-admin-cargo-tab-active"
+                        role="tab"
+                        aria-selected="true"
+                        data-cargo-main-tab="gestion">Gestión Cargo</button>
+                <button type="button"
+                        class="pof-admin-cargo-tab"
+                        role="tab"
+                        aria-selected="false"
+                        data-cargo-main-tab="historiales">Historiales</button>
+            </div>
+
+            <form id="formGestionCargo" data-cargo-main-panel="gestion">
                 <input type="hidden" id="cargoGestionId">
 
                 <div class="pof-admin-cargo-summary">
@@ -39,6 +61,105 @@
                     <div class="pof-cargos-info-item pof-admin-summary-wide">
                         <span>Establecimiento</span>
                         <strong id="cargoGestionResumenEstablecimiento">-</strong>
+                    </div>
+                </div>
+
+                <div class="pof-admin-zone-panel">
+                    <div class="pof-admin-zone-heading">
+                        <h3>Zona Educativa</h3>
+                        <span>Localización del ciclo</span>
+                    </div>
+                    <div id="estadoGestionZona" class="pof-status pof-admin-zone-status"></div>
+                    <div class="pof-admin-zone-grid">
+                        <div class="pof-field">
+                            <label for="cargoGestionZonaTipo">Tipo de Zona</label>
+                            <span class="pof-native-select-wrap">
+                                <select id="cargoGestionZonaTipo">
+                                    <option value="">Seleccioná un tipo</option>
+                                    <option value="URBANA">Urbana</option>
+                                    <option value="RURAL">Rural</option>
+                                </select>
+                            </span>
+                        </div>
+                        <div class="pof-field">
+                            <label for="cargoGestionZona">Zona Educativa</label>
+                            <span class="pof-native-select-wrap">
+                                <select id="cargoGestionZona" disabled>
+                                    <option value="">Seleccioná una zona</option>
+                                </select>
+                            </span>
+                        </div>
+                        <div class="pof-field">
+                            <label for="cargoGestionPuntosZona">Puntos Zona</label>
+                            <input type="number" id="cargoGestionPuntosZona" class="pof-locked-control" readonly tabindex="-1">
+                        </div>
+                    </div>
+                    <div class="pof-help pof-admin-zone-help">
+                        Los cambios se aplican a la misma identidad del año: CUEANEXO; si no existe, CUOF. Para dejarla pendiente otra vez, elegí “Seleccioná una zona”. Todo se confirma con “Guardar cambios”.
+                    </div>
+                </div>
+
+                <div class="pof-admin-zone-panel pof-admin-anexo-panel">
+                    <div class="pof-admin-zone-heading">
+                        <h3>Código(s) Anexo POF</h3>
+                        <span id="cargoGestionAnexoPropietario">Propietario administrativo</span>
+                    </div>
+
+                    <div id="estadoGestionAnexo" class="pof-status pof-admin-zone-status"></div>
+
+                    <div class="pof-admin-anexo-editor-grid">
+                        <div class="pof-field">
+                            <label for="cargoGestionAnexoToggle">Seleccionar Anexos POF</label>
+                            <div id="cargoGestionAnexoSelector" class="pof-admin-offers-select pof-admin-anexo-select">
+                                <button type="button"
+                                        id="cargoGestionAnexoToggle"
+                                        class="pof-admin-offers-toggle"
+                                        aria-expanded="false"
+                                        aria-controls="cargoGestionAnexoOpciones"
+                                        disabled>
+                                    <span id="cargoGestionAnexoResumen">Seleccionar Anexos POF</span>
+                                    <span aria-hidden="true">&#9662;</span>
+                                </button>
+                                <div id="cargoGestionAnexoOpciones"
+                                     class="pof-admin-offers-options pof-admin-anexo-options pof-hidden"></div>
+                            </div>
+
+                            <div id="cargoGestionAnexoNuevoPanel"
+                                 class="pof-admin-anexo-new-panel pof-hidden">
+                                <label for="cargoGestionAnexoNuevoCodigo">Nuevo Anexo POF</label>
+                                <div class="pof-admin-anexo-new-row">
+                                    <input type="text"
+                                           id="cargoGestionAnexoNuevoCodigo"
+                                           maxlength="50"
+                                           autocomplete="off"
+                                           placeholder="Ej. 03">
+                                    <button type="button"
+                                            id="btnCargoGestionAnexoCrear"
+                                            class="pof-btn pof-btn-primary">Crear</button>
+                                    <button type="button"
+                                            id="btnCargoGestionAnexoCancelarCrear"
+                                            class="pof-btn pof-btn-secondary">Cancelar</button>
+                                </div>
+                                <span class="pof-field-hint">
+                                    El nuevo código se agrega al catálogo y queda marcado en esta selección. Se asociará al guardar cambios.
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="pof-field">
+                            <label for="cargoGestionAnexoSeleccionados">Anexos POF seleccionados</label>
+                            <input type="text"
+                                   id="cargoGestionAnexoSeleccionados"
+                                   class="pof-locked-control"
+                                   readonly
+                                   tabindex="-1"
+                                   placeholder="Ninguno seleccionado">
+                        </div>
+                    </div>
+
+                    <div class="pof-help pof-admin-zone-help">
+                        El Anexo POF pertenece al CUE; en Proyecto Especial sólo usa CUOF cuando no existe CUE.
+                        Marcá o desmarcá los códigos y confirmá junto con el resto mediante “Guardar cambios”.
                     </div>
                 </div>
 
@@ -110,6 +231,86 @@
                     <button type="button" class="pof-btn pof-btn-light" data-cargo-cerrar>Cancelar</button>
                 </div>
             </form>
+
+            <section class="pof-admin-history-shell pof-hidden"
+                     data-cargo-main-panel="historiales"
+                     aria-label="Historiales del cargo">
+                <div class="pof-admin-history-tabs" role="tablist" aria-label="Tipos de historial">
+                    <button type="button"
+                            class="pof-admin-history-tab pof-admin-history-tab-active"
+                            role="tab"
+                            aria-selected="true"
+                            data-cargo-history-tab="cargo">Cargo</button>
+                    <button type="button"
+                            class="pof-admin-history-tab"
+                            role="tab"
+                            aria-selected="false"
+                            data-cargo-history-tab="localizacion">
+                        <span id="cargoHistorialLocalizacionLabel">Cargos del CUEANEXO</span>
+                    </button>
+                    <button type="button"
+                            class="pof-admin-history-tab"
+                            role="tab"
+                            aria-selected="false"
+                            data-cargo-history-tab="zona">Zona</button>
+                    <button type="button"
+                            class="pof-admin-history-tab"
+                            role="tab"
+                            aria-selected="false"
+                            data-cargo-history-tab="anexo">Anexo POF</button>
+                </div>
+
+                <section class="pof-admin-history-panel"
+                         data-cargo-history-panel="cargo"
+                         aria-label="Historial del cargo">
+                    <div class="pof-admin-history-filterbar"
+                         role="group"
+                         aria-label="Filtro del historial del cargo">
+                        <button type="button"
+                                class="pof-admin-history-filter pof-admin-history-filter-active"
+                                data-cargo-history-filter="todos">Todos</button>
+                        <button type="button"
+                                class="pof-admin-history-filter"
+                                data-cargo-history-filter="observaciones">Solo observaciones</button>
+                    </div>
+
+                    <div id="historialCargoMovimientosWrap">
+                        <div id="estadoHistorialCargo" class="pof-status"></div>
+                        <div id="resumenHistorialCargo" class="pof-admin-history-summary"></div>
+                        <div id="contenidoHistorialCargo"></div>
+                    </div>
+
+                    <div id="historialCargoObservacionesWrap" class="pof-hidden">
+                        <div id="estadoHistorialObservacion" class="pof-status"></div>
+                        <div id="resumenHistorialObservacion" class="pof-admin-history-summary"></div>
+                        <div id="contenidoHistorialObservacion"></div>
+                    </div>
+                </section>
+
+                <section class="pof-admin-history-panel pof-hidden"
+                         data-cargo-history-panel="localizacion"
+                         aria-label="Historial de cargos de la identidad">
+                    <div id="estadoHistorialLocalizacion" class="pof-status"></div>
+                    <div id="resumenHistorialLocalizacion" class="pof-admin-history-summary"></div>
+                    <div id="contenidoHistorialLocalizacion"></div>
+                </section>
+
+                <section class="pof-admin-history-panel pof-hidden"
+                         data-cargo-history-panel="zona"
+                         aria-label="Historial de Zona Educativa">
+                    <div id="estadoHistorialZona" class="pof-status"></div>
+                    <div id="resumenHistorialZona" class="pof-admin-history-summary"></div>
+                    <div id="contenidoHistorialZona"></div>
+                </section>
+
+                <section class="pof-admin-history-panel pof-hidden"
+                         data-cargo-history-panel="anexo"
+                         aria-label="Historial de Anexo POF">
+                    <div id="estadoHistorialAnexo" class="pof-status"></div>
+                    <div id="resumenHistorialAnexo" class="pof-admin-history-summary"></div>
+                    <div id="contenidoHistorialAnexo"></div>
+                </section>
+            </section>
         </div>
     </div>
     <div id="modalConfirmarEliminacionCargo" class="pof-modal-backdrop pof-hidden" aria-hidden="true">

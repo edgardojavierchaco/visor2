@@ -18,6 +18,10 @@ from ..models import (
     ReunidaPof,
     SnapshotPadronLocalizacionPof,
 )
+from .anexo_pof_service import (
+    aplicar_seleccion_propietario as aplicar_seleccion_anexo_pof,
+    resolver_propietario_anexo_pof_localizacion,
+)
 from .niveles import obtener_niveles_ceic_para_reunida, oferta_es_compatible_con_reunida
 from .niveles_service import normalizar_nivel
 from .padron_materializadas_service import (
@@ -29,6 +33,16 @@ from .padron_materializadas_service import (
     resolver_fila_padron_oficial,
 )
 from .cargos_consolidacion_service import aplicar_alta_independiente
+from .zona_educativa_service import (
+    asignaciones_zona_equivalentes,
+    cambiar_zona_educativa_localizacion,
+    construir_identidad_zona,
+    obtener_asignacion_snapshot,
+    obtener_asignacion_vigente_bloqueada,
+    resolver_zona_educativa_catalogo,
+    seleccion_zona_coincide_asignacion,
+    sincronizar_zona_faltante_identidad,
+)
 
 
 CABECERA_REUNIDA = "REUNIDA"
@@ -348,14 +362,49 @@ def _normalizar_origen_datos(valor):
     return SnapshotPadronLocalizacionPof.OrigenDatos.MANUAL
 
 
+def _seleccion_zona_payload(datos):
+    """
+    Devuelve la selección de Zona enviada por el cliente cuando está completa.
+
+    Los puntos nunca forman parte del dato confiable del frontend. La presencia
+    obligatoria de tipo+zona se valida en los flujos públicos antes de guardar.
+    """
+    tipo = _texto(datos.get("zona_educativa_tipo")).upper()
+    zona = _texto(datos.get("zona_educativa"))
+
+    if not tipo and not zona:
+        return None
+
+    if not tipo or not zona:
+        raise ValidationError({
+            "zona_educativa": [
+                "Debe indicar tipo y Zona Educativa en conjunto."
+            ]
+        })
+
+    tipos_validos = set(SnapshotPadronLocalizacionPof.TipoZonaEducativa.values)
+    if tipo not in tipos_validos:
+        raise ValidationError({
+            "zona_educativa_tipo": [
+                "El tipo de Zona Educativa debe ser URBANA o RURAL."
+            ]
+        })
+
+    return {
+        "tipo": tipo,
+        "zona": zona,
+    }
+
+
 def _validar_datos_guardado_minimos(datos):
     """
     Valida solo la entrada mínima confiable del flujo de guardado.
 
     - Verifica cabecera, padrón y lista de cargos antes de la oficialización CEIC.
-    - Acepta como datos de usuario únicamente CEIC, cantidad, unidad y observación.
+    - Exige tipo+Zona Educativa en Reunidas y Proyecto Especial.
+    - Nunca acepta puntos de Zona como dato autoritativo.
     - Rechaza CUE, Anexo y CUEANEXO cuando Proyecto Especial usa ingreso manual controlado.
-    - No depende de cargo, puntos, total ni snapshot enviados por frontend.
+    - No depende de cargo, puntos CEIC, total ni snapshot enviados por frontend.
     """
     errores = {}
     if not isinstance(datos, dict):
@@ -396,6 +445,18 @@ def _validar_datos_guardado_minimos(datos):
     tipos_operacion = {opcion for opcion, _ in LoteCargaPof.TipoOperacion.choices}
     if tipo_operacion not in tipos_operacion:
         errores["tipo_operacion"] = ["El tipo de operacion no es valido."]
+
+    try:
+        seleccion_zona = _seleccion_zona_payload(datos)
+        if (
+            cabecera_tipo in {CABECERA_REUNIDA, CABECERA_PROYECTO_ESPECIAL}
+            and seleccion_zona is None
+        ):
+            errores["zona_educativa"] = [
+                "Debe seleccionar una Zona Educativa."
+            ]
+    except ValidationError as error:
+        errores.update(_errores_validation_error(error))
 
     padron = datos.get("padron")
     if not isinstance(padron, dict):
@@ -917,7 +978,62 @@ def _obtener_localizacion(datos, reunida, proyecto, advertencias=None):
     return _obtener_localizacion_proyecto(proyecto, identidad, advertencias)
 
 
-def _obtener_snapshot(localizacion, padron, usuario):
+def _resolver_asignacion_zona_guardado(datos, reunida, proyecto):
+    """
+    Resuelve la Zona que debe acompañar al nuevo snapshot de una carga normal.
+
+    - Serializa la identidad lógica del ciclo antes de crear/modificar la localización.
+    - Si ya existe Zona vigente, reutiliza exactamente ese par Zona/Puntos congelado.
+    - Una selección distinta en la carga normal se rechaza: los cambios se harán
+      mediante la operación explícita de Zona Educativa.
+    - Si todavía no existe asignación y el cliente informa tipo+zona, los puntos
+      se resuelven contra el catálogo activo en servidor.
+    - Mientras la UI nueva no esté desplegada, ausencia total de selección sigue
+      permitida para no romper el flujo actual.
+    """
+    padron = datos["padron"]
+    cueanexo, cuof, _cui = _localizacion_desde_padron(padron)
+    anio = reunida.anio if reunida else proyecto.anio
+    identidad = construir_identidad_zona(
+        anio=anio,
+        cueanexo=cueanexo,
+        cuof=cuof,
+    )
+
+    vigente = obtener_asignacion_vigente_bloqueada(identidad)
+    seleccion = _seleccion_zona_payload(datos)
+
+    if vigente["asignada"]:
+        asignacion = {
+            "tipo": vigente["tipo"],
+            "zona": vigente["zona"],
+            "puntos": vigente["puntos"],
+        }
+        if seleccion and not seleccion_zona_coincide_asignacion(
+            seleccion["tipo"],
+            seleccion["zona"],
+            asignacion,
+        ):
+            raise ValidationError({
+                "zona_educativa": [
+                    (
+                        "Esta identidad ya tiene una Zona Educativa vigente en el año. "
+                        "Para cambiarla debe usar la operación específica de Zona Educativa."
+                    )
+                ]
+            })
+        return identidad, asignacion
+
+    if seleccion:
+        return identidad, resolver_zona_educativa_catalogo(
+            seleccion["tipo"],
+            seleccion["zona"],
+        )
+
+    return identidad, None
+
+
+def _obtener_snapshot(localizacion, padron, usuario, asignacion_zona=None):
     snapshot_payload = armar_snapshot_payload(padron)
     origen_datos = _normalizar_origen_datos(
         padron.get("origen_datos") or snapshot_payload.get("origen_datos")
@@ -928,6 +1044,37 @@ def _obtener_snapshot(localizacion, padron, usuario):
             estado_padron = SnapshotPadronLocalizacionPof.EstadoPadron.VIGENTE
         else:
             estado_padron = SnapshotPadronLocalizacionPof.EstadoPadron.SIN_VERIFICAR
+
+    snapshot_anterior = (
+        SnapshotPadronLocalizacionPof.objects.select_for_update()
+        .filter(
+            localizacion=localizacion,
+            vigente=True,
+        )
+        .order_by("-fecha_snapshot", "-id")
+        .first()
+    )
+    asignacion_anterior = obtener_asignacion_snapshot(snapshot_anterior)
+
+    if asignacion_zona is None:
+        asignacion_efectiva = asignacion_anterior
+    else:
+        asignacion_efectiva = asignacion_zona
+        if (
+            asignacion_anterior is not None
+            and not asignaciones_zona_equivalentes(
+                asignacion_anterior,
+                asignacion_efectiva,
+            )
+        ):
+            raise ValidationError({
+                "zona_educativa": [
+                    (
+                        "La carga normal no puede reemplazar una Zona Educativa vigente. "
+                        "Use la operación específica de Zona Educativa."
+                    )
+                ]
+            })
 
     datos_snapshot = {
         "tipo_snapshot": SnapshotPadronLocalizacionPof.TipoSnapshot.INICIAL,
@@ -949,18 +1096,23 @@ def _obtener_snapshot(localizacion, padron, usuario):
         "jornada": snapshot_payload.get("jornada", ""),
         "ubicacion": snapshot_payload.get("ubicacion", ""),
         "ubicacion_localidad_departamento": snapshot_payload.get("ubicacion_localidad_departamento", ""),
+        "zona_educativa_tipo": (
+            asignacion_efectiva["tipo"] if asignacion_efectiva else ""
+        ),
+        "zona_educativa": (
+            asignacion_efectiva["zona"] if asignacion_efectiva else ""
+        ),
+        "puntos_zona_educativa": (
+            asignacion_efectiva["puntos"] if asignacion_efectiva else None
+        ),
         "datos_padron": snapshot_payload.get("datos_padron", {}),
         "usuario": usuario,
         "fecha_snapshot": timezone.now(),
     }
 
-    snapshot = SnapshotPadronLocalizacionPof.objects.filter(
-        localizacion=localizacion,
-        vigente=True,
-    ).first()
-    if snapshot:
-        snapshot.vigente = False
-        snapshot.save(update_fields=["vigente"])
+    if snapshot_anterior:
+        snapshot_anterior.vigente = False
+        snapshot_anterior.save(update_fields=["vigente"])
 
     return SnapshotPadronLocalizacionPof.objects.create(
         localizacion=localizacion,
@@ -1128,14 +1280,33 @@ def _serializar_cargo_detalle(cargo):
         "observacion": cargo.observacion,
         "actualizado_en": cargo.actualizado_en.isoformat() if cargo.actualizado_en else "",
         "localizacion": {
+            "id": localizacion.id,
             "cueanexo": localizacion.cueanexo,
             "cuof": localizacion.cuof,
+            "tipo_identidad": (
+                "CUOF"
+                if proyecto
+                else "CUEANEXO"
+                if reunida
+                else ""
+            ),
             "establecimiento": (
                 snapshot.nombre_establecimiento
                 or snapshot.numero_establecimiento
                 if snapshot
                 else ""
             ),
+        },
+        "zona_educativa": {
+            "asignada": bool(
+                snapshot
+                and _texto(snapshot.zona_educativa_tipo)
+                and _texto(snapshot.zona_educativa)
+                and snapshot.puntos_zona_educativa
+            ),
+            "tipo": _texto(snapshot.zona_educativa_tipo) if snapshot else "",
+            "zona": _texto(snapshot.zona_educativa) if snapshot else "",
+            "puntos": snapshot.puntos_zona_educativa if snapshot else None,
         },
         "cabecera": cabecera,
     })
@@ -1490,6 +1661,197 @@ def modificar_cargo_pof(cargo_id, datos, usuario=None):
             "tipo": "interno",
             "mensaje": "Ocurrió un error interno al guardar. Informe al administrador.",
             "errores": {},
+        }
+
+
+def guardar_gestion_cargo_pof(cargo_id, datos, usuario=None):
+    """
+    Guarda en una única transacción los cambios del modal Gestión Cargo.
+
+    - Reutiliza la modificación administrativa existente para datos del cargo.
+    - Permite incluir opcionalmente zona_educativa y anexo_pof en el mismo payload.
+    - Si cambian Cargo, Zona y/o Anexo POF, todas las operaciones se confirman o revierten juntas.
+    - Una Zona vacía explícita vuelve la identidad anual a estado pendiente.
+    - Anexo POF resuelve el propietario en servidor desde la localización del cargo.
+    """
+    if not isinstance(datos, dict):
+        return {
+            "ok": False,
+            "tipo": "validacion",
+            "mensaje": "El cuerpo de la solicitud debe ser un objeto JSON.",
+            "errores": {"payload": ["JSON inválido."]},
+        }
+
+    incluir_zona = "zona_educativa" in datos
+    zona_payload = datos.get("zona_educativa")
+    if incluir_zona and not isinstance(zona_payload, dict):
+        return {
+            "ok": False,
+            "tipo": "validacion",
+            "mensaje": "Hay errores de validación.",
+            "errores": {
+                "zona_educativa": [
+                    "La Zona Educativa enviada no tiene un formato válido."
+                ]
+            },
+        }
+
+    incluir_anexo = "anexo_pof" in datos
+    anexo_payload = datos.get("anexo_pof")
+    if incluir_anexo:
+        if not isinstance(anexo_payload, dict):
+            return {
+                "ok": False,
+                "tipo": "validacion",
+                "mensaje": "Hay errores de validación.",
+                "errores": {
+                    "anexo_pof": [
+                        "La selección Anexo POF enviada no tiene un formato válido."
+                    ]
+                },
+            }
+        if not isinstance(anexo_payload.get("catalogo_ids"), list):
+            return {
+                "ok": False,
+                "tipo": "validacion",
+                "mensaje": "Hay errores de validación.",
+                "errores": {
+                    "anexo_pof": [
+                        "La selección Anexo POF debe enviar una lista de códigos."
+                    ]
+                },
+            }
+
+    datos_cargo = dict(datos)
+    datos_cargo.pop("zona_educativa", None)
+    datos_cargo.pop("anexo_pof", None)
+    campos_cargo = {
+        "cantidad",
+        "unidad_cantidad",
+        "estado_pof",
+        "observacion",
+        "ofertas_seleccionadas",
+    }
+    incluir_cargo = any(campo in datos_cargo for campo in campos_cargo)
+
+    with transaction.atomic():
+        resultado_cargo = {
+            "ok": False,
+            "tipo": "sin_cambios",
+            "mensaje": "No hay cambios de cargo para guardar.",
+            "errores": {},
+        }
+        if incluir_cargo:
+            resultado_cargo = modificar_cargo_pof(
+                cargo_id,
+                datos_cargo,
+                usuario=usuario,
+            )
+
+        cargo_modificado = bool(resultado_cargo.get("ok"))
+        cargo_sin_cambios = resultado_cargo.get("tipo") == "sin_cambios"
+
+        if not cargo_modificado and not cargo_sin_cambios:
+            transaction.set_rollback(True)
+            return resultado_cargo
+
+        localizacion = None
+        if incluir_zona or incluir_anexo:
+            try:
+                localizacion = (
+                    CargoPof.objects.select_for_update()
+                    .select_related("localizacion")
+                    .get(pk=cargo_id)
+                    .localizacion
+                )
+            except CargoPof.DoesNotExist:
+                transaction.set_rollback(True)
+                return {
+                    "ok": False,
+                    "tipo": "no_encontrado",
+                    "mensaje": "No se encontró el cargo solicitado.",
+                    "errores": {
+                        "cargo_id": ["No se encontró el cargo solicitado."]
+                    },
+                }
+
+        resultado_zona = None
+        zona_modificada = False
+
+        if incluir_zona:
+            resultado_zona = cambiar_zona_educativa_localizacion(
+                localizacion.id,
+                zona_payload.get("tipo", ""),
+                zona_payload.get("zona", ""),
+                usuario=usuario,
+            )
+            zona_modificada = bool(resultado_zona.get("ok"))
+            zona_sin_cambios = resultado_zona.get("tipo") == "sin_cambios"
+
+            if not zona_modificada and not zona_sin_cambios:
+                transaction.set_rollback(True)
+                return resultado_zona
+
+        resultado_anexo = None
+        anexo_modificado = False
+
+        if incluir_anexo:
+            try:
+                propietario_anexo = resolver_propietario_anexo_pof_localizacion(
+                    localizacion
+                )
+                resultado_anexo = aplicar_seleccion_anexo_pof(
+                    propietario=propietario_anexo,
+                    catalogo_ids=anexo_payload.get("catalogo_ids", []),
+                    usuario=usuario,
+                )
+            except ValidationError as error:
+                transaction.set_rollback(True)
+                return {
+                    "ok": False,
+                    "tipo": "validacion",
+                    "mensaje": "No se pudo actualizar Anexo POF.",
+                    "errores": _errores_validation_error(error),
+                }
+
+            anexo_modificado = bool(resultado_anexo.get("modificados"))
+
+        if not cargo_modificado and not zona_modificada and not anexo_modificado:
+            return {
+                "ok": False,
+                "tipo": "sin_cambios",
+                "mensaje": "No hay cambios para guardar.",
+                "errores": {
+                    "__all__": ["Los datos enviados son iguales a los actuales."]
+                },
+            }
+
+        cargo_serializado = obtener_detalle_cargo_pof(cargo_id)
+
+        componentes = []
+        if cargo_modificado:
+            componentes.append("Cargo")
+        if zona_modificada:
+            componentes.append("Zona Educativa")
+        if anexo_modificado:
+            componentes.append("Anexo POF")
+        mensaje = "Cambios guardados correctamente: " + ", ".join(componentes) + "."
+
+        return {
+            "ok": True,
+            "mensaje": mensaje,
+            "cargo": cargo_serializado,
+            "lote_carga_id": resultado_cargo.get("lote_carga_id"),
+            "zona_educativa": (
+                resultado_zona.get("zona_educativa")
+                if resultado_zona
+                else cargo_serializado.get("zona_educativa")
+            ),
+            "anexo_pof_modificados": (
+                resultado_anexo.get("modificados", 0)
+                if resultado_anexo
+                else 0
+            ),
         }
 
 
@@ -1908,13 +2270,35 @@ def guardar_carga_pof(datos, usuario=None):
             for cargo_oficializado in oficializacion_ceic["cargos"]:
                 cargo_oficializado["oferta"] = oferta_texto
                 cargo_oficializado["ofertas_seleccionadas"] = ofertas_seleccionadas
+
+            identidad_zona, asignacion_zona = _resolver_asignacion_zona_guardado(
+                datos,
+                reunida,
+                proyecto,
+            )
+
             localizacion = _obtener_localizacion(
                 datos,
                 reunida,
                 proyecto,
                 advertencias=advertencias_guardado,
             )
-            snapshot = _obtener_snapshot(localizacion, datos["padron"], usuario)
+
+            snapshot = _obtener_snapshot(
+                localizacion,
+                datos["padron"],
+                usuario,
+                asignacion_zona=asignacion_zona,
+            )
+
+            if asignacion_zona is not None:
+                sincronizar_zona_faltante_identidad(
+                    identidad_zona,
+                    asignacion_zona,
+                    usuario=usuario,
+                    excluir_localizacion_ids={localizacion.id},
+                )
+
             lote = LoteCargaPof.objects.create(
                 reunida=reunida,
                 proyecto_especial=proyecto,

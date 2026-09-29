@@ -1821,7 +1821,7 @@ function blindarAutofillBnh(input, token) {
     <div class="bnh-page-header">
         <div>
             <h2><i class="fas fa-user-graduate text-primary"></i> Carga de alumno</h2>
-            <p>Formulario de carga BNH adaptado a los modelos actuales de alumno, tutor, obra social, discapacidad y planes sociales.</p>
+            <p>Formulario de carga de alumno.</p>
         </div>
             <button type="button" class="bnh-btn" id="btnCompletarAzar" title="Completa una carga de prueba sin guardar">
             <i class="fas fa-random"></i> Completar al azar
@@ -1841,30 +1841,31 @@ function blindarAutofillBnh(input, token) {
     -->
     <form id="formCargaAlumno" class="bnh-form-card" data-url-buscar-alumno="{{ url_buscar_alumno }}" data-url-buscar-tutor="{{ url_buscar_tutor }}" data-url-guardar="{{ url_guardar_alumno }}">
         {% csrf_token %}
+        <input type="hidden" data-field="id" value="">
 
         <!-- Datos del alumno: identidad, nacimiento, residencia y contacto. -->
         <div class="bnh-section">
             <h3 class="bnh-section-title"><span><i class="fas fa-id-card"></i> Datos personales</span></h3>
             <div class="bnh-grid">
-                <!-- CUIL es el disparador de búsqueda/autocompletado del alumno. -->
+                <!-- CUIL es opcional en BNH; cuando existe sirve como búsqueda fuerte. -->
                 <div class="bnh-field bnh-col-6">
-                    <label class="bnh-required">CUIL / CUIT</label>
-                    <input type="text" data-field="cuil" maxlength="11" placeholder="Sin guiones ni espacios" value="{{ cuil_inicial }}" required>
-                    <span class="bnh-help">Al salir del campo se valida el CUIL y, si existe, se autocompleta la carga.</span>
+                    <label>CUIL</label>
+                    <input type="text" data-field="cuil" maxlength="14" placeholder="Opcional · 11 dígitos" value="{{ cuil_inicial }}">
+                    <span class="bnh-help" id="bnhCuilAlumnoHelp">El CUIL es opcional y sólo puede informarse cuando el tipo de documento es DNI.</span>
                 </div>
                 <div class="bnh-field bnh-col-6">
                     <label class="bnh-required">Fecha de nacimiento</label>
-                    <input type="date" data-field="fecha_nacimiento" required>
+                    <input type="date" data-field="fecha_nacimiento" value="{{ fecha_nacimiento_inicial }}" required>
                 </div>
 
                 <!-- Datos nominales propios del alumno; se normalizan en backend antes de guardar. -->
                 <div class="bnh-field bnh-col-6">
                     <label class="bnh-required">Apellidos</label>
-                    <input type="text" data-field="apellidos" required>
+                    <input type="text" data-field="apellidos" value="{{ apellidos_inicial }}" required>
                 </div>
                 <div class="bnh-field bnh-col-6">
                     <label class="bnh-required">Nombres</label>
-                    <input type="text" data-field="nombres" required>
+                    <input type="text" data-field="nombres" value="{{ nombres_inicial }}" required>
                 </div>
 
                 <!-- Selectores de catálogos compartidos: documento, sexo y nacionalidad. -->
@@ -1872,18 +1873,19 @@ function blindarAutofillBnh(input, token) {
                     <label class="bnh-required">Tipo de documento</label>
                     <select class="bnh-select" data-field="tipo_doc" required>
                         <option value="">Seleccione</option>
-                        {% for item in tipos_documento %}<option value="{{ item.pk }}">{{ item }}</option>{% endfor %}
+                        {% for item in tipos_documento %}<option value="{{ item.pk }}"{% if tipo_doc_inicial and tipo_doc_inicial|stringformat:"s" == item.pk|stringformat:"s" %} selected{% endif %}>{{ item }}</option>{% endfor %}
                     </select>
                 </div>
                 <div class="bnh-field bnh-col-3">
-                    <label class="bnh-required">Número de documento</label>
-                    <input type="text" data-field="nro_doc" placeholder="Sin guiones ni puntos" required>
+                    <label>Número de documento</label>
+                    <input type="text" data-field="nro_doc" maxlength="20" placeholder="Según el tipo seleccionado" value="{{ nro_doc_inicial }}">
+                    <span class="bnh-help" id="bnhDocumentoAlumnoHelp">La obligatoriedad y el formato dependen del tipo de documento.</span>
                 </div>
                 <div class="bnh-field bnh-col-3">
                     <label class="bnh-required">Sexo</label>
                     <select class="bnh-select" data-field="sexo" required>
                         <option value="">Seleccione</option>
-                        {% for item in sexos %}<option value="{{ item.pk }}">{{ item }}</option>{% endfor %}
+                        {% for item in sexos %}<option value="{{ item.pk }}"{% if sexo_inicial and sexo_inicial|stringformat:"s" == item.pk|stringformat:"s" %} selected{% endif %}>{{ item }}</option>{% endfor %}
                     </select>
                 </div>
                 <div class="bnh-field bnh-col-3">
@@ -1935,16 +1937,16 @@ function blindarAutofillBnh(input, token) {
                     </select>
                 </div>
                 <div class="bnh-field bnh-col-4">
-                    <label class="bnh-required">Provincia de residencia</label>
-                    <select class="bnh-select" data-field="prov_residencia" required>
+                    <label>Provincia de residencia</label>
+                    <select class="bnh-select" data-field="prov_residencia">
                         <option value="">Seleccione</option>
                         {% for item in provincias %}<option value="{{ item.pk }}">{{ item }}</option>{% endfor %}
                     </select>
                 </div>
 
                 <div class="bnh-field bnh-col-4">
-                    <label class="bnh-required">Localidad de residencia</label>
-                    <select class="bnh-select" data-field="loc_residencia" required>
+                    <label>Localidad de residencia</label>
+                    <select class="bnh-select" data-field="loc_residencia">
                         <option value="">Seleccione</option>
                         {% for item in localidades %}<option value="{{ item.pk }}" data-provincia="{{ item.c_provincia_id }}">{{ item }}</option>{% endfor %}
                     </select>
@@ -2119,7 +2121,7 @@ function blindarAutofillBnh(input, token) {
         <div class="bnh-actions">
             <button type="button" class="bnh-btn" id="btnLimpiarFormulario"><i class="fas fa-eraser"></i> Limpiar</button>
             {% if next_url %}
-                <a class="bnh-btn" href="{{ next_url }}"><i class="fas fa-arrow-left"></i> {{ return_label }}</a>
+                <a class="bnh-btn" id="bnhReturnLink" href="{{ next_url }}"><i class="fas fa-arrow-left"></i> {{ return_label }}</a>
             {% endif %}
             <button type="button" class="bnh-btn bnh-btn-success" id="btnGuardarAlumno"><i class="fas fa-save"></i> Guardar carga</button>
         </div>
@@ -2176,9 +2178,10 @@ function blindarAutofillBnh(input, token) {
         <div class="modal-content">
             <div class="modal-header"><h5 class="modal-title">Datos Tutor</h5><button type="button" class="btn-close bnh-modal-close" data-close-modal="true" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button></div>
             <form data-related-form="tutor">
-                <!-- CUIL del tutor permite buscar/reutilizar tutor existente antes de completar la relacion. -->
+                <input type="hidden" data-name="id" value="">
+                <!-- El tutor también puede carecer de CUIL; se reutiliza por CUIL o documento cuando existe. -->
                 <div class="modal-body"><div id="bnhTutorAlert" class="bnh-alert"></div><div class="bnh-modal-grid">
-                    <div class="bnh-field bnh-col-4"><label class="bnh-required">CUIL del tutor</label><input type="text" data-name="cuil_tutor" maxlength="11" placeholder="Sin guiones ni espacios" required><span class="bnh-help">Si existe, se autocompleta. Si editás campos, se guardan actualizados.</span></div>
+                    <div class="bnh-field bnh-col-4"><label>CUIL del tutor</label><input type="text" data-name="cuil_tutor" maxlength="14" placeholder="Opcional · 11 dígitos"><span class="bnh-help" id="bnhCuilTutorHelp">El CUIL es opcional y sólo puede informarse cuando el tipo de documento es DNI.</span></div>
                     <!-- Parentesco pertenece a Parental; el resto son datos base del Tutor. -->
                     <div class="bnh-field bnh-col-4"><label class="bnh-required">Parentesco</label><select class="bnh-select" data-name="parentesco" required><option value="">Seleccione</option>{% for item in parentescos %}<option value="{{ item.pk }}">{{ item }}</option>{% endfor %}</select></div>
                     <div class="bnh-field bnh-col-4"><label class="bnh-required">Apellidos</label><input type="text" data-name="apellidos" required></div>
@@ -2186,7 +2189,7 @@ function blindarAutofillBnh(input, token) {
                     <div class="bnh-field bnh-col-4"><label class="bnh-required">Fecha nacimiento</label><input type="date" data-name="fecha_nac" required></div>
                     <!-- Catálogos del tutor: documento, nacionalidad, país y residencia. -->
                     <div class="bnh-field bnh-col-3"><label class="bnh-required">Tipo documento</label><select class="bnh-select" data-name="tipo_doc" required><option value="">Seleccione</option>{% for item in tipos_documento %}<option value="{{ item.pk }}">{{ item }}</option>{% endfor %}</select></div>
-                    <div class="bnh-field bnh-col-3"><label class="bnh-required">Nro documento</label><input type="text" data-name="nro_doc" required></div>
+                    <div class="bnh-field bnh-col-3"><label>Nro documento</label><input type="text" data-name="nro_doc" maxlength="20"><span class="bnh-help" id="bnhDocumentoTutorHelp">La obligatoriedad y el formato dependen del tipo de documento.</span></div>
                     <div class="bnh-field bnh-col-3"><label class="bnh-required">Nacionalidad</label><select class="bnh-select" data-name="nacionalidad" required><option value="">Seleccione</option>{% for item in nacionalidades %}<option value="{{ item.pk }}">{{ item }}</option>{% endfor %}</select></div>
                     <div class="bnh-field bnh-col-3"><label class="bnh-required">País nacimiento</label><select class="bnh-select" data-name="pais_nac" required><option value="">Seleccione</option>{% for item in paises %}<option value="{{ item.pk }}">{{ item }}</option>{% endfor %}</select></div>
                     <div class="bnh-field bnh-col-3"><label>Nivel de formación</label><select class="bnh-select" data-name="nivel_formacion"><option value="">Seleccione</option>{% for item in niveles_formacion %}<option value="{{ item.pk }}">{{ item }}</option>{% endfor %}</select></div>
@@ -2240,6 +2243,7 @@ function blindarAutofillBnh(input, token) {
 (function () {
     /* Estado en memoria del formulario: el guardado final envía alumno y relaciones juntas. */
     var form = document.getElementById("formCargaAlumno");
+    var alumnoIdInicial = "{{ alumno_id_inicial|default:''|escapejs }}";
     var alertBox = document.getElementById("bnhAlert");
     var alertBottomBox = document.getElementById("bnhAlertBottom");
     var tutorAlertBox = document.getElementById("bnhTutorAlert");
@@ -2284,14 +2288,37 @@ function blindarAutofillBnh(input, token) {
     var editandoPlanIndex = null;
     var SINO_SI = "1";
     var alumnoCuilEstado = {
-        cuilActual: "",
-        verificado: false,
         buscando: false
     };
     var alumnoCuilRequestSeq = 0;
-    var ultimoCuilAlumnoVerificado = "";
-    var ultimoCuilAlumnoEncontrado = "";
+    var CAMPOS_PREFILL_SGE = [
+        "apellidos",
+        "nombres",
+        "tipo_doc",
+        "nro_doc",
+        "cuil",
+        "fecha_nacimiento",
+        "sexo",
+        "nacionalidad",
+        "pais_nacimiento",
+        "prov_nacimiento",
+        "loc_nacimiento",
+        "lugar_nacimiento",
+        "pais_residencia",
+        "prov_residencia",
+        "loc_residencia",
+        "est_civil",
+        "pertenece_pueblo_indigena",
+        "comunidad_originaria",
+        "lengua_originaria",
+        "email",
+        "codigo_area",
+        "telefono",
+        "es_celular"
+    ];
+    var sgePrefillAplicado = {};
     var FIELD_LABELS = {
+        id: "Alumno seleccionado",
         cuil: "CUIL del alumno",
         fecha_nacimiento: "Fecha de nacimiento",
         apellidos: "Apellidos",
@@ -2477,6 +2504,28 @@ function blindarAutofillBnh(input, token) {
         return el.type === "checkbox" ? el.checked : el.value;
     }
 
+    function limpiarPrefillSgeAnterior() {
+        /* Evita mezclar datos de dos personas distintas. Sólo se limpia un valor
+           si sigue exactamente igual al que SGE había escrito; una corrección
+           manual del usuario se conserva. */
+        CAMPOS_PREFILL_SGE.forEach(function (campo) {
+            if (!Object.prototype.hasOwnProperty.call(sgePrefillAplicado, campo)) return;
+            if (getField(campo) !== sgePrefillAplicado[campo]) return;
+            setField(campo, campo === "es_celular" ? false : "");
+        });
+        sgePrefillAplicado = {};
+        actualizarDocumentoAlumno();
+        actualizarNacimientoExtranjero();
+        actualizarResidenciaExtranjera();
+        actualizarPuebloIndigena();
+        actualizarWhatsappAlumno();
+    }
+
+    function aplicarCampoPrefillSge(campo, valor) {
+        setField(campo, valor);
+        sgePrefillAplicado[campo] = getField(campo);
+    }
+
     function parseDateValue(value) {
         if (!value) return null;
         var partes = String(value).split("-");
@@ -2534,7 +2583,7 @@ function blindarAutofillBnh(input, token) {
     }
 
     var MSG_TEXTO_PERSONA = "El campo no puede contener dígitos ni caracteres especiales.";
-    var MSG_DOCUMENTO = "El número de documento es inválido. Ingrese solo números.";
+    var MSG_DOCUMENTO = "El número de documento no cumple el formato del tipo seleccionado.";
     var MSG_SOLO_NUMEROS = "El campo solo puede contener números.";
     var MSG_EMAIL = "Ingrese un email válido.";
     var MSG_PORCENTAJE = "El porcentaje de discapacidad debe estar entre 1 y 100.";
@@ -2640,7 +2689,7 @@ function blindarAutofillBnh(input, token) {
             return validateTextNameField(input);
         }
         if (field === "nro_doc" || name === "nro_doc") {
-            return validateDigitsOnlyField(input, MSG_DOCUMENTO);
+            return validarDocumentoSegunTipo(input);
         }
         if (field === "telefono" || name === "telefono") {
             return validateDigitsOnlyField(input, MSG_SOLO_NUMEROS);
@@ -2660,7 +2709,12 @@ function blindarAutofillBnh(input, token) {
     function agregarErrorSiInvalido(errores, selector, message) {
         var input = inputDesdeSelector(selector);
         if (input && !validarInputPorRegla(input)) {
-            agregarError(errores, message, selector);
+            var wrapper = fieldWrapper(input);
+            var errorEl = wrapper ? wrapper.querySelector(".bnh-field-error") : null;
+            errores.push({
+                mensaje: errorEl && errorEl.textContent ? errorEl.textContent : message,
+                selector: selector || ""
+            });
             return true;
         }
         return false;
@@ -2713,6 +2767,145 @@ function blindarAutofillBnh(input, token) {
         return !!option && (String(option.value) === "1" || normalizarTexto(option.textContent).indexOf("DNI") !== -1);
     }
 
+    function claseTipoDocumento(select) {
+        if (!select || select.selectedIndex < 0) return "";
+        var option = select.options[select.selectedIndex];
+        if (!option || !option.value) return "";
+        var value = String(option.value);
+        var texto = normalizarTexto(option.textContent);
+        if (value === "11" || texto.indexOf("NO POSEE") !== -1) return "no_posee";
+        if (value === "12" || texto.indexOf("TRAMITE") !== -1) return "en_tramite";
+        if (value === "13" || texto.indexOf("EXTRANJ") !== -1) return "extranjero";
+        if (value === "1" || texto === "DNI" || texto.indexOf("DNI") !== -1) return "dni";
+        if (
+            /\b(?:CI|LC|LE)\b/.test(texto)
+            || texto.indexOf("CEDULA DE IDENTIDAD") !== -1
+            || texto.indexOf("CEDULA MERCOSUR") !== -1
+        ) return "numerico";
+        return "otro";
+    }
+
+    function selectTipoDocumentoDeInput(input) {
+        if (!input) return null;
+        if (input.hasAttribute("data-field")) {
+            return form.querySelector("[data-field=\"tipo_doc\"]");
+        }
+        var root = input.closest("[data-related-form=\"tutor\"]");
+        return root ? root.querySelector("[data-name=\"tipo_doc\"]") : null;
+    }
+
+    function validarDocumentoSegunTipo(input) {
+        if (!input) return true;
+        var tipoEl = selectTipoDocumentoDeInput(input);
+        var clase = claseTipoDocumento(tipoEl);
+        var value = String(input.value || "").trim();
+        var compact = value.replace(/[.\-\s]/g, "");
+
+        if (!clase) return clearFieldError(input);
+
+        if (clase === "no_posee") {
+            if (value) {
+                return setFieldError(input, "No debe ingresar número de documento cuando el tipo es “No posee”.");
+            }
+            return clearFieldError(input);
+        }
+
+        if (clase === "en_tramite") {
+            /* BNH permite que quede vacío y no define un formato adicional si se informa. */
+            return clearFieldError(input);
+        }
+
+        if (!value) {
+            return setFieldError(input, "Debe ingresar el número de documento para el tipo seleccionado.");
+        }
+
+        if (clase === "dni") {
+            if (!/^\d{7,8}$/.test(compact)) {
+                return setFieldError(input, "El DNI debe tener 8 dígitos; si tiene 7 se completará con cero a la izquierda.");
+            }
+            return clearFieldError(input);
+        }
+
+        if (clase === "numerico") {
+            if (!/^\d+$/.test(compact)) {
+                return setFieldError(input, "El tipo de documento seleccionado admite únicamente números.");
+            }
+            return clearFieldError(input);
+        }
+
+        if (clase === "extranjero") {
+            if (!/^[A-Za-z0-9]+$/.test(value)) {
+                return setFieldError(input, "El documento extranjero admite únicamente letras y números.");
+            }
+            return clearFieldError(input);
+        }
+
+        return clearFieldError(input);
+    }
+
+    function actualizarDocumentoControl(tipoEl, docEl, helpEl) {
+        if (!tipoEl || !docEl) return;
+        var clase = claseTipoDocumento(tipoEl);
+        var requerido = !!clase && clase !== "no_posee" && clase !== "en_tramite";
+
+        docEl.disabled = clase === "no_posee";
+        marcarRequerido(docEl, requerido);
+
+        if (clase === "no_posee") {
+            docEl.value = "";
+            docEl.placeholder = "No corresponde";
+            if (helpEl) helpEl.textContent = "Para “No posee” el número debe quedar vacío.";
+        } else if (clase === "en_tramite") {
+            docEl.placeholder = "Opcional";
+            if (helpEl) helpEl.textContent = "Para “En trámite” el número puede quedar vacío.";
+        } else if (clase === "extranjero") {
+            docEl.placeholder = "Letras mayúsculas y números";
+            if (helpEl) helpEl.textContent = "Documento extranjero: admite letras y números; se guardará en mayúsculas.";
+        } else if (clase === "dni") {
+            docEl.placeholder = "8 dígitos";
+            if (helpEl) helpEl.textContent = "DNI: 8 dígitos. Si ingresa 7, se completará con cero a la izquierda.";
+        } else if (clase === "numerico") {
+            docEl.placeholder = "Solo números";
+            if (helpEl) helpEl.textContent = "Este tipo de documento admite únicamente números.";
+        } else {
+            docEl.placeholder = "Según el tipo seleccionado";
+            if (helpEl) helpEl.textContent = "La obligatoriedad y el formato dependen del tipo de documento.";
+        }
+
+        if (docEl.disabled) {
+            clearFieldError(docEl);
+        } else {
+            validarDocumentoSegunTipo(docEl);
+        }
+    }
+
+    function actualizarCuilSegunTipoDocumento(tipoEl, cuilEl, helpEl) {
+        if (!cuilEl) return;
+
+        var clase = claseTipoDocumento(tipoEl);
+        var tipoSeleccionado = !!clase;
+        var permiteCuil = !tipoSeleccionado || clase === "dni";
+
+        cuilEl.disabled = !permiteCuil;
+
+        if (!permiteCuil) {
+            cuilEl.value = "";
+            cuilEl.placeholder = "No corresponde";
+            clearFieldError(cuilEl);
+            if (helpEl) {
+                helpEl.textContent = "El CUIL sólo puede informarse cuando el tipo de documento es DNI.";
+            }
+            return;
+        }
+
+        cuilEl.placeholder = "Opcional · 11 dígitos";
+        if (helpEl) {
+            helpEl.textContent = clase === "dni"
+                ? "El CUIL es opcional. Si se informa, debe corresponder al DNI cargado."
+                : "Seleccione DNI como tipo de documento para informar CUIL.";
+        }
+    }
+
     function validarLocalidadProvincia(errores, provinciaSelector, localidadSelector) {
         var provincia = valorCampo(provinciaSelector);
         var localidadOption = selectedOptionFromSelector(localidadSelector);
@@ -2753,6 +2946,46 @@ function blindarAutofillBnh(input, token) {
             return { cuil: base + String(digito), dni: dni };
         }
         return { cuil: "20300000003", dni: "30000000" };
+    }
+
+    function generarIdentidadDocumentoAzar(select) {
+        /* Genera únicamente combinaciones válidas según las reglas BNH actuales.
+           Incluye los casos sin CUIL/documento que antes el botón no ejercitaba. */
+        var codigosSoportados = ["1", "2", "3", "4", "5", "11", "12", "13"];
+        var opciones = availableOptions(select, function (option) {
+            return codigosSoportados.indexOf(String(option.value)) !== -1;
+        });
+        var option = opciones.length
+            ? randomItem(opciones)
+            : (optionByText(select, "DNI") || randomOption(select));
+        if (!option) {
+            return { tipo_doc: "", tipo_doc_label: "", nro_doc: "", cuil: "" };
+        }
+
+        var codigo = String(option.value);
+        var persona = generarCuilValido();
+        var nroDoc = "";
+        var cuil = "";
+
+        if (codigo === "1") {
+            nroDoc = persona.dni;
+            /* El CUIL es opcional incluso para DNI: se prueban ambos caminos. */
+            cuil = Math.random() < .5 ? persona.cuil : "";
+        } else if (["2", "3", "4", "5"].indexOf(codigo) !== -1) {
+            nroDoc = String(randomInt(1000000, 99999999));
+        } else if (codigo === "12") {
+            /* En trámite puede no tener número; si se informa, BNH no fija formato adicional. */
+            nroDoc = Math.random() < .6 ? "" : ("TRAM" + padLeft(randomInt(1, 999999), 6));
+        } else if (codigo === "13") {
+            nroDoc = randomItem(["EXT", "DOC", "ID"]) + padLeft(randomInt(1, 999999), 6);
+        }
+
+        return {
+            tipo_doc: option.value,
+            tipo_doc_label: String(option.textContent || "").trim(),
+            nro_doc: nroDoc,
+            cuil: cuil
+        };
     }
 
     function randomDate(minYear, maxYear) {
@@ -2887,9 +3120,9 @@ function blindarAutofillBnh(input, token) {
     function crearTutorAzar() {
         var nombres = ["LUCAS", "MARTINA", "SOFIA", "MATEO", "VALENTINA", "TOMAS", "JULIETA", "BENJAMIN"];
         var apellidos = ["GOMEZ", "PEREZ", "RODRIGUEZ", "FERNANDEZ", "LOPEZ", "SOSA", "RAMIREZ", "ACOSTA"];
-        var persona = generarCuilValido();
         var parentesco = randomOption(document.querySelector("#modalTutor [data-name=\"parentesco\"]"));
-        var tipoDoc = randomOption(document.querySelector("#modalTutor [data-name=\"tipo_doc\"]"));
+        var tipoDocSelect = document.querySelector("#modalTutor [data-name=\"tipo_doc\"]");
+        var identidad = generarIdentidadDocumentoAzar(tipoDocSelect);
         var nacionalidad = randomOption(document.querySelector("#modalTutor [data-name=\"nacionalidad\"]"));
         var paisNacEl = document.querySelector("#modalTutor [data-name=\"pais_nac\"]");
         var paisNac = optionByText(paisNacEl, "ARGENT") || randomOption(paisNacEl);
@@ -2902,15 +3135,16 @@ function blindarAutofillBnh(input, token) {
         var apellido = randomItem(apellidos);
         var telefono = String(randomInt(300000, 99999999)).substring(0, 8);
         var esCelularTutor = Math.random() < .85;
+        var tokenContacto = String(randomInt(10000000, 99999999));
 
         return {
-            cuil_tutor: persona.cuil,
+            cuil_tutor: identidad.cuil,
             parentesco: parentesco ? parentesco.value : "",
             apellidos: apellido,
             nombres: nombre,
             fecha_nac: randomDate(1970, 1992),
-            tipo_doc: tipoDoc ? tipoDoc.value : "",
-            nro_doc: persona.dni,
+            tipo_doc: identidad.tipo_doc,
+            nro_doc: identidad.nro_doc,
             nacionalidad: nacionalidad ? nacionalidad.value : "",
             pais_nac: paisNac ? paisNac.value : "",
             nivel_formacion: "",
@@ -2922,7 +3156,7 @@ function blindarAutofillBnh(input, token) {
             nro: String(randomInt(100, 9999)),
             piso: "",
             dpto: "",
-            mail: "tutor" + persona.dni + "@example.com",
+            mail: "tutor" + tokenContacto + "@example.com",
             codigo_area: codigoArea ? codigoArea.value : "",
             codigo_area_codigo: codigoArea ? (codigoArea.getAttribute("data-codigo") || "") : "",
             telefono: telefono,
@@ -2931,7 +3165,7 @@ function blindarAutofillBnh(input, token) {
             parental_observaciones: "Generado para prueba",
             parentesco_label: parentesco ? parentesco.textContent : "",
             nombre_completo: apellido + ", " + nombre,
-            documento_label: (tipoDoc ? tipoDoc.textContent : "") + " " + persona.dni,
+            documento_label: identidad.tipo_doc_label + (identidad.nro_doc ? " " + identidad.nro_doc : ""),
             telefono_label: formatTelefono(codigoArea ? codigoArea.getAttribute("data-codigo") : "", telefono)
         };
     }
@@ -2984,12 +3218,12 @@ function blindarAutofillBnh(input, token) {
     function completarCargaAzar() {
         var nombres = ["JUAN", "EMMA", "MIA", "SANTIAGO", "DELFINA", "BAUTISTA", "RENATA", "FRANCO"];
         var apellidos = ["GOMEZ", "PEREZ", "RODRIGUEZ", "FERNANDEZ", "LOPEZ", "SOSA", "RAMIREZ", "ACOSTA"];
-        var persona = generarCuilValido();
         var nombre = randomItem(nombres);
         var apellido = randomItem(apellidos);
         var codigoArea = null;
 
         form.reset();
+        sgePrefillAplicado = {};
         bloquearCuilAlumno(false);
         clearValidationErrors(form);
         clearValidationErrors(document.querySelector("[data-related-form=\"tutor\"]"));
@@ -3000,20 +3234,19 @@ function blindarAutofillBnh(input, token) {
         planesSociales = [];
         tutores = [];
 
-        setMainRandomField("cuil", persona.cuil);
-        alumnoCuilEstado.cuilActual = persona.cuil;
-        alumnoCuilEstado.verificado = true;
         alumnoCuilEstado.buscando = false;
-        ultimoCuilAlumnoVerificado = persona.cuil;
-        ultimoCuilAlumnoEncontrado = "";
-        if (alumnoCuilInput) {
-            alumnoCuilInput._ultimoCuilBuscado = persona.cuil;
-        }
+        alumnoCuilRequestSeq++;
         setMainRandomField("fecha_nacimiento", randomDate(2008, 2017));
         setMainRandomField("apellidos", apellido);
         setMainRandomField("nombres", nombre);
-        setRandomSelect("[data-field=\"tipo_doc\"]");
-        setMainRandomField("nro_doc", persona.dni);
+        var tipoDocAlumnoEl = form.querySelector("[data-field=\"tipo_doc\"]");
+        var identidadAlumno = generarIdentidadDocumentoAzar(tipoDocAlumnoEl);
+        if (identidadAlumno.tipo_doc) {
+            controlValue(tipoDocAlumnoEl, identidadAlumno.tipo_doc);
+        }
+        actualizarDocumentoAlumno();
+        setMainRandomField("nro_doc", identidadAlumno.nro_doc);
+        setMainRandomField("cuil", identidadAlumno.cuil);
         setRandomSelect("[data-field=\"sexo\"]");
         setRandomSelect("[data-field=\"nacionalidad\"]");
         setPaisNacimientoAzar("[data-field=\"pais_nacimiento\"]");
@@ -3027,7 +3260,10 @@ function blindarAutofillBnh(input, token) {
             setMainRandomField("lugar_nacimiento", randomItem(["MONTEVIDEO", "ASUNCION", "SANTIAGO", "LIMA", "BOGOTA"]));
         }
         setArgentinaOrRandom("[data-field=\"pais_residencia\"]");
-        completarProvinciaLocalidad("[data-field=\"prov_residencia\"]", "[data-field=\"loc_residencia\"]");
+        actualizarResidenciaExtranjera();
+        if (normalizarTexto(optionTextFromSelector("[data-field=\"pais_residencia\"]")).indexOf("ARGENT") !== -1) {
+            completarProvinciaLocalidad("[data-field=\"prov_residencia\"]", "[data-field=\"loc_residencia\"]");
+        }
         setRandomSelect("[data-field=\"est_civil\"]");
         setSinoAzar("[data-field=\"tiene_discapacidad\"]");
         setSinoAzar("[data-field=\"tiene_ppi\"]");
@@ -3043,7 +3279,7 @@ function blindarAutofillBnh(input, token) {
         setMainRandomField("telefono", String(randomInt(300000, 99999999)).substring(0, 8));
         setMainRandomField("es_celular", Math.random() < .85);
         setMainRandomField("whatsapp", !!getField("es_celular") && Math.random() < .75);
-        setMainRandomField("email", "alumno" + persona.dni + "@example.com");
+        setMainRandomField("email", "alumno" + randomInt(10000000, 99999999) + "@example.com");
         setMainRandomField("observaciones", "Generado para prueba");
 
         obrasSociales.push(crearObraSocialAzar());
@@ -3059,11 +3295,23 @@ function blindarAutofillBnh(input, token) {
         actualizarDiscapacidad();
         actualizarWhatsappAlumno();
         renderAll();
-        showAlert("info", "Datos de prueba cargados con combinaciones al azar. Revisalos y presiona Guardar carga para persistirlos.");
+        var detalleIdentidad = identidadAlumno.tipo_doc_label || "tipo de documento válido";
+        if (identidadAlumno.cuil) {
+            detalleIdentidad += " + CUIL";
+        } else {
+            detalleIdentidad += " · sin CUIL";
+        }
+        showAlert(
+            "info",
+            "Datos de prueba cargados con combinaciones válidas. Caso documental del alumno: "
+                + detalleIdentidad
+                + ". Revisalos y presiona Guardar carga para persistirlos."
+        );
     }
 
     function fillAlumno(data) {
-        /* Autocompleta campos del alumno cuando el CUIL ya existe en backend. */
+        /* Un registro local confirmado reemplaza cualquier precarga temporal SGE. */
+        sgePrefillAplicado = {};
         Object.keys(data || {}).forEach(function (key) { setField(key, data[key]); });
         var locNacimientoEl = form.querySelector("[data-field=\"loc_nacimiento\"]");
         var locResidenciaEl = form.querySelector("[data-field=\"loc_residencia\"]");
@@ -3077,47 +3325,33 @@ function blindarAutofillBnh(input, token) {
             locResidenciaEl,
             data && data.loc_residencia !== undefined ? data.loc_residencia : (locResidenciaEl ? locResidenciaEl.value : "")
         );
-        bloquearCuilAlumno(true);
+        bloquearCuilAlumno(false);
+        actualizarDocumentoAlumno();
         actualizarNacimientoExtranjero();
+        actualizarResidenciaExtranjera();
         actualizarPuebloIndigena();
         actualizarDiscapacidad();
         actualizarWhatsappAlumno();
     }
 
-    function limpiarCargaParaNuevoAlumno(cuil) {
-        /* Evita reutilizar datos de una busqueda anterior cuando el CUIL valido no existe. */
+    function prepararAltaNueva(params) {
+        /* Conserva exactamente los identificadores usados en la búsqueda actual;
+           el resto del formulario sólo pierde valores automáticos SGE anteriores. */
+        params = params || {};
         bloquearCuilAlumno(false);
-        form.querySelectorAll("[data-field]").forEach(function (el) {
-            var field = el.getAttribute("data-field");
-            if (field === "cuil") {
-                if (el.type === "checkbox") {
-                    el.checked = false;
-                } else {
-                    el.value = cuil || "";
-                }
-            } else if (el.type === "checkbox") {
-                el.checked = el.defaultChecked;
-            } else {
-                if (el._bnhSetLocalidadValue) {
-                    el._bnhSetLocalidadValue("");
-                } else {
-                    el.value = "";
-                }
-            }
-            if (el._bnhSincronizarCodigoArea) { el._bnhSincronizarCodigoArea(); }
-            if (el._bnhSincronizarLocalidad) { el._bnhSincronizarLocalidad(); }
-            if (window.jQuery) { jQuery(el).trigger("change"); }
-        });
-        obrasSociales = [];
-        discapacidades = [];
-        planesSociales = [];
-        tutores = [];
-        limpiarEdicionTemporal();
+        setField("id", "");
+        if (params.cuil !== undefined) {
+            setField("cuil", params.cuil || "");
+        }
+        if (params.tipo_doc !== undefined) {
+            setField("tipo_doc", params.tipo_doc || "");
+        }
+        if (params.nro_doc !== undefined) {
+            setField("nro_doc", params.nro_doc || "");
+        }
+        actualizarDocumentoAlumno();
         actualizarNacimientoExtranjero();
-        actualizarPuebloIndigena();
-        actualizarDiscapacidad();
-        actualizarWhatsappAlumno();
-        renderAll();
+        actualizarResidenciaExtranjera();
     }
 
     function collectAlumno() {
@@ -3127,6 +3361,7 @@ function blindarAutofillBnh(input, token) {
             data[el.getAttribute("data-field")] = el.type === "checkbox" ? el.checked : el.value;
         });
         data.cuil = cleanDigits(data.cuil);
+        data.nro_doc = String(data.nro_doc || "").trim().toUpperCase();
         if (!esCatalogoSi(form.querySelector("[data-field=\"pertenece_pueblo_indigena\"]"))) {
             data.comunidad_originaria = "";
         }
@@ -3147,14 +3382,14 @@ function blindarAutofillBnh(input, token) {
         var fechaNacimiento = getField("fecha_nacimiento");
         var fechaAlumno = parseDateValue(fechaNacimiento);
         var edadAlumno = calcularEdad(fechaAlumno);
-        var dniAlumno = cleanDigits(getField("nro_doc"));
-        var paisNacimientoTexto = normalizarTexto(optionTextFromSelector("[data-field=\"pais_nacimiento\"]"));
+        var paisNacimientoEl = form.querySelector("[data-field=\"pais_nacimiento\"]");
+        var paisResidenciaEl = form.querySelector("[data-field=\"pais_residencia\"]");
+        var paisNacimientoEsArgentina = esPaisArgentina(paisNacimientoEl);
+        var paisResidenciaEsArgentina = esPaisArgentina(paisResidenciaEl);
         var lugarNacimiento = String(getField("lugar_nacimiento") || "").trim();
         var telefono = String(getField("telefono") || "").trim();
 
-        if (!cuil) {
-            agregarError(errores, "Debe ingresar el CUIL del alumno.", "[data-field=\"cuil\"]");
-        } else if (cuil.length !== 11) {
+        if (cuil && cuil.length !== 11) {
             agregarError(errores, "El CUIL del alumno debe tener 11 dígitos.", "[data-field=\"cuil\"]");
         }
 
@@ -3172,13 +3407,31 @@ function blindarAutofillBnh(input, token) {
         else { agregarErrorSiInvalido(errores, "[data-field=\"apellidos\"]", MSG_TEXTO_PERSONA); }
         if (!tieneValor("[data-field=\"nombres\"]")) { agregarError(errores, "Debe ingresar el nombre del alumno.", "[data-field=\"nombres\"]"); }
         else { agregarErrorSiInvalido(errores, "[data-field=\"nombres\"]", MSG_TEXTO_PERSONA); }
-        if (!tieneValor("[data-field=\"tipo_doc\"]")) { agregarError(errores, "Debe seleccionar el tipo de documento del alumno.", "[data-field=\"tipo_doc\"]"); }
-        if (!tieneValor("[data-field=\"nro_doc\"]")) {
-            agregarError(errores, "Debe ingresar el número de documento del alumno.", "[data-field=\"nro_doc\"]");
+        if (!tieneValor("[data-field=\"tipo_doc\"]")) {
+            agregarError(errores, "Debe seleccionar el tipo de documento del alumno.", "[data-field=\"tipo_doc\"]");
         } else {
-            var nroDocAlumnoInvalido = agregarErrorSiInvalido(errores, "[data-field=\"nro_doc\"]", MSG_DOCUMENTO);
-            if (!nroDocAlumnoInvalido && esDocumentoDni("[data-field=\"tipo_doc\"]") && !/^\d{7,8}$/.test(dniAlumno)) {
-                agregarError(errores, "El DNI del alumno debe tener 7 u 8 dígitos.", "[data-field=\"nro_doc\"]");
+            agregarErrorSiInvalido(errores, "[data-field=\"nro_doc\"]", MSG_DOCUMENTO);
+            var tipoDocAlumnoEl = form.querySelector("[data-field=\"tipo_doc\"]");
+            var claseDocumentoAlumno = claseTipoDocumento(tipoDocAlumnoEl);
+            var documentoAlumno = String(getField("nro_doc") || "").trim().replace(/[.\-\s]/g, "");
+
+            if (cuil && claseDocumentoAlumno !== "dni") {
+                agregarError(
+                    errores,
+                    "El CUIL del alumno sólo puede informarse cuando el tipo de documento es DNI.",
+                    "[data-field=\"cuil\"]"
+                );
+            } else if (
+                cuil.length === 11
+                && claseDocumentoAlumno === "dni"
+                && /^\d{7,8}$/.test(documentoAlumno)
+                && cuil.substring(2, 10) !== padLeft(documentoAlumno, 8)
+            ) {
+                agregarError(
+                    errores,
+                    "El CUIL del alumno no corresponde al DNI informado.",
+                    "[data-field=\"cuil\"]"
+                );
             }
         }
         if (!tieneValor("[data-field=\"sexo\"]")) { agregarError(errores, "Debe seleccionar el sexo del alumno.", "[data-field=\"sexo\"]"); }
@@ -3190,7 +3443,7 @@ function blindarAutofillBnh(input, token) {
             );
         }
         if (!tieneValor("[data-field=\"pais_nacimiento\"]")) { agregarError(errores, "Debe seleccionar el país de nacimiento.", "[data-field=\"pais_nacimiento\"]"); }
-        if (paisNacimientoTexto.indexOf("ARGENT") !== -1) {
+        if (paisNacimientoEsArgentina) {
             if (!tieneValor("[data-field=\"prov_nacimiento\"]")) { agregarError(errores, "Debe seleccionar la provincia de nacimiento para alumnos nacidos en Argentina.", "[data-field=\"prov_nacimiento\"]"); }
             if (!tieneValor("[data-field=\"loc_nacimiento\"]")) { agregarError(errores, "Debe seleccionar la localidad de nacimiento para alumnos nacidos en Argentina.", "[data-field=\"loc_nacimiento\"]"); }
         } else if (tieneValor("[data-field=\"pais_nacimiento\"]")) {
@@ -3200,9 +3453,16 @@ function blindarAutofillBnh(input, token) {
                 agregarError(errores, MSG_LUGAR_NACIMIENTO, "[data-field=\"lugar_nacimiento\"]");
             }
         }
-        if (!tieneValor("[data-field=\"pais_residencia\"]")) { agregarError(errores, "Debe seleccionar el país de residencia.", "[data-field=\"pais_residencia\"]"); }
-        if (!tieneValor("[data-field=\"prov_residencia\"]")) { agregarError(errores, "Debe seleccionar la provincia de residencia.", "[data-field=\"prov_residencia\"]"); }
-        if (!tieneValor("[data-field=\"loc_residencia\"]")) { agregarError(errores, "Debe seleccionar la localidad de residencia.", "[data-field=\"loc_residencia\"]"); }
+        if (!tieneValor("[data-field=\"pais_residencia\"]")) {
+            agregarError(errores, "Debe seleccionar el país de residencia.", "[data-field=\"pais_residencia\"]");
+        } else if (paisResidenciaEsArgentina) {
+            if (!tieneValor("[data-field=\"prov_residencia\"]")) {
+                agregarError(errores, "Debe seleccionar la provincia de residencia para Argentina.", "[data-field=\"prov_residencia\"]");
+            }
+            if (!tieneValor("[data-field=\"loc_residencia\"]")) {
+                agregarError(errores, "Debe seleccionar la localidad de residencia para Argentina.", "[data-field=\"loc_residencia\"]");
+            }
+        }
         if (!tieneValor("[data-field=\"est_civil\"]")) { agregarError(errores, "Debe seleccionar el estado civil.", "[data-field=\"est_civil\"]"); }
         agregarErrorSiInvalido(errores, "[data-field=\"email\"]", MSG_EMAIL);
         if (telefono && !tieneValor("[data-field=\"codigo_area\"]")) {
@@ -3221,8 +3481,12 @@ function blindarAutofillBnh(input, token) {
         if (esCatalogoSi("[data-field=\"pertenece_pueblo_indigena\"]") && !tieneValor("[data-field=\"comunidad_originaria\"]")) {
             agregarError(errores, "Debe indicar la comunidad o pueblo originario.", "[data-field=\"comunidad_originaria\"]");
         }
-        if (tutores.length < 1) {
-            agregarError(errores, "Debe cargar al menos un tutor o responsable.", "[data-open-modal=\"modalTutor\"]");
+        if (edadAlumno !== null && edadAlumno >= 0 && edadAlumno < 18 && tutores.length < 1) {
+            agregarError(
+                errores,
+                "El alumno es menor de 18 años. Debe cargar al menos un tutor o responsable.",
+                "[data-open-modal=\"modalTutor\"]"
+            );
         }
         tutores.forEach(function (tutor, idx) {
             var telefonoTutor = String(tutor.telefono || "").trim();
@@ -3335,10 +3599,10 @@ function blindarAutofillBnh(input, token) {
         var fechaTutor = parseDateValue(item.fecha_nac);
         var edadTutor = calcularEdad(fechaTutor);
         var telefono = String(item.telefono || "").trim();
-        var dniTutor = cleanDigits(item.nro_doc);
 
-        if (!item.cuil_tutor) { agregarError(errores, "Debe ingresar el CUIL del tutor.", selectorRelacionado(root, "cuil_tutor")); }
-        else if (item.cuil_tutor.length !== 11) { agregarError(errores, "El CUIL del tutor debe tener 11 dígitos.", selectorRelacionado(root, "cuil_tutor")); }
+        if (item.cuil_tutor && item.cuil_tutor.length !== 11) {
+            agregarError(errores, "El CUIL del tutor debe tener 11 dígitos.", selectorRelacionado(root, "cuil_tutor"));
+        }
         if (!item.parentesco) { agregarError(errores, "Debe seleccionar el parentesco del tutor.", selectorRelacionado(root, "parentesco")); }
         if (!item.apellidos) { agregarError(errores, "Debe ingresar el apellido del tutor.", selectorRelacionado(root, "apellidos")); }
         else { agregarErrorSiInvalido(errores, selectorRelacionado(root, "apellidos"), MSG_TEXTO_PERSONA); }
@@ -3353,13 +3617,32 @@ function blindarAutofillBnh(input, token) {
         } else if (edadTutor !== null && edadTutor > 120) {
             agregarError(errores, "Revise la fecha de nacimiento del tutor. La edad calculada supera el límite esperado.", selectorRelacionado(root, "fecha_nac"));
         }
-        if (!item.tipo_doc) { agregarError(errores, "Debe seleccionar el tipo de documento del tutor.", selectorRelacionado(root, "tipo_doc")); }
-        if (!item.nro_doc) {
-            agregarError(errores, "Debe ingresar el número de documento del tutor.", selectorRelacionado(root, "nro_doc"));
+        if (!item.tipo_doc) {
+            agregarError(errores, "Debe seleccionar el tipo de documento del tutor.", selectorRelacionado(root, "tipo_doc"));
         } else {
-            var nroDocTutorInvalido = agregarErrorSiInvalido(errores, selectorRelacionado(root, "nro_doc"), MSG_DOCUMENTO);
-            if (!nroDocTutorInvalido && esDocumentoDniRelacionado(root, "tipo_doc") && !/^\d{7,8}$/.test(dniTutor)) {
-                agregarError(errores, "El DNI del tutor debe tener 7 u 8 dígitos.", selectorRelacionado(root, "nro_doc"));
+            agregarErrorSiInvalido(errores, selectorRelacionado(root, "nro_doc"), MSG_DOCUMENTO);
+            var tipoDocTutorEl = root.querySelector("[data-name=\"tipo_doc\"]");
+            var claseDocumentoTutor = claseTipoDocumento(tipoDocTutorEl);
+            var documentoTutor = String(item.nro_doc || "").trim().replace(/[.\-\s]/g, "");
+
+            if (item.cuil_tutor && claseDocumentoTutor !== "dni") {
+                agregarError(
+                    errores,
+                    "El CUIL del tutor sólo puede informarse cuando el tipo de documento es DNI.",
+                    selectorRelacionado(root, "cuil_tutor")
+                );
+            } else if (
+                item.cuil_tutor
+                && item.cuil_tutor.length === 11
+                && claseDocumentoTutor === "dni"
+                && /^\d{7,8}$/.test(documentoTutor)
+                && item.cuil_tutor.substring(2, 10) !== padLeft(documentoTutor, 8)
+            ) {
+                agregarError(
+                    errores,
+                    "El CUIL del tutor no corresponde al DNI informado.",
+                    selectorRelacionado(root, "cuil_tutor")
+                );
             }
         }
         if (!item.nacionalidad) { agregarError(errores, "Debe seleccionar la nacionalidad del tutor.", selectorRelacionado(root, "nacionalidad")); }
@@ -3408,6 +3691,13 @@ function blindarAutofillBnh(input, token) {
         /* Devuelve el texto visible de un select, no el id numérico. */
         if (!select || select.selectedIndex < 0) return "";
         return select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : "";
+    }
+
+    function esPaisArgentina(select) {
+        /* Mantiene el mismo criterio tolerante que backend: id histórico 14 o texto del catálogo. */
+        if (!select || !select.value) return false;
+        return String(select.value) === "14"
+            || normalizarTexto(textoSeleccionado(select)).indexOf("ARGENT") !== -1;
     }
 
     function marcarRequerido(el, requerido) {
@@ -3825,7 +4115,7 @@ function blindarAutofillBnh(input, token) {
         var lugarWrapper = document.getElementById("campoLugarNacimientoExtranjero");
         var lugarEl = form.querySelector("[data-field=\"lugar_nacimiento\"]");
         var paisSeleccionado = !!(paisEl && paisEl.value);
-        var esArgentina = normalizarTexto(textoSeleccionado(paisEl)).indexOf("ARGENT") !== -1;
+        var esArgentina = esPaisArgentina(paisEl);
         var mostrarLugarExtranjero = paisSeleccionado && !esArgentina;
 
         marcarRequerido(localidadEl, esArgentina);
@@ -3855,6 +4145,65 @@ function blindarAutofillBnh(input, token) {
         if (esArgentina) {
             cargarLocalidades(provinciaEl, localidadEl, localidadEl ? localidadEl.value : "");
         }
+    }
+
+    function actualizarResidenciaExtranjera() {
+        /* BNH sólo requiere provincia/localidad de residencia cuando el país es Argentina. */
+        var paisEl = form.querySelector("[data-field=\"pais_residencia\"]");
+        var provinciaEl = form.querySelector("[data-field=\"prov_residencia\"]");
+        var localidadEl = form.querySelector("[data-field=\"loc_residencia\"]");
+        var esArgentina = esPaisArgentina(paisEl);
+
+        marcarRequerido(provinciaEl, esArgentina);
+        marcarRequerido(localidadEl, esArgentina);
+
+        if (provinciaEl) {
+            provinciaEl.disabled = !esArgentina;
+            if (!esArgentina) {
+                provinciaEl.value = "";
+                clearFieldError(provinciaEl);
+                if (window.jQuery) { jQuery(provinciaEl).trigger("change"); }
+            }
+        }
+        if (localidadEl) {
+            localidadEl.disabled = !esArgentina;
+            if (!esArgentina) {
+                localidadEl.value = "";
+                clearFieldError(localidadEl);
+            }
+            if (localidadEl._bnhSincronizarLocalidad) { localidadEl._bnhSincronizarLocalidad(); }
+        }
+        if (esArgentina) {
+            cargarLocalidades(provinciaEl, localidadEl, localidadEl ? localidadEl.value : "");
+        }
+    }
+
+    function actualizarDocumentoAlumno() {
+        var tipoEl = form.querySelector("[data-field=\"tipo_doc\"]");
+        actualizarDocumentoControl(
+            tipoEl,
+            form.querySelector("[data-field=\"nro_doc\"]"),
+            document.getElementById("bnhDocumentoAlumnoHelp")
+        );
+        actualizarCuilSegunTipoDocumento(
+            tipoEl,
+            form.querySelector("[data-field=\"cuil\"]"),
+            document.getElementById("bnhCuilAlumnoHelp")
+        );
+    }
+
+    function actualizarDocumentoTutor() {
+        var tipoEl = document.querySelector("#modalTutor [data-name=\"tipo_doc\"]");
+        actualizarDocumentoControl(
+            tipoEl,
+            document.querySelector("#modalTutor [data-name=\"nro_doc\"]"),
+            document.getElementById("bnhDocumentoTutorHelp")
+        );
+        actualizarCuilSegunTipoDocumento(
+            tipoEl,
+            document.querySelector("#modalTutor [data-name=\"cuil_tutor\"]"),
+            document.getElementById("bnhCuilTutorHelp")
+        );
     }
 
     function selectedText(root, name) {
@@ -3920,6 +4269,10 @@ function blindarAutofillBnh(input, token) {
     function resetRelated(root) {
         /* Limpia un modal después de agregar la fila y restaura defaults conocidos. */
         if (!root) return;
+        if (root.getAttribute("data-related-form") === "tutor") {
+            if (typeof tutorBusquedaSeq === "number") { tutorBusquedaSeq++; }
+            tutorBusquedaEnCurso = false;
+        }
         clearValidationErrors(root);
         root.querySelectorAll("[data-name]").forEach(function (el) {
             if (el.type === "checkbox") {
@@ -3994,6 +4347,7 @@ function blindarAutofillBnh(input, token) {
         editandoTutorIndex = idx;
         clearTutorAlert();
         fillRelated(document.querySelector("[data-related-form=\"tutor\"]"), tutores[idx]);
+        actualizarDocumentoTutor();
         actualizarWhatsappTutor();
         abrirModal("modalTutor");
         actualizarLocalidadesTutor(tutores[idx].loc_resid);
@@ -4022,6 +4376,7 @@ function blindarAutofillBnh(input, token) {
             editandoTutorIndex = null;
             clearTutorAlert();
             resetRelated(document.querySelector("[data-related-form=\"tutor\"]"));
+            actualizarDocumentoTutor();
             actualizarLocalidadesTutor("");
             actualizarWhatsappTutor();
         }
@@ -4054,6 +4409,7 @@ function blindarAutofillBnh(input, token) {
             if (btn.getAttribute("data-open-modal") === "modalTutor") {
                 editandoTutorIndex = null;
                 resetRelated(document.querySelector("[data-related-form=\"tutor\"]"));
+                actualizarDocumentoTutor();
                 actualizarLocalidadesTutor("");
                 actualizarWhatsappTutor();
             }
@@ -4073,163 +4429,617 @@ function blindarAutofillBnh(input, token) {
     }
 
     var alumnoCuilInput = form.querySelector("[data-field=\"cuil\"]");
-    alumnoCuilInput.addEventListener("blur", function () {
-        /* Validación frontend mínima y búsqueda de alumno existente por CUIL. */
-        var cuil = cleanDigits(alumnoCuilInput.value);
-        alumnoCuilInput.value = cuil;
-        if (!cuil) {
-            alumnoCuilEstado.cuilActual = "";
-            alumnoCuilEstado.verificado = false;
-            alumnoCuilEstado.buscando = false;
-            ultimoCuilAlumnoVerificado = "";
-            ultimoCuilAlumnoEncontrado = "";
-            return;
+    var alumnoTipoDocInput = form.querySelector("[data-field=\"tipo_doc\"]");
+    var alumnoNroDocInput = form.querySelector("[data-field=\"nro_doc\"]");
+
+    function alumnoTieneRegistroSeleccionado() {
+        return !!String(getField("id") || "").trim();
+    }
+
+    function seleccionarCandidatoAmbiguo(candidatos, tipoPersona) {
+        if (!Array.isArray(candidatos) || !candidatos.length) return null;
+
+        var lineas = candidatos.map(function (candidato, idx) {
+            var persona = candidato.alumno || candidato.tutor || candidato || {};
+            var documento = [
+                persona.tipo_doc_label || persona.tipo_doc || "",
+                persona.nro_doc || ""
+            ].filter(Boolean).join(" ");
+            var cuil = persona.cuil || persona.cuil_tutor || "";
+            var partes = [
+                (persona.apellidos || "") + ", " + (persona.nombres || ""),
+                persona.fecha_nacimiento || persona.fecha_nac || "",
+                documento,
+                cuil ? "CUIL " + cuil : ""
+            ].filter(Boolean);
+            return (idx + 1) + ") " + partes.join(" · ");
+        });
+
+        var respuesta = window.prompt(
+            "Se encontraron varias personas posibles para " + tipoPersona + ".\n\n"
+            + lineas.join("\n")
+            + "\n\nEscribí el número de la persona correcta. Cancelar no selecciona ninguna."
+        );
+        if (respuesta === null) return null;
+
+        var indice = Number.parseInt(String(respuesta).trim(), 10) - 1;
+        if (!Number.isInteger(indice) || indice < 0 || indice >= candidatos.length) {
+            return null;
         }
-        alumnoCuilEstado.cuilActual = cuil;
-        if (cuil.length !== 11) {
-            alumnoCuilEstado.verificado = false;
-            alumnoCuilEstado.buscando = false;
-            showAlert("error", "El CUIL del alumno debe tener 11 dígitos.");
-            return;
-        }
-        if (cuil === alumnoCuilInput._ultimoCuilBuscado && cuil === ultimoCuilAlumnoVerificado) return;
-        alumnoCuilInput._ultimoCuilBuscado = cuil;
-        alumnoCuilEstado.verificado = false;
+        return candidatos[indice];
+    }
+
+    function cargarAlumnoEncontrado(result) {
+        fillAlumno(result.data.alumno);
+        cargarLocalidades(
+            form.querySelector("[data-field=\"prov_nacimiento\"]"),
+            form.querySelector("[data-field=\"loc_nacimiento\"]"),
+            result.data.alumno.loc_nacimiento
+        );
+        cargarLocalidades(
+            form.querySelector("[data-field=\"prov_residencia\"]"),
+            form.querySelector("[data-field=\"loc_residencia\"]"),
+            result.data.alumno.loc_residencia
+        );
+        obrasSociales = result.data.obras_sociales || [];
+        discapacidades = result.data.discapacidades || [];
+        planesSociales = result.data.planes_sociales || [];
+        tutores = result.data.tutores || [];
+        limpiarEdicionTemporal();
+        tutores.forEach(function (t) {
+            t.nombre_completo = (t.apellidos || "") + ", " + (t.nombres || "");
+            t.documento_label = (t.tipo_doc_label || t.tipo_doc || "") + (t.nro_doc ? " " + t.nro_doc : "");
+            t.telefono_label = t.telefono_label || formatTelefono(t.codigo_area_codigo, t.telefono);
+        });
+        actualizarDocumentoAlumno();
+        actualizarNacimientoExtranjero();
+        actualizarResidenciaExtranjera();
+        actualizarPuebloIndigena();
+        actualizarDiscapacidad();
+        actualizarWhatsappAlumno();
+        renderAll();
+        showAlert("ok", "Alumno encontrado. Se abrió el registro existente para editarlo.");
+    }
+
+    function cargarIdentidadDesdeSge(alumnoSge) {
+        /* La materializada SGE sólo entrega valores que el backend pudo traducir
+           o validar de forma segura contra BNH. Los null quedan para carga manual. */
+        CAMPOS_PREFILL_SGE.forEach(function (campo) {
+            if (alumnoSge && alumnoSge[campo] !== undefined && alumnoSge[campo] !== null) {
+                aplicarCampoPrefillSge(campo, alumnoSge[campo]);
+            }
+        });
+        actualizarDocumentoAlumno();
+        actualizarNacimientoExtranjero();
+        actualizarResidenciaExtranjera();
+        actualizarPuebloIndigena();
+        actualizarWhatsappAlumno();
+        showAlert(
+            "info",
+            "Persona encontrada en SGE. Se completaron automáticamente sólo los datos compatibles y validados; lo restante queda para completar manualmente."
+        );
+    }
+
+    function buscarAlumnoExistente(params, mensajeSinCoincidencia) {
+        if (alumnoTieneRegistroSeleccionado()) return;
         alumnoCuilEstado.buscando = true;
         var seq = ++alumnoCuilRequestSeq;
-        fetch(form.dataset.urlBuscarAlumno + "?cuil=" + encodeURIComponent(cuil))
-            .then(function (resp) { return resp.json().then(function (data) { return { ok: resp.ok, data: data }; }); })
-            .then(function (result) {
-                /* Si existe alumno, se recuperan datos base y colecciones relacionadas. */
-                if (seq !== alumnoCuilRequestSeq) return;
-                if (cleanDigits(alumnoCuilInput.value) !== cuil) return;
-                alumnoCuilEstado.buscando = false;
-                if (!result.ok) {
-                    alumnoCuilEstado.verificado = false;
-                    showAlert("error", result.data.error || "CUIL inválido.");
-                    return;
-                }
-                alumnoCuilEstado.verificado = true;
-                ultimoCuilAlumnoVerificado = cuil;
-                if (!result.data.exists) {
-                    ultimoCuilAlumnoEncontrado = "";
-                    limpiarCargaParaNuevoAlumno(cuil);
-                    showAlert("info", "CUIL válido. No existe alumno cargado; se limpió la ficha para iniciar una carga nueva.");
-                    return;
-                }
-                ultimoCuilAlumnoEncontrado = cuil;
-                fillAlumno(result.data.alumno);
-                cargarLocalidades(
-                    form.querySelector("[data-field=\"prov_nacimiento\"]"),
-                    form.querySelector("[data-field=\"loc_nacimiento\"]"),
-                    result.data.alumno.loc_nacimiento
-                );
-                cargarLocalidades(
-                    form.querySelector("[data-field=\"prov_residencia\"]"),
-                    form.querySelector("[data-field=\"loc_residencia\"]"),
-                    result.data.alumno.loc_residencia
-                );
-                obrasSociales = result.data.obras_sociales || [];
-                discapacidades = result.data.discapacidades || [];
-                planesSociales = result.data.planes_sociales || [];
-                tutores = result.data.tutores || [];
-                limpiarEdicionTemporal();
-                /* La tabla de tutores muestra etiquetas armadas en frontend a partir del payload. */
-                tutores.forEach(function (t) {
-                    t.nombre_completo = (t.apellidos || "") + ", " + (t.nombres || "");
-                    t.documento_label = (t.tipo_doc || "") + " " + (t.nro_doc || "");
-                    t.telefono_label = t.telefono_label || formatTelefono(t.codigo_area_codigo, t.telefono);
+        var query = new URLSearchParams(params || {});
+        fetch(form.dataset.urlBuscarAlumno + "?" + query.toString())
+            .then(function (resp) {
+                return resp.json().then(function (data) {
+                    return { ok: resp.ok, data: data };
                 });
-                actualizarPuebloIndigena();
-                actualizarDiscapacidad();
-                actualizarWhatsappAlumno();
-                renderAll();
-                showAlert("ok", "Alumno encontrado. Se autocompletaron los datos existentes.");
+            })
+            .then(function (result) {
+                if (seq !== alumnoCuilRequestSeq) return;
+                alumnoCuilEstado.buscando = false;
+
+                if (!result.ok) {
+                    showAlert("error", result.data.error || "No se pudo verificar la identidad del alumno.");
+                    return;
+                }
+                if (!result.data.exists) {
+                    /* Al cambiar de identidad se descarta únicamente la precarga
+                       SGE anterior que el usuario no haya modificado manualmente. */
+                    limpiarPrefillSgeAnterior();
+                    prepararAltaNueva(params);
+                    if (result.data.sge_found && result.data.alumno_sge) {
+                        cargarIdentidadDesdeSge(result.data.alumno_sge);
+                        return;
+                    }
+                    showAlert("info", mensajeSinCoincidencia || "No existe un alumno cargado con esos datos. Puede continuar con una alta nueva.");
+                    return;
+                }
+
+                var candidato = result.data.alumno || {};
+
+                if (result.data.matched_by_sge_link && result.data.alumno_sge) {
+                    /* El alumno ya existía en BNH y fue reencontrado por el vínculo
+                       estable id_persona_sge. Sólo se sincronizan en pantalla los
+                       identificadores SGE validados; el resto de los datos BNH queda
+                       intacto y nada se persiste hasta que el usuario guarda. */
+                    var identidadSge = result.data.alumno_sge;
+                    var tipoSgeDisponible = identidadSge.tipo_doc !== null
+                        && identidadSge.tipo_doc !== undefined
+                        && String(identidadSge.tipo_doc) !== "";
+                    var documentoSgeDisponible = identidadSge.nro_doc !== null
+                        && identidadSge.nro_doc !== undefined;
+                    var tipoSge = tipoSgeDisponible ? String(identidadSge.tipo_doc) : "";
+                    var nroSge = documentoSgeDisponible
+                        ? String(identidadSge.nro_doc || "").trim().toUpperCase()
+                        : "";
+                    var cambiaDocumentoSge = (
+                        tipoSgeDisponible
+                        && documentoSgeDisponible
+                        && (
+                            tipoSge !== String(candidato.tipo_doc || "")
+                            || nroSge !== String(candidato.nro_doc || "").trim().toUpperCase()
+                        )
+                    );
+
+                    cargarAlumnoEncontrado(result);
+
+                    if (tipoSgeDisponible && documentoSgeDisponible) {
+                        setField("tipo_doc", tipoSge);
+                        setField("nro_doc", nroSge);
+                        actualizarDocumentoAlumno();
+                    }
+
+                    if (identidadSge.cuil !== null && identidadSge.cuil !== undefined) {
+                        setField("cuil", cleanDigits(identidadSge.cuil));
+                    } else if (cambiaDocumentoSge) {
+                        /* Si cambió el documento y SGE no aporta un CUIL validado,
+                           no se conserva uno viejo que quedaría asociado al DNI anterior. */
+                        setField("cuil", "");
+                    }
+
+                    showAlert(
+                        "info",
+                        "Se abrió el alumno BNH ya vinculado a esta persona SGE. "
+                            + "Los identificadores SGE validados quedaron preparados en pantalla; "
+                            + "revísalos y guarda para actualizar el mismo registro."
+                    );
+                    return;
+                }
+
+                var identificadoresNuevos = {
+                    cuil: cleanDigits(getField("cuil")),
+                    tipo_doc: params && params.nro_doc ? params.tipo_doc : "",
+                    nro_doc: params && params.nro_doc
+                        ? String(params.nro_doc).trim().toUpperCase()
+                        : ""
+                };
+                var cambiaCuil = (
+                    identificadoresNuevos.cuil
+                    && identificadoresNuevos.cuil !== cleanDigits(candidato.cuil || "")
+                );
+                var cambiaDocumento = (
+                    identificadoresNuevos.tipo_doc
+                    && identificadoresNuevos.nro_doc
+                    && (
+                        String(identificadoresNuevos.tipo_doc) !== String(candidato.tipo_doc || "")
+                        || identificadoresNuevos.nro_doc !== String(candidato.nro_doc || "").trim().toUpperCase()
+                    )
+                );
+
+                cargarAlumnoEncontrado(result);
+
+                if (cambiaCuil) {
+                    setField("cuil", identificadoresNuevos.cuil);
+                }
+                if (cambiaDocumento) {
+                    setField("tipo_doc", identificadoresNuevos.tipo_doc);
+                    setField("nro_doc", identificadoresNuevos.nro_doc);
+                    actualizarDocumentoAlumno();
+                }
+                if (cambiaCuil || cambiaDocumento) {
+                    showAlert(
+                        "info",
+                        "Se abrió la persona existente. Los identificadores nuevos quedaron preparados; revíselos y guarde para actualizar el mismo registro."
+                    );
+                }
             })
             .catch(function () {
                 if (seq !== alumnoCuilRequestSeq) return;
                 alumnoCuilEstado.buscando = false;
-                alumnoCuilEstado.verificado = false;
-                showAlert("error", "No se pudo verificar el CUIL del alumno.");
+                showAlert("error", "No se pudo verificar la identidad del alumno.");
             });
-    });
+    }
 
+    function buscarAlumnoPorCuil() {
+        if (!alumnoCuilInput || alumnoTieneRegistroSeleccionado()) return;
+        var cuil = cleanDigits(alumnoCuilInput.value);
+        alumnoCuilInput.value = cuil;
+        if (!cuil) return;
+        if (cuil.length !== 11) {
+            showAlert("error", "El CUIL del alumno debe tener 11 dígitos.");
+            return;
+        }
+        var params = { cuil: cuil };
+        var nroDocActual = String(alumnoNroDocInput && alumnoNroDocInput.value || "").trim().toUpperCase();
+        if (
+            alumnoTipoDocInput
+            && alumnoTipoDocInput.value
+            && nroDocActual
+            && validarDocumentoSegunTipo(alumnoNroDocInput)
+        ) {
+            params.tipo_doc = alumnoTipoDocInput.value;
+            params.nro_doc = nroDocActual;
+        }
+        buscarAlumnoExistente(
+            params,
+            "CUIL válido sin coincidencias. Puede continuar con una alta nueva."
+        );
+    }
 
-    if (alumnoCuilInput && alumnoCuilInput.value) {
-        alumnoCuilInput.value = cleanDigits(alumnoCuilInput.value);
-        if (alumnoCuilInput.value.length === 11) {
-            alumnoCuilInput.dispatchEvent(new Event("blur"));
+    function parametrosIdentidadDocumentalAlumno() {
+        if (!alumnoTipoDocInput || !alumnoTipoDocInput.value) return null;
+        var clase = claseTipoDocumento(alumnoTipoDocInput);
+        var nroDoc = String(alumnoNroDocInput && alumnoNroDocInput.value || "").trim().toUpperCase();
+        var params = {
+            tipo_doc: alumnoTipoDocInput.value,
+            nro_doc: nroDoc
+        };
+        var cuilActual = cleanDigits(getField("cuil"));
+        if (cuilActual) {
+            if (cuilActual.length !== 11) {
+                setFieldError(alumnoCuilInput, "El CUIL del alumno debe tener 11 dígitos.");
+                return null;
+            }
+            params.cuil = cuilActual;
+        }
+        if (clase === "no_posee" || (clase === "en_tramite" && !nroDoc)) {
+            // Sin número de documento sólo existe una búsqueda segura si hay CUIL.
+            return cuilActual ? params : null;
+        }
+
+        if (!nroDoc || !validarDocumentoSegunTipo(alumnoNroDocInput)) return null;
+        return params;
+    }
+
+    function buscarAlumnoPorDocumento() {
+        if (alumnoTieneRegistroSeleccionado()) return;
+        var params = parametrosIdentidadDocumentalAlumno();
+        if (!params) return;
+        buscarAlumnoExistente(
+            params,
+            "No existe un alumno cargado con esa identidad documental. Puede continuar con una alta nueva."
+        );
+    }
+
+    var alumnoCuilTimer = null;
+    if (alumnoCuilInput) {
+        alumnoCuilInput.addEventListener("blur", buscarAlumnoPorCuil);
+        alumnoCuilInput.addEventListener("input", function () {
+            alumnoCuilInput.value = cleanDigits(alumnoCuilInput.value);
+            alumnoCuilRequestSeq++;
+            alumnoCuilEstado.buscando = false;
+            window.clearTimeout(alumnoCuilTimer);
+            if (alumnoTieneRegistroSeleccionado()) return;
+            alumnoCuilTimer = window.setTimeout(function () {
+                if (alumnoCuilInput.value.length === 11) {
+                    buscarAlumnoPorCuil();
+                }
+            }, 350);
+        });
+
+        if (alumnoCuilInput.value && !alumnoIdInicial) {
+            alumnoCuilInput.value = cleanDigits(alumnoCuilInput.value);
+            if (alumnoCuilInput.value.length === 11) {
+                buscarAlumnoPorCuil();
+            }
         }
     }
-    var alumnoCuilTimer = null;
-    alumnoCuilInput.addEventListener("input", function () {
-        alumnoCuilInput.value = cleanDigits(alumnoCuilInput.value);
-        alumnoCuilEstado.cuilActual = alumnoCuilInput.value;
-        if (alumnoCuilInput.value === ultimoCuilAlumnoVerificado && alumnoCuilInput.value.length === 11) {
-            alumnoCuilEstado.buscando = false;
-            alumnoCuilEstado.verificado = true;
-        } else {
-            alumnoCuilEstado.buscando = alumnoCuilInput.value.length === 11;
-            alumnoCuilEstado.verificado = false;
-        }
-        alumnoCuilRequestSeq++;
-        window.clearTimeout(alumnoCuilTimer);
-        alumnoCuilTimer = window.setTimeout(function () {
-            if (alumnoCuilInput.value.length === 11) {
-                alumnoCuilInput.dispatchEvent(new Event("blur"));
-            }
-        }, 350);
-    });
 
-    var tutorCuilInput = document.querySelector("#modalTutor [data-name=\"cuil_tutor\"]");
-    tutorCuilInput.addEventListener("blur", function () {
-        /* Validación frontend mínima y búsqueda de tutor existente por CUIL. */
+    if (alumnoTipoDocInput) {
+        alumnoTipoDocInput.addEventListener("change", function () {
+            actualizarDocumentoAlumno();
+            alumnoCuilRequestSeq++;
+            alumnoCuilEstado.buscando = false;
+            buscarAlumnoPorDocumento();
+        });
+    }
+    if (alumnoNroDocInput) {
+        alumnoNroDocInput.addEventListener("input", function () {
+            alumnoCuilRequestSeq++;
+            alumnoCuilEstado.buscando = false;
+        });
+        alumnoNroDocInput.addEventListener("blur", function () {
+            alumnoNroDocInput.value = String(alumnoNroDocInput.value || "").trim().toUpperCase();
+            buscarAlumnoPorDocumento();
+        });
+    }
+
+    if (alumnoIdInicial) {
+        buscarAlumnoExistente({ alumno_id: alumnoIdInicial });
+    } else if (
+        !(alumnoCuilInput && cleanDigits(alumnoCuilInput.value))
+        && alumnoTipoDocInput
+        && alumnoTipoDocInput.value
+        && alumnoNroDocInput
+        && String(alumnoNroDocInput.value || "").trim()
+    ) {
+        buscarAlumnoPorDocumento();
+    }
+
+    var tutorRoot = document.querySelector("[data-related-form=\"tutor\"]");
+    var tutorCuilInput = tutorRoot ? tutorRoot.querySelector("[data-name=\"cuil_tutor\"]") : null;
+    var tutorTipoDocInput = tutorRoot ? tutorRoot.querySelector("[data-name=\"tipo_doc\"]") : null;
+    var tutorNroDocInput = tutorRoot ? tutorRoot.querySelector("[data-name=\"nro_doc\"]") : null;
+    var tutorBusquedaSeq = 0;
+    var tutorBusquedaEnCurso = false;
+
+    function tutorTieneRegistroSeleccionado() {
+        var idEl = tutorRoot ? tutorRoot.querySelector("[data-name=\"id\"]") : null;
+        return !!(idEl && String(idEl.value || "").trim());
+    }
+
+    function completarTutorEncontrado(tutor) {
+        Object.keys(tutor || {}).forEach(function (key) {
+            var el = tutorRoot ? tutorRoot.querySelector("[data-name=\"" + key + "\"]") : null;
+            if (!el) return;
+            if (el.type === "checkbox") {
+                el.checked = tutor[key] === true || tutor[key] === "true" || tutor[key] === "1" || tutor[key] === 1;
+            } else if (el._bnhSetLocalidadValue) {
+                el._bnhSetLocalidadValue(tutor[key] || "");
+            } else {
+                el.value = tutor[key] || "";
+            }
+            if (el._bnhSincronizarCodigoArea) { el._bnhSincronizarCodigoArea(); }
+            if (el._bnhSincronizarLocalidad) { el._bnhSincronizarLocalidad(); }
+            if (window.jQuery) { jQuery(el).trigger("change"); }
+        });
+        actualizarDocumentoTutor();
+        actualizarLocalidadesTutor(tutor.loc_resid);
+        actualizarWhatsappTutor();
+        showTutorAlert("ok", "Tutor encontrado. Se abrió el registro existente para editarlo.");
+    }
+
+    function buscarTutorExistente(params, mensajeSinCoincidencia) {
+        if (!tutorRoot || tutorTieneRegistroSeleccionado()) return;
+        tutorBusquedaEnCurso = true;
+        var seq = ++tutorBusquedaSeq;
+        var query = new URLSearchParams(params || {});
+        fetch(form.dataset.urlBuscarTutor + "?" + query.toString())
+            .then(function (resp) {
+                return resp.json().then(function (data) {
+                    return { ok: resp.ok, data: data };
+                });
+            })
+            .then(function (result) {
+                if (seq !== tutorBusquedaSeq) return;
+                tutorBusquedaEnCurso = false;
+
+                if (
+                    !result.ok
+                    && result.data
+                    && result.data.ambiguous
+                    && result.data.weak_match
+                    && Array.isArray(result.data.candidates)
+                ) {
+                    var seleccionado = seleccionarCandidatoAmbiguo(
+                        result.data.candidates,
+                        "el tutor"
+                    );
+                    if (!seleccionado) {
+                        showTutorAlert(
+                            "info",
+                            "No se seleccionó ninguna de las coincidencias posibles."
+                        );
+                        return;
+                    }
+                    result = {
+                        ok: true,
+                        data: {
+                            exists: true,
+                            weak_match: false,
+                            tutor: seleccionado
+                        }
+                    };
+                }
+
+                if (!result.ok) {
+                    showTutorAlert("error", result.data.error || "No se pudo verificar la identidad del tutor.");
+                    return;
+                }
+                if (!result.data.exists) {
+                    showTutorAlert("info", mensajeSinCoincidencia || "No existe un tutor cargado con esos datos.");
+                    return;
+                }
+
+                var candidato = result.data.tutor || {};
+                var identificadoresNuevos = {
+                    cuil_tutor: cleanDigits(tutorCuilInput ? tutorCuilInput.value : ""),
+                    tipo_doc: params && params.nro_doc ? params.tipo_doc : "",
+                    nro_doc: params && params.nro_doc
+                        ? String(params.nro_doc).trim().toUpperCase()
+                        : ""
+                };
+                var cambiaCuil = (
+                    identificadoresNuevos.cuil_tutor
+                    && identificadoresNuevos.cuil_tutor !== cleanDigits(candidato.cuil_tutor || "")
+                );
+                var cambiaDocumento = (
+                    identificadoresNuevos.tipo_doc
+                    && identificadoresNuevos.nro_doc
+                    && (
+                        String(identificadoresNuevos.tipo_doc) !== String(candidato.tipo_doc || "")
+                        || identificadoresNuevos.nro_doc !== String(candidato.nro_doc || "").trim().toUpperCase()
+                    )
+                );
+
+                if (result.data.weak_match) {
+                    var descripcion = [
+                        candidato.apellidos || "",
+                        candidato.nombres || "",
+                        candidato.fecha_nac || ""
+                    ].filter(Boolean).join(" · ");
+                    var mismaPersona = window.confirm(
+                        "Se encontró un tutor previamente cargado con los mismos datos nominales"
+                        + (descripcion ? ":\n\n" + descripcion : "")
+                        + "\n\nEstos datos no alcanzan para identificarlo de forma automática. "
+                        + "Pulse Aceptar sólo si confirma que es la misma persona. "
+                        + "Pulse Cancelar para continuar con un tutor nuevo."
+                    );
+                    if (!mismaPersona) {
+                        showTutorAlert("info", "La coincidencia débil fue descartada. Puede continuar con un tutor nuevo.");
+                        return;
+                    }
+                }
+
+                completarTutorEncontrado(candidato);
+
+                if (cambiaCuil && tutorCuilInput) {
+                    tutorCuilInput.value = identificadoresNuevos.cuil_tutor;
+                }
+                if (cambiaDocumento) {
+                    tutorTipoDocInput.value = identificadoresNuevos.tipo_doc;
+                    tutorNroDocInput.value = identificadoresNuevos.nro_doc;
+                    if (window.jQuery) { jQuery(tutorTipoDocInput).trigger("change"); }
+                    actualizarDocumentoTutor();
+                }
+                if (cambiaCuil || cambiaDocumento) {
+                    showTutorAlert(
+                        "info",
+                        "Se abrió el tutor existente. Los identificadores nuevos quedaron preparados; revíselos antes de agregarlo."
+                    );
+                }
+            })
+            .catch(function () {
+                if (seq !== tutorBusquedaSeq) return;
+                tutorBusquedaEnCurso = false;
+                showTutorAlert("error", "No se pudo verificar la identidad del tutor.");
+            });
+    }
+
+    function buscarTutorPorCuil() {
+        if (!tutorCuilInput || tutorTieneRegistroSeleccionado()) return;
         var cuil = cleanDigits(tutorCuilInput.value);
         tutorCuilInput.value = cuil;
-        if (!cuil) { clearTutorAlert(); return; }
-        if (cuil.length !== 11) { showTutorAlert("error", "El CUIL del tutor debe tener 11 dígitos."); return; }
-        if (cuil === tutorCuilInput._ultimoCuilBuscado) return;
-        tutorCuilInput._ultimoCuilBuscado = cuil;
-        fetch(form.dataset.urlBuscarTutor + "?cuil=" + encodeURIComponent(cuil))
-            .then(function (resp) { return resp.json().then(function (data) { return { ok: resp.ok, data: data }; }); })
-            .then(function (result) {
-                /* Si existe tutor, se completan solo los campos presentes en el modal. */
-                if (!result.ok) { showTutorAlert("error", result.data.error || "CUIL de tutor inválido."); return; }
-                if (!result.data.exists) { showTutorAlert("info", "CUIL de tutor válido. No existe tutor cargado; puede completarlo desde cero."); return; }
-                var tutor = result.data.tutor;
-                Object.keys(tutor).forEach(function (key) {
-                    var el = document.querySelector("#modalTutor [data-name=\"" + key + "\"]");
-                    if (el) {
-                        if (el.type === "checkbox") {
-                            el.checked = tutor[key] === true || tutor[key] === "true" || tutor[key] === "1" || tutor[key] === 1;
-                        } else {
-                            if (el._bnhSetLocalidadValue) {
-                                el._bnhSetLocalidadValue(tutor[key] || "");
-                            } else {
-                                el.value = tutor[key] || "";
-                            }
-                        }
-                        if (el._bnhSincronizarCodigoArea) { el._bnhSincronizarCodigoArea(); }
-                        if (el._bnhSincronizarLocalidad) { el._bnhSincronizarLocalidad(); }
-                        if (window.jQuery) { jQuery(el).trigger("change"); }
-                    }
-                });
-                actualizarLocalidadesTutor(tutor.loc_resid);
-                actualizarWhatsappTutor();
-                showTutorAlert("ok", "Tutor encontrado. Se autocompletaron sus datos; puede editarlos antes de guardar.");
-            })
-            .catch(function () { showTutorAlert("error", "No se pudo verificar el CUIL del tutor."); });
-    });
+        if (!cuil) return;
+        if (cuil.length !== 11) {
+            showTutorAlert("error", "El CUIL del tutor debe tener 11 dígitos.");
+            return;
+        }
+        var params = { cuil: cuil };
+        var nroDocActual = String(tutorNroDocInput && tutorNroDocInput.value || "").trim().toUpperCase();
+        if (
+            tutorTipoDocInput
+            && tutorTipoDocInput.value
+            && nroDocActual
+            && validarDocumentoSegunTipo(tutorNroDocInput)
+        ) {
+            params.tipo_doc = tutorTipoDocInput.value;
+            params.nro_doc = nroDocActual;
+        }
+        var apellidosEl = tutorRoot ? tutorRoot.querySelector("[data-name=\"apellidos\"]") : null;
+        var nombresEl = tutorRoot ? tutorRoot.querySelector("[data-name=\"nombres\"]") : null;
+        var fechaEl = tutorRoot ? tutorRoot.querySelector("[data-name=\"fecha_nac\"]") : null;
+        var apellidos = String(apellidosEl && apellidosEl.value || "").trim();
+        var nombres = String(nombresEl && nombresEl.value || "").trim();
+        var fechaNac = String(fechaEl && fechaEl.value || "").trim();
+        if (apellidos && nombres && fechaNac) {
+            params.apellidos = apellidos;
+            params.nombres = nombres;
+            params.fecha_nac = fechaNac;
+        }
+        buscarTutorExistente(
+            params,
+            "CUIL válido sin coincidencias. Puede completar un tutor nuevo."
+        );
+    }
+
+    function buscarTutorPorDocumento() {
+        if (!tutorTipoDocInput || !tutorNroDocInput || tutorTieneRegistroSeleccionado()) return;
+        if (!tutorTipoDocInput.value) return;
+
+        var nroDoc = String(tutorNroDocInput.value || "").trim().toUpperCase();
+        var clase = claseTipoDocumento(tutorTipoDocInput);
+        var apellidosEl = tutorRoot.querySelector("[data-name=\"apellidos\"]");
+        var nombresEl = tutorRoot.querySelector("[data-name=\"nombres\"]");
+        var fechaEl = tutorRoot.querySelector("[data-name=\"fecha_nac\"]");
+        var apellidos = String(apellidosEl && apellidosEl.value || "").trim();
+        var nombres = String(nombresEl && nombresEl.value || "").trim();
+        var fechaNac = String(fechaEl && fechaEl.value || "").trim();
+        var params = {
+            tipo_doc: tutorTipoDocInput.value,
+            nro_doc: nroDoc
+        };
+        var cuilActual = cleanDigits(tutorCuilInput ? tutorCuilInput.value : "");
+        if (cuilActual) {
+            if (cuilActual.length !== 11) {
+                showTutorAlert("error", "El CUIL del tutor debe tener 11 dígitos.");
+                return;
+            }
+            params.cuil = cuilActual;
+        }
+
+        if (apellidos && nombres && fechaNac) {
+            params.apellidos = apellidos;
+            params.nombres = nombres;
+            params.fecha_nac = fechaNac;
+        }
+
+        if (clase === "no_posee" || (clase === "en_tramite" && !nroDoc)) {
+            if (!(apellidos && nombres && fechaNac)) return;
+        } else if (!nroDoc || !validarDocumentoSegunTipo(tutorNroDocInput)) {
+            return;
+        }
+
+        buscarTutorExistente(
+            params,
+            "No existe un tutor cargado con esa identidad. Puede completar uno nuevo."
+        );
+    }
 
     var tutorCuilTimer = null;
-    tutorCuilInput.addEventListener("input", function () {
-        tutorCuilInput.value = cleanDigits(tutorCuilInput.value);
-        window.clearTimeout(tutorCuilTimer);
-        tutorCuilTimer = window.setTimeout(function () {
-            if (tutorCuilInput.value.length === 11) {
-                tutorCuilInput.dispatchEvent(new Event("blur"));
+    if (tutorCuilInput) {
+        tutorCuilInput.addEventListener("blur", buscarTutorPorCuil);
+        tutorCuilInput.addEventListener("input", function () {
+            tutorCuilInput.value = cleanDigits(tutorCuilInput.value);
+            tutorBusquedaSeq++;
+            tutorBusquedaEnCurso = false;
+            window.clearTimeout(tutorCuilTimer);
+            if (tutorTieneRegistroSeleccionado()) return;
+            tutorCuilTimer = window.setTimeout(function () {
+                if (tutorCuilInput.value.length === 11) {
+                    buscarTutorPorCuil();
+                }
+            }, 350);
+        });
+    }
+
+    if (tutorTipoDocInput) {
+        tutorTipoDocInput.addEventListener("change", function () {
+            actualizarDocumentoTutor();
+            tutorBusquedaSeq++;
+            tutorBusquedaEnCurso = false;
+            buscarTutorPorDocumento();
+        });
+    }
+    if (tutorNroDocInput) {
+        tutorNroDocInput.addEventListener("input", function () {
+            tutorBusquedaSeq++;
+            tutorBusquedaEnCurso = false;
+        });
+        tutorNroDocInput.addEventListener("blur", function () {
+            tutorNroDocInput.value = String(tutorNroDocInput.value || "").trim().toUpperCase();
+            buscarTutorPorDocumento();
+        });
+    }
+
+    ["apellidos", "nombres", "fecha_nac"].forEach(function (name) {
+        var el = tutorRoot ? tutorRoot.querySelector("[data-name=\"" + name + "\"]") : null;
+        if (!el) return;
+        el.addEventListener("change", function () {
+            tutorBusquedaSeq++;
+            tutorBusquedaEnCurso = false;
+            var clase = claseTipoDocumento(tutorTipoDocInput);
+            if (clase === "no_posee" || (clase === "en_tramite" && !String(tutorNroDocInput.value || "").trim())) {
+                buscarTutorPorDocumento();
             }
-        }, 350);
+        });
     });
 
     document.querySelector("[data-related-form=\"obra_social\"]").addEventListener("submit", function (ev) {
@@ -4274,8 +5084,13 @@ function blindarAutofillBnh(input, token) {
     document.querySelector("[data-related-form=\"tutor\"]").addEventListener("submit", function (ev) {
         /* El tutor incluye datos propios y datos de la relacion parental. */
         ev.preventDefault();
+        if (tutorBusquedaEnCurso) {
+            showTutorAlert("info", "Espere a que termine la búsqueda de identidad del tutor antes de agregarlo.");
+            return;
+        }
         var item = readRelated(ev.target);
         item.cuil_tutor = cleanDigits(item.cuil_tutor);
+        item.nro_doc = String(item.nro_doc || "").trim().toUpperCase();
         if (!String(item.codigo_area || "").trim() || !String(item.telefono || "").trim()) {
             item.es_celular = false;
             item.whatsapp = false;
@@ -4284,10 +5099,49 @@ function blindarAutofillBnh(input, token) {
         }
         var erroresTutor = validarTutorTemporal(ev.target, item);
         if (mostrarErroresModal(erroresTutor, showTutorAlert)) return;
-        if (tutores.some(function (tutor, idx) { return idx !== editandoTutorIndex && cleanDigits(tutor.cuil_tutor) === item.cuil_tutor; })) {
+
+        if (item.id && tutores.some(function (tutor, idx) {
+            return idx !== editandoTutorIndex && String(tutor.id || "") === String(item.id);
+        })) {
+            showTutorAlert("error", "Ese tutor ya está agregado en la tabla.");
+            return;
+        }
+        if (item.cuil_tutor && tutores.some(function (tutor, idx) {
+            return idx !== editandoTutorIndex
+                && cleanDigits(tutor.cuil_tutor)
+                && cleanDigits(tutor.cuil_tutor) === item.cuil_tutor;
+        })) {
             showTutorAlert("error", "Ese CUIL de tutor ya está agregado en la tabla.");
             return;
         }
+        if (item.tipo_doc && item.nro_doc && tutores.some(function (tutor, idx) {
+            return idx !== editandoTutorIndex
+                && String(tutor.tipo_doc || "") === String(item.tipo_doc)
+                && String(tutor.nro_doc || "").trim().toUpperCase() === item.nro_doc;
+        })) {
+            showTutorAlert("error", "Ese tutor ya está agregado con el mismo tipo y número de documento.");
+            return;
+        }
+
+        if (!item.id && !item.cuil_tutor && !item.nro_doc) {
+            var tutorNominalRepetido = tutores.some(function (tutor, idx) {
+                return idx !== editandoTutorIndex
+                    && normalizarTexto(tutor.apellidos || "") === normalizarTexto(item.apellidos || "")
+                    && normalizarTexto(tutor.nombres || "") === normalizarTexto(item.nombres || "")
+                    && String(tutor.fecha_nac || "") === String(item.fecha_nac || "");
+            });
+            if (
+                tutorNominalRepetido
+                && !window.confirm(
+                    "Ya hay un tutor sin CUIL ni número de documento con el mismo nombre y fecha de nacimiento en esta carga. "
+                    + "Puede ser un homónimo. Pulse Aceptar sólo si desea conservar ambos registros."
+                )
+            ) {
+                showTutorAlert("info", "No se agregó un segundo tutor nominalmente coincidente.");
+                return;
+            }
+        }
+
         item.parentesco_label = selectedText(ev.target, "parentesco");
         item.nombre_completo = (item.apellidos || "") + ", " + (item.nombres || "");
         item.documento_label = selectedText(ev.target, "tipo_doc") + " " + (item.nro_doc || "");
@@ -4301,6 +5155,7 @@ function blindarAutofillBnh(input, token) {
         }
         renderAll();
         resetRelated(ev.target);
+        actualizarDocumentoTutor();
         actualizarLocalidadesTutor("");
         actualizarWhatsappTutor();
         clearTutorAlert();
@@ -4336,7 +5191,6 @@ function blindarAutofillBnh(input, token) {
         */
         /* Guardado final: alumno y colecciones relacionadas viajan en un único POST JSON. */
         clearAlert();
-        var cuilAlumno = cleanDigits(getField("cuil"));
         var errores = validarCargaCompleta();
         if (errores.length) {
             mostrarErroresValidacion(errores);
@@ -4344,11 +5198,7 @@ function blindarAutofillBnh(input, token) {
             return;
         }
         if (alumnoCuilEstado.buscando) {
-            showAlert("info", "Primero espere a que termine la verificación del CUIL del alumno.");
-            return;
-        }
-        if (!alumnoCuilEstado.verificado || cuilAlumno !== ultimoCuilAlumnoVerificado) {
-            showAlert("error", "El CUIL fue modificado. Verifique el CUIL antes de guardar.");
+            showAlert("info", "Primero espere a que termine la búsqueda de identidad del alumno.");
             return;
         }
         if (!esCatalogoSi("[data-field=\"tiene_discapacidad\"]")) {
@@ -4397,6 +5247,41 @@ function blindarAutofillBnh(input, token) {
                 showAlert("error", mensajeErrorHumano(errorBackend || "No se pudo guardar la carga."));
                 return;
             }
+            /* El backend devuelve la identidad persistida y las relaciones ya normalizadas.
+               Esto permite seguir editando el mismo alumno sin crear duplicados en un segundo guardado,
+               incluso cuando alumno o tutor no tienen CUIL/documento. */
+            if (result.data.alumno) {
+                fillAlumno(result.data.alumno);
+            } else if (result.data.alumno_id) {
+                setField("id", result.data.alumno_id);
+            }
+            obrasSociales = result.data.obras_sociales || obrasSociales;
+            discapacidades = result.data.discapacidades || discapacidades;
+            planesSociales = result.data.planes_sociales || planesSociales;
+            tutores = result.data.tutores || tutores;
+            tutores.forEach(function (t) {
+                t.nombre_completo = (t.apellidos || "") + ", " + (t.nombres || "");
+                t.documento_label = (t.tipo_doc_label || t.tipo_doc || "") + (t.nro_doc ? " " + t.nro_doc : "");
+                t.telefono_label = t.telefono_label || formatTelefono(t.codigo_area_codigo, t.telefono);
+            });
+            renderAll();
+
+            /* Si Carga Alumno fue abierta desde otro módulo (por ejemplo CEF),
+               el retorno queda ligado al Alumno exacto recién guardado. Es un atajo
+               seguro para volver al registro guardado; CEF también puede recuperarlo
+               después por sus datos actuales cuando no existe número documental. */
+            var alumnoGuardadoId = result.data.alumno && result.data.alumno.id
+                ? result.data.alumno.id
+                : result.data.alumno_id;
+            var returnLink = document.getElementById("bnhReturnLink");
+            if (returnLink && alumnoGuardadoId) {
+                try {
+                    var returnUrl = new URL(returnLink.href, window.location.href);
+                    returnUrl.searchParams.set("alumno_id", String(alumnoGuardadoId));
+                    returnLink.href = returnUrl.toString();
+                } catch (e) {}
+            }
+
             showAlert("ok", "Carga guardada correctamente. Los datos del alumno y sus relaciones fueron actualizados.");
         })
         .catch(function () { showAlert("error", "No se pudo conectar con el servidor. Verifique la conexión e intente nuevamente."); })
@@ -4409,26 +5294,26 @@ function blindarAutofillBnh(input, token) {
     document.getElementById("btnLimpiarFormulario").addEventListener("click", function () {
         /* Limpia formulario y relaciones temporales sin llamar al backend. */
         form.reset();
+        sgePrefillAplicado = {};
         bloquearCuilAlumno(false);
         limpiarEdicionTemporal();
         obrasSociales = [];
         discapacidades = [];
         tutores = [];
         planesSociales = [];
-        alumnoCuilEstado.cuilActual = "";
-        alumnoCuilEstado.verificado = false;
         alumnoCuilEstado.buscando = false;
         alumnoCuilRequestSeq++;
-        ultimoCuilAlumnoVerificado = "";
-        ultimoCuilAlumnoEncontrado = "";
-        alumnoCuilInput._ultimoCuilBuscado = "";
+        tutorBusquedaSeq++;
         renderAll();
         clearAlert();
         clearValidationErrors(form);
         clearValidationErrors(document.querySelector("[data-related-form=\"tutor\"]"));
         clearValidationErrors(document.querySelector("[data-related-form=\"discapacidad\"]"));
         if (window.jQuery) { jQuery(".bnh-select").trigger("change"); }
+        actualizarDocumentoAlumno();
+        actualizarDocumentoTutor();
         actualizarNacimientoExtranjero();
+        actualizarResidenciaExtranjera();
         actualizarPuebloIndigena();
         actualizarDiscapacidad();
         actualizarWhatsappAlumno();
@@ -4572,12 +5457,19 @@ function blindarAutofillBnh(input, token) {
     vincularFiltroLocalidades("[data-field=\"prov_residencia\"]", "[data-field=\"loc_residencia\"]");
     vincularFiltroLocalidades("#modalTutor [data-name=\"prov_resid\"]", "#modalTutor [data-name=\"loc_resid\"]");
 
-    /* País de nacimiento controla dinámicamente si provincia/localidad son obligatorias. */
+    /* Países controlan dinámicamente si aplican provincia/localidad argentinas. */
     var paisNacimientoEl = form.querySelector("[data-field=\"pais_nacimiento\"]");
     if (paisNacimientoEl) {
         paisNacimientoEl.addEventListener("change", actualizarNacimientoExtranjero);
     }
+    var paisResidenciaEl = form.querySelector("[data-field=\"pais_residencia\"]");
+    if (paisResidenciaEl) {
+        paisResidenciaEl.addEventListener("change", actualizarResidenciaExtranjera);
+    }
     actualizarNacimientoExtranjero();
+    actualizarResidenciaExtranjera();
+    actualizarDocumentoAlumno();
+    actualizarDocumentoTutor();
 
     /* Primer render: muestra filas vacías hasta que el usuario cargue datos o se autocompleten. */
     var pertenecePuebloEl = form.querySelector("[data-field=\"pertenece_pueblo_indigena\"]");

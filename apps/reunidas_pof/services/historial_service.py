@@ -6,7 +6,13 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.utils import timezone
 
-from ..models import CargoPof, MovimientoCargoPof
+from ..models import (
+    CargoPof,
+    HistorialAsociacionAnexoPof,
+    LocalizacionPof,
+    MovimientoCargoPof,
+    SnapshotPadronLocalizacionPof,
+)
 from .exportacion_rows import obtener_clave_consolidacion_cargo
 from .filtros_pof_service import (
     TIPOS_MOVIMIENTO_LABELS,
@@ -40,6 +46,10 @@ FLECHA_CAMBIO = "\u2192"
 GUION_VACIO = "\u2014"
 MOJIBAKE_GUION_VACIO = "\u00e2\u20ac\u201d"
 OBSERVACION_PLACEHOLDERS = {"-", "--", "---", MOJIBAKE_GUION_VACIO, GUION_VACIO}
+
+TIPO_EVENTO_ZONA_EDUCATIVA = "ZONA_EDUCATIVA"
+TIPO_EVENTO_ANEXO_POF = "ANEXO_POF"
+TIPOS_EVENTO_CARGO = set(MovimientoCargoPof.TipoMovimiento.values)
 
 NOMBRES_CAMPOS_DIFF = {
     "ceic": "CEIC",
@@ -723,7 +733,9 @@ def _partes_diff_resumen_compacto(diff, modo):
     """
     Reduce el diff a una frase corta apta para la tabla principal.
 
-    - Prioriza cambios estructurales visibles como cantidad, total y estado.
+    - En altas muestra los valores iniciales con ":" porque no existe una
+      transición real desde un valor anterior.
+    - En modificaciones conserva la flecha para cambios entre valores.
     - Resume cambios de observación sin volcar textos largos en el listado.
     - Limita la longitud para que la fila siga compacta y el detalle quede en la lupa.
     """
@@ -737,6 +749,21 @@ def _partes_diff_resumen_compacto(diff, modo):
             partes.append("Observación modificada")
             continue
 
+        if modo == "alta" and clave in {
+            "cantidad",
+            "unidad_cantidad",
+            "puntos_asignados",
+            "total",
+        }:
+            nombre = {
+                "cantidad": "Cantidad",
+                "unidad_cantidad": "Unidad",
+                "puntos_asignados": "Puntos",
+                "total": "Total",
+            }[clave]
+            partes.append(f"{nombre}: {cambio['nuevo']}")
+            continue
+
         if clave == "cantidad":
             partes.append(f"Cantidad {cambio['anterior']} {FLECHA_CAMBIO} {cambio['nuevo']}")
             continue
@@ -748,10 +775,6 @@ def _partes_diff_resumen_compacto(diff, modo):
         if clave == "estado_pof":
             partes.append(f"Estado {cambio['anterior']} {FLECHA_CAMBIO} {cambio['nuevo']}")
             continue
-
-        if modo == "alta" and clave in {"unidad_cantidad", "puntos_asignados"}:
-            nombre = "Unidad" if clave == "unidad_cantidad" else "Puntos"
-            partes.append(f"{nombre}: {cambio['nuevo']}")
 
     return partes[:4]
 
@@ -822,26 +845,24 @@ def generar_detalle_movimiento(movimiento):
     return "Movimiento registrado sin cambios de valores."
 
 
-def _resumir_detalle_movimiento(movimiento, proyecto):
+def _construir_resumen_visual_movimiento(movimiento):
     """
-    Construye el texto compacto que se muestra en la columna Detalle del listado.
+    Separa el resumen del listado en acción principal y datos breves.
 
-    - Conserva el verbo principal de cada movimiento para que el listado sea entendible.
-    - Resume observaciones largas como un cambio breve sin mostrar su contenido completo.
-    - Deja el diff completo y el detalle extenso exclusivamente para el modal AJAX.
+    La estructura evita convertir el detalle en una oración técnica larga y
+    permite que el template presente los cambios como elementos visuales.
     """
-    del proyecto
     referencia = _referencia_cargo_movimiento(movimiento)
     diff = _construir_diff_movimiento(movimiento)
 
     if movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.AFECTADO:
         if _es_movimiento_afectado_inicial(movimiento):
             partes = _partes_diff_resumen_compacto(diff, "alta")
-            detalle = f"Se añadió el cargo {referencia}."
+            accion = f"Se añadió el cargo {referencia}."
         else:
             partes = _partes_diff_resumen_compacto(diff, "modificacion")
-            detalle = f"Se reactivó el cargo {referencia}."
-        return f"{detalle} {'; '.join(partes)}." if partes else detalle
+            accion = f"Se reactivó el cargo {referencia}."
+        return {"accion": accion, "partes": partes}
 
     if movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.DESAFECTADO:
         es_inicial = _es_movimiento_desafectado_inicial(movimiento)
@@ -849,26 +870,50 @@ def _resumir_detalle_movimiento(movimiento, proyecto):
             diff,
             "alta" if es_inicial else "modificacion",
         )
-        detalle = (
+        accion = (
             f"Se añadió el cargo {referencia} en estado Desafectado."
             if es_inicial
             else f"Se dio de baja el cargo {referencia}."
         )
-        return f"{detalle} {'; '.join(partes)}." if partes else detalle
+        return {"accion": accion, "partes": partes}
 
     partes = _partes_diff_resumen_compacto(diff, "modificacion")
     if partes:
-        if _es_movimiento_incremento(movimiento, diff):
-            return f"Se incrementó el cargo existente {referencia}. {'; '.join(partes)}."
-        return f"Se modificó el cargo {referencia}. {'; '.join(partes)}."
+        accion = (
+            f"Se incrementó el cargo existente {referencia}."
+            if _es_movimiento_incremento(movimiento, diff)
+            else f"Se modificó el cargo {referencia}."
+        )
+        return {"accion": accion, "partes": partes}
 
-    return generar_detalle_movimiento(movimiento)
+    return {
+        "accion": generar_detalle_movimiento(movimiento),
+        "partes": [],
+    }
+
+
+def _formatear_resumen_visual_movimiento(resumen):
+    """Mantiene el texto plano legacy para consumidores que aún lo utilicen."""
+    accion = resumen.get("accion", "")
+    partes = resumen.get("partes", [])
+    return f"{accion} {'; '.join(partes)}." if partes else accion
+
+
+def _resumir_detalle_movimiento(movimiento, proyecto):
+    """Compatibilidad: devuelve el resumen compacto como texto plano."""
+    del proyecto
+    return _formatear_resumen_visual_movimiento(
+        _construir_resumen_visual_movimiento(movimiento)
+    )
 
 
 def _preparar_movimiento_para_listado(movimiento):
     reunida, proyecto = _obtener_cabecera_movimiento(movimiento)
     movimiento.cabecera_resumen = _resumir_cabecera(reunida, proyecto)
-    movimiento.detalle_resumen = _resumir_detalle_movimiento(movimiento, proyecto)
+    movimiento.detalle_resumen_visual = _construir_resumen_visual_movimiento(movimiento)
+    movimiento.detalle_resumen = _formatear_resumen_visual_movimiento(
+        movimiento.detalle_resumen_visual
+    )
     movimiento.localizacion_resumen = _serializar_localizacion_listado(movimiento)
     movimiento.usuario_movimiento = _serializar_usuario_movimiento(movimiento.usuario)
     movimiento.tiene_observacion_real = bool(_normalizar_observacion_real(movimiento.observacion))
@@ -912,15 +957,15 @@ def obtener_titulo_historial(filtros):
     if filtros.get("tipo") and filtros.get("tipo") != TIPO_MOVIMIENTO_TODOS:
         partes.append(TIPOS_MOVIMIENTO_LABELS[filtros["tipo"]])
     elif filtros.get("tipo") == TIPO_MOVIMIENTO_TODOS:
-        partes.append("Todos los movimientos")
+        partes.append("Todos los eventos")
 
     if filtros.get("vista_rapida") in {VISTA_7_DIAS, VISTA_30_DIAS}:
         partes.append(VISTAS_RAPIDAS[filtros["vista_rapida"]])
 
     if partes:
-        return "Historial de movimientos - " + " / ".join(partes)
+        return "Historial general - " + " / ".join(partes)
 
-    return "Historial de movimientos POF"
+    return "Historial general POF"
 
 
 def obtener_ultimos_movimientos_reunida(anio, nivel, limite=5):
@@ -1156,6 +1201,39 @@ def _serializar_movimiento_cantidad(movimiento):
     }
 
 
+def _observacion_inicial_movimiento(movimiento):
+    """
+    Devuelve la observacion con la que nacio el cargo, si el movimiento la conserva.
+
+    La fuente canonica es el snapshot `valores_nuevos` del movimiento inicial;
+    no usa `movimiento.observacion` como fallback porque ese campo tambien puede
+    describir el motivo del movimiento y no necesariamente el valor del cargo.
+    """
+    if movimiento.tipo_movimiento not in {
+        MovimientoCargoPof.TipoMovimiento.AFECTADO,
+        MovimientoCargoPof.TipoMovimiento.DESAFECTADO,
+    }:
+        return ""
+    nuevos = movimiento.valores_nuevos
+    if not isinstance(nuevos, dict) or "observacion" not in nuevos:
+        return ""
+    return _normalizar_observacion_comparable(nuevos.get("observacion"))
+
+
+def _serializar_evento_observacion_inicial(movimiento):
+    observacion = _observacion_inicial_movimiento(movimiento)
+    usuario = _serializar_usuario_movimiento(movimiento.usuario)
+    return {
+        "id": movimiento.id,
+        "fecha": _valor_serializable(movimiento.fecha),
+        "tipo_evento": "inicial",
+        "label": "Observación inicial",
+        "resumen": _valor_serializable(observacion),
+        "valor_inicial": _valor_serializable(observacion),
+        "usuario": usuario["nombre"],
+    }
+
+
 def _serializar_movimiento_observacion(movimiento):
     observacion_anterior, observacion_nueva = _observaciones_comparables_movimiento(
         movimiento
@@ -1164,6 +1242,9 @@ def _serializar_movimiento_observacion(movimiento):
     return {
         "id": movimiento.id,
         "fecha": _valor_serializable(movimiento.fecha),
+        "tipo_evento": "modificacion",
+        "label": "Observación modificada",
+        "resumen": _valor_serializable(observacion_nueva),
         "observacion_anterior": _valor_serializable(observacion_anterior),
         "observacion_nueva": _valor_serializable(observacion_nueva),
         "usuario": usuario["nombre"],
@@ -1253,6 +1334,15 @@ def obtener_historial_cantidad_cargos_pof(cargo_ids_recibidos):
 
 
 def obtener_historial_observacion_cargos_pof(cargo_ids_recibidos):
+    """
+    Devuelve la linea de tiempo completa de observacion de uno o varios cargos.
+
+    - Incluye el valor inicial cuando el primer movimiento del cargo conserva una
+      observacion real en su snapshot `valores_nuevos`.
+    - Incluye cada modificacion real posterior con Antes/Despues.
+    - Cada cargo se devuelve del evento mas reciente al mas antiguo.
+    - No inventa eventos iniciales vacios ni modifica la auditoria existente.
+    """
     cargo_ids = _normalizar_cargo_ids_historial(cargo_ids_recibidos)
     cargos = list(
         CargoPof.objects.select_related(
@@ -1266,16 +1356,40 @@ def obtener_historial_observacion_cargos_pof(cargo_ids_recibidos):
 
     _validar_cargos_historial(cargos, exigir_afectados=False)
     movimientos_por_cargo = {cargo.id: [] for cargo in cargos}
+    movimiento_inicial_por_cargo = {}
+
     movimientos = MovimientoCargoPof.objects.select_related("usuario").filter(
         cargo_id__in=cargo_ids,
-        tipo_movimiento=MovimientoCargoPof.TipoMovimiento.MODIFICACION,
     ).order_by("cargo_id", "fecha", "id")
 
     for movimiento in movimientos:
-        if es_cambio_real_observacion_movimiento(movimiento):
+        if (
+            movimiento.cargo_id not in movimiento_inicial_por_cargo
+            and movimiento.tipo_movimiento
+            in {
+                MovimientoCargoPof.TipoMovimiento.AFECTADO,
+                MovimientoCargoPof.TipoMovimiento.DESAFECTADO,
+            }
+        ):
+            movimiento_inicial_por_cargo[movimiento.cargo_id] = movimiento
+
+        if (
+            movimiento.tipo_movimiento
+            == MovimientoCargoPof.TipoMovimiento.MODIFICACION
+            and es_cambio_real_observacion_movimiento(movimiento)
+        ):
             movimientos_por_cargo[movimiento.cargo_id].append(
                 _serializar_movimiento_observacion(movimiento)
             )
+
+    for cargo in cargos:
+        movimiento_inicial = movimiento_inicial_por_cargo.get(cargo.id)
+        if movimiento_inicial and _observacion_inicial_movimiento(movimiento_inicial):
+            movimientos_por_cargo[cargo.id].insert(
+                0,
+                _serializar_evento_observacion_inicial(movimiento_inicial),
+            )
+        movimientos_por_cargo[cargo.id].reverse()
 
     cargo_referencia = cargos[0]
     localizacion = cargo_referencia.localizacion
@@ -1412,6 +1526,122 @@ def obtener_historial_estado_cargos_pof(cargo_ids_recibidos):
     }
 
 
+def _serializar_movimiento_historial_contextual(movimiento):
+    """Serializa un movimiento completo para los historiales contextuales del modal."""
+    _preparar_movimiento_para_listado(movimiento)
+    cargo = movimiento.cargo
+    observacion = _normalizar_observacion_real(movimiento.observacion)
+    return {
+        "id": movimiento.id,
+        "fecha": _valor_serializable(movimiento.fecha),
+        "tipo_movimiento": movimiento.tipo_movimiento,
+        "tipo_movimiento_display": movimiento.tipo_movimiento_display,
+        "tipo_movimiento_clase": movimiento.tipo_movimiento_clase,
+        "detalle": movimiento.detalle_resumen,
+        "detalle_visual": movimiento.detalle_resumen_visual,
+        "usuario": movimiento.usuario_movimiento,
+        "observacion": observacion,
+        "diff": _construir_diff_movimiento(movimiento),
+        "cargo": {
+            "id": cargo.id,
+            "ceic": _formatear_valor_campo("ceic", cargo.ceic),
+            "cargo": _valor_serializable(cargo.cargo),
+        },
+    }
+
+
+def _serializar_contexto_localizacion_historial(localizacion):
+    reunida = localizacion.reunida
+    proyecto = localizacion.proyecto_especial
+    cueanexo = str(localizacion.cueanexo or "").strip()
+    cuof = str(localizacion.cuof or "").strip()
+    usar_cuof = bool(proyecto) or not cueanexo
+    return {
+        "id": localizacion.id,
+        "cueanexo": _valor_serializable(cueanexo),
+        "cuof": _valor_serializable(cuof),
+        "tipo_identidad": "CUOF" if usar_cuof else "CUEANEXO",
+        "identidad": _valor_serializable(cuof if usar_cuof else cueanexo),
+        "cabecera": _resumir_cabecera(reunida, proyecto),
+        "tipo_cabecera": (
+            "REUNIDA"
+            if reunida
+            else "PROYECTO_ESPECIAL"
+            if proyecto
+            else ""
+        ),
+    }
+
+
+def obtener_historial_completo_cargo_pof(cargo_id):
+    """
+    Devuelve la vida completa del cargo abierto en Gestion Cargo.
+
+    El alcance es el cargo fisico exacto. No mezcla otros cargos del CUEANEXO/CUOF
+    ni movimientos de otras cabeceras o ciclos.
+    """
+    cargo = CargoPof.objects.select_related(
+        "localizacion",
+        "localizacion__reunida",
+        "localizacion__proyecto_especial",
+    ).get(pk=cargo_id)
+    movimientos = _obtener_movimientos_queryset().filter(cargo_id=cargo.id)
+    return {
+        "cargo": _serializar_cargo_actual(cargo),
+        "localizacion": _serializar_contexto_localizacion_historial(cargo.localizacion),
+        "movimientos": [
+            _serializar_movimiento_historial_contextual(movimiento)
+            for movimiento in movimientos
+        ],
+    }
+
+
+def obtener_historial_localizacion_cargos_pof(localizacion_id):
+    """
+    Devuelve movimientos de todos los cargos de la identidad de la localizacion.
+
+    - Mantiene la cabecera/ciclo del cargo abierto.
+    - Reunida usa CUEANEXO como identidad y agrupa sus distintos CUOF.
+    - Proyecto Especial usa siempre CUOF, aunque conserve CUEANEXO de Padron.
+    - Nunca mezcla la misma identidad existente en otra POF, proyecto o ciclo.
+    """
+    localizacion = LocalizacionPof.objects.select_related(
+        "reunida",
+        "proyecto_especial",
+    ).get(pk=localizacion_id)
+    movimientos = _obtener_movimientos_queryset()
+    cueanexo = str(localizacion.cueanexo or "").strip()
+    cuof = str(localizacion.cuof or "").strip()
+
+    if localizacion.reunida_id:
+        movimientos = movimientos.filter(
+            cargo__localizacion__reunida_id=localizacion.reunida_id
+        )
+        if cueanexo:
+            movimientos = movimientos.filter(
+                cargo__localizacion__cueanexo=cueanexo
+            )
+        else:
+            movimientos = movimientos.filter(
+                cargo__localizacion__cuof__iexact=cuof
+            )
+    else:
+        movimientos = movimientos.filter(
+            cargo__localizacion__proyecto_especial_id=localizacion.proyecto_especial_id
+        )
+        movimientos = movimientos.filter(
+            cargo__localizacion__cuof__iexact=cuof
+        )
+
+    return {
+        "localizacion": _serializar_contexto_localizacion_historial(localizacion),
+        "movimientos": [
+            _serializar_movimiento_historial_contextual(movimiento)
+            for movimiento in movimientos
+        ],
+    }
+
+
 def obtener_detalle_movimiento_pof(movimiento_id):
     movimiento = MovimientoCargoPof.objects.select_related(
         "cargo",
@@ -1453,26 +1683,435 @@ def obtener_detalle_movimiento_pof(movimiento_id):
     }
 
 
+
+def _evento_cargo_desde_movimiento(movimiento):
+    _preparar_movimiento_para_listado(movimiento)
+    return {
+        "id": movimiento.id,
+        "fecha": movimiento.fecha,
+        "usuario_movimiento": movimiento.usuario_movimiento,
+        "cabecera_resumen": movimiento.cabecera_resumen,
+        "localizacion_resumen": {
+            **movimiento.localizacion_resumen,
+            "cue": (
+                str(movimiento.localizacion_resumen.get("cueanexo") or "")[:7]
+                if str(movimiento.localizacion_resumen.get("cueanexo") or "").isdigit()
+                and len(str(movimiento.localizacion_resumen.get("cueanexo") or "")) == 9
+                else GUION_VACIO
+            ),
+        },
+        "tipo_movimiento": movimiento.tipo_movimiento,
+        "tipo_movimiento_display": movimiento.tipo_movimiento_display,
+        "tipo_movimiento_clase": movimiento.tipo_movimiento_clase,
+        "detalle_resumen_visual": movimiento.detalle_resumen_visual,
+        "tiene_observacion_real": movimiento.tiene_observacion_real,
+        "permite_detalle": True,
+    }
+
+
+def _tipo_evento_habilitado(filtros, tipo_evento):
+    tipo = filtros.get("tipo")
+    return not tipo or tipo == TIPO_MOVIMIENTO_TODOS or tipo == tipo_evento
+
+
+def _umbral_vista_rapida(filtros):
+    vista = filtros.get("vista_rapida")
+    if vista == VISTA_7_DIAS:
+        return timezone.now() - timedelta(days=7)
+    if vista == VISTA_30_DIAS:
+        return timezone.now() - timedelta(days=30)
+    return None
+
+
+def _usuario_coincide_cuil(usuario, cuil_busqueda):
+    if not cuil_busqueda:
+        return True
+    identificador = str(
+        getattr(usuario, "cuil", "")
+        or getattr(usuario, "cuit", "")
+        or getattr(usuario, "username", "")
+        or ""
+    )
+    digitos = "".join(caracter for caracter in identificador if caracter.isdigit())
+    return str(cuil_busqueda) in digitos
+
+
+def _asignacion_zona_snapshot_historial(snapshot):
+    return {
+        "tipo": str(snapshot.zona_educativa_tipo or "").strip().upper(),
+        "zona": " ".join(str(snapshot.zona_educativa or "").strip().split()),
+        "puntos": snapshot.puntos_zona_educativa,
+    }
+
+
+def _clave_asignacion_zona_historial(asignacion):
+    return (
+        str(asignacion.get("tipo") or "").strip().upper(),
+        str(asignacion.get("zona") or "").strip().casefold(),
+        asignacion.get("puntos"),
+    )
+
+
+def _descripcion_zona_historial(asignacion):
+    if not asignacion or not asignacion.get("zona"):
+        return "Sin Zona Educativa"
+    puntos = asignacion.get("puntos")
+    return (
+        f"{asignacion['zona']} · {puntos} puntos"
+        if puntos not in (None, "")
+        else str(asignacion["zona"])
+    )
+
+
+def _identidad_zona_historial(localizacion):
+    if localizacion.reunida_id:
+        anio = localizacion.reunida.anio
+    elif localizacion.proyecto_especial_id:
+        anio = localizacion.proyecto_especial.anio
+    else:
+        return None
+
+    cueanexo = str(localizacion.cueanexo or "").strip()
+    if cueanexo.isdigit() and len(cueanexo) == 9:
+        return ("CUEANEXO", int(anio), cueanexo)
+
+    cuof = str(localizacion.cuof or "").strip()
+    if cuof:
+        return ("CUOF", int(anio), cuof)
+    return None
+
+
+def _construir_evento_zona_historial(snapshot, anterior, nuevo):
+    localizacion = snapshot.localizacion
+    cueanexo = str(localizacion.cueanexo or "").strip()
+    cuof = str(localizacion.cuof or "").strip()
+    cue = cueanexo[:7] if cueanexo.isdigit() and len(cueanexo) == 9 else GUION_VACIO
+
+    if not anterior.get("zona") and nuevo.get("zona"):
+        accion = f"Se asignó la Zona Educativa {_descripcion_zona_historial(nuevo)}."
+    elif anterior.get("zona") and not nuevo.get("zona"):
+        accion = "Se quitó la Zona Educativa."
+    else:
+        accion = "Se modificó la Zona Educativa."
+
+    partes = []
+    if anterior.get("tipo") != nuevo.get("tipo"):
+        partes.append(
+            f"Tipo: {anterior.get('tipo') or GUION_VACIO} {FLECHA_CAMBIO} "
+            f"{nuevo.get('tipo') or GUION_VACIO}"
+        )
+    if anterior.get("zona") != nuevo.get("zona"):
+        partes.append(
+            f"Zona: {anterior.get('zona') or GUION_VACIO} {FLECHA_CAMBIO} "
+            f"{nuevo.get('zona') or GUION_VACIO}"
+        )
+    if anterior.get("puntos") != nuevo.get("puntos"):
+        partes.append(
+            f"Puntos: {_valor_serializable(anterior.get('puntos'))} {FLECHA_CAMBIO} "
+            f"{_valor_serializable(nuevo.get('puntos'))}"
+        )
+
+    return {
+        "id": f"zona-{snapshot.id}",
+        "fecha": snapshot.fecha_snapshot,
+        "usuario_movimiento": _serializar_usuario_movimiento(snapshot.usuario),
+        "cabecera_resumen": _resumir_cabecera(
+            localizacion.reunida if localizacion.reunida_id else None,
+            localizacion.proyecto_especial if localizacion.proyecto_especial_id else None,
+        ),
+        "localizacion_resumen": {
+            "cue": cue,
+            "cueanexo": cueanexo or GUION_VACIO,
+            "cuof": cuof or GUION_VACIO,
+        },
+        "tipo_movimiento": TIPO_EVENTO_ZONA_EDUCATIVA,
+        "tipo_movimiento_display": TIPOS_MOVIMIENTO_LABELS[TIPO_EVENTO_ZONA_EDUCATIVA],
+        "tipo_movimiento_clase": "modificacion",
+        "detalle_resumen_visual": {
+            "accion": accion,
+            "partes": partes,
+        },
+        "tiene_observacion_real": False,
+        "permite_detalle": False,
+    }
+
+
+def _obtener_eventos_zona_historial(filtros):
+    if not _tipo_evento_habilitado(filtros, TIPO_EVENTO_ZONA_EDUCATIVA):
+        return []
+    if filtros.get("ceic"):
+        return []
+
+    localizaciones = LocalizacionPof.objects.select_related(
+        "reunida",
+        "proyecto_especial",
+    )
+
+    if filtros.get("anio"):
+        anio = int(filtros["anio"])
+        localizaciones = localizaciones.filter(
+            Q(reunida__anio=anio) | Q(proyecto_especial__anio=anio)
+        )
+
+    nivel = filtros.get("nivel")
+    if nivel and nivel != NIVEL_TODOS:
+        localizaciones = localizaciones.filter(reunida__nivel=nivel)
+
+    if filtros.get("cueanexo"):
+        localizaciones = localizaciones.filter(cueanexo=filtros["cueanexo"])
+    if filtros.get("cuof"):
+        localizaciones = localizaciones.filter(cuof__iexact=filtros["cuof"])
+
+    canonicas = {}
+    for localizacion in localizaciones.order_by("id"):
+        identidad = _identidad_zona_historial(localizacion)
+        if identidad is not None and identidad not in canonicas:
+            canonicas[identidad] = localizacion
+
+    if not canonicas:
+        return []
+
+    snapshots = (
+        SnapshotPadronLocalizacionPof.objects
+        .select_related(
+            "usuario",
+            "localizacion",
+            "localizacion__reunida",
+            "localizacion__proyecto_especial",
+        )
+        .filter(localizacion_id__in=[item.id for item in canonicas.values()])
+        .order_by("localizacion_id", "fecha_snapshot", "id")
+    )
+
+    umbral = _umbral_vista_rapida(filtros)
+    cuil = filtros.get("cuil")
+    eventos = []
+    anterior_por_localizacion = {}
+
+    for snapshot in snapshots:
+        actual = _asignacion_zona_snapshot_historial(snapshot)
+        anterior = anterior_por_localizacion.get(snapshot.localizacion_id)
+        anterior_por_localizacion[snapshot.localizacion_id] = actual
+
+        if anterior is None:
+            continue
+        if _clave_asignacion_zona_historial(anterior) == _clave_asignacion_zona_historial(actual):
+            continue
+        if umbral is not None and snapshot.fecha_snapshot < umbral:
+            continue
+        if not _usuario_coincide_cuil(snapshot.usuario, cuil):
+            continue
+
+        eventos.append(
+            _construir_evento_zona_historial(snapshot, anterior, actual)
+        )
+
+    eventos.sort(key=lambda item: (item["fecha"], str(item["id"])), reverse=True)
+    return eventos
+
+
+def _aplicar_vista_rapida_historial_anexo(queryset, filtros):
+    umbral = _umbral_vista_rapida(filtros)
+    if umbral is not None:
+        queryset = queryset.filter(fecha__gte=umbral)
+    return queryset
+
+
+def _obtener_propietarios_anexo_contexto(filtros):
+    nivel = filtros.get("nivel")
+    tiene_contexto = bool(
+        filtros.get("anio")
+        or filtros.get("cueanexo")
+        or filtros.get("cuof")
+        or (nivel and nivel != NIVEL_TODOS)
+    )
+    if not tiene_contexto:
+        return None
+
+    localizaciones = LocalizacionPof.objects.select_related(
+        "reunida",
+        "proyecto_especial",
+    )
+
+    if filtros.get("anio"):
+        anio = int(filtros["anio"])
+        localizaciones = localizaciones.filter(
+            Q(reunida__anio=anio) | Q(proyecto_especial__anio=anio)
+        )
+
+    if nivel and nivel != NIVEL_TODOS:
+        localizaciones = localizaciones.filter(reunida__nivel=nivel)
+
+    if filtros.get("cueanexo"):
+        localizaciones = localizaciones.filter(cueanexo=filtros["cueanexo"])
+    if filtros.get("cuof"):
+        localizaciones = localizaciones.filter(cuof__iexact=filtros["cuof"])
+
+    cues = set()
+    cuofs = set()
+    for localizacion in localizaciones:
+        cueanexo = str(localizacion.cueanexo or "").strip()
+        if cueanexo.isdigit() and len(cueanexo) == 9:
+            cues.add(cueanexo[:7])
+            continue
+
+        if localizacion.proyecto_especial_id:
+            cuof = str(localizacion.cuof or "").strip()
+            if cuof:
+                cuofs.add(cuof)
+
+    return cues, cuofs
+
+
+def _obtener_historial_anexo_queryset(filtros):
+    if not _tipo_evento_habilitado(filtros, TIPO_EVENTO_ANEXO_POF):
+        return HistorialAsociacionAnexoPof.objects.none()
+
+    if filtros.get("ceic"):
+        return HistorialAsociacionAnexoPof.objects.none()
+
+    queryset = HistorialAsociacionAnexoPof.objects.select_related(
+        "asociacion",
+        "asociacion__codigo_catalogo",
+        "usuario",
+    )
+    queryset = _aplicar_vista_rapida_historial_anexo(queryset, filtros)
+
+    propietarios_contexto = _obtener_propietarios_anexo_contexto(filtros)
+    if propietarios_contexto is not None:
+        cues, cuofs = propietarios_contexto
+        filtro_propietarios = Q()
+        if cues:
+            filtro_propietarios |= Q(
+                asociacion__cue__in=sorted(cues),
+                asociacion__cuof="",
+            )
+        if cuofs:
+            filtro_propietarios |= Q(
+                asociacion__cue="",
+                asociacion__cuof__in=sorted(cuofs),
+            )
+        if not cues and not cuofs:
+            return HistorialAsociacionAnexoPof.objects.none()
+        queryset = queryset.filter(filtro_propietarios)
+    if filtros.get("cuil"):
+        queryset = queryset.filter(
+            usuario__username__contains=filtros["cuil"]
+        )
+
+    return queryset.order_by("-fecha", "-id")
+
+
+def _construir_evento_anexo_historial(historial):
+    asociacion = historial.asociacion
+    tipo_propietario = "CUE" if asociacion.cue else "CUOF"
+    propietario = asociacion.cue or asociacion.cuof
+    codigo = asociacion.codigo_catalogo.codigo
+
+    acciones = {
+        HistorialAsociacionAnexoPof.Accion.ASOCIAR: "Se asoció",
+        HistorialAsociacionAnexoPof.Accion.DESACTIVAR: "Se desactivó",
+        HistorialAsociacionAnexoPof.Accion.REACTIVAR: "Se reactivó",
+    }
+    verbo = acciones.get(historial.accion, "Se actualizó")
+
+    return {
+        "id": f"anexo-{historial.id}",
+        "fecha": historial.fecha,
+        "usuario_movimiento": _serializar_usuario_movimiento(historial.usuario),
+        "cabecera_resumen": f"Global · {tipo_propietario} {propietario}",
+        "localizacion_resumen": {
+            "cue": asociacion.cue or GUION_VACIO,
+            "cueanexo": GUION_VACIO,
+            "cuof": asociacion.cuof or GUION_VACIO,
+        },
+        "tipo_movimiento": TIPO_EVENTO_ANEXO_POF,
+        "tipo_movimiento_display": TIPOS_MOVIMIENTO_LABELS[TIPO_EVENTO_ANEXO_POF],
+        "tipo_movimiento_clase": "modificacion",
+        "detalle_resumen_visual": {
+            "accion": (
+                f"{verbo} el Código Anexo POF {codigo} para "
+                f"{tipo_propietario} {propietario}."
+            ),
+            "partes": [
+                f"Código: {codigo}",
+                f"Propietario: {tipo_propietario} {propietario}",
+            ],
+        },
+        "tiene_observacion_real": False,
+        "permite_detalle": False,
+    }
+
+
+def _clave_orden_evento_historial(evento):
+    return (evento["fecha"], str(evento["id"]))
+
+
 def construir_contexto_historial(request):
     filtros, errores_filtros = obtener_filtros_historial_pof_con_errores(request)
     filtros_suficientes = not errores_filtros and filtros_historial_suficientes(filtros)
-    queryset = _obtener_movimientos_queryset()
-    if filtros_suficientes:
-        queryset = _aplicar_filtros_historial(queryset, filtros)
-    else:
-        queryset = queryset.none()
-    paginator = Paginator(queryset, 10)
-    page_obj = paginator.get_page(request.GET.get("page", 1))
 
-    for movimiento in page_obj.object_list:
-        _preparar_movimiento_para_listado(movimiento)
+    movimientos_queryset = _obtener_movimientos_queryset()
+    eventos_zona = []
+    historial_anexo_queryset = HistorialAsociacionAnexoPof.objects.none()
+
+    if filtros_suficientes:
+        tipo_evento = filtros.get("tipo")
+        if (
+            tipo_evento
+            and tipo_evento != TIPO_MOVIMIENTO_TODOS
+            and tipo_evento not in TIPOS_EVENTO_CARGO
+        ):
+            movimientos_queryset = movimientos_queryset.none()
+        else:
+            movimientos_queryset = _aplicar_filtros_historial(
+                movimientos_queryset,
+                filtros,
+            )
+        eventos_zona = _obtener_eventos_zona_historial(filtros)
+        historial_anexo_queryset = _obtener_historial_anexo_queryset(filtros)
+    else:
+        movimientos_queryset = movimientos_queryset.none()
+
+    total_cargos = movimientos_queryset.count()
+    total_zona = len(eventos_zona)
+    total_anexo = historial_anexo_queryset.count()
+    total_registros = total_cargos + total_zona + total_anexo
+
+    paginator = Paginator(range(total_registros), 10)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+    limite_necesario = page_obj.end_index() if total_registros else 0
+
+    eventos_cargo = [
+        _evento_cargo_desde_movimiento(movimiento)
+        for movimiento in movimientos_queryset[:limite_necesario]
+    ]
+    eventos_anexo = [
+        _construir_evento_anexo_historial(historial)
+        for historial in historial_anexo_queryset[:limite_necesario]
+    ]
+
+    candidatos = [
+        *eventos_cargo,
+        *eventos_zona[:limite_necesario],
+        *eventos_anexo,
+    ]
+    candidatos.sort(key=_clave_orden_evento_historial, reverse=True)
+
+    indice_inicio = page_obj.start_index() - 1 if total_registros else 0
+    indice_fin = page_obj.end_index() if total_registros else 0
+    eventos_pagina = candidatos[indice_inicio:indice_fin]
+    page_obj.object_list = eventos_pagina
 
     query_params = request.GET.copy()
     query_params.pop("page", None)
     query_params.pop("texto", None)
     query_params.pop("page_size", None)
-    total_registros = paginator.count
-    tiene_contexto = bool(filtros["anio"] and filtros["nivel"] and filtros["nivel"] != NIVEL_TODOS)
+    tiene_contexto = bool(
+        filtros["anio"]
+        and filtros["nivel"]
+        and filtros["nivel"] != NIVEL_TODOS
+    )
 
     return {
         "anio_activo": filtros["anio"] if tiene_contexto else "",
@@ -1482,18 +2121,29 @@ def construir_contexto_historial(request):
         "tipos_movimiento": TIPOS_MOVIMIENTO_LABELS,
         "vistas_rapidas": VISTAS_RAPIDAS,
         "errores_filtros": errores_filtros,
-        "filtros_activos": construir_chips_filtros_historial(request, filtros, errores_filtros),
+        "filtros_activos": construir_chips_filtros_historial(
+            request,
+            filtros,
+            errores_filtros,
+        ),
         "filtros_suficientes": filtros_suficientes,
         "mensaje_filtros": (
             MENSAJE_FILTROS_INVALIDOS
             if errores_filtros
-            else ("" if filtros_suficientes else obtener_mensaje_filtros_insuficientes_historial(filtros))
+            else (
+                ""
+                if filtros_suficientes
+                else obtener_mensaje_filtros_insuficientes_historial(filtros)
+            )
         ),
         "limpiar_filtros_querystring": querystring_limpio_historial(),
         "page_obj": page_obj,
         "paginator": paginator,
-        "movimientos": page_obj.object_list,
+        "movimientos": eventos_pagina,
         "total_registros": total_registros,
+        "total_movimientos_cargo": total_cargos,
+        "total_eventos_zona": total_zona,
+        "total_eventos_anexo": total_anexo,
         "showing_start": page_obj.start_index() if total_registros else 0,
         "showing_end": page_obj.end_index() if total_registros else 0,
         "query_params_base": query_params.urlencode(),

@@ -33,3 +33,83 @@ function normalizarTextoOferta(texto) {
         .replace(/[\u0300-\u036f]/g, "")
         .toLowerCase();
 }
+
+async function solicitarJsonLecturaResiliente(url, opciones) {
+    const configuracion = Object.assign(
+        {
+            credentials: "same-origin",
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                "Accept": "application/json",
+            },
+        },
+        opciones || {},
+        { method: "GET" }
+    );
+
+    const headers = Object.assign(
+        {
+            "X-Requested-With": "XMLHttpRequest",
+            "Accept": "application/json",
+        },
+        (opciones && opciones.headers) || {}
+    );
+    configuracion.headers = headers;
+
+    let ultimoError = null;
+
+    for (let intento = 0; intento < 2; intento += 1) {
+        try {
+            const response = await fetch(url, configuracion);
+            const texto = await response.text();
+            let data = {};
+
+            if (texto) {
+                try {
+                    data = JSON.parse(texto);
+                } catch (errorParseo) {
+                    const error = new Error("Respuesta inesperada del servidor.");
+                    error.status = response.status;
+                    error.respuestaInvalida = true;
+                    error.body = texto;
+                    error.original = errorParseo;
+                    throw error;
+                }
+            }
+
+            if (
+                intento === 0
+                && [500, 502, 503, 504].includes(Number(response.status || 0))
+            ) {
+                await new Promise(function (resolve) {
+                    window.setTimeout(resolve, 250);
+                });
+                continue;
+            }
+
+            return { response: response, data: data };
+        } catch (error) {
+            ultimoError = error;
+            const status = Number(error && error.status || 0);
+            const reintentable = Boolean(
+                error
+                && (
+                    error.respuestaInvalida
+                    || status === 0
+                    || [500, 502, 503, 504].includes(status)
+                )
+            );
+
+            if (intento === 0 && reintentable) {
+                await new Promise(function (resolve) {
+                    window.setTimeout(resolve, 250);
+                });
+                continue;
+            }
+
+            throw error;
+        }
+    }
+
+    throw ultimoError || new Error("No se pudo completar la lectura.");
+}

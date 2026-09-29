@@ -14,6 +14,13 @@ from ..models import (
     SnapshotPadronLocalizacionPof,
     _decimal_dos_decimales,
 )
+from .zona_educativa_service import (
+    asignaciones_zona_equivalentes,
+    bloquear_identidad_zona,
+    construir_identidad_zona,
+    obtener_asignacion_snapshot,
+    obtener_asignacion_vigente_identidad,
+)
 
 
 def _resumen_herencia(reunida_base_id=None, heredada=False):
@@ -161,14 +168,127 @@ def _validar_origen(reunida_base, localizaciones_origen):
                 raise ValidationError("El total de un cargo origen no es consistente.")
 
 
-def _crear_snapshot_destino(localizacion_destino, snapshot_origen, usuario, momento):
+def _preparar_asignaciones_zona_herencia(localizaciones_origen, anio_destino):
+    """
+    Resuelve la Zona que heredará cada localización en el nuevo ciclo.
+
+    - Bloquea todas las identidades destino en orden estable para evitar carreras.
+    - Si el destino ya tiene Zona para la identidad, esa asignación prevalece.
+    - Una Zona heredada distinta a la ya vigente en destino bloquea la herencia.
+    - Si el destino aún no tiene Zona, una única asignación origen se propaga a
+      todas las localizaciones del mismo grupo, incluso si alguna estaba vacía.
+    - Nunca consulta el catálogo: la herencia copia estado histórico congelado.
+    """
+    grupos = {}
+
+    for localizacion in localizaciones_origen:
+        identidad = construir_identidad_zona(
+            anio=anio_destino,
+            cueanexo=localizacion.cueanexo,
+            cuof=localizacion.cuof,
+        )
+        clave_grupo = (
+            identidad["anio"],
+            identidad["tipo_clave"],
+            identidad["clave"],
+        )
+        snapshot_origen = localizacion.snapshots_vigentes_herencia[0]
+        grupos.setdefault(
+            clave_grupo,
+            {
+                "identidad": identidad,
+                "items": [],
+            },
+        )["items"].append(
+            {
+                "localizacion": localizacion,
+                "asignacion_origen": obtener_asignacion_snapshot(snapshot_origen),
+            }
+        )
+
+    grupos_ordenados = [
+        grupos[clave]
+        for clave in sorted(grupos)
+    ]
+
+    for grupo in grupos_ordenados:
+        bloquear_identidad_zona(grupo["identidad"])
+
+    resultado = {}
+
+    for grupo in grupos_ordenados:
+        vigente_destino = obtener_asignacion_vigente_identidad(
+            grupo["identidad"]
+        )
+        asignacion_destino = None
+        if vigente_destino["asignada"]:
+            asignacion_destino = {
+                "tipo": vigente_destino["tipo"],
+                "zona": vigente_destino["zona"],
+                "puntos": vigente_destino["puntos"],
+            }
+
+        asignaciones_origen = []
+        for item in grupo["items"]:
+            asignacion = item["asignacion_origen"]
+            if asignacion is None:
+                continue
+            if not any(
+                asignaciones_zona_equivalentes(asignacion, existente)
+                for existente in asignaciones_origen
+            ):
+                asignaciones_origen.append(asignacion)
+
+        if asignacion_destino is not None:
+            for asignacion_origen in asignaciones_origen:
+                if not asignaciones_zona_equivalentes(
+                    asignacion_origen,
+                    asignacion_destino,
+                ):
+                    raise ValidationError(
+                        "La Zona Educativa heredada entra en conflicto con la "
+                        "Zona ya vigente para esa identidad en el año destino."
+                    )
+            asignacion_efectiva = asignacion_destino
+        else:
+            if len(asignaciones_origen) > 1:
+                raise ValidationError(
+                    "El origen contiene Zonas Educativas contradictorias para "
+                    "una misma identidad que se heredaría al nuevo ciclo."
+                )
+            asignacion_efectiva = (
+                asignaciones_origen[0]
+                if asignaciones_origen
+                else None
+            )
+
+        for item in grupo["items"]:
+            resultado[item["localizacion"].id] = asignacion_efectiva
+
+    return resultado
+
+
+def _crear_snapshot_destino(
+    localizacion_destino,
+    snapshot_origen,
+    usuario,
+    momento,
+    asignacion_zona=None,
+):
     """
     Crea el nuevo snapshot inicial desde la única foto vigente de origen.
 
     - Conserva los datos funcionales del padrón y copia JSON de forma independiente.
+    - Copia Zona/Puntos congelados o usa la asignación ya vigente del ciclo destino.
     - Establece tipo INICIAL, vigencia y fechas propias del destino.
     - No reutiliza el usuario, fecha ni identidad del snapshot histórico.
     """
+    asignacion_efectiva = (
+        asignacion_zona
+        if asignacion_zona is not None
+        else obtener_asignacion_snapshot(snapshot_origen)
+    )
+
     return SnapshotPadronLocalizacionPof.objects.create(
         localizacion=localizacion_destino,
         tipo_snapshot=SnapshotPadronLocalizacionPof.TipoSnapshot.INICIAL,
@@ -190,6 +310,21 @@ def _crear_snapshot_destino(localizacion_destino, snapshot_origen, usuario, mome
         jornada=snapshot_origen.jornada,
         ubicacion=snapshot_origen.ubicacion,
         ubicacion_localidad_departamento=snapshot_origen.ubicacion_localidad_departamento,
+        zona_educativa_tipo=(
+            asignacion_efectiva["tipo"]
+            if asignacion_efectiva
+            else ""
+        ),
+        zona_educativa=(
+            asignacion_efectiva["zona"]
+            if asignacion_efectiva
+            else ""
+        ),
+        puntos_zona_educativa=(
+            asignacion_efectiva["puntos"]
+            if asignacion_efectiva
+            else None
+        ),
         datos_padron=deepcopy(snapshot_origen.datos_padron),
         usuario=usuario,
         fecha_snapshot=momento,
@@ -204,14 +339,20 @@ def _copiar_localizaciones_destino(
     *,
     reunida_destino=None,
     proyecto_destino=None,
+    asignaciones_zona_por_localizacion=None,
 ):
     """
     Copia el estado funcional vigente de una cabecera POF a otra nueva.
 
     - Crea identidades, snapshot vigente y lote AFECTADO propios del destino.
     - Conserva todos los datos funcionales del cargo, incluidas sus ofertas.
+    - Aplica la Zona/Puntos resuelta para el ciclo destino sin consultar catálogo.
     - No copia IDs, fechas ni historial administrativo de la cabecera base.
     """
+    asignaciones_zona_por_localizacion = (
+        asignaciones_zona_por_localizacion or {}
+    )
+
     for localizacion_origen in localizaciones_origen:
         localizacion_destino = LocalizacionPof.objects.create(
             reunida=reunida_destino,
@@ -227,6 +368,9 @@ def _copiar_localizaciones_destino(
             localizacion_origen.snapshots_vigentes_herencia[0],
             usuario_destino,
             momento,
+            asignacion_zona=asignaciones_zona_por_localizacion.get(
+                localizacion_origen.id
+            ),
         )
         resumen["snapshots_creados"] += 1
 
@@ -292,6 +436,11 @@ def heredar_estado_inicial_reunida(reunida_destino, usuario=None):
     localizaciones_origen = _cargar_localizaciones_origen(reunida_base)
     _validar_origen(reunida_base, localizaciones_origen)
 
+    asignaciones_zona = _preparar_asignaciones_zona_herencia(
+        localizaciones_origen,
+        reunida_destino.anio,
+    )
+
     usuario_destino = _usuario_herencia(usuario)
     momento = timezone.now()
     resumen["heredada"] = True
@@ -302,6 +451,7 @@ def heredar_estado_inicial_reunida(reunida_destino, usuario=None):
         usuario_destino,
         momento,
         reunida_destino=reunida_destino,
+        asignaciones_zona_por_localizacion=asignaciones_zona,
     )
 
 
@@ -444,6 +594,10 @@ def heredar_estado_inicial_proyecto_especial(proyecto_destino, usuario=None):
         proyecto_base
     )
     _validar_origen_proyecto(proyecto_base, localizaciones_origen)
+    asignaciones_zona = _preparar_asignaciones_zona_herencia(
+        localizaciones_origen,
+        proyecto_destino.anio,
+    )
 
     resumen["heredada"] = True
     return _copiar_localizaciones_destino(
@@ -452,4 +606,5 @@ def heredar_estado_inicial_proyecto_especial(proyecto_destino, usuario=None):
         _usuario_herencia(usuario),
         timezone.now(),
         proyecto_destino=proyecto_destino,
+        asignaciones_zona_por_localizacion=asignaciones_zona,
     )
