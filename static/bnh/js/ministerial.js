@@ -546,7 +546,8 @@
                     "titulacion",
                     "espacio_curricular",
                     "grado_anio",
-                    "secciones"
+                    "secciones",
+                    "seccion_multiple"
                 ];
                 curricularFields.forEach(name => setVisible(name, !nonTeaching()));
                 form.querySelectorAll("[data-curricular-section]").forEach(el => {
@@ -595,6 +596,10 @@
                 );
                 setDisabled(
                     "secciones",
+                    hideCurricular || curricularPending || !value("nivel_curricular")
+                );
+                setDisabled(
+                    "seccion_multiple",
                     hideCurricular || curricularPending || !value("nivel_curricular")
                 );
 
