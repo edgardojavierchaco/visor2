@@ -1915,6 +1915,14 @@ function pintarSecciones(data) {
                         )}
                     </td>
 
+                    <td class="text-center">
+                        <strong>
+                            ${formatNumero(
+                                fila.sin_registro || 0
+                            )}
+                        </strong>
+                    </td>
+
                     <td class="text-end">
                         ${formatNumero(
                             fila.presentes
@@ -1961,6 +1969,21 @@ function pintarAlertasAlumnos(data) {
     if (!tbody) {
         return;
     }
+
+    // Protección adicional del frontend: ALERTA NOMINAL nunca debe
+    // renderizar estudiantes NORMAL ni SIN DATOS aunque el backend
+    // recibiera datos inconsistentes o una respuesta cacheada.
+    const nivelesSeguimiento = new Set([
+        "ATENCION",
+        "ALTO",
+        "CRITICO",
+    ]);
+
+    data = (Array.isArray(data) ? data : []).filter(
+        fila => nivelesSeguimiento.has(
+            String(fila?.nivel_alerta_final || "").toUpperCase()
+        )
+    );
 
     tbody.innerHTML =
         "";
