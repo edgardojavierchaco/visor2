@@ -17,9 +17,8 @@ from .models_session import (
     SesionUsuario
 )
 
-from django.contrib.sessions.models import (
-    Session
-)
+from importlib import import_module
+
 
 
 class LoginFormView(LoginView):
@@ -126,18 +125,17 @@ class LoginFormView(LoginView):
     # 🔥 FORM VALID
     # =========================
     def form_valid(self, form):
-        user = authenticate(
-            username=form.cleaned_data['username'],
-            password=form.cleaned_data['password']
-        )
+        # AuthenticationForm ya validó las credenciales.
+        # IMPORTANTE: todavía NO iniciamos sesión. La sesión autenticada
+        # sólo se crea después de comprobar que el dispositivo está autorizado.
+        user = form.get_user()
 
         if not user:
             return JsonResponse({
                 'success': False,
                 'message': 'Credenciales incorrectas.'
             })
-        
-        login(self.request, user)   
+
         # =========================
         # DEVICE INFO
         # =========================
@@ -210,10 +208,16 @@ class LoginFormView(LoginView):
                     'message': 'Dispositivo no autorizado, revisá tu correo'
                 })
 
-                
-            # =====================================================
-        # DISPOSITIVO OK → LOGIN OK
         # =====================================================
+        # DISPOSITIVO OK → RECIÉN AHORA INICIAR SESIÓN
+        # =====================================================
+        login(self.request, user)
+
+        # login() normalmente crea/rota la clave; save() garantiza
+        # que exista una session_key persistida antes de registrarla.
+        if not self.request.session.session_key:
+            self.request.session.save()
+
         session_key = self.request.session.session_key
 
         SesionUsuario.objects.update_or_create(
@@ -298,37 +302,55 @@ def cerrar_otras_sesiones(
 ):
 
     if not request.user.is_authenticated:
-
         return JsonResponse({
-            'success': False
-        })
+            'success': False,
+            'message': 'La sesión actual no está autenticada.'
+        }, status=401)
 
-    actual = (
-        request.session.session_key
-    )
+    actual = request.session.session_key
 
-    sesiones = (
+    sesiones = list(
         SesionUsuario.objects.filter(
             usuario=request.user,
             activa=True
         )
-        .exclude(
-            session_key=actual
-        )
+        .exclude(session_key=actual)
     )
 
-    for s in sesiones:
+    # Usar el SessionStore configurado por Django es fundamental.
+    # Con cached_db, borrar únicamente django_session deja viva la
+    # copia de caché hasta su expiración. SessionStore.delete()
+    # invalida correctamente el backend que esté configurado.
+    engine = import_module(settings.SESSION_ENGINE)
+    SessionStore = engine.SessionStore
 
-        Session.objects.filter(
-            session_key=s.session_key
-        ).delete()
+    cerradas = 0
+    errores = []
 
-        s.activa = False
-        s.save()
+    for sesion in sesiones:
+        try:
+            store = SessionStore(session_key=sesion.session_key)
+            store.delete(sesion.session_key)
+            sesion.activa = False
+            sesion.save(update_fields=['activa'])
+            cerradas += 1
+        except Exception as exc:
+            errores.append({
+                'session_key': sesion.session_key,
+                'error': str(exc),
+            })
 
     return JsonResponse({
-        'success': True
+        'success': len(errores) == 0,
+        'sesiones_cerradas': cerradas,
+        'errores': errores,
+        'message': (
+            'Las otras sesiones fueron cerradas.'
+            if not errores
+            else 'Algunas sesiones no pudieron cerrarse.'
+        )
     })
+
 
 
 class CustomLogoutView(LogoutView):

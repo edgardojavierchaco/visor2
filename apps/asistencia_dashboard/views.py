@@ -401,6 +401,46 @@ def _adjuntar_matricula(datos, filtros, request, detalle=False):
     return datos
 
 
+def _adjuntar_sin_registro_secciones(datos, filtros, request):
+    """Adjunta los días sin registro de calidad a cada fila de sección."""
+    if not datos:
+        return datos
+
+    for fila in datos:
+        fila["sin_registro"] = 0
+
+    if not _relation_exists(TABLA_CALIDAD):
+        return datos
+
+    ids = [fila.get("id_seccion") for fila in datos if fila.get("id_seccion") is not None]
+    if not ids:
+        return datos
+
+    where, params = _build_where_calidad(filtros, request, alias="c")
+    where += " AND c.id_seccion = ANY(%s)"
+    params.append(ids)
+
+    try:
+        with connections[DB_ALIAS].cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT c.id_seccion, COALESCE(SUM(c.dias_sin_registro), 0)::integer AS sin_registro
+                FROM {TABLA_CALIDAD} c
+                WHERE {where}
+                GROUP BY c.id_seccion
+                """,
+                params,
+            )
+            mapa = {row[0]: int(row[1] or 0) for row in cursor.fetchall()}
+    except Exception:
+        return datos
+
+    for fila in datos:
+        fila["sin_registro"] = mapa.get(fila.get("id_seccion"), 0)
+
+    return datos
+
+
 def _calidad_resumen(filtros, request):
     if not _relation_exists(TABLA_CALIDAD):
         return {
@@ -710,6 +750,7 @@ def _consulta_mensual_base(filtros, request, detalle):
     if detalle:
         base = f"""
             SELECT a.cueanexo, MAX(a.escuela) AS escuela, a.nivel, a.grado, a.seccion, a.turno,
+                   MIN(a.id_seccion) AS id_seccion,
                    COUNT(DISTINCT a.fecha_asistencia) AS dias_registrados,
                    SUM(a.total_alumnos) AS alumno_jornadas,
                    SUM(a.presentes) AS presentes, SUM(a.ausentes) AS ausentes,
@@ -760,6 +801,7 @@ def api_secciones(request):
         cursor.execute(base + order + " LIMIT %s OFFSET %s", params + [page_size, offset])
         datos = _dictfetchall(cursor)
     _adjuntar_matricula(datos, filtros, request, detalle=True)
+    _adjuntar_sin_registro_secciones(datos, filtros, request)
     return JsonResponse({"data": datos, "pagination": _pagination_meta(page, page_size, total)})
 
 
@@ -902,9 +944,19 @@ def api_alertas_alumnos(request):
     if not filtros.get("cueanexo"):
         return JsonResponse({"data": [], "resumen": {"NORMAL": 0, "ATENCION": 0, "ALTO": 0, "CRITICO": 0, "SIN DATOS": 0}, "requiere_cue": True, "pagination": _pagination_meta(page, page_size, 0)})
     where, params = _build_where_semanal(filtros, request)
-    if filtros.get("alerta"):
+
+    # ALERTA NOMINAL: este panel muestra exclusivamente estudiantes que
+    # requieren seguimiento semanal. NORMAL y SIN DATOS quedan fuera siempre.
+    niveles_seguimiento = ("ATENCION", "ALTO", "CRITICO")
+    where += " AND nivel_alerta_final = ANY(%s)"
+    params.append(list(niveles_seguimiento))
+
+    # Si se solicita un nivel puntual, sólo se acepta dentro de los estados
+    # que requieren seguimiento. Un valor NORMAL/SIN DATOS no puede reabrirlos.
+    alerta_solicitada = (filtros.get("alerta") or "").upper()
+    if alerta_solicitada in niveles_seguimiento:
         where += " AND nivel_alerta_final=%s"
-        params.append(filtros["alerta"])
+        params.append(alerta_solicitada)
     select_sql = f"""
         SELECT cueanexo, escuela, id_alumno, id_persona, nombre_apellido, nivel, grado, seccion, turno,
                fecha_desde, fecha_hasta, dias_esperados_semana, dias_registrados, dias_sin_registro_semana,
