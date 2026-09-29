@@ -131,10 +131,7 @@
             form.dataset.bnhVersion = VERSION;
 
             const field = name => form.querySelector(
-                `[name="${name}"], ` +
-                `[name="actividad-${name}"], ` +
-                `[name="persona-${name}"], ` +
-                `[name$="-${name}"]`
+                `[name="${name}"], [name="actividad-${name}"], [name="persona-${name}"]`
             );
             const value = name => field(name)?.value || "";
             const personalTypeCode = () => Number(value("tipo_personal") || 0);
@@ -1103,9 +1100,6 @@
                     "modalidad_curricular",
                     "nivel_curricular",
                     "titulacion",
-                    "tipo_ubicacion",
-                    "multiplan",
-                    "titulaciones_multiplan",
                     "provincia"
                 ];
                 const name = names.find(key => field(key) === target);
@@ -1137,38 +1131,6 @@
                         loadCargoCatalogs(currentName);
                         return;
                     }
-
-                    // Sección única / múltiple: solo cambia la interfaz.
-                    // No recargar catálogos curriculares.
-                    if (currentName === "tipo_ubicacion") {
-                        const isMultipleLocation = value("tipo_ubicacion") === "MULTIPLE";
-                        const extraBox = form.querySelector("[data-ubicaciones-extra]");
-                        if (extraBox) extraBox.hidden = !isMultipleLocation;
-
-                        ["grado_anio", "secciones", "turno"].forEach(name => {
-                            const input = field(name);
-                            const wrapper = input?.closest("[data-field]");
-                            if (wrapper) wrapper.hidden = isMultipleLocation;
-                        });
-
-                        if (isMultipleLocation) {
-                            ensureMultipleLocationRows();
-                        } else {
-                            const list = form.querySelector("[data-ubicaciones-list]");
-                            if (list) list.innerHTML = "";
-                        }
-
-                        enable();
-                        syncLocations();
-                        return;
-                    }
-
-                    // Estos dos campos tienen listeners específicos que recargan
-                    // únicamente lo necesario para Multiplan.
-                    if (currentName === "multiplan" || currentName === "titulaciones_multiplan") {
-                        return;
-                    }
-
                     loadCurricularCatalogs(currentName);
                 });
             }
@@ -1250,27 +1212,13 @@
                 loadCurricularCatalogs("titulaciones_multiplan");
             });
             field("tipo_ubicacion")?.addEventListener("change", () => {
-                const isMultipleLocation = value("tipo_ubicacion") === "MULTIPLE";
-
-                // Actualización inmediata de la interfaz. No depende de AJAX ni de
-                // la recarga de catálogos curriculares.
-                const extraBox = form.querySelector("[data-ubicaciones-extra]");
-                if (extraBox) extraBox.hidden = !isMultipleLocation;
-
-                ["grado_anio", "secciones", "turno"].forEach(name => {
-                    const input = field(name);
-                    const wrapper = input?.closest("[data-field]");
-                    if (wrapper) wrapper.hidden = isMultipleLocation;
-                });
-
-                if (isMultipleLocation) {
+                enable();
+                if (value("tipo_ubicacion") === "MULTIPLE") {
                     ensureMultipleLocationRows();
                 } else {
                     const list = form.querySelector("[data-ubicaciones-list]");
                     if (list) list.innerHTML = "";
                 }
-
-                enable();
                 syncLocations();
             });
             ["grado_anio", "secciones", "turno"].forEach(name => field(name)?.addEventListener("change", syncLocations));

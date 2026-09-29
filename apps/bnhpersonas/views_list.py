@@ -26,6 +26,8 @@ from .domain.access import (
     scoped_offers,
 )
 
+from .domain.catalogs import titulacion_label
+
 from .models import (
     EventoAuditoria,
     TipoPersonal,
@@ -434,6 +436,11 @@ class PersonaDetailView(View):
                 "grado_anio",
                 "secciones",
             )
+            .prefetch_related(
+                "ubicaciones_curriculares__grado_anio",
+                "ubicaciones_curriculares__seccion",
+                "titulaciones_curriculares",
+            )
             .order_by(
                 "eliminado",
                 "cueanexo",
@@ -441,6 +448,19 @@ class PersonaDetailView(View):
                 "pk",
             )
         )
+
+        for actividad in activities:
+            actividad.ubicaciones_ui = list(
+                actividad.ubicaciones_curriculares.all()
+            )
+            actividad.titulaciones_ui = [
+                {
+                    "id": item.titulacion,
+                    "label": titulacion_label(item.titulacion_fuente, item.titulacion)
+                    or str(item.titulacion),
+                }
+                for item in actividad.titulaciones_curriculares.all()
+            ]
 
         print(
             "DEBUG 2 - ACTIVITIES:",
