@@ -8,7 +8,7 @@
 {% endif %}
 
 {% if field.name == 'modalidad_curricular' %}
-<div class="col-12 mt-4" data-curricular-section><hr><h3 class="h5 mb-0">Ubicación curricular</h3><p class="text-muted mb-0">Circuito independiente: Modalidad → Nivel → Titulación → Espacio Curricular → Grado/año y Sección.</p></div>
+<div class="col-12 mt-4" data-curricular-section><hr><h3 class="h5 mb-0">Ubicación curricular</h3><p class="text-muted mb-0">Modalidad y nivel, sección única o múltiple, una o varias titulaciones y un espacio curricular común.</p></div>
 {% endif %}
 
 {% if field.name == 'f_desde' %}
@@ -21,5 +21,19 @@
   {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
   {% for error in field.errors %}<div class="text-danger" role="alert">{{ error }}</div>{% endfor %}
 </div>
+{% if field.name == 'secciones' %}
+<div class="col-12" data-ubicaciones-extra hidden>
+  <div class="border rounded p-3 bg-light">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div>
+        <strong data-ubicaciones-title>Componentes de la sección múltiple</strong>
+        <div class="form-text">Cada fila representa una combinación Grado/Año + Sección + Turno del mismo puesto. Debe cargar al menos dos componentes.</div>
+      </div>
+      <button type="button" class="btn btn-outline-primary btn-sm" data-add-ubicacion>+ Agregar componente</button>
+    </div>
+    <div data-ubicaciones-list></div>
+  </div>
+</div>
+{% endif %}
 {% endfor %}
 </div>

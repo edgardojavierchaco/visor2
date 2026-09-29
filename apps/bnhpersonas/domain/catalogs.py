@@ -651,10 +651,63 @@ def valid_titulacion(
     )
 
 
+
+def common_curricular_spaces(modalidad_pk, nivel_id, titulaciones):
+    """Espacios presentes en TODAS las titulaciones indicadas.
+
+    Se devuelve una fila canónica de la primera titulación por cada nombre común,
+    manteniendo compatibilidad con el FK histórico espacio_curricular.
+    """
+    try:
+        ids = []
+        for value in titulaciones or []:
+            value = int(value)
+            if value not in ids:
+                ids.append(value)
+    except (TypeError, ValueError):
+        return EspacioCurricularNombre.objects.none()
+
+    if not ids:
+        return EspacioCurricularNombre.objects.none()
+
+    fuente = titulacion_source(modalidad_pk, nivel_id)
+    if not fuente or any(
+        not valid_titulacion(modalidad_pk, nivel_id, tid, fuente)
+        for tid in ids
+    ):
+        return EspacioCurricularNombre.objects.none()
+
+    # id_nombre_espacio_curricular identifica el espacio independientemente
+    # de la fila específica de cada titulación. La intersección se realiza
+    # sobre ese identificador y se devuelve la fila canónica de la primera.
+    common_space_ids = None
+    for tid in ids:
+        space_ids = set(
+            EspacioCurricularNombre.objects
+            .filter(id_titulacion=tid)
+            .exclude(nombre__isnull=True)
+            .exclude(nombre="")
+            .values_list("id_nombre_espacio_curricular", flat=True)
+        )
+        common_space_ids = space_ids if common_space_ids is None else common_space_ids & space_ids
+        if not common_space_ids:
+            return EspacioCurricularNombre.objects.none()
+
+    return (
+        EspacioCurricularNombre.objects
+        .filter(
+            id_titulacion=ids[0],
+            id_nombre_espacio_curricular__in=common_space_ids,
+        )
+        .order_by("nombre", "id_espacio_curricular")
+        .distinct("nombre")
+    )
+
 def curricular_catalogs(
     modalidad_pk,
     nivel_id=None,
     titulacion=None,
+    titulaciones_seleccionadas=None,
     tipo_personal=None,
     categoria=None,
 ):
@@ -835,6 +888,18 @@ def curricular_catalogs(
                 "nombre"
             )
         )
+
+    # MULTIPLAN: el espacio debe existir en TODAS las titulaciones seleccionadas.
+    multi_ids = []
+    for value in (titulaciones_seleccionadas or []):
+        try:
+            value = int(value)
+        except (TypeError, ValueError):
+            continue
+        if value not in multi_ids:
+            multi_ids.append(value)
+    if len(multi_ids) > 1:
+        espacios = common_curricular_spaces(modalidad_pk, nivel_id, multi_ids)
 
     # ========================================================
     # GRADOS / AÑOS

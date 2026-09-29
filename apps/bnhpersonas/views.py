@@ -480,6 +480,17 @@ def filtrar_datos_curriculares(request):
         modalidad = integer_param(request, "modalidad_curricular")
         nivel = integer_param(request, "nivel_curricular")
         titulacion = integer_param(request, "titulacion")
+        raw_multi = request.GET.getlist("titulaciones")
+        if len(raw_multi) == 1 and "," in raw_multi[0]:
+            raw_multi = raw_multi[0].split(",")
+        titulaciones = []
+        for raw in raw_multi:
+            try:
+                value = int(raw)
+            except (TypeError, ValueError):
+                continue
+            if value not in titulaciones:
+                titulaciones.append(value)
         tipo_personal = integer_param(request, "tipo_personal")
 
         if tipo_personal and not TipoPersonal.objects.filter(
@@ -491,6 +502,7 @@ def filtrar_datos_curriculares(request):
             modalidad,
             nivel,
             titulacion,
+            titulaciones_seleccionadas=titulaciones,
             tipo_personal=tipo_personal,
         )
 

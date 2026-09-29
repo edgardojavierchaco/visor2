@@ -33,6 +33,8 @@ from ..models import (
     HorarioActividad,
     Personas,
     RegistroActividades,
+    RegistroActividadUbicacion,
+    RegistroActividadTitulacion,
 )
 from .concurrency import (
     advisory_xact_lock,
@@ -264,8 +266,43 @@ def save_person(user, form):
     return _save_person_impl(user, form, operation_id=uuid.uuid4())
 
 
+def _sync_curricular_details(activity, *, ubicaciones, titulaciones):
+    """Sincroniza las tablas detalle del puesto ya persistido."""
+    RegistroActividadUbicacion.objects.filter(actividad=activity).delete()
+    if ubicaciones:
+        RegistroActividadUbicacion.objects.bulk_create([
+            RegistroActividadUbicacion(
+                actividad=activity,
+                grado_anio_id=row["grado"],
+                seccion_id=row["seccion"],
+                turno=row["turno"],
+                orden=index,
+            )
+            for index, row in enumerate(ubicaciones, start=1)
+        ])
+
+    RegistroActividadTitulacion.objects.filter(actividad=activity).delete()
+    if titulaciones and activity.titulacion_fuente:
+        RegistroActividadTitulacion.objects.bulk_create([
+            RegistroActividadTitulacion(
+                actividad=activity,
+                titulacion=tid,
+                titulacion_fuente=activity.titulacion_fuente,
+                orden=index,
+            )
+            for index, tid in enumerate(titulaciones, start=1)
+        ])
+
+
+
 def _save_activity_impl(user, form, persona, *, operation_id=None):
-    # Orden de bloqueo: persona -> actividad -> sede/horario.
+    """Guarda una actividad.
+
+    Reglas de ubicación:
+    - UNICA: un RegistroActividades / un id_puesto.
+    - MULTIPLE: un RegistroActividades / un id_puesto + varios componentes detalle.
+    Las secciones independientes se cargan como actividades separadas.
+    """
     person = get_object_or_404(
         Personas.objects.select_for_update().order_by("pk"),
         pk=persona.pk,
@@ -299,7 +336,6 @@ def _save_activity_impl(user, form, persona, *, operation_id=None):
         if not op_uuid:
             raise ValidationError("No se recibió el identificador de operación del cargo.")
 
-        # Idempotencia real: el mismo POST/reintento devuelve el registro ya creado.
         existing = (
             RegistroActividades.objects.select_for_update()
             .filter(uuid=op_uuid)
@@ -329,10 +365,27 @@ def _save_activity_impl(user, form, persona, *, operation_id=None):
     obj.usuario_modificacion = user
     obj.normalize()
 
-    # El ID Puesto se genera automáticamente. No forma parte del formulario.
-    from .id_puesto import asignar_id_puesto
-    asignar_id_puesto(obj, anterior=current)
+    ubicaciones = form.cleaned_data.get("ubicaciones_normalizadas") or []
+    titulaciones = form.cleaned_data.get("titulaciones_normalizadas") or []
+    tipo_ubicacion = form.cleaned_data.get("tipo_ubicacion") or "UNICA"
 
+    if titulaciones:
+        obj.titulacion = titulaciones[0]
+
+    from .id_puesto import asignar_id_puesto
+
+    # ------------------------------------------------------------
+    # UNICA / SECCION MULTIPLE
+    # Un solo RegistroActividades y un solo id_puesto.
+    # ------------------------------------------------------------
+    if ubicaciones:
+        first_loc = ubicaciones[0]
+        obj.grado_anio_id = first_loc["grado"]
+        obj.secciones_id = first_loc["seccion"]
+        obj.turno = first_loc["turno"]
+
+    obj.tipo_ubicacion = tipo_ubicacion
+    asignar_id_puesto(obj, anterior=current)
     obj.full_clean()
 
     duplicates = possible_activity_duplicates(obj, exclude_pk=obj.pk or None)
@@ -340,6 +393,11 @@ def _save_activity_impl(user, form, persona, *, operation_id=None):
         raise PossibleDuplicate(duplicates)
 
     obj.save()
+    _sync_curricular_details(
+        obj,
+        ubicaciones=ubicaciones[:1] if tipo_ubicacion == "UNICA" else ubicaciones,
+        titulaciones=titulaciones,
+    )
     audit(
         user,
         obj,
@@ -347,6 +405,7 @@ def _save_activity_impl(user, form, persona, *, operation_id=None):
         before,
         operation_id=op_uuid,
     )
+
     return obj
 
 
