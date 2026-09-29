@@ -614,7 +614,7 @@
 
             const url = new URL(opcionesFiltroUrl, window.location.href);
             url.searchParams.set("campo", campo);
-            const solicitud = apiDetalle.requestJson(url.toString(), {method: "GET"})
+            const solicitud = apiDetalle.requestJsonRead(url.toString())
                 .then(function (data) {
                     const opciones = data && data.opciones;
                     const opcionesValidas = Array.isArray(opciones) && opciones.every(function (opcion) {
@@ -1481,8 +1481,7 @@
         marcarBotonDetalleGrupo(button, true);
 
         try {
-          const respuesta = await apiDetalle.requestJson(url.toString(), {
-            method: "GET",
+          const respuesta = await apiDetalle.requestJsonRead(url.toString(), {
             credentials: "same-origin",
           });
           const cargos = Array.isArray(respuesta.cargos)

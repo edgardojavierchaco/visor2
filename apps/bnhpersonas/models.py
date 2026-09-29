@@ -868,6 +868,11 @@ class RegistroActividades(AuditoriaModel):
     )
     
     secciones=models.ForeignKey('Secciones', on_delete=models.PROTECT, null=True, blank=True)
+
+    seccion_multiple = models.BooleanField(
+        default=False,
+        choices=[(False, 'NO'), (True, 'SÍ')],
+    )
     
     espacios = models.ForeignKey(
         'TitulosEspacios',

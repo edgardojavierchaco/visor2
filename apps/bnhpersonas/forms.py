@@ -170,6 +170,7 @@ class ActividadDirectorForm(StyledForm):
             "grado_anio",
             "turno",
             "secciones",
+            "seccion_multiple",
             # Fechas / funciones
             "f_desde",
             "f_hasta",
@@ -192,6 +193,7 @@ class ActividadDirectorForm(StyledForm):
             "espacio_curricular": "Espacio curricular",
             "grado_anio": "Grado / Año",
             "secciones": "Sección",
+            "seccion_multiple": "Sección múltiple",
             "f_desde": "Inicio del cargo",
             "f_hasta": "Fin del cargo (si corresponde)",
             "f_desde_funciones": "Inicio de funciones",
@@ -324,6 +326,7 @@ class ActividadDirectorForm(StyledForm):
                 "espacio_curricular",
                 "grado_anio",
                 "secciones",
+                "seccion_multiple",
             ):
                 self.fields[name].required = False
         else:
@@ -422,6 +425,7 @@ class ActividadDirectorForm(StyledForm):
             data["espacio_curricular"] = None
             data["grado_anio"] = None
             data["secciones"] = None
+            data["seccion_multiple"] = False
             return data
 
         # ====================================================
