@@ -1,4 +1,5 @@
 {% extends 'reunidas_pof/layout_pof.html' %}
+{% load static %}
 {% block content %}
 
 <div class="pof-page">
@@ -146,6 +147,7 @@
     </div>
 </div>
 
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}?v=20260924-1"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     var form = document.getElementById("crearReunidaForm");
@@ -332,19 +334,18 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         submitButton.disabled = true;
         try {
-            var response = await fetch("{% url 'reunidas_pof:previsualizar_reunida_base' %}?" + params.toString(), {
-                headers: {"X-Requested-With": "XMLHttpRequest"},
-            });
-            var datos = await response.json();
-            if (!response.ok || !datos.ok) {
-                mostrarErroresFormulario(datos);
-                return;
-            }
+            var datos = await window.pofApi.requestJsonRead(
+                "{% url 'reunidas_pof:previsualizar_reunida_base' %}?" + params.toString()
+            );
             abrirModal(datos);
         } catch (error) {
-            mostrarErrorGeneral(
-                "No se pudo verificar la base de la POF. Intentá nuevamente."
-            );
+            if (error && error.data) {
+                mostrarErroresFormulario(error.data);
+            } else {
+                mostrarErrorGeneral(
+                    "No se pudo verificar la base de la POF. Intentá nuevamente."
+                );
+            }
         } finally {
             submitButton.disabled = false;
         }

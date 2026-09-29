@@ -65,17 +65,126 @@
         summary.classList.remove("pof-hidden");
     }
 
-    function crearCelda(valor, etiqueta) {
-        const celda = document.createElement("td");
-        celda.textContent = valorVisible(valor);
-        celda.dataset.label = etiqueta;
-        return celda;
+    function crearBloqueObservacion(etiqueta, valor, clase) {
+        const bloque = document.createElement("div");
+        bloque.className = "pof-observation-timeline-value " + (clase || "");
+
+        const label = document.createElement("span");
+        label.className = "pof-observation-timeline-value-label";
+        label.textContent = etiqueta;
+
+        const texto = document.createElement("div");
+        texto.className = "pof-observation-timeline-value-text";
+        texto.textContent = valorVisible(valor);
+
+        bloque.appendChild(label);
+        bloque.appendChild(texto);
+        return bloque;
     }
 
-    function crearEncabezado(titulo) {
-        const th = document.createElement("th");
-        th.textContent = titulo;
-        return th;
+    function crearEventoTimeline(evento, indice, abiertoPorDefecto) {
+        const entrada = document.createElement("div");
+        entrada.className = "pof-observation-timeline-entry";
+        entrada.style.setProperty("--pof-observation-event-index", String(indice));
+
+        const nodo = document.createElement("span");
+        nodo.className = "pof-observation-timeline-node";
+        nodo.setAttribute("aria-hidden", "true");
+        entrada.appendChild(nodo);
+
+        const tarjeta = document.createElement("article");
+        tarjeta.className = "pof-observation-timeline-card";
+
+        const cabecera = document.createElement("div");
+        cabecera.className = "pof-observation-timeline-head";
+
+        const meta = document.createElement("div");
+        meta.className = "pof-observation-timeline-meta";
+
+        const fecha = document.createElement("span");
+        fecha.className = "pof-observation-timeline-date";
+        fecha.textContent = valorVisible(evento.fecha);
+
+        const usuario = document.createElement("span");
+        usuario.className = "pof-observation-timeline-user";
+        usuario.textContent = valorVisible(evento.usuario);
+
+        meta.appendChild(fecha);
+        meta.appendChild(usuario);
+
+        const badge = document.createElement("span");
+        badge.className =
+            "pof-observation-timeline-badge " +
+            (evento.tipo_evento === "inicial"
+                ? "pof-observation-timeline-badge-initial"
+                : "pof-observation-timeline-badge-change");
+        badge.textContent =
+            evento.label ||
+            (evento.tipo_evento === "inicial"
+                ? "Observación inicial"
+                : "Observación modificada");
+
+        cabecera.appendChild(meta);
+        cabecera.appendChild(badge);
+        tarjeta.appendChild(cabecera);
+
+        if (evento.tipo_evento === "inicial") {
+            tarjeta.appendChild(
+                crearBloqueObservacion(
+                    "Valor inicial",
+                    evento.valor_inicial || evento.resumen,
+                    "pof-observation-timeline-value-initial"
+                )
+            );
+        } else {
+            const resumen = document.createElement("div");
+            resumen.className = "pof-observation-timeline-current";
+            resumen.textContent = valorVisible(
+                evento.resumen || evento.observacion_nueva
+            );
+            tarjeta.appendChild(resumen);
+
+            const acciones = document.createElement("div");
+            acciones.className = "pof-observation-timeline-actions";
+            const toggle = document.createElement("button");
+            toggle.type = "button";
+            toggle.className = "pof-observation-timeline-toggle";
+            toggle.setAttribute("aria-expanded", abiertoPorDefecto ? "true" : "false");
+            toggle.textContent = abiertoPorDefecto ? "Ocultar cambio" : "Ver cambio";
+            acciones.appendChild(toggle);
+            tarjeta.appendChild(acciones);
+
+            const detalle = document.createElement("div");
+            detalle.className = "pof-observation-timeline-change";
+            if (!abiertoPorDefecto) {
+                detalle.classList.add("pof-hidden");
+            }
+            detalle.appendChild(
+                crearBloqueObservacion(
+                    "Antes",
+                    evento.observacion_anterior,
+                    "pof-observation-timeline-value-before"
+                )
+            );
+            detalle.appendChild(
+                crearBloqueObservacion(
+                    "Después",
+                    evento.observacion_nueva,
+                    "pof-observation-timeline-value-after"
+                )
+            );
+            tarjeta.appendChild(detalle);
+
+            toggle.addEventListener("click", function () {
+                const abrir = detalle.classList.contains("pof-hidden");
+                detalle.classList.toggle("pof-hidden", !abrir);
+                toggle.setAttribute("aria-expanded", abrir ? "true" : "false");
+                toggle.textContent = abrir ? "Ocultar cambio" : "Ver cambio";
+            });
+        }
+
+        entrada.appendChild(tarjeta);
+        return entrada;
     }
 
     function renderizarGrupo(cargo, mostrarOrigen) {
@@ -85,37 +194,34 @@
         }
 
         const section = document.createElement("section");
-        section.className = "pof-detail-section pof-quantity-history-group";
-        const title = document.createElement("h3");
-        title.textContent = mostrarOrigen
-            ? "Registro físico #" + valorVisible(cargo.id) + " · CEIC " + valorVisible(cargo.ceic)
-            : "Cambios de observación";
-        section.appendChild(title);
+        section.className = "pof-observation-timeline-group";
 
-        const wrap = document.createElement("div");
-        wrap.className = "pof-table-wrap pof-observation-history-table-wrap";
-        const table = document.createElement("table");
-        table.className = "pof-grid-table pof-observation-history-table";
-        const thead = document.createElement("thead");
-        const headerRow = document.createElement("tr");
-        ["Fecha", "Anterior", "Nueva", "Usuario"].forEach(function (titulo) {
-            headerRow.appendChild(crearEncabezado(titulo));
-        });
-        thead.appendChild(headerRow);
-        table.appendChild(thead);
+        if (mostrarOrigen) {
+            const title = document.createElement("h3");
+            title.className = "pof-observation-timeline-group-title";
+            title.textContent =
+                "Registro físico #" + valorVisible(cargo.id) +
+                " · CEIC " + valorVisible(cargo.ceic);
+            section.appendChild(title);
+        }
 
-        const tbody = document.createElement("tbody");
-        movimientos.forEach(function (movimiento) {
-            const row = document.createElement("tr");
-            row.appendChild(crearCelda(movimiento.fecha, "Fecha"));
-            row.appendChild(crearCelda(movimiento.observacion_anterior, "Anterior"));
-            row.appendChild(crearCelda(movimiento.observacion_nueva, "Nueva"));
-            row.appendChild(crearCelda(movimiento.usuario, "Usuario"));
-            tbody.appendChild(row);
+        const timeline = document.createElement("div");
+        timeline.className = "pof-observation-timeline";
+        const indiceModificacionReciente = movimientos.findIndex(function (movimiento) {
+            return movimiento.tipo_evento === "modificacion";
         });
-        table.appendChild(tbody);
-        wrap.appendChild(table);
-        section.appendChild(wrap);
+
+        movimientos.forEach(function (movimiento, indice) {
+            timeline.appendChild(
+                crearEventoTimeline(
+                    movimiento,
+                    indice,
+                    indice === indiceModificacionReciente
+                )
+            );
+        });
+
+        section.appendChild(timeline);
         return section;
     }
 
@@ -131,7 +237,7 @@
         api.clearStatus(status);
 
         if (!payload.modificado || !cargosConCambios.length) {
-            api.showStatus(status, "info", "No hay cambios reales de observación para este cargo.");
+            api.showStatus(status, "info", "No hay historial de observación registrado para este cargo.");
             return;
         }
 
@@ -183,8 +289,7 @@
         api.showStatus(status, "info", "Cargando historial de observación...");
 
         try {
-            const respuesta = await api.requestJson(construirUrl(cargoIds), {
-                method: "GET",
+            const respuesta = await api.requestJsonRead(construirUrl(cargoIds), {
                 credentials: "same-origin"
             });
             renderizarHistorial(respuesta.data || {});

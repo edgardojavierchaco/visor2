@@ -17,7 +17,7 @@
         </div>
         <div class="pof-view-header-copy">
             <h1>{{ cabecera_detalle_nombre|upper }} {{ reunida.anio }}{% if reunida.nivel %} &middot; {{ reunida.nivel }}{% endif %}</h1>
-            <p>{% if es_proyecto_especial %}Detalle operativo de cargos del Proyecto Especial por CUE/Anexo o CUOF, seg&uacute;n la identidad disponible.{% else %}Revisión operativa de cargos por CUE, anexos y CUOF de la POF.{% endif %}</p>
+            <p>{% if es_proyecto_especial %}Detalle operativo de cargos del Proyecto Especial por CUE/Anexo o CUOF, seg&uacute;n la identidad disponible.{% else %}Revisión operativa de cargos por CUEANEXO, agrupados visualmente por CUE y CUOF de la POF.{% endif %}</p>
         </div>
     </div>
 
@@ -201,6 +201,10 @@
                                 {% endif %}
                                 <span class="pof-cue-separator">&middot;</span>
                                 <span class="pof-cue-name">{{ grupo_proyecto.establecimiento|default:"Proyecto Especial" }}</span>
+                                <span class="pof-cue-info-placeholder" title="Códigos Anexo POF vigentes del propietario">
+                                    <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">label</span>
+                                    Anexo POF: {% if grupo_proyecto.codigos_anexo_pof %}{{ grupo_proyecto.codigos_anexo_pof|join:", " }}{% else %}—{% endif %}
+                                </span>
                                 {% if grupo_proyecto.tipo_identidad == "CUE" and grupo_proyecto.info_cue %}
                                     <button type="button"
                                             class="pof-cue-info-placeholder pof-cue-info-button"
@@ -219,7 +223,7 @@
                     <div class="pof-cue-totals-row" aria-label="Totales del grupo">
                         <div class="pof-cue-total">
                             {% if grupo_proyecto.tipo_identidad == "CUE" %}
-                                <span><span class="pof-cue-total-icon pof-cue-total-filled-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> Total anexos</span>
+                                <span><span class="pof-cue-total-icon pof-cue-total-filled-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> Total CUEANEXO</span>
                                 <strong>{{ grupo_proyecto.total_anexos|default:0 }}</strong>
                             {% else %}
                                 <span><span class="pof-cue-total-icon pof-material-symbol pof-icon-view-apps material-symbols-outlined" aria-hidden="true">view_apps</span> Total localizaciones</span>
@@ -253,6 +257,8 @@
                                     {% else %}
                                         <th>Establecimiento / Referencia</th>
                                     {% endif %}
+                                    <th>Zona Educativa</th>
+                                    <th>Puntos Zona</th>
                                     <th>Cargos</th>
                                     <th>Acci&oacute;n</th>
                                 </tr>
@@ -271,6 +277,14 @@
                                         {% else %}
                                             <td>{{ localizacion.establecimiento|default:"—" }}</td>
                                         {% endif %}
+                                        <td>
+                                            {% if localizacion.zona_educativa %}
+                                                {{ localizacion.zona_educativa_tipo|default:"" }} &middot; {{ localizacion.zona_educativa }}
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ localizacion.puntos_zona_educativa|default_if_none:"—" }}</td>
                                         <td>{{ localizacion.cantidad_cargos|default:0 }}</td>
                                         <td>
                                             <div class="pof-actions">
@@ -291,7 +305,7 @@
                                                        class="pof-btn pof-btn-light"
                                                        aria-label="Administrar cargos de esta localizaci&oacute;n"
                                                        title="Administrar cargos de esta localizaci&oacute;n">
-                                                         <span class="pof-action-icon pof-material-symbol pof-icon-settings material-symbols-outlined" aria-hidden="true">settings_account_box</span> Administrar
+                                                        <span class="pof-action-icon pof-material-symbol pof-icon-settings material-symbols-outlined" aria-hidden="true">settings_account_box</span> Administrar
                                                     </a>
                                                 {% endif %}
                                             </div>
@@ -300,7 +314,7 @@
                                     <tr class="pof-hidden pof-detalle-grupo-row"
                                         data-detalle-grupo-row="true"
                                         hidden>
-                                        <td colspan="5">
+                                        <td colspan="7">
                                             <div id="detalle-proyecto-grupo-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
                                                  data-detalle-grupo-contenido="true"></div>
                                         </td>
@@ -544,12 +558,12 @@
 
             {% if mostrar_resumen_detalle %}
                 <div class="pof-detalle-search-summary">
-                    <strong><span class="pof-detail-search-summary-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">star</span><span>Resultado de búsqueda: {{ resumen_coincidencias_detalle.cargos|default:0 }} cargos · {{ resumen_coincidencias_detalle.cues|default:0 }} CUE · {{ resumen_coincidencias_detalle.anexos|default:0 }} Anexos</span></strong>
-                    <span>Los totales de cada CUE corresponden al CUE completo dentro del alcance mostrado.</span>
+                    <strong><span class="pof-detail-search-summary-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">star</span><span>Resultado de búsqueda: {{ resumen_coincidencias_detalle.cargos|default:0 }} cargos · {{ resumen_coincidencias_detalle.cueanexos|default:0 }} CUEANEXO · {{ resumen_coincidencias_detalle.cues|default:0 }} CUE</span></strong>
+                    <span>Cada CUEANEXO se cuenta como una localización; los totales de cada CUE conservan el CUE completo dentro del alcance mostrado.</span>
                 </div>
             {% elif not filtros_detalle_activos %}
                 <div class="pof-list-status">
-                    <span><span class="pof-detail-results-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">list_alt</span> Resultados: Mostrando CUE {{ paginacion_grupos_detalle.showing_start }}-{{ paginacion_grupos_detalle.showing_end }} de {{ paginacion_grupos_detalle.total }}.</span>
+                    <span><span class="pof-detail-results-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">list_alt</span> Resultados: Mostrando CUEANEXO {{ paginacion_grupos_detalle.showing_start }}-{{ paginacion_grupos_detalle.showing_end }} de {{ paginacion_grupos_detalle.total }}.</span>
                 </div>
             {% endif %}
         {% endif %}
@@ -566,6 +580,10 @@
                             <div class="pof-cue-title">
                                 <strong>CUE {{ grupo_cue.cue|default:"—" }}</strong>
                                 <span>{{ grupo_cue.establecimiento|default_if_none:""|default:"Sin establecimiento" }}</span>
+                                <span class="pof-cue-info-placeholder" title="Códigos Anexo POF vigentes del CUE">
+                                    <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">label</span>
+                                    Anexo POF: {% if grupo_cue.codigos_anexo_pof %}{{ grupo_cue.codigos_anexo_pof|join:", " }}{% else %}—{% endif %}
+                                </span>
                             </div>
 
                             <span class="pof-cue-info-placeholder" title="Acción prevista para una próxima etapa">
@@ -573,7 +591,7 @@
                             </span>
 
                             <div class="pof-cue-total">
-                                <span>Total anexos</span>
+                                <span>Total CUEANEXO</span>
                                 <strong>{{ grupo_cue.total_anexos|default:0 }}</strong>
                             </div>
 
@@ -595,6 +613,8 @@
                                         <th>Anexo</th>
                                         <th>CUEANEXO</th>
                                         <th>CUOF</th>
+                                        <th>Zona Educativa</th>
+                                        <th>Puntos Zona</th>
                                         <th>Oferta / Tipo</th>
                                         <th>CEIC</th>
                                         <th>Cantidad</th>
@@ -615,6 +635,14 @@
                                                 <td>{{ grupo_anexo.anexo|default:"—" }}</td>
                                                 <td>{{ grupo_anexo.cueanexo|default_if_none:""|default:"—" }}</td>
                                                 <td>{{ grupo_anexo.cuof|default_if_none:""|default:"—" }}</td>
+                                                <td>
+                                                    {% if grupo_anexo.zona_educativa %}
+                                                        {{ grupo_anexo.zona_educativa_tipo|default:"" }} &middot; {{ grupo_anexo.zona_educativa }}
+                                                    {% else %}
+                                                        —
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ grupo_anexo.puntos_zona_educativa|default_if_none:"—" }}</td>
                                                 <td>{{ grupo_anexo.oferta_tipo|default_if_none:""|default:"—" }}</td>
                                                 <td>{{ cargo.ceic|default:"—" }}</td>
                                                 <td>
@@ -682,6 +710,10 @@
                             <span class="pof-cue-code"><span class="pof-cue-code-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">apartment</span> CUE {{ grupo_cue.cue|default:"—" }}</span>
                             <span class="pof-cue-separator">&middot;</span>
                             <span class="pof-cue-name">{{ grupo_cue.establecimiento|default_if_none:""|default:"Sin establecimiento" }}</span>
+                            <span class="pof-cue-info-placeholder" title="Códigos Anexo POF vigentes del CUE">
+                                <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">label</span>
+                                Anexo POF: {% if grupo_cue.codigos_anexo_pof %}{{ grupo_cue.codigos_anexo_pof|join:", " }}{% else %}—{% endif %}
+                            </span>
                             {% if grupo_cue.info_cue %}
                                 <button type="button"
                                         class="pof-cue-info-placeholder pof-cue-info-button"
@@ -699,7 +731,7 @@
 
                 <div class="pof-cue-totals-row" aria-label="Totales del CUE">
                     <div class="pof-cue-total">
-                        <span><span class="pof-cue-total-icon pof-cue-total-filled-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> Total anexos</span>
+                        <span><span class="pof-cue-total-icon pof-cue-total-filled-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">folder</span> Total CUEANEXO</span>
                         <strong>{{ grupo_cue.total_anexos|default:0 }}</strong>
                     </div>
 
@@ -721,6 +753,8 @@
                                 <th>Anexo</th>
                                 <th>CUI</th>
                                 <th>CUOF</th>
+                                <th>Zona Educativa</th>
+                                <th>Puntos Zona</th>
                                 <th>Cargos</th>
                                 <th>Acci&oacute;n</th>
                             </tr>
@@ -731,6 +765,14 @@
                                     <td>{{ grupo_anexo.anexo|default:"—" }}</td>
                                     <td>{{ grupo_anexo.cui|default_if_none:""|default:"" }}</td>
                                     <td>{{ grupo_anexo.cuof|default_if_none:""|default:"—" }}</td>
+                                    <td>
+                                        {% if grupo_anexo.zona_educativa %}
+                                            {{ grupo_anexo.zona_educativa_tipo|default:"" }} &middot; {{ grupo_anexo.zona_educativa }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ grupo_anexo.puntos_zona_educativa|default_if_none:"—" }}</td>
                                     <td>{{ grupo_anexo.cantidad_cargos|default:0 }}</td>
                                     <td>
                                         <div class="pof-actions">
@@ -757,14 +799,14 @@
                                 <tr class="pof-hidden pof-detalle-grupo-row"
                                     data-detalle-grupo-row="true"
                                     hidden>
-                                    <td colspan="5">
+                                    <td colspan="7">
                                         <div id="detalle-grupo-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
                                              data-detalle-grupo-contenido="true"></div>
                                     </td>
                                 </tr>
                             {% empty %}
                                 <tr>
-                                    <td colspan="5" class="pof-grid-empty">No hay anexos cargados para este CUE.</td>
+                                    <td colspan="7" class="pof-grid-empty">No hay anexos cargados para este CUE.</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -823,7 +865,7 @@
                 <div class="pof-note">{{ mensaje_detalle }}</div>
             {% elif filtros_detalle_activos %}
                 <div class="pof-detalle-empty">
-                    No hay grupos CUE que coincidan con los filtros aplicados.
+                    No hay CUEANEXO que coincidan con los filtros aplicados.
                 </div>
             {% else %}
                 <div class="pof-detalle-empty">
@@ -833,13 +875,13 @@
         {% endif %}
 
         {% if paginacion_grupos_detalle.total %}
-            <div class="pof-table-footer" aria-label="Paginaci&oacute;n de grupos CUE">
+            <div class="pof-table-footer" aria-label="Paginaci&oacute;n por CUEANEXO">
                 <div class="pof-page-size">
-                    Mostrando CUE {{ paginacion_grupos_detalle.showing_start }}-{{ paginacion_grupos_detalle.showing_end }} de {{ paginacion_grupos_detalle.total }}
+                    Mostrando CUEANEXO {{ paginacion_grupos_detalle.showing_start }}-{{ paginacion_grupos_detalle.showing_end }} de {{ paginacion_grupos_detalle.total }}
                 </div>
 
                 {% if paginacion_grupos_detalle.paginator.num_pages > 1 %}
-                    <nav class="pof-pagination" aria-label="Paginaci&oacute;n de grupos CUE">
+                    <nav class="pof-pagination" aria-label="Paginaci&oacute;n por CUEANEXO">
                         {% if paginacion_grupos_detalle.page_obj.has_previous %}
                             <a class="pof-page-btn" href="{% if paginacion_grupos_detalle.query_params_base %}?{{ paginacion_grupos_detalle.query_params_base }}&amp;{% else %}?{% endif %}page={{ paginacion_grupos_detalle.page_obj.previous_page_number }}">Anterior</a>
                         {% else %}
@@ -877,11 +919,11 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
-<script src="{% static 'reunidas_pof/js/historial_cantidad.js' %}"></script>
-<script src="{% static 'reunidas_pof/js/historial_observacion.js' %}?v=20260716-1"></script>
-<script src="{% static 'reunidas_pof/js/historial_estado.js' %}"></script>
-<script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20260717-2"></script>
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}?v=20260924-1"></script>
+<script src="{% static 'reunidas_pof/js/historial_cantidad.js' %}?v=20260924-1"></script>
+<script src="{% static 'reunidas_pof/js/historial_observacion.js' %}?v=20260924-1"></script>
+<script src="{% static 'reunidas_pof/js/historial_estado.js' %}?v=20260924-1"></script>
+<script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20260924-7"></script>
 <script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260829-1"></script>
-    <script src="{% static 'reunidas_pof/js/detalle_reunida.js' %}?v=20260829-1"></script>
+    <script src="{% static 'reunidas_pof/js/detalle_reunida.js' %}?v=20260924-1"></script>
 {% endblock %}

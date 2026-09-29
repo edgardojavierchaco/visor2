@@ -1,0 +1,142 @@
+.pof-anexo-domain-note {
+    line-height: 1.5;
+}
+
+.pof-anexo-inline-form,
+.pof-anexo-associate-box {
+    align-items: flex-end;
+    display: flex;
+    gap: 12px;
+}
+
+.pof-anexo-grow {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.pof-anexo-owner-form {
+    align-items: end;
+}
+
+.pof-anexo-owner-submit {
+    align-items: flex-end;
+    display: flex;
+}
+
+.pof-anexo-owner-submit .pof-btn {
+    width: 100%;
+}
+
+.pof-anexo-cuof-note {
+    margin-top: 14px;
+}
+
+.pof-anexo-owner-panel {
+    margin-top: 16px;
+}
+
+.pof-anexo-owner-banner {
+    align-items: center;
+    background: var(--pof-primary-soft);
+    border: 1px solid var(--pof-border);
+    border-radius: 10px;
+    display: flex;
+    gap: 14px;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    padding: 12px 14px;
+}
+
+.pof-anexo-owner-caption {
+    color: var(--pof-muted);
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+}
+
+.pof-anexo-owner-banner strong {
+    color: var(--pof-primary-dark);
+    font-size: 17px;
+}
+
+.pof-anexo-associate-box {
+    background: #F8FAFF;
+    border: 1px solid var(--pof-border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    padding: 14px;
+}
+
+.pof-anexo-field-help {
+    color: var(--pof-muted);
+    display: block;
+    font-size: 12px;
+    line-height: 1.35;
+    margin-top: 5px;
+}
+
+.pof-anexo-subtitle {
+    color: var(--pof-text);
+    font-size: 16px;
+    font-weight: 800;
+    margin: 18px 0 8px;
+}
+
+.pof-anexo-history-title {
+    margin-top: 22px;
+}
+
+.pof-anexo-retired-badge {
+    background: #FFF8E5;
+    color: #8A5A00;
+}
+
+.pof-anexo-code {
+    color: var(--pof-primary-dark);
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.pof-anexo-action-note {
+    color: var(--pof-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.pof-anexo-admin-page .pof-grid-action-btn[disabled] {
+    cursor: not-allowed;
+    opacity: .55;
+    transform: none;
+}
+
+@media (max-width: 820px) {
+    .pof-anexo-owner-form .pof-col-3,
+    .pof-anexo-owner-form .pof-col-6 {
+        grid-column: span 12;
+    }
+
+    .pof-anexo-inline-form,
+    .pof-anexo-associate-box {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .pof-anexo-inline-form .pof-btn,
+    .pof-anexo-associate-box .pof-btn {
+        width: 100%;
+    }
+}
+
+@media (max-width: 560px) {
+    .pof-anexo-owner-banner {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .pof-anexo-owner-banner .pof-btn {
+        width: 100%;
+    }
+}

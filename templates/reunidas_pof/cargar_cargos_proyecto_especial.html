@@ -180,6 +180,54 @@
             <div id="detalleSeleccion"></div>
         </div>
 
+        <div id="bloqueZonaEducativa" class="pof-card pof-card-accent pof-cabecera-load-card pof-hidden">
+            <h2>3. Datos POF de la referencia</h2>
+            <div class="pof-help">
+                La Zona Educativa es obligatoria y se resuelve por la identidad de la carga. El C&oacute;digo Anexo POF es informativo, se toma del CUE cuando existe y s&oacute;lo usa CUOF como fallback cuando no hay CUE.
+            </div>
+
+            <div class="pof-grid">
+                <div class="pof-field pof-col-4">
+                    <label for="zonaEducativaTipo">Tipo de Zona</label>
+                    <span class="pof-native-select-wrap">
+                        <select id="zonaEducativaTipo" class="pof-form-select" disabled>
+                            <option value="">Seleccion&aacute; un tipo</option>
+                            <option value="URBANA">Urbana</option>
+                            <option value="RURAL">Rural</option>
+                        </select>
+                    </span>
+                </div>
+
+                <div class="pof-field pof-col-4">
+                    <label for="zonaEducativaSelect">Zona Educativa</label>
+                    <span class="pof-native-select-wrap">
+                        <select id="zonaEducativaSelect" class="pof-form-select" disabled>
+                            <option value="">Seleccion&aacute; una zona</option>
+                        </select>
+                    </span>
+                </div>
+
+                <div class="pof-field pof-col-4">
+                    <label for="puntosZonaEducativa">Puntos Zona Educativa</label>
+                    <input type="number" id="puntosZonaEducativa" min="1" step="1" readonly>
+                </div>
+
+                <div class="pof-field pof-col-12">
+                    <label for="anexoPofCodigos">C&oacute;digo(s) Anexo POF</label>
+                    <input type="text"
+                           id="anexoPofCodigos"
+                           class="pof-locked-control"
+                           readonly
+                           placeholder="Sin Código Anexo POF asociado">
+                    <div id="anexoPofHint" class="pof-field-hint">
+                        Dato vigente del propietario administrativo. Se administra desde Anexo POF y no se modifica desde esta carga.
+                    </div>
+                </div>
+            </div>
+
+            <div id="estadoZonaEducativa" class="pof-status"></div>
+        </div>
+
         <div id="bloqueCargos" class="pof-cargo-entry pof-hidden">
             <div class="pof-cargo-entry-panel">
                 <h2>Cargos a cargar</h2>
@@ -338,9 +386,14 @@
 {% url 'reunidas_pof:buscar_cuof_manual_proyecto_especial' as url_buscar_cuof_manual_pe %}
 {% url 'reunidas_pof:catalogo_ceic_proyecto_especial' as url_catalogo_ceic_pe %}
 {% url 'reunidas_pof:guardar_carga_proyecto_especial' as url_guardar_carga_pe %}
+{% url 'reunidas_pof:zona_educativa_catalogo' as url_zona_educativa_catalogo %}
+{% url 'reunidas_pof:zona_educativa_vigente' as url_zona_educativa_vigente %}
+{% url 'reunidas_pof:anexo_pof_asociaciones' as url_anexo_pof_asociaciones %}
 {% url 'reunidas_pof:detalle_reunida' as url_detalle_reunida %}
+{% url 'reunidas_pof:exportar_reunida' as url_exportar_reunida %}
 <script id="cargarCargosProyectoEspecialConfig" type="application/json">
 {
+    "cuofInicial": "{{ cuof_inicial|default_if_none:''|escapejs }}",
     "proyectoEspecial": {
         "id": "{{ proyecto_especial.id|default_if_none:''|escapejs }}",
         "anio": "{{ proyecto_especial.anio|default_if_none:''|escapejs }}",
@@ -363,7 +416,11 @@
         "buscarCuofManual": "{{ url_buscar_cuof_manual_pe|escapejs }}",
         "catalogoCeic": "{{ url_catalogo_ceic_pe|escapejs }}",
         "guardarCarga": "{{ url_guardar_carga_pe|escapejs }}",
-        "detalleReunida": "{{ url_detalle_reunida|escapejs }}"
+        "zonaEducativaCatalogo": "{{ url_zona_educativa_catalogo|escapejs }}",
+        "zonaEducativaVigente": "{{ url_zona_educativa_vigente|escapejs }}",
+        "anexoPofAsociaciones": "{{ url_anexo_pof_asociaciones|escapejs }}",
+        "detalleReunida": "{{ url_detalle_reunida|escapejs }}",
+        "exportarReunida": "{{ url_exportar_reunida|escapejs }}"
     }
 }
 </script>
@@ -371,6 +428,6 @@
     {% include "reunidas_pof/_helpers_carga_cargos_comunes.html" %}
 </script>
 <script src="{% static 'reunidas_pof/js/carga_cargos_comun.js' %}?v=20260828-1"></script>
-<script src="{% static 'reunidas_pof/js/cargar_cargos_proyecto_especial.js' %}?v=20260828-1"></script>
+<script src="{% static 'reunidas_pof/js/cargar_cargos_proyecto_especial.js' %}?v=20260924-1"></script>
 {% endif %}
 {% endblock %}

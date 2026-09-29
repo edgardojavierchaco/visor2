@@ -291,8 +291,7 @@
     api.showStatus(status, "info", "Cargando historial de Estado POF...");
 
     try {
-      const respuesta = await api.requestJson(construirUrl(cargoIds), {
-        method: "GET",
+      const respuesta = await api.requestJsonRead(construirUrl(cargoIds), {
         credentials: "same-origin",
       });
 

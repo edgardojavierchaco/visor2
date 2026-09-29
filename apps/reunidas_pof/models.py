@@ -687,6 +687,695 @@ class LocalizacionPof(models.Model):
         return f"Proyectos Especiales POF - CUOF {self.cuof}"
 
 
+# ANEXO POF LEGACY 0014 - SOLO COMPATIBILIDAD DE ESQUEMA --------------------------------------------------
+#
+# Estas clases preservan el estado ORM de las tablas creadas por la migración 0014
+# hasta que exista una decisión explícita de retiro físico. Ningún circuito vigente
+# de Anexo POF debe leerlas ni escribirlas. El dominio canónico comienza más abajo
+# en CatalogoAnexoPof / AsociacionAnexoPof.
+#
+# No eliminar estas clases aisladamente: hacerlo haría que un futuro makemigrations
+# proponga DeleteModel sobre las tablas legacy.
+
+class AsignacionAnexoPof(models.Model):
+    """
+    MODELO LEGACY 0014. No utilizar en funcionalidad nueva ni vigente.
+
+    Se conserva exclusivamente para mantener alineado el estado de modelos con las
+    tablas históricas mientras el dominio canónico opera por CUE/CUOF.
+    """
+
+    reunida = models.ForeignKey(
+        ReunidaPof,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="asignaciones_anexo_pof",
+        verbose_name="Reunida POF",
+    )
+
+    proyecto_especial = models.ForeignKey(
+        ProyectosEspecialesPof,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="asignaciones_anexo_pof",
+        verbose_name="Proyecto Especial POF",
+    )
+
+    cueanexo = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        verbose_name="CUEANEXO",
+    )
+
+    cuof = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name="CUOF",
+    )
+
+    codigo = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        verbose_name="Código Anexo POF",
+    )
+
+    usuario_actualizacion = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="asignaciones_anexo_pof_actualizadas",
+        verbose_name="Usuario de última actualización",
+    )
+
+    creado_en = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Creado en",
+    )
+
+    actualizado_en = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Actualizado en",
+    )
+
+    class Meta:
+        db_table = '"reunidas_pof"."asignacion_anexo_pof"'
+        verbose_name = "Asignación de Anexo POF"
+        verbose_name_plural = "Asignaciones de Anexo POF"
+
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    (
+                        models.Q(
+                            reunida__isnull=False,
+                            proyecto_especial__isnull=True,
+                            cuof="",
+                        )
+                        & ~models.Q(cueanexo="")
+                    )
+                    |
+                    (
+                        models.Q(
+                            reunida__isnull=True,
+                            proyecto_especial__isnull=False,
+                            cueanexo="",
+                        )
+                        & ~models.Q(cuof="")
+                    )
+                ),
+                name="ck_anexo_pof_identidad_cabecera",
+            ),
+            models.UniqueConstraint(
+                fields=["reunida", "cueanexo"],
+                condition=models.Q(reunida__isnull=False),
+                name="uq_anexo_pof_reunida_cue",
+            ),
+            models.UniqueConstraint(
+                fields=["proyecto_especial", "cuof"],
+                condition=models.Q(proyecto_especial__isnull=False),
+                name="uq_anexo_pof_proyecto_cuof",
+            ),
+        ]
+
+    def clean(self):
+        """
+        Refuerza las dos identidades válidas y normaliza el código sin alterar su contenido.
+        """
+        super().clean()
+
+        self.cueanexo = str(self.cueanexo or "").strip()
+        self.cuof = str(self.cuof or "").strip()
+        self.codigo = str(self.codigo or "").strip()
+
+        tiene_reunida = bool(self.reunida_id)
+        tiene_proyecto = bool(self.proyecto_especial_id)
+
+        if tiene_reunida == tiene_proyecto:
+            raise ValidationError({
+                "reunida": "La asignación debe pertenecer a una única cabecera POF.",
+                "proyecto_especial": "La asignación debe pertenecer a una única cabecera POF.",
+            })
+
+        if tiene_reunida:
+            if not self.cueanexo:
+                raise ValidationError({
+                    "cueanexo": "El CUEANEXO es obligatorio para Anexo POF de Reunidas."
+                })
+            if not self.cueanexo.isdigit() or len(self.cueanexo) != 9:
+                raise ValidationError({
+                    "cueanexo": "El CUEANEXO debe tener exactamente 9 dígitos."
+                })
+            if self.cuof:
+                raise ValidationError({
+                    "cuof": "El CUOF debe quedar vacío para Anexo POF de Reunidas."
+                })
+        else:
+            if not self.cuof:
+                raise ValidationError({
+                    "cuof": "El CUOF es obligatorio para Anexo POF de Proyecto Especial."
+                })
+            if self.cueanexo:
+                raise ValidationError({
+                    "cueanexo": "El CUEANEXO debe quedar vacío para Anexo POF de Proyecto Especial."
+                })
+
+        if "," in self.codigo:
+            raise ValidationError({
+                "codigo": "El Código Anexo POF no puede contener comas."
+            })
+
+        if any(not caracter.isprintable() for caracter in self.codigo):
+            raise ValidationError({
+                "codigo": "El Código Anexo POF no puede contener caracteres de control."
+            })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        if self.reunida_id:
+            identidad = f"Reunida {self.reunida_id} - CUEANEXO {self.cueanexo}"
+        else:
+            identidad = (
+                f"Proyecto Especial {self.proyecto_especial_id} - CUOF {self.cuof}"
+            )
+        return f"{identidad} - Anexo POF {self.codigo or 'sin asignar'}"
+
+
+class HistorialAnexoPof(models.Model):
+    """
+    MODELO LEGACY 0014. No utilizar como historial vigente de Anexo POF.
+
+    Se conserva junto con AsignacionAnexoPof únicamente por compatibilidad de
+    esquema hasta un retiro físico explícito y seguro.
+    """
+
+    class Origen(models.TextChoices):
+        CARGA = "CARGA", "Carga"
+        GESTION = "GESTION", "Gestión"
+        HERENCIA = "HERENCIA", "Herencia"
+
+    asignacion = models.ForeignKey(
+        AsignacionAnexoPof,
+        on_delete=models.PROTECT,
+        related_name="historial",
+        verbose_name="Asignación Anexo POF",
+    )
+
+    codigo_anterior = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        verbose_name="Código anterior",
+    )
+
+    codigo_nuevo = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        verbose_name="Código nuevo",
+    )
+
+    origen = models.CharField(
+        max_length=20,
+        choices=Origen.choices,
+        verbose_name="Origen",
+    )
+
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="historial_anexos_pof",
+        verbose_name="Usuario",
+    )
+
+    fecha = models.DateTimeField(
+        default=timezone.now,
+        verbose_name="Fecha",
+    )
+
+    class Meta:
+        db_table = '"reunidas_pof"."historial_anexo_pof"'
+        verbose_name = "Historial de Anexo POF"
+        verbose_name_plural = "Historial de Anexos POF"
+        ordering = ["-fecha", "-id"]
+
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(codigo_anterior=models.F("codigo_nuevo")),
+                name="ck_hist_anexo_pof_cambio_real",
+            ),
+        ]
+
+        indexes = [
+            models.Index(
+                fields=["asignacion", "fecha"],
+                name="idx_hist_anexo_pof_asig_fecha",
+            ),
+        ]
+
+    def clean(self):
+        """
+        Evita movimientos vacíos y conserva el mismo formato permitido para el valor vigente.
+        """
+        super().clean()
+
+        self.codigo_anterior = str(self.codigo_anterior or "").strip()
+        self.codigo_nuevo = str(self.codigo_nuevo or "").strip()
+
+        for campo, valor in (
+            ("codigo_anterior", self.codigo_anterior),
+            ("codigo_nuevo", self.codigo_nuevo),
+        ):
+            if "," in valor:
+                raise ValidationError({
+                    campo: "El Código Anexo POF no puede contener comas."
+                })
+            if any(not caracter.isprintable() for caracter in valor):
+                raise ValidationError({
+                    campo: "El Código Anexo POF no puede contener caracteres de control."
+                })
+
+        if self.codigo_anterior == self.codigo_nuevo:
+            raise ValidationError({
+                "codigo_nuevo": "El historial sólo puede registrar cambios reales."
+            })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return (
+            f"{self.asignacion} - "
+            f"{self.codigo_anterior or 'sin asignar'} -> "
+            f"{self.codigo_nuevo or 'sin asignar'}"
+        )
+
+
+# ANEXO POF - DOMINIO CANONICO POR CUE/CUOF ------------------------------------------------------------
+
+class CatalogoAnexoPof(models.Model):
+    """
+    Catálogo global de valores posibles de Código Anexo POF.
+
+    El estado activo controla si el código puede utilizarse para nuevas
+    asociaciones. Desactivarlo no modifica asociaciones CUE/CUOF existentes.
+    El valor del código es inmutable una vez creado.
+    """
+
+    codigo = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name="Código Anexo POF",
+    )
+
+    activo = models.BooleanField(
+        default=True,
+        verbose_name="Activo",
+    )
+
+    creado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="catalogos_anexo_pof_creados",
+        verbose_name="Creado por",
+    )
+
+    usuario_actualizacion = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="catalogos_anexo_pof_actualizados",
+        verbose_name="Usuario de última actualización",
+    )
+
+    creado_en = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Creado en",
+    )
+
+    actualizado_en = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Actualizado en",
+    )
+
+    class Meta:
+        db_table = '"reunidas_pof"."catalogo_anexo_pof"'
+        verbose_name = "Código Anexo POF"
+        verbose_name_plural = "Catálogo de Anexo POF"
+        ordering = ["codigo", "id"]
+
+    def clean(self):
+        super().clean()
+
+        self.codigo = str(self.codigo or "").strip()
+
+        if not self.codigo:
+            raise ValidationError({
+                "codigo": "El Código Anexo POF no puede quedar vacío."
+            })
+
+        if "," in self.codigo:
+            raise ValidationError({
+                "codigo": "El Código Anexo POF no puede contener comas."
+            })
+
+        if any(not caracter.isprintable() for caracter in self.codigo):
+            raise ValidationError({
+                "codigo": "El Código Anexo POF no puede contener caracteres de control."
+            })
+
+        if self.pk and not self._state.adding:
+            codigo_original = (
+                type(self).objects
+                .filter(pk=self.pk)
+                .values_list("codigo", flat=True)
+                .first()
+            )
+            if codigo_original is not None and codigo_original != self.codigo:
+                raise ValidationError({
+                    "codigo": (
+                        "Un Código Anexo POF existente no puede renombrarse. "
+                        "Desactívelo y cree otro código si corresponde."
+                    )
+                })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        estado = "activo" if self.activo else "inactivo"
+        return f"{self.codigo} ({estado})"
+
+
+class HistorialCatalogoAnexoPof(models.Model):
+    """Auditoría de altas, bajas lógicas y reactivaciones del catálogo."""
+
+    class Accion(models.TextChoices):
+        CREAR = "CREAR", "Crear"
+        DESACTIVAR = "DESACTIVAR", "Desactivar"
+        REACTIVAR = "REACTIVAR", "Reactivar"
+
+    class Origen(models.TextChoices):
+        ADMINISTRACION = "ADMINISTRACION", "Administración"
+        MIGRACION_LEGACY = "MIGRACION_LEGACY", "Migración legacy"
+
+    catalogo = models.ForeignKey(
+        CatalogoAnexoPof,
+        on_delete=models.PROTECT,
+        related_name="historial",
+        verbose_name="Código Anexo POF",
+    )
+
+    accion = models.CharField(
+        max_length=20,
+        choices=Accion.choices,
+        verbose_name="Acción",
+    )
+
+    origen = models.CharField(
+        max_length=30,
+        choices=Origen.choices,
+        verbose_name="Origen",
+    )
+
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="historial_catalogo_anexo_pof",
+        verbose_name="Usuario",
+    )
+
+    fecha = models.DateTimeField(
+        default=timezone.now,
+        verbose_name="Fecha",
+    )
+
+    class Meta:
+        db_table = '"reunidas_pof"."historial_catalogo_anexo_pof"'
+        verbose_name = "Historial de catálogo Anexo POF"
+        verbose_name_plural = "Historial de catálogo Anexo POF"
+        ordering = ["-fecha", "-id"]
+        indexes = [
+            models.Index(
+                fields=["catalogo", "fecha"],
+                name="idx_hist_cat_anexo_fecha",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.catalogo.codigo} - {self.accion}"
+
+
+class AsociacionAnexoPof(models.Model):
+    """
+    Asociación canónica entre un Código Anexo POF y su propietario.
+
+    El propietario es exactamente uno:
+    - CUE para el dominio normal y para Proyecto Especial cuando existe CUE.
+    - CUOF únicamente como fallback de Proyecto Especial cuando no existe CUE.
+
+    Una asociación no se elimina físicamente: su vigencia se controla con activo.
+    La identidad propietario+código es inmutable una vez creada.
+    """
+
+    cue = models.CharField(
+        max_length=7,
+        blank=True,
+        default="",
+        verbose_name="CUE",
+    )
+
+    cuof = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name="CUOF",
+    )
+
+    codigo_catalogo = models.ForeignKey(
+        CatalogoAnexoPof,
+        on_delete=models.PROTECT,
+        related_name="asociaciones",
+        verbose_name="Código Anexo POF",
+    )
+
+    activo = models.BooleanField(
+        default=True,
+        verbose_name="Activo",
+    )
+
+    usuario_actualizacion = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="asociaciones_anexo_pof_actualizadas",
+        verbose_name="Usuario de última actualización",
+    )
+
+    creado_en = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Creado en",
+    )
+
+    actualizado_en = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Actualizado en",
+    )
+
+    class Meta:
+        db_table = '"reunidas_pof"."asociacion_anexo_pof"'
+        verbose_name = "Asociación Anexo POF"
+        verbose_name_plural = "Asociaciones Anexo POF"
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    (
+                        ~models.Q(cue="")
+                        & models.Q(cuof="")
+                    )
+                    |
+                    (
+                        models.Q(cue="")
+                        & ~models.Q(cuof="")
+                    )
+                ),
+                name="ck_asoc_anexo_pof_propietario",
+            ),
+            models.UniqueConstraint(
+                fields=["cue", "codigo_catalogo"],
+                condition=~models.Q(cue=""),
+                name="uq_asoc_anexo_pof_cue_codigo",
+            ),
+            models.UniqueConstraint(
+                fields=["cuof", "codigo_catalogo"],
+                condition=~models.Q(cuof=""),
+                name="uq_asoc_anexo_pof_cuof_codigo",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["cue", "activo"],
+                name="idx_asoc_anexo_cue_activo",
+            ),
+            models.Index(
+                fields=["cuof", "activo"],
+                name="idx_asoc_anexo_cuof_activo",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        self.cue = str(self.cue or "").strip()
+        self.cuof = str(self.cuof or "").strip()
+
+        tiene_cue = bool(self.cue)
+        tiene_cuof = bool(self.cuof)
+
+        if tiene_cue == tiene_cuof:
+            raise ValidationError({
+                "cue": "La asociación debe tener exactamente un propietario: CUE o CUOF.",
+                "cuof": "La asociación debe tener exactamente un propietario: CUE o CUOF.",
+            })
+
+        if tiene_cue and (len(self.cue) != 7 or not self.cue.isdigit()):
+            raise ValidationError({
+                "cue": "El CUE debe tener exactamente 7 dígitos."
+            })
+
+        if tiene_cuof and any(not caracter.isprintable() for caracter in self.cuof):
+            raise ValidationError({
+                "cuof": "El CUOF no puede contener caracteres de control."
+            })
+
+        if self.pk and not self._state.adding:
+            identidad_original = (
+                type(self).objects
+                .filter(pk=self.pk)
+                .values("cue", "cuof", "codigo_catalogo_id")
+                .first()
+            )
+            if identidad_original is not None:
+                identidad_actual = {
+                    "cue": self.cue,
+                    "cuof": self.cuof,
+                    "codigo_catalogo_id": self.codigo_catalogo_id,
+                }
+                if identidad_original != identidad_actual:
+                    raise ValidationError({
+                        "__all__": (
+                            "La identidad CUE/CUOF + Código Anexo POF no puede modificarse. "
+                            "Desactive la asociación y cree otra si corresponde."
+                        )
+                    })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    @property
+    def tipo_propietario(self):
+        return "CUE" if self.cue else "CUOF"
+
+    @property
+    def propietario(self):
+        return self.cue or self.cuof
+
+    def __str__(self):
+        estado = "activo" if self.activo else "inactivo"
+        return (
+            f"{self.tipo_propietario} {self.propietario} - "
+            f"Anexo POF {self.codigo_catalogo.codigo} ({estado})"
+        )
+
+
+class HistorialAsociacionAnexoPof(models.Model):
+    """Auditoría de altas, bajas lógicas y reactivaciones de asociaciones."""
+
+    class Accion(models.TextChoices):
+        ASOCIAR = "ASOCIAR", "Asociar"
+        DESACTIVAR = "DESACTIVAR", "Desactivar"
+        REACTIVAR = "REACTIVAR", "Reactivar"
+
+    class Origen(models.TextChoices):
+        ADMINISTRACION = "ADMINISTRACION", "Administración"
+        MIGRACION_LEGACY = "MIGRACION_LEGACY", "Migración legacy"
+
+    asociacion = models.ForeignKey(
+        AsociacionAnexoPof,
+        on_delete=models.PROTECT,
+        related_name="historial",
+        verbose_name="Asociación Anexo POF",
+    )
+
+    accion = models.CharField(
+        max_length=20,
+        choices=Accion.choices,
+        verbose_name="Acción",
+    )
+
+    origen = models.CharField(
+        max_length=30,
+        choices=Origen.choices,
+        verbose_name="Origen",
+    )
+
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="historial_asociaciones_anexo_pof",
+        verbose_name="Usuario",
+    )
+
+    fecha = models.DateTimeField(
+        default=timezone.now,
+        verbose_name="Fecha",
+    )
+
+    class Meta:
+        db_table = '"reunidas_pof"."historial_asociacion_anexo_pof"'
+        verbose_name = "Historial de asociación Anexo POF"
+        verbose_name_plural = "Historial de asociaciones Anexo POF"
+        ordering = ["-fecha", "-id"]
+        indexes = [
+            models.Index(
+                fields=["asociacion", "fecha"],
+                name="idx_hist_asoc_anexo_fecha",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.asociacion} - {self.accion}"
+
+
 # GUARDA LAS FOTOS DEL PADRÓN ASOCIADAS A UNA LOCALIZACIÓN POF ------------------------------------------------------------
 
 
@@ -713,6 +1402,13 @@ class SnapshotPadronLocalizacionPof(models.Model):
         INICIAL = "INICIAL", "Inicial"
         VERIFICACION = "VERIFICACION", "Verificación"
         SINCRONIZACION = "SINCRONIZACION", "Sincronización"
+
+    class TipoZonaEducativa(models.TextChoices):
+        """
+        Tipo de catálogo usado para la asignación de Zona Educativa.
+        """
+        URBANA = "URBANA", "Urbana"
+        RURAL = "RURAL", "Rural"
 
     class OrigenDatos(models.TextChoices):
         """
@@ -859,6 +1555,30 @@ class SnapshotPadronLocalizacionPof(models.Model):
         verbose_name="Ubicación localidad/departamento",
     )
 
+    # Tipo de catálogo usado para la Zona Educativa congelada en esta foto.
+    zona_educativa_tipo = models.CharField(
+        max_length=10,
+        choices=TipoZonaEducativa.choices,
+        blank=True,
+        default="",
+        verbose_name="Tipo de Zona Educativa",
+    )
+
+    # Código o denominación de Zona Educativa vigente al momento del snapshot.
+    zona_educativa = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        verbose_name="Zona Educativa",
+    )
+
+    # Puntaje de Zona Educativa vigente al momento del snapshot.
+    puntos_zona_educativa = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name="Puntos Zona Educativa",
+    )
+
     # Datos completos del padrón en formato JSON para conservar la foto original.
     datos_padron = models.JSONField(
         default=dict,
@@ -900,6 +1620,24 @@ class SnapshotPadronLocalizacionPof(models.Model):
                 condition=models.Q(vigente=True),
                 name="uq_snapshot_padron_loc_vigente",
             ),
+
+            # La Zona Educativa queda completamente ausente o completamente definida.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(
+                        zona_educativa_tipo="",
+                        zona_educativa="",
+                        puntos_zona_educativa__isnull=True,
+                    )
+                    |
+                    (
+                        models.Q(zona_educativa_tipo__in=["URBANA", "RURAL"])
+                        & ~models.Q(zona_educativa="")
+                        & models.Q(puntos_zona_educativa__gt=0)
+                    )
+                ),
+                name="ck_snapshot_pof_zona_integridad",
+            ),
         ]
 
         indexes = [
@@ -933,13 +1671,40 @@ class SnapshotPadronLocalizacionPof(models.Model):
     def clean(self):
         """
         Valida reglas internas del snapshot antes de guardar.
-        Evita marcar una verificación simple como snapshot vigente.
+        Evita marcar una verificación simple como snapshot vigente y mantiene
+        consistente la asignación histórica de Zona Educativa.
         """
         super().clean()
 
         if self.tipo_snapshot == self.TipoSnapshot.VERIFICACION and self.vigente:
             raise ValidationError({
                 "vigente": "Una verificación no debería marcarse como snapshot vigente."
+            })
+
+        tiene_tipo_zona = bool(self.zona_educativa_tipo)
+        tiene_zona = bool(self.zona_educativa)
+        tiene_puntos_zona = self.puntos_zona_educativa is not None
+
+        if any((tiene_tipo_zona, tiene_zona, tiene_puntos_zona)) and not all(
+            (tiene_tipo_zona, tiene_zona, tiene_puntos_zona)
+        ):
+            raise ValidationError({
+                "zona_educativa_tipo": (
+                    "La Zona Educativa debe indicar tipo, zona y puntos en conjunto."
+                ),
+                "zona_educativa": (
+                    "La Zona Educativa debe indicar tipo, zona y puntos en conjunto."
+                ),
+                "puntos_zona_educativa": (
+                    "La Zona Educativa debe indicar tipo, zona y puntos en conjunto."
+                ),
+            })
+
+        if tiene_puntos_zona and self.puntos_zona_educativa <= 0:
+            raise ValidationError({
+                "puntos_zona_educativa": (
+                    "Los puntos de Zona Educativa deben ser mayores que cero."
+                )
             })
 
     def save(self, *args, **kwargs):
