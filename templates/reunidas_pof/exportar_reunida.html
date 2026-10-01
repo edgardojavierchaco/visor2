@@ -1,5 +1,11 @@
 {% extends 'reunidas_pof/layout_pof.html' %}
 {% load static %}
+
+{% block head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/panel-option-search.css' %}?v=20260824-1">
+{% endblock %}
+
 {% block content %}
 
 <div class="pof-page">
@@ -35,9 +41,17 @@
 
 
     <div class="pof-export-preview">
-        {% if not es_proyecto_especial %}
-            <div class="pof-visual-filter-card" data-pof-export-search>
-                <div class="pof-visual-toolbar">
+        <form method="get"
+              id="exportarReunidaFiltrosForm"
+              class="pof-visual-filter-card"
+              data-pof-export-search
+              data-pof-export-filters="1"
+              data-pof-export-options-url="{% url 'reunidas_pof:detalle_reunida_opciones_filtro' %}"
+              aria-label="Búsqueda y filtros de la exportación">
+            <input type="hidden" id="exportarReunidaCampoFiltroActivo" value="">
+
+            <div class="pof-visual-toolbar">
+                {% if not es_proyecto_especial %}
                     <div class="pof-visual-live-search" id="exportarReunidaLiveSearch">
                         <div class="pof-visual-search-control-row">
                             <label class="pof-visually-hidden" for="exportarReunidaColumnaSelect">Columna</label>
@@ -87,36 +101,71 @@
                             <span id="exportarReunidaBusquedaStatusText"></span>
                         </div>
                     </div>
+                {% endif %}
+
+                <div class="pof-visual-toolbar-actions">
+                    <button type="button"
+                            class="pof-btn pof-btn-outline-primary pof-visual-toolbar-btn pof-visual-toggle-btn{% if filtros_exportacion_activos %} pof-visual-toggle-active{% endif %}"
+                            data-pof-export-filters-toggle
+                            aria-controls="pofExportFiltersPanel"
+                            aria-expanded="false">
+                        <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">filter_alt</span> Filtros
+                    </button>
                 </div>
             </div>
-            <div class="pof-filter-active-list"
-                 id="exportarReunidaFiltrosActivos"
-                 aria-label="Filtros activos"
-                 {% if not busqueda_columna_valor %}hidden{% endif %}>
-                {% if busqueda_columna_valor %}
-                    {% for columna in columnas_busqueda %}
-                        {% if columna.id == busqueda_columna_id %}
-                            <div class="pof-filter-chip"
-                                 data-pof-export-search-chip
-                                 data-pof-export-search-column="{{ columna.id }}">
-                                <span class="pof-filter-chip-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">label</span>
-                                <span class="pof-filter-chip-text">{{ columna.label }}: {{ busqueda_columna_valor }}</span>
-                                <button type="button"
-                                        class="pof-filter-chip-remove"
-                                        data-pof-export-search-chip-remove
-                                        aria-label="Eliminar {{ columna.label }}: {{ busqueda_columna_valor }}">
-                                    <span class="pof-filter-chip-remove-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">cancel</span>
-                                </button>
-                            </div>
-                        {% endif %}
+
+            <div id="pofExportFiltersPanel"
+                 class="pof-visual-panel"
+                 data-panel-option-search-type="filters"
+                 hidden>
+                <div class="pof-visual-panel-head">
+                    <strong>Filtros</strong>
+                </div>
+                <div class="pof-visual-filter-grid">
+                    {% for filtro in filtros_exportacion_campos %}
+                        <div>
+                            <button type="button"
+                                    class="pof-visual-filter-btn"
+                                    data-filter-field="{{ filtro.id }}"
+                                    data-filter-label="{{ filtro.label }}"
+                                    data-filter-mode="{{ filtro.tipo }}"
+                                    data-filter-operators="{{ filtro.operadores }}">
+                                {{ filtro.label }}
+                            </button>
+                        </div>
                     {% endfor %}
-                    <a href="#" class="pof-filter-clear-all" data-pof-export-search-clear-all>
-                        <span class="pof-visual-clear-filters-icon pof-material-symbol pof-icon-delete material-symbols-outlined" aria-hidden="true">delete</span>
-                        <span>Limpiar filtros</span>
-                    </a>
-                {% endif %}
+                </div>
             </div>
-        {% endif %}
+
+            <div id="exportarReunidaFiltroBackdrop" class="pof-visual-dialog-backdrop" hidden></div>
+            <div id="exportarReunidaDialogFiltro" class="pof-visual-dialog" hidden>
+                <h6 id="exportarReunidaDialogTitulo" class="pof-visual-dialog-title">Agregar Filtro</h6>
+                <div class="pof-visual-dialog-body">
+                    <div class="pof-visual-dialog-field">
+                        <label for="exportarReunidaOperadorFiltro">Operador</label>
+                        <span class="pof-native-select-wrap">
+                            <select id="exportarReunidaOperadorFiltro"></select>
+                        </span>
+                    </div>
+                    <div class="pof-visual-dialog-field">
+                        <label id="exportarReunidaValorFiltroLabel" for="exportarReunidaValorFiltro">Valor</label>
+                        <div id="exportarReunidaValorFiltroMount"></div>
+                    </div>
+                    <div class="pof-visual-dialog-actions">
+                        <button type="submit" class="pof-filter-apply-btn">Agregar filtro</button>
+                        <button type="button" class="pof-filter-clear-btn" id="exportarReunidaCerrarDialogoFiltro">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="pof-filter-active-list"
+             id="exportarReunidaFiltrosActivos"
+             aria-label="Filtros activos"
+             {% if not filtros_exportacion_activos %}hidden{% endif %}></div>
+
+        {{ filtros_exportacion_opciones|json_script:"exportarReunidaFiltrosOpcionesData" }}
+        {{ filtros_simple_exportacion_nombres|json_script:"exportarReunidaFiltrosSimplesData" }}
 
         <div class="pof-export-title">
 
@@ -274,6 +323,7 @@
                    data-pof-export-table>
                 <thead>
                     <tr>
+                        <th class="pof-export-affect-column">Afectar</th>
                         {% if columnas_disponibles %}
                             {% for columna in columnas_disponibles %}
                                 <th data-column-key="{{ columna.key }}" {% if not columna.visible %}hidden{% endif %}>
@@ -301,13 +351,14 @@
                                 <th>{{ columna }}</th>
                             {% endfor %}
                         {% endif %}
+                        <th class="pof-export-action-column">Acci&oacute;n</th>
                     </tr>
                 </thead>
 
                 <tbody>
                     {% if columnas_disponibles %}
                         <tr class="pof-export-no-columns-row" {% if columnas_visibles_keys %}hidden{% endif %}>
-                            <td colspan="{{ columnas_preview_colspan }}" data-pof-preview-colspan>
+                            <td colspan="{{ columnas_preview_colspan|add:'2' }}" data-pof-preview-colspan>
                                 No hay columnas visibles. Marc&aacute; al menos una columna para ver la tabla o exportar Excel.
                             </td>
                         </tr>
@@ -317,6 +368,25 @@
 
                         {% for fila in seccion.filas %}
                             <tr class="{% if fila.es_inicio_cue %}pof-export-grupo-cue{% elif fila.es_inicio_anexo %}pof-export-grupo-anexo{% endif %}">
+                                <td class="pof-export-affect-column">
+                                    {% if fila.mostrar_afectar %}
+                                        {% if es_proyecto_especial %}
+                                            <a href="{% url 'reunidas_pof:cargar_cargos_proyecto_especial' %}?proyecto_especial_id={{ proyecto_especial.id|urlencode }}&amp;cuof={{ fila.cuof|urlencode }}&amp;origen=exportar"
+                                               class="pof-grid-icon-btn pof-export-affect-btn"
+                                               title="Afectar cargo en este CUOF"
+                                               aria-label="Afectar cargo en este CUOF">
+                                                <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">add</span>
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'reunidas_pof:cargar_cargos' %}?anio={{ reunida.anio|urlencode }}&amp;nivel={{ reunida.nivel_codigo|urlencode }}&amp;cueanexo={{ fila.cueanexo|urlencode }}&amp;origen=exportar"
+                                               class="pof-grid-icon-btn pof-export-affect-btn"
+                                               title="Afectar cargo en este CUEANEXO"
+                                               aria-label="Afectar cargo en este CUEANEXO">
+                                                <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">add</span>
+                                            </a>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
                                 {% if fila.celdas %}
                                     {% for celda in fila.celdas %}
                                         <td data-column-key="{{ celda.key }}" {% if not celda.visible %}hidden{% endif %}>
@@ -387,13 +457,27 @@
                                         <td>{{ celda }}</td>
                                     {% endfor %}
                                 {% endif %}
+                                <td class="pof-export-action-column">
+                                    {% if fila.cargo_ids|length == 1 %}
+                                        <button type="button"
+                                                class="pof-grid-icon-btn pof-admin-gear-btn"
+                                                title="Gesti&oacute;n de cargo"
+                                                aria-label="Gesti&oacute;n de cargo"
+                                                data-cargo-id="{{ fila.cargo_ids.0 }}"
+                                                data-cargo-gestion>
+                                            <span class="pof-action-icon pof-material-symbol pof-icon-tools material-symbols-outlined" aria-hidden="true">handyman</span>
+                                        </button>
+                                    {% else %}
+                                        &mdash;
+                                    {% endif %}
+                                </td>
                             </tr>
                         {% endfor %}
 
                     {% empty %}
                         <tr class="{% if busqueda_sin_resultados %}pof-export-empty-search-row{% else %}pof-export-empty-reunida-row{% endif %}"
                             data-pof-export-empty-state="{% if busqueda_sin_resultados %}search-no-results{% else %}reunida-no-cargos{% endif %}">
-                            <td colspan="{{ columnas_preview_colspan }}" data-pof-preview-colspan>
+                            <td colspan="{{ columnas_preview_colspan|add:'2' }}" data-pof-preview-colspan>
                                 {% if mensaje_exportacion %}
                                     {{ mensaje_exportacion }}
                                 {% else %}
@@ -410,10 +494,10 @@
         {% if not es_proyecto_especial and paginacion_preview.mostrar %}
             <div class="pof-table-footer" data-pof-export-preview-pagination>
                 <span class="pof-export-count" aria-live="polite">
-                    Mostrando CUE {{ paginacion_preview.primer_cue }}-{{ paginacion_preview.ultimo_cue }} de {{ paginacion_preview.total_cue }}
+                    Mostrando CUEANEXO {{ paginacion_preview.primer_cueanexo }}-{{ paginacion_preview.ultimo_cueanexo }} de {{ paginacion_preview.total_cueanexo }}
                     &middot; P&aacute;gina {{ paginacion_preview.pagina_actual }} de {{ paginacion_preview.total_paginas }}
                 </span>
-                <nav class="pof-pagination" aria-label="Paginaci&oacute;n del preview por CUE">
+                <nav class="pof-pagination" aria-label="Paginaci&oacute;n del preview por CUEANEXO">
                     {% if paginacion_preview.tiene_anterior %}
                         <a class="pof-page-btn"
                            href="{% url 'reunidas_pof:exportar_reunida' %}?{% if paginacion_preview.querystring_base %}{{ paginacion_preview.querystring_base }}&amp;{% endif %}page={{ paginacion_preview.pagina_anterior }}">Anterior</a>
@@ -447,6 +531,7 @@
     {% include "reunidas_pof/historial_cantidad_modal.html" %}
     {% include "reunidas_pof/historial_observacion_modal.html" %}
     {% include "reunidas_pof/historial_estado_modal.html" %}
+    {% include "reunidas_pof/gestion_cargo_modal.html" with gestion_cargo_success_mode="reload" %}
 
     
 </div>
@@ -455,10 +540,12 @@
 
 {% block scripts %}
 {{ block.super }}
-<script src="{% static 'reunidas_pof/js/pof_api.js' %}"></script>
-<script src="{% static 'reunidas_pof/js/historial_cantidad.js' %}"></script>
-<script src="{% static 'reunidas_pof/js/historial_observacion.js' %}"></script>
-<script src="{% static 'reunidas_pof/js/historial_estado.js' %}"></script>
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}?v=20260924-1"></script>
+<script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260829-1"></script>
+<script src="{% static 'reunidas_pof/js/historial_cantidad.js' %}?v=20260924-1"></script>
+<script src="{% static 'reunidas_pof/js/historial_observacion.js' %}?v=20260924-1"></script>
+<script src="{% static 'reunidas_pof/js/historial_estado.js' %}?v=20260924-1"></script>
+<script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20260924-7"></script>
 <script>
     (function () {
         const preview = document.querySelector(".pof-export-preview");
@@ -488,8 +575,85 @@
         const searchClear = document.querySelector("#exportarReunidaLimpiarBusqueda");
         const searchStatus = document.querySelector("#exportarReunidaBusquedaStatus");
         const searchStatusText = document.querySelector("#exportarReunidaBusquedaStatusText");
-        const searchBadges = document.querySelector("#exportarReunidaFiltrosActivos");
+        const activeFilters = document.querySelector("#exportarReunidaFiltrosActivos");
+        const searchBadges = activeFilters;
+        const filterForm = document.querySelector("#exportarReunidaFiltrosForm");
+        const filtersPanel = document.querySelector("#pofExportFiltersPanel");
+        const filtersToggle = document.querySelector("[data-pof-export-filters-toggle]");
+        const filterDialog = document.querySelector("#exportarReunidaDialogFiltro");
+        const filterBackdrop = document.querySelector("#exportarReunidaFiltroBackdrop");
+        const filterDialogTitle = document.querySelector("#exportarReunidaDialogTitulo");
+        const activeFilterField = document.querySelector("#exportarReunidaCampoFiltroActivo");
+        const filterOperator = document.querySelector("#exportarReunidaOperadorFiltro");
+        const filterValueLabel = document.querySelector("#exportarReunidaValorFiltroLabel");
+        const filterValueMount = document.querySelector("#exportarReunidaValorFiltroMount");
+        const closeFilterDialogButton = document.querySelector("#exportarReunidaCerrarDialogoFiltro");
+        const filterApplyButton = filterDialog
+            ? filterDialog.querySelector(".pof-filter-apply-btn")
+            : null;
+        const filterButtons = filterForm
+            ? Array.from(filterForm.querySelectorAll(".pof-visual-filter-btn"))
+            : [];
+        const commonFilterUI = window.POFCommonFilterUI || null;
+        const apiFiltros = window.pofApi || null;
         const esProyectoEspecial = {% if es_proyecto_especial %}true{% else %}false{% endif %};
+        const SEARCH_TO_ADVANCED = {
+            cueanexo: "cueanexo",
+            cuof: "cuof",
+            ceic: "ceic",
+            cargo: "cargo",
+            puntos: "puntos_asignados",
+            oferta: "oferta",
+            estado_pof: "estado_pof"
+        };
+        const SIMPLE_TO_ADVANCED = {
+            cueanexo: "cueanexo",
+            cue_busqueda: "cue",
+            anexo: "anexo",
+            cuof: "cuof",
+            cui: "cui",
+            establecimiento: "nombre_establecimiento",
+            localidad: "localidad",
+            departamento: "departamento",
+            region: "region",
+            jornada: "jornada",
+            categoria: "categoria",
+            ambito: "ambito",
+            ceic: "ceic",
+            cargo: "cargo",
+            estado_pof: "estado_pof",
+            unidad_cantidad: "unidad_cantidad"
+        };
+        const SIMPLE_EXACT_PARAMS = new Set([
+            "cueanexo",
+            "cue_busqueda",
+            "anexo",
+            "cuof",
+            "ambito",
+            "categoria",
+            "jornada",
+            "ceic",
+            "estado_pof",
+            "unidad_cantidad"
+        ]);
+        const REMOTE_CHECKLIST_FIELDS = new Set([
+            "region",
+            "localidad",
+            "departamento",
+            "ambito",
+            "categoria",
+            "jornada",
+            "acronimo",
+            "estado_localizacion_padron",
+            "estado_oferta_padron",
+            "estado_establecimiento_padron"
+        ]);
+        const fieldConfig = {};
+        let filterOptions = {};
+        let simpleFilterParams = [];
+        let filterDialogState = null;
+        const loadedRemoteFilters = new Set();
+        const remoteFilterRequests = new Map();
         let searchLoadingToken = 0;
         let searchInteractionDirty = false;
         let searchRequestState = null;
@@ -500,6 +664,31 @@
             columnId: searchSelect ? searchSelect.value : "",
             value: (searchInput && searchInput.value || "").trim()
         };
+
+        function readJsonScript(id, fallback) {
+            const node = document.getElementById(id);
+            if (!node) {
+                return fallback;
+            }
+            try {
+                return JSON.parse(node.textContent || "null") || fallback;
+            } catch (error) {
+                window.console.error("No se pudo leer la configuración de filtros de Exportar.", error);
+                return fallback;
+            }
+        }
+
+        filterOptions = readJsonScript("exportarReunidaFiltrosOpcionesData", {});
+        simpleFilterParams = readJsonScript("exportarReunidaFiltrosSimplesData", []);
+
+        filterButtons.forEach(function (button) {
+            fieldConfig[button.dataset.filterField] = {
+                field: button.dataset.filterField,
+                label: button.dataset.filterLabel,
+                mode: button.dataset.filterMode || "text",
+                operators: button.dataset.filterOperators || "text"
+            };
+        });
 
         /**
          * Mantiene seleccionadas las columnas operativas obligatorias del exportable.
@@ -680,9 +869,14 @@
          */
         function applyPendingSearchToUrl(url) {
             const nextState = getSearchState();
-            if (nextState.columnId) {
+            const advancedField = SEARCH_TO_ADVANCED[nextState.columnId] || "";
+
+            if (advancedField) {
+                replaceFilterValuesForField(url, advancedField, "0", []);
+            } else if (nextState.columnId) {
                 url.searchParams.delete("col_" + nextState.columnId);
             }
+
             if (nextState.value && nextState.columnId) {
                 url.searchParams.set("col_" + nextState.columnId, nextState.value);
             }
@@ -740,65 +934,774 @@
             searchStatus.setAttribute("aria-hidden", visible ? "false" : "true");
         }
 
-        /**
-         * Representa todas las búsquedas rápidas aplicadas con chips POF independientes.
-         *
-         * - Deriva los chips de los parámetros `col_*` válidos de la URL confirmada.
-         * - Identifica cada chip con su propia columna para eliminar solo ese criterio.
-         * - Construye el texto con nodos seguros, sin interpretar el valor como HTML.
-         * - Muestra `Limpiar filtros` una sola vez cuando existe al menos un criterio.
-         */
+        function getOperatorLabels() {
+            const labels = {};
+            if (!commonFilterUI || !commonFilterUI.filterOperatorPresets) {
+                return labels;
+            }
+            Object.keys(commonFilterUI.filterOperatorPresets).forEach(function (preset) {
+                commonFilterUI.filterOperatorPresets[preset].forEach(function (operator) {
+                    labels[operator.value] = operator.label;
+                });
+            });
+            return labels;
+        }
+
+        const FILTER_OPERATOR_LABELS = getOperatorLabels();
+
+        function getAdvancedFiltersFromUrl(url) {
+            const campos = url.searchParams.getAll("campo_filtro");
+            const operadores = url.searchParams.getAll("operador_filtro");
+            const valores = url.searchParams.getAll("valor_filtro");
+            const filtros = [];
+            campos.forEach(function (field, index) {
+                const value = (valores[index] || "").trim();
+                if (!value || !fieldConfig[field]) {
+                    return;
+                }
+                filtros.push({
+                    type: "avanzado",
+                    field: field,
+                    editField: field,
+                    index: String(index),
+                    operator: operadores[index] || "0",
+                    value: value,
+                    param: ""
+                });
+            });
+            return filtros;
+        }
+
+        function getSimpleFiltersFromUrl(url, advancedFields) {
+            const filtros = [];
+            simpleFilterParams.forEach(function (param) {
+                const value = (url.searchParams.get(param) || "").trim();
+                const editField = SIMPLE_TO_ADVANCED[param] || param;
+                if (!value || !fieldConfig[editField] || advancedFields.has(editField)) {
+                    return;
+                }
+                filtros.push({
+                    type: "simple",
+                    field: param,
+                    editField: editField,
+                    index: "",
+                    operator: SIMPLE_EXACT_PARAMS.has(param) ? "2" : "0",
+                    value: value,
+                    param: param
+                });
+            });
+            return filtros;
+        }
+
+        function getSearchFiltersFromUrl(url, advancedFields) {
+            return getAppliedColumnSearches(url)
+                .filter(function (state) {
+                    const advancedField = SEARCH_TO_ADVANCED[state.columnId];
+                    return !advancedField || !advancedFields.has(advancedField);
+                })
+                .map(function (state) {
+                    return {
+                        type: "columna",
+                        field: state.columnId,
+                        editField: SEARCH_TO_ADVANCED[state.columnId] || state.columnId,
+                        index: "",
+                        operator: "0",
+                        value: state.value,
+                        label: state.label,
+                        param: "col_" + state.columnId
+                    };
+                });
+        }
+
+        function getFilterOptionLabel(field, value) {
+            const options = Array.isArray(filterOptions[field]) ? filterOptions[field] : [];
+            for (let index = 0; index < options.length; index += 1) {
+                const option = options[index];
+                const optionValue = typeof option === "object" ? option.value : option;
+                if (String(optionValue) === String(value)) {
+                    return String(typeof option === "object" ? option.label : option);
+                }
+            }
+            return String(value);
+        }
+
+        function getFilterChipText(filter) {
+            if (filter.type === "columna") {
+                return "Columna " + (filter.label || filter.field) + ": " + filter.value;
+            }
+            const config = fieldConfig[filter.editField] || {};
+            const label = config.label || filter.editField || filter.field;
+            const operatorLabel = FILTER_OPERATOR_LABELS[filter.operator] || "parecido a";
+            const valueLabel = getFilterOptionLabel(filter.editField, filter.value);
+            if (filter.type === "simple") {
+                return label + ": " + valueLabel;
+            }
+            return label + " " + operatorLabel + ": " + valueLabel;
+        }
+
+        function createFilterChip(filter) {
+            const chip = document.createElement("div");
+            chip.className = "pof-filter-chip";
+            chip.dataset.filterChip = "";
+            chip.dataset.filterType = filter.type;
+            chip.dataset.filterField = filter.field;
+            chip.dataset.filterEditField = filter.editField || filter.field;
+            chip.dataset.filterIndex = filter.index || "";
+            chip.dataset.filterOperator = filter.operator || "0";
+            chip.dataset.filterValue = filter.value || "";
+            chip.dataset.filterParam = filter.param || "";
+
+            if (filter.type === "columna") {
+                chip.dataset.pofExportSearchChip = "";
+                chip.dataset.pofExportSearchColumn = filter.field;
+            }
+
+            const labelControl = document.createElement(
+                filter.type === "columna" ? "span" : "button"
+            );
+            if (filter.type !== "columna") {
+                labelControl.type = "button";
+                labelControl.className = "pof-filter-chip-edit";
+                labelControl.dataset.filterChipEdit = "";
+                labelControl.setAttribute("aria-label", "Editar " + getFilterChipText(filter));
+            }
+
+            const icon = document.createElement("span");
+            icon.className = "pof-filter-chip-icon pof-material-symbol material-symbols-outlined";
+            icon.setAttribute("aria-hidden", "true");
+            icon.textContent = "label";
+
+            const textNode = document.createElement("span");
+            textNode.className = "pof-filter-chip-text";
+            textNode.textContent = getFilterChipText(filter);
+            labelControl.append(icon, textNode);
+
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "pof-filter-chip-remove";
+            remove.dataset.filterChipRemove = "";
+            if (filter.type === "columna") {
+                remove.dataset.pofExportSearchChipRemove = "";
+            }
+            remove.setAttribute("aria-label", "Eliminar " + getFilterChipText(filter));
+
+            const removeIcon = document.createElement("span");
+            removeIcon.className = "pof-filter-chip-remove-icon pof-material-symbol material-symbols-outlined";
+            removeIcon.setAttribute("aria-hidden", "true");
+            removeIcon.textContent = "cancel";
+            remove.append(removeIcon);
+            chip.append(labelControl, remove);
+            return chip;
+        }
+
+        function getActiveFiltersFromUrl(url) {
+            const advanced = getAdvancedFiltersFromUrl(url);
+            const advancedFields = new Set(advanced.map(function (filter) {
+                return filter.editField;
+            }));
+            return []
+                .concat(getSearchFiltersFromUrl(url, advancedFields))
+                .concat(getSimpleFiltersFromUrl(url, advancedFields))
+                .concat(advanced);
+        }
+
+        function syncFiltersToggle(url) {
+            if (!filtersToggle) {
+                return;
+            }
+            const hasActive = getActiveFiltersFromUrl(url).length > 0;
+            const isOpen = filtersPanel && !filtersPanel.hidden;
+            filtersToggle.classList.toggle("pof-visual-toggle-active", hasActive || isOpen);
+        }
+
         function renderSearchBadges(url) {
             if (!searchBadges) {
                 return;
             }
             searchBadges.replaceChildren();
-            const states = getAppliedColumnSearches(url);
-            if (!states.length) {
+            const filters = getActiveFiltersFromUrl(url);
+            if (!filters.length) {
                 searchBadges.hidden = true;
+                syncFiltersToggle(url);
                 return;
             }
-            states.forEach(function (state) {
-                const chip = document.createElement("div");
-                chip.className = "pof-filter-chip";
-                chip.dataset.pofExportSearchChip = "";
-                chip.dataset.pofExportSearchColumn = state.columnId;
 
-                const icon = document.createElement("span");
-                icon.className = "pof-filter-chip-icon pof-material-symbol material-symbols-outlined";
-                icon.setAttribute("aria-hidden", "true");
-                icon.textContent = "label";
-                const text = document.createElement("span");
-                text.className = "pof-filter-chip-text";
-                text.textContent = state.label + ": " + state.value;
-                const remove = document.createElement("button");
-                remove.type = "button";
-                remove.className = "pof-filter-chip-remove";
-                remove.dataset.pofExportSearchChipRemove = "";
-                remove.setAttribute("aria-label", "Eliminar " + state.label + ": " + state.value);
-                const removeIcon = document.createElement("span");
-                removeIcon.className = "pof-filter-chip-remove-icon pof-material-symbol material-symbols-outlined";
-                removeIcon.setAttribute("aria-hidden", "true");
-                removeIcon.textContent = "cancel";
-                remove.append(removeIcon);
-                chip.append(icon, text, remove);
-                searchBadges.append(chip);
+            filters.forEach(function (filter) {
+                searchBadges.append(createFilterChip(filter));
             });
 
             const clearAll = document.createElement("a");
             clearAll.href = "#";
-            clearAll.className = "pof-filter-clear-all";
-            clearAll.dataset.pofExportSearchClearAll = "";
+            clearAll.className = "pof-filter-clear-all pof-visual-clear-filters-link";
+            clearAll.dataset.pofExportClearAll = "";
+
             const clearIcon = document.createElement("span");
             clearIcon.className = "pof-visual-clear-filters-icon pof-material-symbol pof-icon-delete material-symbols-outlined";
             clearIcon.setAttribute("aria-hidden", "true");
             clearIcon.textContent = "delete";
+
             const clearText = document.createElement("span");
             clearText.textContent = "Limpiar filtros";
             clearAll.append(clearIcon, clearText);
-
             searchBadges.append(clearAll);
             searchBadges.hidden = false;
+            syncFiltersToggle(url);
+        }
+
+        function firstOperatorForFilterConfig(config) {
+            if (commonFilterUI && commonFilterUI.firstOperatorForConfig) {
+                return commonFilterUI.firstOperatorForConfig(config);
+            }
+            return config && config.operators === "exact" ? "2" : "0";
+        }
+
+        function sameFilterCriterion(left, right) {
+            if (commonFilterUI && commonFilterUI.sameFilterCriterion) {
+                return commonFilterUI.sameFilterCriterion(left, right);
+            }
+            return JSON.stringify(left || {}) === JSON.stringify(right || {});
+        }
+
+        function hasUsefulFilterCriterion(config, state) {
+            if (commonFilterUI && commonFilterUI.hasUsefulFilterCriterion) {
+                return commonFilterUI.hasUsefulFilterCriterion(config, state);
+            }
+            return Boolean(state && Array.isArray(state.values) && state.values.length);
+        }
+
+        function getActiveFilterField() {
+            return (activeFilterField && activeFilterField.value)
+                || (filterDialogState && filterDialogState.field)
+                || "";
+        }
+
+        function getAdvancedFilterForField(field, url) {
+            const filters = getAdvancedFiltersFromUrl(url || new URL(window.location.href));
+            return filters.find(function (filter) {
+                return filter.editField === field;
+            }) || null;
+        }
+
+        function getSimpleFilterForField(field, url) {
+            const currentUrl = url || new URL(window.location.href);
+            for (let index = 0; index < simpleFilterParams.length; index += 1) {
+                const param = simpleFilterParams[index];
+                if ((SIMPLE_TO_ADVANCED[param] || param) !== field) {
+                    continue;
+                }
+                const value = (currentUrl.searchParams.get(param) || "").trim();
+                if (value) {
+                    return {
+                        source: "simple",
+                        field: field,
+                        param: param,
+                        operator: SIMPLE_EXACT_PARAMS.has(param) ? "2" : "0",
+                        values: [value]
+                    };
+                }
+            }
+            return null;
+        }
+
+        function getSearchFilterForAdvancedField(field, url) {
+            const currentUrl = url || new URL(window.location.href);
+            const states = getAppliedColumnSearches(currentUrl);
+            for (let index = states.length - 1; index >= 0; index -= 1) {
+                const state = states[index];
+                if ((SEARCH_TO_ADVANCED[state.columnId] || state.columnId) === field) {
+                    return {
+                        source: "columna",
+                        field: field,
+                        param: "col_" + state.columnId,
+                        operator: "0",
+                        values: [state.value]
+                    };
+                }
+            }
+            return null;
+        }
+
+        function getFilterDialogInitialState(config, editState) {
+            if (editState && editState.field === config.field) {
+                return {
+                    source: editState.source || "avanzado",
+                    index: editState.index == null ? null : String(editState.index),
+                    param: editState.param || "",
+                    operator: editState.operator || firstOperatorForFilterConfig(config),
+                    values: Array.isArray(editState.values) ? editState.values : [],
+                    disableUntilChanged: true
+                };
+            }
+
+            const currentUrl = new URL(window.location.href);
+            const advanced = getAdvancedFilterForField(config.field, currentUrl);
+            if (advanced) {
+                return {
+                    source: "avanzado",
+                    index: advanced.index,
+                    param: "",
+                    operator: advanced.operator,
+                    values: [advanced.value],
+                    disableUntilChanged: true
+                };
+            }
+
+            const simple = getSimpleFilterForField(config.field, currentUrl);
+            if (simple) {
+                return {
+                    source: simple.source,
+                    index: null,
+                    param: simple.param,
+                    operator: simple.operator,
+                    values: simple.values,
+                    disableUntilChanged: true
+                };
+            }
+
+            const search = getSearchFilterForAdvancedField(config.field, currentUrl);
+            if (search) {
+                return {
+                    source: search.source,
+                    index: null,
+                    param: search.param,
+                    operator: search.operator,
+                    values: search.values,
+                    disableUntilChanged: true
+                };
+            }
+
+            return {
+                source: "nuevo",
+                index: null,
+                param: "",
+                operator: firstOperatorForFilterConfig(config),
+                values: [],
+                disableUntilChanged: false
+            };
+        }
+
+        function collectFilterValues() {
+            const config = fieldConfig[getActiveFilterField()];
+            if (!config || !filterValueMount) {
+                return [];
+            }
+            if (config.mode === "checklist") {
+                return Array.from(
+                    filterValueMount.querySelectorAll('input[type="checkbox"]:checked')
+                ).map(function (checkbox) {
+                    return checkbox.value;
+                }).filter(Boolean);
+            }
+            const input = document.getElementById("exportarReunidaValorFiltro");
+            const value = input ? input.value.trim() : "";
+            return value ? [value] : [];
+        }
+
+        function getCurrentFilterDialogState() {
+            return {
+                operator: filterOperator ? filterOperator.value : "",
+                values: collectFilterValues()
+            };
+        }
+
+        function syncFilterApplyButton() {
+            if (!filterApplyButton) {
+                return;
+            }
+            if (!filterDialogState) {
+                filterApplyButton.disabled = true;
+                return;
+            }
+            const current = getCurrentFilterDialogState();
+            filterApplyButton.disabled = filterDialogState.disableUntilChanged
+                ? sameFilterCriterion(filterDialogState.initial, current)
+                : !hasUsefulFilterCriterion(fieldConfig[filterDialogState.field], current);
+        }
+
+        function renderTextFilterControl(mode, initialValue) {
+            if (!filterValueMount || !filterValueLabel) {
+                return;
+            }
+            filterValueMount.replaceChildren();
+            filterValueLabel.textContent = "Valor";
+            const input = document.createElement("input");
+            input.type = mode === "number" ? "number" : "text";
+            input.id = "exportarReunidaValorFiltro";
+            input.className = "pof-visual-dialog-input";
+            input.autocomplete = "off";
+            input.value = initialValue == null ? "" : initialValue;
+            filterValueMount.append(input);
+            input.focus();
+            syncFilterApplyButton();
+        }
+
+        function normalizeFilterOption(option) {
+            return {
+                value: typeof option === "object" ? option.value : option,
+                label: typeof option === "object" ? option.label : option
+            };
+        }
+
+        function renderChecklistFilterControl(field, options, initialValues) {
+            if (!filterValueMount || !filterValueLabel) {
+                return;
+            }
+            filterValueMount.replaceChildren();
+            filterValueLabel.textContent = "Opciones";
+            const values = Array.isArray(options) ? options : [];
+            if (!values.length) {
+                const empty = document.createElement("div");
+                empty.className = "pof-visual-dialog-empty";
+                empty.textContent = "Sin opciones disponibles.";
+                filterValueMount.append(empty);
+                syncFilterApplyButton();
+                return;
+            }
+
+            const search = document.createElement("input");
+            search.type = "text";
+            search.id = "exportarReunidaBuscarOpcionFiltro";
+            search.className = "pof-visual-dialog-input";
+            search.autocomplete = "off";
+            search.placeholder = "Buscar opción";
+
+            const optionsRoot = document.createElement("div");
+            optionsRoot.id = "exportarReunidaOpcionesFiltro";
+            optionsRoot.className = "pof-visual-dialog-options";
+            const selected = new Set((initialValues || []).map(String));
+
+            values.forEach(function (option) {
+                const item = normalizeFilterOption(option);
+                const label = document.createElement("label");
+                label.className = "pof-visual-dialog-option";
+                label.dataset.optionText = commonFilterUI
+                    ? commonFilterUI.normalizeText(item.label)
+                    : String(item.label || "").toLowerCase();
+
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.value = String(item.value);
+                checkbox.checked = selected.has(String(item.value));
+
+                const textNode = document.createElement("span");
+                textNode.textContent = String(item.label);
+                label.append(checkbox, textNode);
+                optionsRoot.append(label);
+            });
+
+            filterValueMount.append(search, optionsRoot);
+            if (commonFilterUI && commonFilterUI.bindDialogOptionSearch) {
+                commonFilterUI.bindDialogOptionSearch(search, optionsRoot);
+            }
+            search.focus();
+            syncFilterApplyButton();
+        }
+
+        async function loadRemoteFilterOptions(field) {
+            const optionsUrl = filterForm
+                ? filterForm.dataset.pofExportOptionsUrl || ""
+                : "";
+            if (
+                !optionsUrl ||
+                !apiFiltros ||
+                !REMOTE_CHECKLIST_FIELDS.has(field) ||
+                loadedRemoteFilters.has(field)
+            ) {
+                return true;
+            }
+
+            const activeRequest = remoteFilterRequests.get(field);
+            if (activeRequest) {
+                return activeRequest;
+            }
+
+            const url = new URL(optionsUrl, window.location.href);
+            url.searchParams.set("campo", field);
+            const request = apiFiltros.requestJsonRead(url.toString())
+                .then(function (data) {
+                    const options = data && data.opciones;
+                    if (!data || data.ok !== true || data.campo !== field || !Array.isArray(options)) {
+                        throw new Error("Respuesta inválida del catálogo de filtros.");
+                    }
+                    filterOptions[field] = options;
+                    loadedRemoteFilters.add(field);
+                    return true;
+                })
+                .catch(function () {
+                    if (filterDialogState && filterDialogState.field === field && filterValueMount) {
+                        filterValueMount.replaceChildren();
+                        const errorNode = document.createElement("div");
+                        errorNode.className = "pof-visual-dialog-empty";
+                        errorNode.textContent = "No se pudieron cargar las opciones. Intentá nuevamente.";
+                        filterValueMount.append(errorNode);
+                        if (filterApplyButton) {
+                            filterApplyButton.disabled = true;
+                        }
+                    }
+                    return false;
+                })
+                .finally(function () {
+                    if (remoteFilterRequests.get(field) === request) {
+                        remoteFilterRequests.delete(field);
+                    }
+                });
+
+            remoteFilterRequests.set(field, request);
+            return request;
+        }
+
+        function prepareFilterDialog(config, editState) {
+            if (
+                !filterDialog ||
+                !filterBackdrop ||
+                !activeFilterField ||
+                !filterOperator ||
+                !filterDialogTitle
+            ) {
+                return null;
+            }
+            const initial = getFilterDialogInitialState(config, editState);
+            activeFilterField.value = config.field;
+            filterDialogTitle.textContent = config.label;
+
+            const presets = commonFilterUI && commonFilterUI.filterOperatorPresets
+                ? (commonFilterUI.filterOperatorPresets[config.operators]
+                    || commonFilterUI.filterOperatorPresets.text)
+                : [{ value: "0", label: "parecido a" }];
+
+            filterOperator.replaceChildren();
+            presets.forEach(function (operator) {
+                const option = document.createElement("option");
+                option.value = operator.value;
+                option.textContent = operator.label;
+                filterOperator.append(option);
+            });
+            filterOperator.value = initial.operator;
+            if (!filterOperator.value) {
+                filterOperator.value = firstOperatorForFilterConfig(config);
+            }
+
+            filterDialogState = {
+                source: initial.source,
+                index: initial.index,
+                param: initial.param,
+                field: config.field,
+                initial: {
+                    operator: filterOperator.value,
+                    values: initial.values.slice()
+                },
+                disableUntilChanged: initial.disableUntilChanged
+            };
+            filterDialog.hidden = false;
+            filterBackdrop.hidden = false;
+            syncFilterApplyButton();
+            return initial;
+        }
+
+        async function openFilterDialog(config, editState) {
+            const initial = prepareFilterDialog(config, editState);
+            if (!initial || !filterValueMount) {
+                return;
+            }
+
+            if (config.mode === "checklist") {
+                if (REMOTE_CHECKLIST_FIELDS.has(config.field)) {
+                    filterValueMount.replaceChildren();
+                    const loading = document.createElement("div");
+                    loading.className = "pof-visual-dialog-empty";
+                    loading.textContent = "Cargando opciones...";
+                    filterValueMount.append(loading);
+                    if (filterApplyButton) {
+                        filterApplyButton.disabled = true;
+                    }
+                    const loaded = await loadRemoteFilterOptions(config.field);
+                    if (
+                        !loaded ||
+                        !filterDialogState ||
+                        filterDialogState.field !== config.field
+                    ) {
+                        return;
+                    }
+                }
+                renderChecklistFilterControl(
+                    config.field,
+                    filterOptions[config.field],
+                    filterDialogState.initial.values
+                );
+            } else {
+                renderTextFilterControl(
+                    config.mode,
+                    filterDialogState.initial.values[0] || ""
+                );
+            }
+        }
+
+        function closeFilterDialog() {
+            if (filterDialog) {
+                filterDialog.hidden = true;
+            }
+            if (filterBackdrop) {
+                filterBackdrop.hidden = true;
+            }
+            if (activeFilterField) {
+                activeFilterField.value = "";
+            }
+            filterDialogState = null;
+            if (filterValueMount) {
+                filterValueMount.replaceChildren();
+            }
+        }
+
+        function removeLegacyCriteriaForField(url, field) {
+            Object.keys(SEARCH_TO_ADVANCED).forEach(function (columnId) {
+                if (SEARCH_TO_ADVANCED[columnId] === field) {
+                    url.searchParams.delete("col_" + columnId);
+                }
+            });
+            simpleFilterParams.forEach(function (param) {
+                if ((SIMPLE_TO_ADVANCED[param] || param) === field) {
+                    url.searchParams.delete(param);
+                }
+            });
+        }
+
+        function replaceFilterValuesForField(url, field, operator, values) {
+            const params = url.searchParams;
+            const campos = params.getAll("campo_filtro");
+            const operadores = params.getAll("operador_filtro");
+            const valores = params.getAll("valor_filtro");
+
+            removeLegacyCriteriaForField(url, field);
+            params.delete("campo_filtro");
+            params.delete("operador_filtro");
+            params.delete("valor_filtro");
+
+            campos.forEach(function (campo, index) {
+                if (campo === field) {
+                    return;
+                }
+                params.append("campo_filtro", campo);
+                params.append("operador_filtro", operadores[index] || "0");
+                params.append("valor_filtro", valores[index] || "");
+            });
+
+            values.forEach(function (value) {
+                params.append("campo_filtro", field);
+                params.append("operador_filtro", operator);
+                params.append("valor_filtro", value);
+            });
+            params.delete("page");
+            params.delete("page_size");
+        }
+
+        function replaceAdvancedFilterByIndex(url, indexToReplace, field, operator, values) {
+            const params = url.searchParams;
+            const campos = params.getAll("campo_filtro");
+            const operadores = params.getAll("operador_filtro");
+            const valores = params.getAll("valor_filtro");
+
+            removeLegacyCriteriaForField(url, field);
+            params.delete("campo_filtro");
+            params.delete("operador_filtro");
+            params.delete("valor_filtro");
+
+            campos.forEach(function (campo, index) {
+                if (String(index) === String(indexToReplace)) {
+                    return;
+                }
+                params.append("campo_filtro", campo);
+                params.append("operador_filtro", operadores[index] || "0");
+                params.append("valor_filtro", valores[index] || "");
+            });
+
+            values.forEach(function (value) {
+                params.append("campo_filtro", field);
+                params.append("operador_filtro", operator);
+                params.append("valor_filtro", value);
+            });
+            params.delete("page");
+            params.delete("page_size");
+        }
+
+        function removeAdvancedFilterByIndex(url, indexToRemove) {
+            const params = url.searchParams;
+            const campos = params.getAll("campo_filtro");
+            const operadores = params.getAll("operador_filtro");
+            const valores = params.getAll("valor_filtro");
+
+            params.delete("campo_filtro");
+            params.delete("operador_filtro");
+            params.delete("valor_filtro");
+
+            campos.forEach(function (campo, index) {
+                if (String(index) === String(indexToRemove)) {
+                    return;
+                }
+                params.append("campo_filtro", campo);
+                params.append("operador_filtro", operadores[index] || "0");
+                params.append("valor_filtro", valores[index] || "");
+            });
+            params.delete("page");
+            params.delete("page_size");
+        }
+
+        function editFilterFromChip(chip) {
+            const editField = chip.dataset.filterEditField || chip.dataset.filterField;
+            const config = fieldConfig[editField];
+            if (!config) {
+                return;
+            }
+            void openFilterDialog(config, {
+                source: chip.dataset.filterType || "avanzado",
+                field: editField,
+                index: chip.dataset.filterIndex || null,
+                param: chip.dataset.filterParam || chip.dataset.filterField || "",
+                operator: chip.dataset.filterOperator || firstOperatorForFilterConfig(config),
+                values: chip.dataset.filterValue ? [chip.dataset.filterValue] : []
+            });
+        }
+
+        function clearFilterFromChip(chip) {
+            if (consultaEnCurso) {
+                return;
+            }
+            const url = new URL(window.location.href);
+            const type = chip.dataset.filterType;
+            const field = chip.dataset.filterField;
+            if (type === "avanzado") {
+                removeAdvancedFilterByIndex(url, chip.dataset.filterIndex);
+            } else if (type === "simple") {
+                url.searchParams.delete(chip.dataset.filterParam || field);
+            } else if (type === "columna") {
+                url.searchParams.delete("col_" + field);
+            }
+            url.searchParams.delete("page");
+            url.searchParams.delete("page_size");
+            void refreshPreviewFromUrl(url.toString());
+        }
+
+        function clearAllFilterParamsFromUrl(url) {
+            clearSearchParams(url);
+            ["campo_filtro", "operador_filtro", "valor_filtro"].forEach(function (key) {
+                url.searchParams.delete(key);
+            });
+            simpleFilterParams.forEach(function (param) {
+                url.searchParams.delete(param);
+            });
+            url.searchParams.delete("page");
+            url.searchParams.delete("page_size");
+            return url;
+        }
+
+        function clearAllFunctionalFilters() {
+            if (consultaEnCurso) {
+                return;
+            }
+            const url = clearAllFilterParamsFromUrl(
+                new URL(window.location.href)
+            );
+            searchInteractionDirty = false;
+            void refreshPreviewFromUrl(url.toString());
         }
 
         /**
@@ -831,8 +1734,11 @@
             const controls = document.querySelectorAll(
                 "#exportarReunidaBuscarBusqueda, "
                 + "#exportarReunidaLimpiarBusqueda, "
-                + "#exportarReunidaFiltrosActivos [data-pof-export-search-chip], "
-                + "#exportarReunidaFiltrosActivos [data-pof-export-search-clear-all], "
+                + "#exportarReunidaFiltrosActivos [data-filter-chip-edit], "
+                + "#exportarReunidaFiltrosActivos [data-filter-chip-remove], "
+                + "#exportarReunidaFiltrosActivos [data-pof-export-clear-all], "
+                + "[data-pof-export-filters-toggle], "
+                + "#pofExportFiltersPanel .pof-visual-filter-btn, "
                 + "[data-pof-export-preview-pagination] a[href]"
             );
             controls.forEach(function (control) {
@@ -908,16 +1814,15 @@
             const url = new URL(window.location.href);
             url.searchParams.delete("accion");
             url.searchParams.delete("visible_col");
-            if (!esProyectoEspecial) {
-                url.searchParams.delete("alcance");
-                if (alcance === "todos") {
-                    clearSearchParams(url);
-                }
-                url.searchParams.delete("page");
-                url.searchParams.set("alcance", alcance);
-            } else if (document.querySelector("[data-pof-export-preview-pagination]")) {
-                url.searchParams.delete("page");
+            url.searchParams.delete("alcance");
+            url.searchParams.delete("page");
+            url.searchParams.delete("page_size");
+
+            if (alcance === "todos") {
+                clearAllFilterParamsFromUrl(url);
             }
+
+            url.searchParams.set("alcance", alcance);
             url.searchParams.set("accion", "excel");
             keys.forEach(function (key) {
                 url.searchParams.append("visible_col", key);
@@ -948,6 +1853,20 @@
             setExcelLinkState(excelAllLink, getAllKeys(), "todos");
         }
 
+        function syncVisibleColumnsInUrl(keys) {
+            if (esProyectoEspecial) {
+                return;
+            }
+
+            const url = new URL(window.location.href);
+            url.searchParams.delete("accion");
+            url.searchParams.delete("visible_col");
+            keys.forEach(function (key) {
+                url.searchParams.append("visible_col", key);
+            });
+            window.history.replaceState({}, "", url.toString());
+        }
+
         function updateColumns() {
             const keys = getVisibleKeys();
             const visibleSet = new Set(keys);
@@ -970,7 +1889,8 @@
             table.querySelectorAll("[data-pof-preview-colspan]").forEach(function (cell) {
                 cell.colSpan = checks.length
                     + (hasVisibleQuantity ? 1 : 0)
-                    + (hasVisibleObservation ? 1 : 0);
+                    + (hasVisibleObservation ? 1 : 0)
+                    + 2;
             });
 
             table.classList.toggle("pof-export-no-visible-columns", keys.length === 0);
@@ -986,6 +1906,7 @@
                 counter.textContent = keys.length + " de " + checks.length + " columnas visibles";
             }
 
+            syncVisibleColumnsInUrl(keys);
             setExcelState(keys);
         }
 
@@ -1377,19 +2298,136 @@
             searchClear.addEventListener("click", clearColumnSearch);
         }
 
-        if (searchBadges) {
-            searchBadges.addEventListener("click", function (event) {
-                const removeControl = event.target.closest("[data-pof-export-search-chip-remove]");
-                const chip = removeControl && removeControl.closest("[data-pof-export-search-chip]");
-                if (chip && searchBadges.contains(chip)) {
-                    event.preventDefault();
-                    void removeAppliedColumnSearch(chip.dataset.pofExportSearchColumn || "");
+        if (filtersToggle && filtersPanel) {
+            filtersToggle.addEventListener("click", function () {
+                if (consultaEnCurso) {
                     return;
                 }
-                const clearAll = event.target.closest("[data-pof-export-search-clear-all]");
+                const open = filtersPanel.hidden;
+                filtersPanel.hidden = !open;
+                filtersToggle.setAttribute("aria-expanded", open ? "true" : "false");
+                syncFiltersToggle(new URL(window.location.href));
+            });
+        }
+
+        filterButtons.forEach(function (button) {
+            button.addEventListener("click", function () {
+                if (consultaEnCurso) {
+                    return;
+                }
+                const config = fieldConfig[button.dataset.filterField];
+                if (config) {
+                    void openFilterDialog(config);
+                }
+            });
+        });
+
+        if (filterOperator) {
+            filterOperator.addEventListener("change", syncFilterApplyButton);
+        }
+        if (filterValueMount) {
+            filterValueMount.addEventListener("input", syncFilterApplyButton);
+            filterValueMount.addEventListener("change", syncFilterApplyButton);
+        }
+        if (closeFilterDialogButton) {
+            closeFilterDialogButton.addEventListener("click", closeFilterDialog);
+        }
+        if (filterBackdrop) {
+            filterBackdrop.addEventListener("click", closeFilterDialog);
+        }
+
+        if (filterForm) {
+            filterForm.addEventListener("submit", function (event) {
+                event.preventDefault();
+                if (
+                    consultaEnCurso ||
+                    !filterDialogState ||
+                    (filterApplyButton && filterApplyButton.disabled)
+                ) {
+                    return;
+                }
+
+                const field = getActiveFilterField();
+                const config = fieldConfig[field];
+                if (!field || !config) {
+                    return;
+                }
+
+                const values = collectFilterValues();
+                const operator = filterOperator ? filterOperator.value || "0" : "0";
+                const url = new URL(window.location.href);
+
+                if (filterDialogState.source === "columna") {
+                    if (filterDialogState.param) {
+                        url.searchParams.delete(filterDialogState.param);
+                    }
+                    replaceFilterValuesForField(url, field, operator, values);
+                } else if (
+                    filterDialogState.source === "avanzado" &&
+                    filterDialogState.index !== null &&
+                    filterDialogState.index !== ""
+                ) {
+                    replaceAdvancedFilterByIndex(
+                        url,
+                        filterDialogState.index,
+                        field,
+                        operator,
+                        values
+                    );
+                } else if (
+                    filterDialogState.source === "simple" &&
+                    filterDialogState.param
+                ) {
+                    if (
+                        operator === filterDialogState.initial.operator &&
+                        values.length <= 1
+                    ) {
+                        if (values.length) {
+                            url.searchParams.set(filterDialogState.param, values[0]);
+                        } else {
+                            url.searchParams.delete(filterDialogState.param);
+                        }
+                        url.searchParams.delete("page");
+                        url.searchParams.delete("page_size");
+                    } else {
+                        url.searchParams.delete(filterDialogState.param);
+                        replaceFilterValuesForField(url, field, operator, values);
+                    }
+                } else {
+                    replaceFilterValuesForField(url, field, operator, values);
+                }
+
+                closeFilterDialog();
+                void refreshPreviewFromUrl(url.toString());
+            });
+        }
+
+        if (searchBadges) {
+            searchBadges.addEventListener("click", function (event) {
+                const chip = event.target.closest("[data-filter-chip]");
+                const clearAll = event.target.closest("[data-pof-export-clear-all]");
+
                 if (clearAll && searchBadges.contains(clearAll)) {
                     event.preventDefault();
-                    void clearAllAppliedColumnSearches();
+                    clearAllFunctionalFilters();
+                    return;
+                }
+
+                if (!chip || !searchBadges.contains(chip)) {
+                    return;
+                }
+
+                const removeControl = event.target.closest("[data-filter-chip-remove]");
+                if (removeControl && chip.contains(removeControl)) {
+                    event.preventDefault();
+                    clearFilterFromChip(chip);
+                    return;
+                }
+
+                const editControl = event.target.closest("[data-filter-chip-edit]");
+                if (editControl && chip.contains(editControl)) {
+                    event.preventDefault();
+                    editFilterFromChip(chip);
                 }
             });
         }
@@ -1430,7 +2468,7 @@
 
         }
 
-        if (pagination || searchSelect) {
+        if (pagination || searchSelect || filtersToggle) {
             window.addEventListener("popstate", function () {
                 refreshPreviewFromUrl(window.location.href, { replace: true });
             });

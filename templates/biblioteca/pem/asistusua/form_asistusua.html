@@ -2,14 +2,16 @@
 {% load static %}
 {% load widget_tweaks %}
 {% block head %}
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260908-6">
+    <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2.min.css' %}">
+    <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2-bootstrap4.min.css' %}">
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260923-responsive-crud-1">
 {% endblock %}
 
 {% block content_header %}{% endblock %}
 
 {% block content %}
-<main class="biblioteca-crud biblioteca-crud--formulario">
-    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='groups' %}
+<main class="biblioteca-crud biblioteca-crud--formulario biblioteca-form-standard">
+    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='groups' section_return_url=list_url section_return_label='Volver a Asistencia' %}
     <form id="formulario" method="post" action="?periodo={{ periodo_activo_id }}" enctype="multipart/form-data" class="biblioteca-crud__form">
         <div class="card biblioteca-crud__panel">
             <div class="card-header">
@@ -41,49 +43,36 @@
                     </div>
                 {% endif %}
 
-                <!-- Botón para mostrar el popup en la fila superior -->
-                <div class="form-group row biblioteca-crud__info-row">
-                    <div class="col-md-12 text-right">
-                        <button type="button" class="btn btn-info" id="showPopupBtn">
-                            <span class="biblioteca-symbol" aria-hidden="true">info</span> Información
-                        </button>
+                <section class="biblioteca-form__block" aria-labelledby="biblioteca-form-datos">
+                    {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' show_info=1 info_title='Asistencia' info_section_icon='groups' info_text='Registrá la asistencia de usuarios correspondiente al período.' info_item_1='Nivel' info_icon_1='school' info_item_2='Usuario' info_icon_2='person' info_item_3='Varones' info_icon_3='man' info_item_4='Total' info_icon_4='calculate' only %}
+                    <div class="biblioteca-form__block-body">
+                        <div class="biblioteca-form__grid">
+                            <div>
+                                <label for="id_nivel">Nivel</label>
+                                <div class="biblioteca-form__select-wrap">
+                                    {{ form.nivel|add_class:"form-control biblioteca-form__select" }}
+                                    <span class="biblioteca-symbol biblioteca-form__select-icon" aria-hidden="true">expand_more</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="id_usuario">Usuario</label>
+                                <div class="biblioteca-form__select-wrap">
+                                    {{ form.usuario|add_class:"form-control biblioteca-form__select" }}
+                                    <span class="biblioteca-symbol biblioteca-form__select-icon" aria-hidden="true">expand_more</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="id_varones">Varones</label>
+                                {{ form.varones|add_class:"form-control text-center" }}
+                            </div>
+                            <div>
+                                <label for="id_total">Total</label>
+                                {{ form.total|add_class:"form-control text-center" }}
+                            </div>
+                        </div>
                     </div>
-                </div>
-
-                <!-- Campo CUE Anexo (Solo lectura) -->
-                <div class="form-group row">
-                    <div class="col-md-4">
-                        <label for="id_cueanexo">CUE Anexo:</label>
-                        <input type="text" id="id_cueanexo" name="cueanexo" class="form-control" value="{{ cueanexo }}" readonly>
-                    </div>                
-                    <div class="col-md-4">
-                        <label for="id_mes">Mes:</label>
-                        {{ form.mes|add_class:"form-control" }}
-                    </div>
-                    <div class="col-md-4">
-                        <label for="id_anio">Año:</label>
-                        {{ form.anio|add_class:"form-control" }}
-                    </div>                    
-                </div>
-
-                <div class="row mt-4">
-                    <div class="col-md-3">
-                        <label for="id_nivel">Nivel:</label>
-                        {{ form.nivel|add_class:"form-control text-center" }}
-                    </div>
-                    <div class="col-md-2">
-                        <label for="id_usuario">Usuario:</label>
-                        {{ form.usuario|add_class:"form-control text-center" }}
-                    </div>
-                    <div class="col-md-2">
-                        <label for="id_varones">Varones:</label>
-                        {{ form.varones|add_class:"form-control text-center" }}
-                    </div>
-                    <div class="col-md-2">
-                        <label for="id_total">Total:</label>
-                        {{ form.total|add_class:"form-control" }}
-                    </div>                    
-                </div>
+                </section>
+            </div>
 
             <div class="card-footer">
                 <button type="submit" id="btnSubmit" class="btn btn-primary btn-flat">
@@ -97,6 +86,9 @@
     </form>
 </main>
 
+<script src="{% static 'lib/select2-4.0.13/js/select2.min.js' %}"></script>
+<script src="{% static 'biblioteca/js/form_controls.js' %}?v=20260917-2"></script>
+
     <!-- ========================= -->
 <!-- 🔥 JAVASCRIPT -->
 <!-- ========================= -->
@@ -108,8 +100,6 @@
     const btnSubmit = document.getElementById('btnSubmit');
 
     const fields = {
-        mes: document.getElementById('id_mes'),
-        anio: document.getElementById('id_anio'),
         varones: document.getElementById('id_varones'),
         total: document.getElementById('id_total'),
     };
@@ -157,7 +147,11 @@
             }
         }
 
-        btnSubmit.disabled = errores > 0;
+        if (window.biblioteca_form_state) {
+            window.biblioteca_form_state.setValidationValid(btnSubmit.form, errores === 0);
+        } else {
+            btnSubmit.disabled = errores > 0;
+        }
 
         return errores === 0;
     }
@@ -209,10 +203,10 @@
 
         var parameters = new FormData(this);
 
-        submit_with_ajax(
+        biblioteca_submit_with_ajax(
             window.location.pathname + window.location.search,
-            'Notificación',
-            '¿Estás seguro de realizar la siguiente acción?',
+            'Confirmar guardado',
+            '¿Querés guardar los datos cargados en este registro?',
             parameters,
             function () {
                 location.href = '{{ list_url }}';
@@ -223,13 +217,7 @@
     // =========================
     // INFO POPUP
     // =========================
-    $('#showPopupBtn').click(function () {
-        Swal.fire({
-            title: 'Información',
-            html: `<p>En esta sección se cargan los registros de asistencia de usuarios del período.</p>`,
-            icon: 'info'
-        });
-    });
+
 
     // =========================
     // BLOQUEO (SI VIENE DEL BACKEND)
@@ -241,13 +229,6 @@
             text: 'Este período ya fue enviado y no puede modificarse.'
         });
     {% endif %}
-
-    // ===============================
-// 📌 AUTO FILL CAMPOS
-// ===============================
-document.getElementById("id_cueanexo").value = "{{ cueanexo }}";
-document.getElementById("id_mes").value = "{{ mes }}";
-document.getElementById("id_anio").value = "{{ anno }}";
 
     </script>
 {% endblock %}

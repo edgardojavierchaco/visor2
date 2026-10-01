@@ -118,6 +118,7 @@ from .views import (
 )
 
 from .views_bibliotecarios import (
+    BibliotecarioPersonaLookupView,
     BibliotecariosCueCreateView,
     BibliotecariosCueListView,
     BibliotecariosCueUpdateView,
@@ -268,7 +269,11 @@ urlpatterns = [
     
     path("delete/<int:pk>/", BibliotecariosCueDeleteView.as_view(), name="bibliotecario_delete"),
     path('bibliotecarios/list/', BibliotecariosCueListView.as_view(), name='bibliotecario_list'),
-    
+    path(
+        'bibliotecarios/persona-bnh/',
+        BibliotecarioPersonaLookupView.as_view(),
+        name='bibliotecario_persona_lookup',
+    ),
 
     path('bibliotecarios/create/', BibliotecariosCueCreateView.as_view(), name='bibliotecario_create'),
     path('bibliotecarios/update/<int:pk>/', BibliotecariosCueUpdateView.as_view(), name='bibliotecario_update'),

@@ -1,0 +1,40 @@
+<div class="modal biblioteca-action-modal biblioteca-guardar-modal"
+     id="bibliotecaGuardarModal"
+     tabindex="-1"
+     role="dialog"
+     aria-labelledby="bibliotecaGuardarModalTitulo"
+     aria-describedby="bibliotecaGuardarModalDescripcion"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="biblioteca-action-modal__header">
+                <span class="biblioteca-action-modal__icon" aria-hidden="true">
+                    <span class="biblioteca-symbol biblioteca-symbol--filled">save</span>
+                </span>
+                <h2 class="biblioteca-action-modal__title" id="bibliotecaGuardarModalTitulo">
+                    Confirmar guardado
+                </h2>
+            </div>
+
+            <div class="biblioteca-action-modal__body">
+                <p id="bibliotecaGuardarModalDescripcion">
+                    ¿Querés guardar los datos cargados en este registro?
+                </p>
+            </div>
+
+            <div class="biblioteca-action-modal__footer">
+                <button type="button"
+                        class="btn btn-light"
+                        data-biblioteca-guardar-cancelar>
+                    Cancelar
+                </button>
+                <button type="button"
+                        class="btn btn-primary"
+                        data-biblioteca-guardar-confirmar>
+                    <span class="biblioteca-symbol" aria-hidden="true">save</span>
+                    <span data-biblioteca-guardar-confirmar-texto>Sí, guardar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

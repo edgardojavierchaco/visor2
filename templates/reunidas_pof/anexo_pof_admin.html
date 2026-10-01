@@ -1,0 +1,258 @@
+{% extends 'reunidas_pof/layout_pof.html' %}
+{% load static %}
+
+{% block head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'reunidas_pof/css/anexo_pof_admin.css' %}?v=20260923-1">
+{% endblock %}
+
+{% block content %}
+<div class="pof-anexo-admin-page"
+     data-pof-anexo-admin
+     data-catalogo-url="{% url 'reunidas_pof:anexo_pof_catalogo' %}"
+     data-catalogo-crear-url="{% url 'reunidas_pof:crear_anexo_pof_catalogo' %}"
+     data-catalogo-desactivar-url-base="{% url 'reunidas_pof:desactivar_anexo_pof_catalogo' 0 %}"
+     data-catalogo-reactivar-url-base="{% url 'reunidas_pof:reactivar_anexo_pof_catalogo' 0 %}"
+     data-catalogo-historial-url-base="{% url 'reunidas_pof:historial_catalogo_anexo_pof' 0 %}"
+     data-asociaciones-url="{% url 'reunidas_pof:anexo_pof_asociaciones' %}"
+     data-asociar-url="{% url 'reunidas_pof:asociar_anexo_pof' %}"
+     data-asociacion-desactivar-url="{% url 'reunidas_pof:desactivar_asociacion_anexo_pof' %}"
+     data-asociacion-reactivar-url="{% url 'reunidas_pof:reactivar_asociacion_anexo_pof' %}"
+     data-asociaciones-historial-url="{% url 'reunidas_pof:historial_asociaciones_anexo_pof' %}">
+
+    {% include "reunidas_pof/menu_pof.html" with seccion_activa="inicio" %}
+
+    <div class="pof-view-header">
+        <div class="pof-view-header-icon-box" aria-hidden="true">
+            <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">label</span>
+        </div>
+        <div class="pof-view-header-copy">
+            <h1>ADMINISTRACI&Oacute;N ANEXO POF</h1>
+            <p>Gestion&aacute; el cat&aacute;logo global y sus asociaciones administrativas por CUE o CUOF.</p>
+        </div>
+    </div>
+
+    <div class="pof-note pof-anexo-domain-note">
+        <strong>Regla de negocio:</strong>
+        los C&oacute;digos Anexo POF pertenecen al CUE. El CUOF se utiliza &uacute;nicamente
+        para Proyecto Especial cuando realmente no existe CUE. Las cargas POF no son propietarias de este dato.
+    </div>
+
+    <section class="pof-card pof-card-accent" aria-labelledby="anexoCatalogoTitulo">
+        <div class="pof-card-header">
+            <div>
+                <h2 id="anexoCatalogoTitulo">Cat&aacute;logo Anexo POF</h2>
+                <p class="pof-help">
+                    Los c&oacute;digos son globales. Desactivar un c&oacute;digo impide nuevas asociaciones,
+                    pero no modifica las asociaciones vigentes que ya lo utilizan.
+                </p>
+            </div>
+        </div>
+
+        <form class="pof-anexo-inline-form" data-anexo-catalogo-form>
+            <div class="pof-field pof-anexo-grow">
+                <label for="anexoCatalogoCodigo">Nuevo c&oacute;digo</label>
+                <input type="text"
+                       id="anexoCatalogoCodigo"
+                       class="pof-form-control"
+                       maxlength="50"
+                       autocomplete="off"
+                       placeholder="Ej: 00, 01 o A-2"
+                       data-anexo-catalogo-codigo>
+            </div>
+            <button type="submit" class="pof-btn pof-btn-primary" data-anexo-catalogo-crear>
+                <span class="pof-action-icon material-symbols-outlined" aria-hidden="true">add</span>
+                Agregar c&oacute;digo
+            </button>
+        </form>
+
+        <div class="pof-status pof-api-status" role="status" aria-live="polite" data-anexo-catalogo-status></div>
+
+        <div class="pof-grid-table-wrap">
+            <table class="pof-grid-table" aria-label="Catálogo de Códigos Anexo POF">
+                <thead>
+                    <tr>
+                        <th>C&oacute;digo</th>
+                        <th>Estado</th>
+                        <th>&Uacute;ltima actualizaci&oacute;n</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody data-anexo-catalogo-body>
+                    <tr>
+                        <td colspan="4" class="pof-empty">Cargando cat&aacute;logo...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="pof-card pof-card-accent" aria-labelledby="anexoAsociacionesTitulo">
+        <div class="pof-card-header">
+            <div>
+                <h2 id="anexoAsociacionesTitulo">Asociaciones por propietario</h2>
+                <p class="pof-help">
+                    Seleccion&aacute; el propietario administrativo y administr&aacute; sus c&oacute;digos sin modificar cargos ni POF.
+                </p>
+            </div>
+        </div>
+
+        <form class="pof-grid pof-anexo-owner-form" data-anexo-propietario-form>
+            <div class="pof-field pof-col-3">
+                <label for="anexoPropietarioTipo">Tipo de propietario</label>
+                <span class="pof-native-select-wrap">
+                    <select id="anexoPropietarioTipo" class="pof-form-select" data-anexo-propietario-tipo>
+                        <option value="CUE">CUE</option>
+                        <option value="CUOF">CUOF - Proyecto Especial sin CUE</option>
+                    </select>
+                </span>
+            </div>
+
+            <div class="pof-field pof-col-6">
+                <label for="anexoPropietarioValor" data-anexo-propietario-label>CUE</label>
+                <input type="text"
+                       id="anexoPropietarioValor"
+                       class="pof-form-control"
+                       maxlength="7"
+                       inputmode="numeric"
+                       autocomplete="off"
+                       placeholder="7 dígitos"
+                       data-anexo-propietario-valor>
+            </div>
+
+            <div class="pof-anexo-owner-submit pof-col-3">
+                <button type="submit" class="pof-btn pof-btn-primary" data-anexo-propietario-cargar>
+                    <span class="pof-action-icon material-symbols-outlined" aria-hidden="true">search_check_2</span>
+                    Cargar asociaciones
+                </button>
+            </div>
+        </form>
+
+        <div class="pof-note pof-anexo-cuof-note pof-hidden" data-anexo-cuof-note>
+            <strong>CUOF es fallback.</strong>
+            Usalo s&oacute;lo para un Proyecto Especial que no tenga CUE. Si existe CUE, la administraci&oacute;n corresponde al CUE.
+        </div>
+
+        <div class="pof-status pof-api-status" role="status" aria-live="polite" data-anexo-propietario-status></div>
+
+        <div class="pof-anexo-owner-panel pof-hidden" data-anexo-owner-panel>
+            <div class="pof-anexo-owner-banner">
+                <div>
+                    <span class="pof-anexo-owner-caption">Propietario seleccionado</span>
+                    <strong data-anexo-owner-title>-</strong>
+                </div>
+                <button type="button"
+                        class="pof-btn pof-btn-light"
+                        data-anexo-owner-refresh>
+                    Actualizar
+                </button>
+            </div>
+
+            <div class="pof-anexo-associate-box">
+                <div class="pof-field pof-anexo-grow">
+                    <label for="anexoCodigoDisponible">Asociar c&oacute;digo</label>
+                    <span class="pof-native-select-wrap">
+                        <select id="anexoCodigoDisponible" class="pof-form-select" data-anexo-codigo-disponible>
+                            <option value="">Seleccionar c&oacute;digo</option>
+                        </select>
+                    </span>
+                    <span class="pof-anexo-field-help" data-anexo-codigo-help>
+                        Se muestran c&oacute;digos activos del cat&aacute;logo que no est&aacute;n asociados actualmente.
+                    </span>
+                </div>
+                <button type="button"
+                        class="pof-btn pof-btn-primary"
+                        data-anexo-asociar
+                        disabled>
+                    <span class="pof-action-icon material-symbols-outlined" aria-hidden="true">splitscreen_add</span>
+                    Asociar
+                </button>
+            </div>
+
+            <div class="pof-status pof-api-status" role="status" aria-live="polite" data-anexo-asociacion-status></div>
+
+            <h3 class="pof-anexo-subtitle">C&oacute;digos del propietario</h3>
+            <div class="pof-grid-table-wrap">
+                <table class="pof-grid-table" aria-label="Asociaciones Anexo POF del propietario">
+                    <thead>
+                        <tr>
+                            <th>C&oacute;digo</th>
+                            <th>Cat&aacute;logo</th>
+                            <th>Asociaci&oacute;n</th>
+                            <th>&Uacute;ltima actualizaci&oacute;n</th>
+                            <th>Acci&oacute;n</th>
+                        </tr>
+                    </thead>
+                    <tbody data-anexo-asociaciones-body>
+                        <tr>
+                            <td colspan="5" class="pof-empty">Seleccion&aacute; un propietario.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="pof-anexo-subtitle pof-anexo-history-title">Historial del propietario</h3>
+            <div class="pof-grid-table-wrap pof-history-table-wrap">
+                <table class="pof-grid-table" aria-label="Historial de asociaciones Anexo POF">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>C&oacute;digo</th>
+                            <th>Acci&oacute;n</th>
+                            <th>Usuario</th>
+                        </tr>
+                    </thead>
+                    <tbody data-anexo-asociaciones-historial-body>
+                        <tr>
+                            <td colspan="4" class="pof-empty">Sin historial cargado.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <div class="pof-modal-backdrop pof-hidden"
+         aria-hidden="true"
+         data-anexo-catalogo-history-modal>
+        <div class="pof-modal pof-history-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="anexoCatalogoHistorialTitulo">
+            <div class="pof-modal-header">
+                <div>
+                    <h2 id="anexoCatalogoHistorialTitulo">Historial del c&oacute;digo</h2>
+                    <p class="pof-help" data-anexo-catalogo-history-label></p>
+                </div>
+                <button type="button"
+                        class="pof-modal-close"
+                        aria-label="Cerrar"
+                        data-anexo-catalogo-history-close>&times;</button>
+            </div>
+
+            <div class="pof-status pof-api-status"
+                 role="status"
+                 aria-live="polite"
+                 data-anexo-catalogo-history-status></div>
+
+            <div class="pof-grid-table-wrap pof-history-table-wrap">
+                <table class="pof-grid-table" aria-label="Historial del código Anexo POF">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Acci&oacute;n</th>
+                            <th>Usuario</th>
+                        </tr>
+                    </thead>
+                    <tbody data-anexo-catalogo-history-body></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'reunidas_pof/js/pof_api.js' %}?v=20260924-1"></script>
+<script src="{% static 'reunidas_pof/js/anexo_pof_admin.js' %}?v=20260924-1"></script>
+{% endblock %}

@@ -20,6 +20,7 @@ ModelForm de ``forms.py``.
 
 # ============================================================
 import re
+import unicodedata
 from django.conf import settings
 from django.db import models
 from django.core.exceptions import ValidationError
@@ -45,6 +46,196 @@ from apps.bnhpersonas.models import (
     EstadosCiviles,
     CodAreasTelefonos,
 )
+
+
+DOCUMENTO_DNI = 1
+DOCUMENTO_NO_POSEE = 11
+DOCUMENTO_EN_TRAMITE = 12
+DOCUMENTO_EXTRANJERO = 13
+
+
+def _texto_tipo_documento(tipo_documento):
+    """Normaliza el texto visible del catálogo para tolerar PK no canónicos."""
+
+    try:
+        texto = str(tipo_documento or "").strip().upper()
+        return "".join(
+            caracter
+            for caracter in unicodedata.normalize("NFKD", texto)
+            if not unicodedata.combining(caracter)
+        )
+    except Exception:
+        return ""
+
+
+def clasificar_tipo_documento(tipo_documento):
+    """Clasifica tipos BNH por código y, como respaldo, por su etiqueta visible."""
+
+    tipo_id = getattr(tipo_documento, "pk", tipo_documento)
+    try:
+        tipo_id = int(tipo_id)
+    except (TypeError, ValueError):
+        tipo_id = None
+
+    texto = _texto_tipo_documento(tipo_documento)
+    # Los estados especiales tienen prioridad sobre coincidencias parciales
+    # como "DNI" dentro de la descripción del catálogo.
+    if tipo_id == DOCUMENTO_NO_POSEE or "NO POSEE" in texto:
+        return "no_posee"
+    if tipo_id == DOCUMENTO_EN_TRAMITE or "TRAMITE" in texto:
+        return "en_tramite"
+    if tipo_id == DOCUMENTO_EXTRANJERO or "EXTRANJ" in texto:
+        return "extranjero"
+    if tipo_id == DOCUMENTO_DNI or texto == "DNI" or "DNI" in texto:
+        return "dni"
+    if (
+        re.search(r"\b(?:CI|LC|LE)\b", texto)
+        or "CEDULA DE IDENTIDAD" in texto
+        or "CEDULA MERCOSUR" in texto
+    ):
+        return "numerico"
+    return "otro"
+
+
+def normalizar_documento_bnh(tipo_documento, valor, nombre="Número de documento"):
+    """Aplica las reglas documentales BNH sin asumir que todo documento es DNI."""
+
+    clase = clasificar_tipo_documento(tipo_documento)
+    texto = str(valor or "").strip().upper()
+
+    if clase == "no_posee":
+        if texto:
+            raise ValidationError(
+                f"{nombre}: no debe informarse cuando el tipo de documento es 'No posee'."
+            )
+        return None
+
+    if clase == "en_tramite":
+        # El requerimiento permite ausencia de número y no fija un formato
+        # adicional cuando se informa; no se inventan restricciones.
+        return texto or None
+
+    if not texto:
+        raise ValidationError(f"{nombre} es obligatorio para el tipo de documento seleccionado.")
+
+    if clase in {"dni", "numerico"}:
+        normalizado = re.sub(r"[.\-\s]", "", texto)
+        if not normalizado.isdigit():
+            raise ValidationError(f"{nombre}: el tipo seleccionado admite únicamente números.")
+        if clase == "dni":
+            if len(normalizado) == 7:
+                normalizado = normalizado.zfill(8)
+            if len(normalizado) != 8:
+                raise ValidationError(
+                    "DNI inválido: debe contener 8 dígitos; para DNI menores a 10 millones use cero inicial."
+                )
+        return normalizado
+
+    if clase == "extranjero":
+        if not re.fullmatch(r"[A-Z0-9]+", texto):
+            raise ValidationError(
+                f"{nombre}: el documento extranjero admite únicamente letras mayúsculas y números."
+            )
+        return texto
+
+    # Para códigos no documentados en el requerimiento adjunto no se inventan
+    # restricciones adicionales: se conserva el valor, normalizado a mayúsculas.
+    return texto
+
+
+def normalizar_cuil_opcional(valor, nombre="CUIL"):
+    """Valida CUIL sólo cuando fue informado y conserva ausencia real como None."""
+
+    texto = str(valor or "").strip()
+    if not texto:
+        return None
+    if not re.fullmatch(r"[0-9.\-\s]+", texto):
+        raise ValidationError(f"{nombre} inválido: use únicamente números y separadores habituales.")
+    cuil = re.sub(r"\D", "", texto)
+    if len(cuil) != 11:
+        raise ValidationError(f"{nombre} debe tener 11 dígitos.")
+    validar_cuil(cuil)
+    return cuil
+
+
+def normalizar_componente_id_jurisdiccional(valor):
+    """Normaliza una parte del identificador jurisdiccional de respaldo.
+
+    BNH indica concatenar los seis datos de identidad cuando la jurisdicción no
+    dispone de un identificador nominal. Para que el resultado sea estable y no
+    contenga signos de puntuación, se usan mayúsculas ASCII y sólo letras/números.
+    """
+
+    texto = str(valor or "").strip().upper()
+    texto = "".join(
+        caracter
+        for caracter in unicodedata.normalize("NFKD", texto)
+        if not unicodedata.combining(caracter)
+    )
+    return re.sub(r"[^A-Z0-9]", "", texto)
+
+
+def generar_id_persona_jurisdiccional_bnh(
+    *,
+    apellidos,
+    nombres,
+    tipo_documento,
+    nro_documento,
+    fecha_nacimiento,
+    sexo,
+):
+    """Construye la identidad jurisdiccional con la regla canónica BNH."""
+
+    tipo_id = getattr(tipo_documento, "pk", tipo_documento)
+    sexo_id = getattr(sexo, "pk", sexo)
+    documento = normalizar_documento_bnh(
+        tipo_documento or tipo_id,
+        nro_documento,
+    )
+    fecha = (
+        fecha_nacimiento.strftime("%d%m%Y")
+        if fecha_nacimiento
+        else ""
+    )
+    componentes = (
+        apellidos,
+        nombres,
+        tipo_id,
+        documento,
+        fecha,
+        sexo_id,
+    )
+    identificador = "".join(
+        normalizar_componente_id_jurisdiccional(componente)
+        for componente in componentes
+    )
+    if not identificador:
+        raise ValidationError(
+            {"id_persona_jurisdiccional": "No se pudo generar el identificador jurisdiccional."}
+        )
+    return identificador
+
+
+def validar_cuil_con_documento(cuil, tipo_documento, nro_documento, nombre="CUIL"):
+    """CUIL sólo corresponde a DNI argentino y, si hay DNI, debe coincidir."""
+
+    if not cuil:
+        return
+
+    clase_documento = clasificar_tipo_documento(tipo_documento)
+    if clase_documento != "dni":
+        raise ValidationError(
+            f"{nombre} sólo puede informarse cuando el tipo de documento es DNI."
+        )
+
+    if not nro_documento:
+        return
+
+    dni = str(nro_documento).zfill(8)
+    if cuil[2:10] != dni:
+        raise ValidationError(
+            f"{nombre} no corresponde al DNI informado."
+        )
 
 
 def _provincia_id_de_localidad(localidad):
@@ -249,15 +440,29 @@ class Alumno(models.Model):
         DocumentoTipo, 
         on_delete=models.PROTECT
         )
-    nro_doc = models.CharField(max_length=20, unique=True, db_index=True)
+    nro_doc = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        db_index=True,
+    )
     cuil = models.CharField(
         max_length=11,
         null=True,
         blank=True,
         db_index=True,
     )
+    # Referencia técnica a SGE cuando la persona fue localizada allí. Se guarda
+    # separada del PK local y del identificador jurisdiccional porque cumplen
+    # funciones distintas. PostgreSQL admite múltiples NULL con unique=True.
+    id_persona_sge = models.PositiveBigIntegerField(
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+    )
     id_persona_jurisdiccional = models.CharField(
-        max_length=80,
+        max_length=512,
         unique=True,
         db_index=True,
         null=True,
@@ -311,6 +516,8 @@ class Alumno(models.Model):
     prov_residencia = models.ForeignKey(
         Provincias,
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         db_column="prov_residencia",
         related_name="alumnos_provincia_residencia",
     )
@@ -318,6 +525,8 @@ class Alumno(models.Model):
     loc_residencia = models.ForeignKey(
         Localidades,
         on_delete=models.PROTECT,
+        null=True,
+        blank=True,
         db_column="loc_residencia",
         related_name="alumnos_localidad_residencia",
     )
@@ -431,6 +640,16 @@ class Alumno(models.Model):
             pais_txt = ""
         return pais_id == 14 or "ARGENT" in pais_txt
 
+    def pais_residencia_es_argentina(self):
+        """Determina si provincia/localidad de residencia deben completarse."""
+
+        pais_id = self.pais_residencia_id
+        try:
+            pais_txt = str(self.pais_residencia or "").upper() if pais_id else ""
+        except Pais.DoesNotExist:
+            pais_txt = ""
+        return pais_id == 14 or "ARGENT" in pais_txt
+
     def clean(self):
         """Normaliza documento/CUIL y aplica validaciones antes de guardar."""
 
@@ -460,19 +679,23 @@ class Alumno(models.Model):
                     "El lugar de nacimiento es obligatorio cuando el pais de nacimiento no es Argentina."
                 )
 
-        # Residencia siempre se valida contra los catalogos compartidos.
+        # BNH pide provincia/localidad de residencia únicamente para Argentina.
         if not self.pais_residencia_id:
             errors["pais_residencia"] = "Debe seleccionar el pais de residencia."
-        if not self.prov_residencia_id:
-            errors["prov_residencia"] = "Debe seleccionar la provincia de residencia."
-        if not self.loc_residencia_id:
-            errors["loc_residencia"] = "Debe seleccionar la localidad de residencia."
-        if (
-            self.prov_residencia_id
-            and self.loc_residencia_id
-            and not _localidad_corresponde_a_provincia(self.loc_residencia, self.prov_residencia_id)
-        ):
-            errors["loc_residencia"] = "La localidad de residencia no corresponde a la provincia seleccionada."
+        elif self.pais_residencia_es_argentina():
+            if not self.prov_residencia_id:
+                errors["prov_residencia"] = "La provincia de residencia es obligatoria para Argentina."
+            if not self.loc_residencia_id:
+                errors["loc_residencia"] = "La localidad de residencia es obligatoria para Argentina."
+            if (
+                self.prov_residencia_id
+                and self.loc_residencia_id
+                and not _localidad_corresponde_a_provincia(self.loc_residencia, self.prov_residencia_id)
+            ):
+                errors["loc_residencia"] = "La localidad de residencia no corresponde a la provincia seleccionada."
+        else:
+            self.prov_residencia = None
+            self.loc_residencia = None
 
         # WhatsApp solo queda habilitado si hay telefono celular completo.
         telefono = _validar_contacto_telefono(errors, self.codigo_area_id, self.telefono)
@@ -485,22 +708,66 @@ class Alumno(models.Model):
         if not self.es_celular:
             self.whatsapp = False
 
-        if self.nro_doc:
-            self.nro_doc = self.nro_doc.strip().upper()
-
-        # DNI se normaliza solo cuando el tipo de documento elegido es DNI.
-        if self.tipo_doc_id == 1:
+        # Documento y CUIL son atributos de identidad, pero CUIL no es
+        # requisito de existencia de la persona. La regla documental depende
+        # del tipo seleccionado y contempla No posee / En trámite / extranjero.
+        tipo_documento = None
+        if self.tipo_doc_id:
             try:
-                self.nro_doc = validar_dni(self.nro_doc)
-            except ValidationError as exc:
-                errors["nro_doc"] = exc.messages
+                tipo_documento = self.tipo_doc
+            except DocumentoTipo.DoesNotExist:
+                tipo_documento = self.tipo_doc_id
 
-        if self.cuil:
-            self.cuil = re.sub(r"\D", "", self.cuil)
+        try:
+            self.nro_doc = normalizar_documento_bnh(
+                tipo_documento or self.tipo_doc_id,
+                self.nro_doc,
+            )
+        except ValidationError as exc:
+            errors["nro_doc"] = exc.messages
+
+        try:
+            self.cuil = normalizar_cuil_opcional(self.cuil, "CUIL del alumno")
+        except ValidationError as exc:
+            errors["cuil"] = exc.messages
+
+        if self.cuil and "nro_doc" not in errors:
             try:
-                validar_cuil(self.cuil)
+                validar_cuil_con_documento(
+                    self.cuil,
+                    tipo_documento or self.tipo_doc_id,
+                    self.nro_doc,
+                    "CUIL del alumno",
+                )
             except ValidationError as exc:
                 errors["cuil"] = exc.messages
+
+        # Ninguna coincidencia se fusiona silenciosamente. CUIL y
+        # tipo+documento identifican candidatos fuertes y deben ser únicos
+        # dentro de BNH Alumnos cuando están informados.
+        if self.cuil and "cuil" not in errors:
+            duplicado_cuil = type(self).objects.filter(cuil=self.cuil)
+            if self.pk:
+                duplicado_cuil = duplicado_cuil.exclude(pk=self.pk)
+            if duplicado_cuil.exists():
+                errors["cuil"] = "Ya existe otro alumno cargado con este CUIL."
+
+        if self.nro_doc and self.tipo_doc_id and "nro_doc" not in errors:
+            duplicado_documento = type(self).objects.filter(
+                tipo_doc_id=self.tipo_doc_id,
+                nro_doc__iexact=self.nro_doc,
+            )
+            if self.pk:
+                duplicado_documento = duplicado_documento.exclude(pk=self.pk)
+            if duplicado_documento.exists():
+                errors["nro_doc"] = (
+                    "Ya existe otro alumno con el mismo tipo y número de documento."
+                )
+
+        # Nombre + fecha de nacimiento + sexo son datos de apoyo para
+        # detectar candidatos, no una clave única: pueden existir homónimos reales.
+        # Las coincidencias débiles se resuelven en la interfaz con confirmación
+        # explícita y nunca se fusionan automáticamente desde el modelo.
 
         # Comunidad originaria depende de la respuesta del catalogo SI/NO.
         if self.pertenece_pueblo_indigena_id == CatalogoSinoTipo.SI:
@@ -528,43 +795,55 @@ class Alumno(models.Model):
         return f"+54{codigo}{numero}"
 
     def generar_id_persona_jurisdiccional(self):
-        """Genera el codigo jurisdiccional estable a partir del CUIL."""
+        """Genera el identificador jurisdiccional inicial de la persona.
 
-        cuil = re.sub(r"\D", "", str(self.cuil or ""))
-        if not cuil:
-            return None
-        return f"22_{cuil}"
+        El identificador jurisdiccional es independiente de SGE y siempre se
+        construye con los seis datos de identidad BNH: apellidos, nombres, tipo
+        y número de documento, fecha de nacimiento y sexo. id_persona_sge se
+        conserva aparte únicamente como referencia técnica a SGE.
+
+        El valor jurisdiccional se genera una sola vez; cambios posteriores de
+        los datos personales o del vínculo con SGE no lo recalculan.
+        """
+
+        tipo_documento = None
+        if self.tipo_doc_id:
+            try:
+                tipo_documento = self.tipo_doc
+            except DocumentoTipo.DoesNotExist:
+                tipo_documento = self.tipo_doc_id
+
+        return generar_id_persona_jurisdiccional_bnh(
+            apellidos=self.apellidos,
+            nombres=self.nombres,
+            tipo_documento=tipo_documento or self.tipo_doc_id,
+            nro_documento=self.nro_doc,
+            fecha_nacimiento=self.fecha_nacimiento,
+            sexo=self.sexo_id,
+        )
 
 
     def save(self, *args, **kwargs):
-        """Fuerza full_clean para ejecutar validaciones también en guardados directos."""
+        """Fuerza validación integral y preserva la identidad jurisdiccional estable."""
 
         self.telefono_normalizado = self.normalizar_telefono()
+        self.cuil = normalizar_cuil_opcional(self.cuil, "CUIL del alumno")
 
+        identificador_original = None
         if self.pk:
-            # Una vez generado el codigo jurisdiccional, el CUIL queda estable:
-            # cambiarlo alteraria la identidad tecnica del alumno.
             original = type(self).objects.filter(pk=self.pk).only(
-                "cuil",
                 "id_persona_jurisdiccional",
             ).first()
-
             if original:
-                if original.cuil:
-                    cuil_original = re.sub(r"\D", "", str(original.cuil or ""))
-                    cuil_actual = re.sub(r"\D", "", str(self.cuil or ""))
-                    if cuil_actual and cuil_actual != cuil_original:
-                        raise ValidationError({
-                            "cuil": "El CUIL del alumno no puede modificarse una vez generado el código jurisdiccional."
-                        })
-                    self.cuil = cuil_original
+                identificador_original = original.id_persona_jurisdiccional
 
-                if original.id_persona_jurisdiccional:
-                    self.id_persona_jurisdiccional = original.id_persona_jurisdiccional
-
-        if not self.id_persona_jurisdiccional:
-            # Para altas nuevas, el codigo se crea justo antes de validar y
-            # persistir, usando el CUIL ya normalizado.
+        if identificador_original:
+            # El identificador permanente nunca se recalcula por cambios de
+            # CUIL, documento, nombre, aparición posterior en SGE u otros datos.
+            self.id_persona_jurisdiccional = identificador_original
+        else:
+            # En una persona nueva (o un registro antiguo todavía sin ID), el
+            # valor siempre lo determina la regla canónica del modelo.
             self.id_persona_jurisdiccional = self.generar_id_persona_jurisdiccional()
 
         self.full_clean()
@@ -573,7 +852,8 @@ class Alumno(models.Model):
     def __str__(self):
         """Representacion breve del alumno para admin, logs y relaciones."""
 
-        return f"{self.apellidos}, {self.nombres} - {self.nro_doc}"
+        documento = self.nro_doc or "SIN DOCUMENTO"
+        return f"{self.apellidos}, {self.nombres} - {documento}"
 
     class Meta:
         # db_table conserva el esquema físico existente. Los índices aceleran
@@ -585,6 +865,18 @@ class Alumno(models.Model):
         indexes = [
             models.Index(fields=["nro_doc"], name="idx_alumnos_nro_doc"),
             models.Index(fields=["email"], name="idx_alumnos_email"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cuil"],
+                condition=models.Q(cuil__isnull=False) & ~models.Q(cuil=""),
+                name="uq_bnh_alumno_cuil_informado",
+            ),
+            models.UniqueConstraint(
+                fields=["tipo_doc", "nro_doc"],
+                condition=models.Q(nro_doc__isnull=False) & ~models.Q(nro_doc=""),
+                name="uq_bnh_alumno_tipo_documento",
+            ),
         ]
 
 
@@ -955,14 +1247,24 @@ class PlanesSociales(models.Model):
 class Tutor(models.Model):
     """Tutor con datos propios, reutilizable en vínculos parentales."""
       
-    # Identificación propia del tutor. CUIL y documento son únicos para
-    # poder encontrar o reutilizar un tutor existente desde el formulario.
+    # CUIL es opcional: un responsable extranjero puede no tenerlo.
+    # Tipo + documento identifican candidatos cuando existe documentación.
     id = models.BigAutoField(primary_key=True)
-    cuil_tutor = models.CharField(max_length=20, unique=True, db_index=True)
+    cuil_tutor = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        db_index=True,
+    )
     apellidos = models.CharField(max_length=bnh_max_length(Personas, "apellido"))
     nombres = models.CharField(max_length=bnh_max_length(Personas, "nombre"))
     tipo_doc = models.ForeignKey(DocumentoTipo, on_delete=models.PROTECT)
-    nro_doc = models.CharField(max_length=20, unique=True, db_index=True)
+    nro_doc = models.CharField(
+        max_length=20,
+        null=True,
+        blank=True,
+        db_index=True,
+    )
     fecha_nac = models.DateField()
     nacionalidad = models.ForeignKey(Nacionalidad, on_delete=models.PROTECT)
     pais_nac = models.ForeignKey(
@@ -1039,6 +1341,18 @@ class Tutor(models.Model):
             models.Index(fields=["cuil_tutor"], name="idx_tutores_cuil"),
             models.Index(fields=["nro_doc"], name="idx_tutores_nro_doc"),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cuil_tutor"],
+                condition=models.Q(cuil_tutor__isnull=False) & ~models.Q(cuil_tutor=""),
+                name="uq_bnh_tutor_cuil_informado",
+            ),
+            models.UniqueConstraint(
+                fields=["tipo_doc", "nro_doc"],
+                condition=models.Q(nro_doc__isnull=False) & ~models.Q(nro_doc=""),
+                name="uq_bnh_tutor_tipo_documento",
+            ),
+        ]
 
     def clean(self):
         """Normaliza documento/CUIL y aplica validaciones antes de guardar."""
@@ -1047,16 +1361,61 @@ class Tutor(models.Model):
         errors = {}
 
         # Tutor tiene contacto obligatorio porque funciona como responsable o
-        # referente del alumno dentro de la relacion parental.
-        if self.nro_doc:
-            self.nro_doc = self.nro_doc.strip().upper()
+        # referente del alumno dentro de la relacion parental. Su identidad,
+        # en cambio, no depende de disponer de CUIL.
+        tipo_documento = None
+        if self.tipo_doc_id:
+            try:
+                tipo_documento = self.tipo_doc
+            except DocumentoTipo.DoesNotExist:
+                tipo_documento = self.tipo_doc_id
 
-        if self.tipo_doc_id == 1:
-            self.nro_doc = validar_dni(self.nro_doc)
+        try:
+            self.nro_doc = normalizar_documento_bnh(
+                tipo_documento or self.tipo_doc_id,
+                self.nro_doc,
+                "Número de documento del tutor",
+            )
+        except ValidationError as exc:
+            errors["nro_doc"] = exc.messages
 
-        if self.cuil_tutor:
-            self.cuil_tutor = re.sub(r"\D", "", self.cuil_tutor)
-            validar_cuil(self.cuil_tutor)
+        try:
+            self.cuil_tutor = normalizar_cuil_opcional(
+                self.cuil_tutor,
+                "CUIL del tutor",
+            )
+        except ValidationError as exc:
+            errors["cuil_tutor"] = exc.messages
+
+        if self.cuil_tutor and "nro_doc" not in errors:
+            try:
+                validar_cuil_con_documento(
+                    self.cuil_tutor,
+                    tipo_documento or self.tipo_doc_id,
+                    self.nro_doc,
+                    "CUIL del tutor",
+                )
+            except ValidationError as exc:
+                errors["cuil_tutor"] = exc.messages
+
+        if self.cuil_tutor and "cuil_tutor" not in errors:
+            duplicado_cuil = type(self).objects.filter(cuil_tutor=self.cuil_tutor)
+            if self.pk:
+                duplicado_cuil = duplicado_cuil.exclude(pk=self.pk)
+            if duplicado_cuil.exists():
+                errors["cuil_tutor"] = "Ya existe otro tutor cargado con este CUIL."
+
+        if self.nro_doc and self.tipo_doc_id and "nro_doc" not in errors:
+            duplicado_documento = type(self).objects.filter(
+                tipo_doc_id=self.tipo_doc_id,
+                nro_doc__iexact=self.nro_doc,
+            )
+            if self.pk:
+                duplicado_documento = duplicado_documento.exclude(pk=self.pk)
+            if duplicado_documento.exists():
+                errors["nro_doc"] = (
+                    "Ya existe otro tutor con el mismo tipo y número de documento."
+                )
 
         if not self.prov_resid_id:
             errors["prov_resid"] = "Debe seleccionar la provincia de residencia del tutor."
@@ -1095,13 +1454,15 @@ class Tutor(models.Model):
         """Actualiza telefono normalizado y valida antes de guardar tutor."""
 
         self.telefono_normalizado = self.normalizar_telefono()
+        self.cuil_tutor = normalizar_cuil_opcional(self.cuil_tutor, "CUIL del tutor")
         self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
         """Representacion breve del tutor para tablas y relaciones."""
 
-        return f"{self.apellidos}, {self.nombres} - {self.nro_doc}"
+        documento = self.nro_doc or "SIN DOCUMENTO"
+        return f"{self.apellidos}, {self.nombres} - {documento}"
       
       
 ############################
@@ -1122,7 +1483,7 @@ def validar_dni(dni):
 
     if not re.fullmatch(r"\d{7,8}", dni):
         raise ValidationError(
-            "DNI inválido: debe contener solo números y tener 7 u 8 dígitos."
+            "DNI inválido: debe contener solo números y tener 8 dígitos."
         )
 
-    return dni
+    return dni.zfill(8)

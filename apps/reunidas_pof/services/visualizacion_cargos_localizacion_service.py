@@ -2,6 +2,7 @@ import logging
 from decimal import Decimal
 from io import BytesIO
 
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import DatabaseError, OperationalError, ProgrammingError
 from django.db.models import (
@@ -16,7 +17,7 @@ from django.db.models import (
     Value,
     When,
 )
-from django.db.models.functions import Cast, Concat, Substr, Trim
+from django.db.models.functions import Cast, Concat, Trim
 from django.http import QueryDict
 from django.utils import timezone
 
@@ -34,6 +35,11 @@ from ..models import (
     obtener_rol_usuario_pof,
     usuario_tiene_alcance_restringido_pof,
 )
+from .anexo_pof_service import (
+    TIPO_PROPIETARIO_CUE,
+    TIPO_PROPIETARIO_CUOF,
+    obtener_codigos_activos_propietarios,
+)
 from .excel_estilos import COLOR_SEPARADOR_CUE, COLOR_SEPARADOR_CUEANEXO
 from .padron_materializadas_service import (
     REGIONES_EDUCATIVAS_POF,
@@ -41,16 +47,28 @@ from .padron_materializadas_service import (
     obtener_opciones_filtros_visualizacion_padron,
     obtener_variantes_region_padron,
 )
+from .zona_educativa_service import (
+    TIPO_IDENTIDAD_CUEANEXO,
+    obtener_asignacion_snapshot,
+    obtener_identidad_zona_localizacion,
+)
 
 
 GUION = "—"
 logger = logging.getLogger(__name__)
 CABECERA_PROYECTO_ESPECIAL = "PROYECTO_ESPECIAL"
-CUES_POR_PAGINA_VISUALIZACION = 5
+UNIDADES_POR_PAGINA_VISUALIZACION = 5
 MAX_TERMINOS_BUSQUEDA_OBSERVACION = 5
 
 VISUALIZACION_CARGOS_COLUMNAS = [
     {"id": "cueanexo", "label": "CUEANEXO", "visible_default": True},
+    {
+        "id": "anexo_pof",
+        "label": "Código(s) Anexo POF",
+        "visible_default": True,
+        "ordenable": False,
+        "buscable": False,
+    },
     {"id": "cue", "label": "CUE", "visible_default": True},
     {"id": "anexo", "label": "Anexo", "visible_default": True},
     {"id": "cuof", "label": "CUOF", "visible_default": True},
@@ -60,6 +78,8 @@ VISUALIZACION_CARGOS_COLUMNAS = [
     {"id": "region", "label": "Región", "visible_default": True},
     {"id": "localidad", "label": "Localidad", "visible_default": True},
     {"id": "departamento", "label": "Departamento", "visible_default": True},
+    {"id": "zona_educativa", "label": "Zona Educativa", "visible_default": True},
+    {"id": "puntos_zona_educativa", "label": "Puntos Zona", "visible_default": True},
     {"id": "ambito", "label": "Ámbito", "visible_default": False},
     {"id": "categoria", "label": "Categoría", "visible_default": False},
     {"id": "jornada", "label": "Jornada", "visible_default": False},
@@ -106,6 +126,8 @@ SNAPSHOT_COLUMNAS = {
     "region": "region",
     "localidad": "localidad",
     "departamento": "departamento",
+    "zona_educativa": "zona_educativa",
+    "puntos_zona_educativa": "puntos_zona_educativa",
     "ubicacion": "ubicacion",
     "estado_localizacion_padron": "estado_localizacion_padron",
     "estado_establecimiento_padron": "estado_establecimiento_padron",
@@ -159,6 +181,8 @@ COLUMNAS_CENTRADAS = {
     "cui",
     "numero_establecimiento",
     "region",
+    "zona_educativa",
+    "puntos_zona_educativa",
     "ceic",
     "cantidad",
     "unidad_cantidad",
@@ -175,11 +199,14 @@ COLUMNAS_NO_REPETIR_POR_LOCALIZACION = {
     "anexo",
     "cuof",
     "cui",
+    "anexo_pof",
     "numero_establecimiento",
     "nombre_establecimiento",
     "region",
     "localidad",
     "departamento",
+    "zona_educativa",
+    "puntos_zona_educativa",
     "ubicacion",
     "estado_localizacion_padron",
     "estado_establecimiento_padron",
@@ -211,6 +238,7 @@ FILTROS_SELECT_SNAPSHOT = (
     "region",
     "localidad",
     "departamento",
+    "zona_educativa",
     "estado_localizacion_padron",
     "estado_establecimiento_padron",
 )
@@ -220,6 +248,7 @@ FILTROS_SELECT_DEFINICIONES = (
     {"id": "region", "label": "Región", "col": "pof-col-2"},
     {"id": "localidad", "label": "Localidad", "col": "pof-col-3"},
     {"id": "departamento", "label": "Departamento", "col": "pof-col-3"},
+    {"id": "zona_educativa", "label": "Zona Educativa", "col": "pof-col-2"},
     {"id": "ambito", "label": "Ámbito", "col": "pof-col-2"},
     {"id": "categoria", "label": "Categoría", "col": "pof-col-3"},
     {"id": "jornada", "label": "Jornada", "col": "pof-col-3"},
@@ -260,6 +289,7 @@ FILTROS_AVANZADOS_CAMPOS = [
     {"id": "region", "label": "Región", "tipo": "checklist", "operadores": "exact"},
     {"id": "localidad", "label": "Localidad", "tipo": "checklist", "operadores": "exact"},
     {"id": "departamento", "label": "Departamento", "tipo": "checklist", "operadores": "exact"},
+    {"id": "zona_educativa", "label": "Zona Educativa", "tipo": "checklist", "operadores": "exact"},
     {"id": "ambito", "label": "Ámbito", "tipo": "checklist", "operadores": "exact"},
     {"id": "categoria", "label": "Categoría", "tipo": "checklist", "operadores": "exact"},
     {"id": "jornada", "label": "Jornada", "tipo": "checklist", "operadores": "exact"},
@@ -862,6 +892,17 @@ def construir_opciones_filtros_visualizacion_cargos_localizacion(request=None):
     except (DatabaseError, ProgrammingError, OperationalError):
         logger.exception("No se pudieron obtener opciones de filtros desde Padron Interno.")
 
+    try:
+        opciones["zona_educativa"] = _opciones_desde_queryset(
+            SnapshotPadronLocalizacionPof.objects.filter(vigente=True),
+            "zona_educativa",
+        )
+    except (DatabaseError, ProgrammingError, OperationalError):
+        logger.exception(
+            "No se pudieron obtener opciones de Zona Educativa desde snapshots POF."
+        )
+        opciones["zona_educativa"] = []
+
     opciones["oferta"] = _opciones_oferta_filtro_visualizacion()
     return opciones
 
@@ -1235,6 +1276,8 @@ def _busqueda_token_q(token):
         "region",
         "localidad",
         "departamento",
+        "zona_educativa",
+        "puntos_zona_educativa",
         "ubicacion",
     ):
         snapshot_q |= Q(**{f"localizacion__snapshots_padron__{campo}__icontains": token})
@@ -1513,6 +1556,175 @@ def _construir_contexto_totales_generales_orm(queryset, cargos):
     return _armar_contexto_totales_desde_agregados(cargos, totales_agrupados)
 
 
+def _clave_identidad_zona_visualizacion(localizacion):
+    identidad = obtener_identidad_zona_localizacion(localizacion)
+    return (
+        int(identidad["anio"]),
+        str(identidad["tipo_clave"]),
+        str(identidad["clave"]),
+    )
+
+
+def _resolver_estados_zona_identidades_visualizacion(cargos):
+    """
+    Resuelve Zona Educativa por identidad anual para las identidades de la página.
+
+    - Consulta también pares de la identidad que no tengan cargos visibles.
+    - Propaga una única asignación lógica aunque algún snapshot vigente legacy esté vacío.
+    - Marca conflicto si existen dos asignaciones no vacías distintas o un snapshot inválido.
+    """
+    identidades = {}
+    for cargo in cargos:
+        localizacion = cargo.localizacion
+        clave = _clave_identidad_zona_visualizacion(localizacion)
+        identidades[clave] = {
+            "anio": clave[0],
+            "tipo_clave": clave[1],
+            "clave": clave[2],
+        }
+
+    if not identidades:
+        return {}
+
+    filtro_identidades = Q()
+    for identidad in identidades.values():
+        filtro_anio = (
+            Q(localizacion__reunida__anio=identidad["anio"])
+            | Q(localizacion__proyecto_especial__anio=identidad["anio"])
+        )
+        if identidad["tipo_clave"] == TIPO_IDENTIDAD_CUEANEXO:
+            filtro_identidad = filtro_anio & Q(
+                localizacion__cueanexo=identidad["clave"]
+            )
+        else:
+            filtro_identidad = (
+                filtro_anio
+                & (Q(localizacion__cueanexo="") | Q(localizacion__cueanexo__isnull=True))
+                & Q(localizacion__cuof=identidad["clave"])
+            )
+        filtro_identidades |= filtro_identidad
+
+    asignaciones_por_identidad = {clave: [] for clave in identidades}
+    conflictos = set()
+
+    snapshots = (
+        SnapshotPadronLocalizacionPof.objects
+        .filter(vigente=True)
+        .filter(filtro_identidades)
+        .select_related(
+            "localizacion",
+            "localizacion__reunida",
+            "localizacion__proyecto_especial",
+        )
+    )
+
+    for snapshot in snapshots:
+        clave = _clave_identidad_zona_visualizacion(snapshot.localizacion)
+        if clave not in identidades:
+            continue
+        try:
+            asignacion = obtener_asignacion_snapshot(snapshot)
+        except ValidationError:
+            conflictos.add(clave)
+            continue
+
+        if asignacion is None:
+            continue
+
+        canonica = (
+            str(asignacion["tipo"]).upper(),
+            " ".join(str(asignacion["zona"]).split()).casefold(),
+            int(asignacion["puntos"]),
+        )
+        if not any(item["canonica"] == canonica for item in asignaciones_por_identidad[clave]):
+            asignaciones_por_identidad[clave].append({
+                "canonica": canonica,
+                "asignacion": asignacion,
+            })
+
+    estados = {}
+    for clave in identidades:
+        asignaciones = asignaciones_por_identidad[clave]
+        conflicto = clave in conflictos or len(asignaciones) > 1
+        estados[clave] = {
+            "conflicto": conflicto,
+            "asignacion": None if conflicto or not asignaciones else asignaciones[0]["asignacion"],
+        }
+
+    return estados
+
+
+def _aplicar_estado_zona_fila_visualizacion(fila_raw, estado_zona):
+    if not estado_zona:
+        return fila_raw
+
+    if estado_zona.get("conflicto"):
+        fila_raw["zona_educativa"] = "CONFLICTO"
+        fila_raw["puntos_zona_educativa"] = "CONFLICTO"
+        return fila_raw
+
+    asignacion = estado_zona.get("asignacion")
+    if asignacion:
+        fila_raw["zona_educativa"] = _valor_o_guion(asignacion.get("zona"))
+        fila_raw["puntos_zona_educativa"] = _valor_o_guion(
+            asignacion.get("puntos")
+        )
+    return fila_raw
+
+
+def _resolver_propietario_anexo_pof_visualizacion(localizacion):
+    cue = str(getattr(localizacion, "cue_base", "") or "").strip()
+    if len(cue) == 7 and cue.isdigit():
+        return {
+            "tipo": TIPO_PROPIETARIO_CUE,
+            "valor": cue,
+        }
+
+    es_proyecto_especial = bool(
+        getattr(localizacion, "proyecto_especial_id", None)
+    )
+    if es_proyecto_especial:
+        cuof = str(getattr(localizacion, "cuof", "") or "").strip()
+        if cuof:
+            return {
+                "tipo": TIPO_PROPIETARIO_CUOF,
+                "valor": cuof,
+            }
+
+    return None
+
+
+def _resolver_codigos_anexo_pof_visualizacion(cargos):
+    """
+    Resuelve Código(s) Anexo POF para un conjunto materializado de cargos.
+
+    Ejecuta una sola consulta bulk y conserva la precedencia CUE > CUOF.
+    Reunidas sin CUE no caen a CUOF; el fallback CUOF existe sólo para PE.
+    """
+    propietarios = []
+    claves_por_cargo = {}
+
+    for cargo in cargos or []:
+        propietario = _resolver_propietario_anexo_pof_visualizacion(
+            cargo.localizacion
+        )
+        if propietario is None:
+            continue
+
+        clave = (propietario["tipo"], propietario["valor"])
+        claves_por_cargo[cargo.id] = clave
+        propietarios.append(propietario)
+
+    mapa_codigos = obtener_codigos_activos_propietarios(
+        propietarios=propietarios,
+    )
+
+    return {
+        cargo_id: ", ".join(mapa_codigos.get(clave, []))
+        for cargo_id, clave in claves_por_cargo.items()
+    }
+
+
 def _serializar_cargo(cargo, contexto_totales_generales=None):
     localizacion = cargo.localizacion
     snapshot = _obtener_snapshot_vigente(localizacion)
@@ -1530,6 +1742,7 @@ def _serializar_cargo(cargo, contexto_totales_generales=None):
     fila = {
         "id": cargo.id,
         "_clave_localizacion_grupo": _obtener_clave_agrupacion_visualizacion(localizacion),
+        "_clave_identidad_zona": _clave_identidad_zona_visualizacion(localizacion),
         "_clave_total_general": clave_total_general,
         "_cueanexo_visual": _limpiar_texto(localizacion.cueanexo),
         "cueanexo": _valor_o_guion(localizacion.cueanexo),
@@ -1615,22 +1828,40 @@ def _aplicar_no_repeticion_total_general(fila_display, claves_totales_vistas):
         claves_totales_vistas.add(clave_total_general)
 
 
-def _armar_filas_tabla(cargos, columnas, contexto_totales_generales):
+def _armar_filas_tabla(
+    cargos,
+    columnas,
+    contexto_totales_generales,
+    estados_zona_identidades=None,
+    codigos_anexo_pof_por_cargo=None,
+):
     """
     Construye las filas visibles del visualizador conservando sus agrupaciones.
 
     - Marca los cambios de CUE y CUEANEXO con la misma jerarquia del exportador.
     - Mantiene la no repeticion visual por localizacion.
     - Aplica Total General una sola vez por clave de agrupacion.
+    - Usa la Zona lógica resuelta por identidad y nunca oculta un conflicto real.
     """
     filas = []
     clave_localizacion_anterior = None
     claves_totales_vistas = set()
     cue_anterior = None
     anexo_anterior = None
+    estados_zona_identidades = estados_zona_identidades or {}
+    codigos_anexo_pof_por_cargo = codigos_anexo_pof_por_cargo or {}
 
     for cargo in cargos:
         fila_raw = _serializar_cargo(cargo, contexto_totales_generales)
+        fila_raw["anexo_pof"] = _valor_o_guion(
+            codigos_anexo_pof_por_cargo.get(cargo.id, "")
+        )
+        _aplicar_estado_zona_fila_visualizacion(
+            fila_raw,
+            estados_zona_identidades.get(
+                fila_raw.get("_clave_identidad_zona")
+            ),
+        )
         cueanexo_actual, cue_actual, anexo_actual = (
             _obtener_claves_jerarquicas_visualizacion(fila_raw)
         )
@@ -1799,24 +2030,53 @@ def _queryset_visualizacion(request, ignorar_filtros=False):
     return _aplicar_orden(queryset.distinct(), request)
 
 
-def _anotar_unidad_paginacion_cue(queryset):
+def _anotar_unidad_paginacion(queryset):
     """
-    Anota la unidad estable usada para paginar el visualizador POF.
+    Anota la identidad funcional usada para paginar el visualizador POF.
 
-    - Agrupa los CUEANEXO por sus siete digitos de CUE base.
-    - Conserva el agrupador CUOF vigente para Proyecto Especial sin CUE.
+    - Reunida normal usa el CUEANEXO completo.
+    - Proyecto Especial usa siempre CUOF, aunque conserve CUEANEXO de Padron.
+    - Cualquier dato legacy sin identidad utilizable queda aislado por localizacion.
     - Opera sobre el queryset ya autorizado y filtrado que recibe.
     """
-    sin_cue = Q(localizacion__cueanexo="") | Q(localizacion__cueanexo__isnull=True)
+    proyecto = Q(localizacion__proyecto_especial__isnull=False)
+    proyecto_con_cuof = (
+        proyecto
+        & ~Q(localizacion__cuof="")
+        & Q(localizacion__cuof__isnull=False)
+    )
+    cueanexo_disponible = (
+        ~Q(localizacion__cueanexo="")
+        & Q(localizacion__cueanexo__isnull=False)
+    )
     return queryset.annotate(
-        _unidad_paginacion_cue=Case(
+        _unidad_paginacion=Case(
             When(
-                sin_cue,
-                then=Concat(Value("0:CUOF:"), "localizacion__cuof"),
+                proyecto_con_cuof,
+                then=Concat(
+                    Value("0:PROYECTO:"),
+                    Cast("localizacion__proyecto_especial_id", CharField()),
+                    Value(":CUOF:"),
+                    "localizacion__cuof",
+                ),
+            ),
+            When(
+                proyecto,
+                then=Concat(
+                    Value("0:LOCALIZACION:"),
+                    Cast("localizacion_id", CharField()),
+                ),
+            ),
+            When(
+                cueanexo_disponible,
+                then=Concat(
+                    Value("1:CUEANEXO:"),
+                    "localizacion__cueanexo",
+                ),
             ),
             default=Concat(
-                Value("1:CUE:"),
-                Substr("localizacion__cueanexo", 1, 7),
+                Value("2:LOCALIZACION:"),
+                Cast("localizacion_id", CharField()),
             ),
             output_field=CharField(),
         )
@@ -1825,80 +2085,83 @@ def _anotar_unidad_paginacion_cue(queryset):
 
 def _orden_unidades_paginacion(request):
     """
-    Resuelve el orden de las unidades CUE para la pagina solicitada.
+    Resuelve el orden de las identidades funcionales de la pagina solicitada.
 
-    - Mantiene orden descendente cuando el usuario ordena CUE o CUEANEXO asi.
+    - Respeta descendente para CUE, CUEANEXO o CUOF.
     - Usa orden ascendente estable para las demas columnas de cargo.
     - No acepta campos libres como expresiones ORM.
     """
     orden = _limpiar_texto(request.GET.get("orden", ""))
     direccion = _limpiar_texto(request.GET.get("dir", "asc")).lower()
-    if orden in {"cue", "cueanexo"} and direccion == "desc":
-        return "-_unidad_paginacion_cue"
-    return "_unidad_paginacion_cue"
+    if orden in {"cue", "cueanexo", "cuof"} and direccion == "desc":
+        return "-_unidad_paginacion"
+    return "_unidad_paginacion"
 
 
-def _paginar_unidades_cue(queryset, request):
+def _paginar_unidades(queryset, request):
     """
-    Obtiene desde PostgreSQL las cinco unidades CUE de la pagina pedida.
+    Obtiene desde PostgreSQL las cinco identidades funcionales de la pagina.
 
-    - Parte del queryset con alcance y filtros ya aplicados.
-    - Cuenta y pagina claves distintas sin materializar los cargos completos.
-    - Normaliza paginas invalidas o fuera de rango mediante `Paginator.get_page`.
+    Reunidas se cuentan por CUEANEXO y Proyectos Especiales por CUOF, sin
+    materializar los cargos completos antes de paginar.
     """
     unidades_queryset = (
-        _anotar_unidad_paginacion_cue(queryset)
+        _anotar_unidad_paginacion(queryset)
         .order_by(_orden_unidades_paginacion(request))
-        .values_list("_unidad_paginacion_cue", flat=True)
+        .values_list("_unidad_paginacion", flat=True)
         .distinct()
     )
-    paginator = Paginator(unidades_queryset, CUES_POR_PAGINA_VISUALIZACION)
+    paginator = Paginator(unidades_queryset, UNIDADES_POR_PAGINA_VISUALIZACION)
     page_obj = paginator.get_page(request.GET.get("page", 1))
     unidades_pagina = list(page_obj.object_list)
     return unidades_pagina, page_obj
 
 
-def _restringir_queryset_a_unidades_cue(queryset, unidades_pagina):
-    """
-    Restringe cargos ya autorizados a las unidades CUE de una pagina.
-
-    - No reconstruye el alcance ni consulta anexos fuera del queryset recibido.
-    - Mantiene juntos los cargos de cada CUE y el orden interno solicitado.
-    - Devuelve un queryset vacio cuando la pagina no contiene unidades.
-    """
+def _restringir_queryset_a_unidades(queryset, unidades_pagina):
+    """Restringe cargos autorizados a las identidades funcionales de la pagina."""
     if not unidades_pagina:
         return queryset.none()
 
     orden_actual = tuple(queryset.query.order_by)
     orden_unidad = Case(
         *[
-            When(_unidad_paginacion_cue=unidad, then=Value(indice))
+            When(_unidad_paginacion=unidad, then=Value(indice))
             for indice, unidad in enumerate(unidades_pagina)
         ],
         default=Value(len(unidades_pagina)),
         output_field=IntegerField(),
     )
     return (
-        _anotar_unidad_paginacion_cue(queryset)
-        .filter(_unidad_paginacion_cue__in=unidades_pagina)
+        _anotar_unidad_paginacion(queryset)
+        .filter(_unidad_paginacion__in=unidades_pagina)
         .annotate(_orden_unidad_paginacion=orden_unidad)
         .order_by("_orden_unidad_paginacion", *orden_actual)
     )
 
 
-def _construir_metadatos_paginacion(page_obj, total_registros_pagina):
+def _construir_metadatos_paginacion(
+    page_obj,
+    total_registros_pagina,
+    *,
+    es_proyecto_especial=False,
+):
     """
-    Serializa metadatos minimos para la futura UI de paginacion por CUE.
+    Serializa metadatos de paginacion por identidad funcional.
 
-    - Conserva fija la pagina en cinco unidades completas.
-    - Informa navegacion anterior y siguiente sin alterar claves existentes.
-    - Distingue cargos visibles en la pagina del total de cargos filtrados.
+    Proyecto Especial se rotula CUOF. La visualizacion general puede combinar
+    Reunidas y Proyectos Especiales, por lo que explicita ambas identidades.
     """
+    unidad_label = "CUOF" if es_proyecto_especial else "CUEANEXO / CUOF"
+    total_unidades = page_obj.paginator.count
     return {
         "pagina_actual": page_obj.number,
         "total_paginas": page_obj.paginator.num_pages,
-        "cues_por_pagina": CUES_POR_PAGINA_VISUALIZACION,
-        "total_cues": page_obj.paginator.count,
+        "unidades_por_pagina": UNIDADES_POR_PAGINA_VISUALIZACION,
+        "total_unidades": total_unidades,
+        "unidad_label": unidad_label,
+        # Alias legacy para consumidores anteriores del endpoint.
+        "cues_por_pagina": UNIDADES_POR_PAGINA_VISUALIZACION,
+        "total_cues": total_unidades,
         "total_registros_pagina": total_registros_pagina,
         "tiene_anterior": page_obj.has_previous(),
         "pagina_anterior": (
@@ -1915,8 +2178,9 @@ def construir_contexto_visualizacion_cargos_localizacion(request, incluir_opcion
     """
     Construye la vista paginada del visualizador sin ampliar el alcance POF.
 
-    - Aplica permisos, contexto y filtros antes de seleccionar los CUE paginables.
-    - Materializa solo cargos de las cinco unidades CUE de la pagina.
+    - Aplica permisos, contexto y filtros antes de seleccionar identidades paginables.
+    - Reunida pagina por CUEANEXO; Proyecto Especial pagina por CUOF.
+    - Materializa solo cargos de las cinco identidades funcionales de la pagina.
     - Conserva los calculos vigentes de cantidad, puntos, total y Total General.
     """
     contexto_cabecera = _resolver_contexto_visualizacion(request)
@@ -1941,13 +2205,13 @@ def construir_contexto_visualizacion_cargos_localizacion(request, incluir_opcion
 
     try:
         total_registros = queryset.count()
-        unidades_pagina, page_obj = _paginar_unidades_cue(queryset, request)
-        queryset_pagina = _restringir_queryset_a_unidades_cue(
+        unidades_pagina, page_obj = _paginar_unidades(queryset, request)
+        queryset_pagina = _restringir_queryset_a_unidades(
             queryset,
             unidades_pagina,
         )
         cargos = list(queryset_pagina)
-        queryset_totales_pagina = _restringir_queryset_a_unidades_cue(
+        queryset_totales_pagina = _restringir_queryset_a_unidades(
             queryset,
             unidades_pagina,
         )
@@ -1955,15 +2219,41 @@ def construir_contexto_visualizacion_cargos_localizacion(request, incluir_opcion
             queryset_totales_pagina,
             cargos,
         )
-        filas = _armar_filas_tabla(cargos, columnas, contexto_totales_generales)
-        paginacion = _construir_metadatos_paginacion(page_obj, len(cargos))
+        estados_zona_identidades = _resolver_estados_zona_identidades_visualizacion(
+            cargos
+        )
+        codigos_anexo_pof_por_cargo = _resolver_codigos_anexo_pof_visualizacion(
+            cargos
+        )
+        conflictos_zona_educativa = sum(
+            1
+            for estado in estados_zona_identidades.values()
+            if estado.get("conflicto")
+        )
+        filas = _armar_filas_tabla(
+            cargos,
+            columnas,
+            contexto_totales_generales,
+            estados_zona_identidades=estados_zona_identidades,
+            codigos_anexo_pof_por_cargo=codigos_anexo_pof_por_cargo,
+        )
+        paginacion = _construir_metadatos_paginacion(
+            page_obj,
+            len(cargos),
+            es_proyecto_especial=contexto_cabecera["es_proyecto_especial"],
+        )
         tabla_no_migrada = False
     except (ProgrammingError, OperationalError):
         total_registros = 0
         filas = []
-        paginator = Paginator([], CUES_POR_PAGINA_VISUALIZACION)
+        conflictos_zona_educativa = 0
+        paginator = Paginator([], UNIDADES_POR_PAGINA_VISUALIZACION)
         page_obj = paginator.get_page(1)
-        paginacion = _construir_metadatos_paginacion(page_obj, 0)
+        paginacion = _construir_metadatos_paginacion(
+            page_obj,
+            0,
+            es_proyecto_especial=contexto_cabecera["es_proyecto_especial"],
+        )
         tabla_no_migrada = True
 
     contexto = {
@@ -1993,6 +2283,17 @@ def construir_contexto_visualizacion_cargos_localizacion(request, incluir_opcion
         "querystring_exportar_filtros": _query_exportar_filtros(request, base_params_contexto),
         "querystring_exportar_todo": _query_params_desde_dict(base_params_contexto),
         "total_registros": total_registros,
+        "conflictos_zona_educativa": conflictos_zona_educativa,
+        "mensaje_conflictos_zona_educativa": (
+            (
+                "Se detectaron "
+                f"{conflictos_zona_educativa} identidades con Zonas Educativas "
+                "vigentes contradictorias. Las columnas de Zona se marcan como "
+                "CONFLICTO para no ocultar ni elegir un valor arbitrariamente."
+            )
+            if conflictos_zona_educativa
+            else ""
+        ),
         "paginacion": paginacion,
         "tabla_visualizacion_no_migrada": tabla_no_migrada,
         "es_proyecto_especial": contexto_cabecera["es_proyecto_especial"],
@@ -2031,6 +2332,8 @@ def construir_payload_visualizacion_cargos_localizacion(request):
         "querystring_exportar_filtros": contexto["querystring_exportar_filtros"],
         "querystring_exportar_todo": contexto["querystring_exportar_todo"],
         "total_registros": contexto["total_registros"],
+        "conflictos_zona_educativa": contexto["conflictos_zona_educativa"],
+        "mensaje_conflictos_zona_educativa": contexto["mensaje_conflictos_zona_educativa"],
         "paginacion": contexto["paginacion"],
         "tabla_visualizacion_no_migrada": contexto["tabla_visualizacion_no_migrada"],
         "es_proyecto_especial": contexto["es_proyecto_especial"],
@@ -2126,7 +2429,6 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
     from openpyxl.formatting.rule import FormulaRule, Rule
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.styles.differential import DifferentialStyle
-    from openpyxl.styles.numbers import NumberFormat
     from openpyxl.utils import get_column_letter
     from openpyxl.worksheet.filters import FilterColumn
 
@@ -2272,8 +2574,23 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
             cargo.id: _obtener_clave_agrupacion_visualizacion(cargo.localizacion)
             for cargo in cargos_lote
         }
+        estados_zona_lote = _resolver_estados_zona_identidades_visualizacion(
+            cargos_lote
+        )
+        codigos_anexo_pof_lote = _resolver_codigos_anexo_pof_visualizacion(
+            cargos_lote
+        )
         for cargo in cargos_lote:
             fila_raw = _serializar_cargo(cargo, contexto_totales_generales)
+            fila_raw["anexo_pof"] = _valor_o_guion(
+                codigos_anexo_pof_lote.get(cargo.id, "")
+            )
+            _aplicar_estado_zona_fila_visualizacion(
+                fila_raw,
+                estados_zona_lote.get(
+                    fila_raw.get("_clave_identidad_zona")
+                ),
+            )
             _, cue_actual, anexo_actual = _obtener_claves_jerarquicas_visualizacion(
                 fila_raw
             )
@@ -2451,26 +2768,23 @@ def construir_excel_visualizacion_cargos_localizacion(request, exportar_todo=Fal
     hay_filas_datos = fila_actual > fila_encabezado + 1
     if hay_filas_datos and columnas_no_repetir_excel:
         ocultar_repetido_dxf = DifferentialStyle(
-            numFmt=NumberFormat(numFmtId=164, formatCode=";;;"),
-        )
-        rangos = " ".join(
-            f"{get_column_letter(indice)}{fila_encabezado + 1}:"
-            f"{get_column_letter(indice)}{ultima_fila_datos}"
-            for indice in columnas_no_repetir_excel
+            font=Font(color="FFFFFFFF"),
         )
         formula_duplicado_visible = (
             f"AND(SUBTOTAL(103,${letra_fila_visible}{fila_encabezado + 1})=1,"
             f"${letra_clave_grupo}{fila_encabezado + 1}="
             f"${letra_ultimo_grupo_visible}{fila_encabezado})"
         )
-        ws.conditional_formatting.add(
-            rangos,
-            Rule(
-                type="expression",
-                formula=[formula_duplicado_visible],
-                dxf=ocultar_repetido_dxf,
-            ),
-        )
+        for indice in columnas_no_repetir_excel:
+            letra = get_column_letter(indice)
+            ws.conditional_formatting.add(
+                f"{letra}{fila_encabezado + 1}:{letra}{ultima_fila_datos}",
+                Rule(
+                    type="expression",
+                    formula=[formula_duplicado_visible],
+                    dxf=ocultar_repetido_dxf,
+                ),
+            )
 
     if hay_filas_datos:
         rango_datos = f"A{fila_encabezado + 1}:{ultima_columna}{ultima_fila_datos}"

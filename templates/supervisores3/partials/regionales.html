@@ -1,0 +1,134 @@
+{% for regional in regionales %}
+
+<div class="card mt-3">
+
+<div class="card-header">
+
+<div class="d-flex justify-content-between">
+
+<div>
+
+<b>
+{{ regional.region }}
+</b>
+
+</div>
+
+<div>
+
+<a
+href="{% url 'nivel_create' regional.id %}"
+class="btn btn-sm btn-primary">
+
+Nivel
+
+</a>
+
+<a
+href="{% url 'oferta_create' regional.id %}"
+class="btn btn-sm btn-success">
+
+Oferta
+
+</a>
+
+<a
+href="{% url 'regional_delete' regional.id %}"
+class="btn btn-sm btn-danger">
+
+Eliminar
+
+</a>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="card-body">
+
+<h6>Niveles</h6>
+
+<ul>
+
+{% for nivel in regional.niveles.all %}
+
+<li>
+
+{{ nivel.nivel }}
+
+<a
+href="{% url 'nivel_delete' nivel.id %}">
+
+❌
+
+</a>
+
+</li>
+
+{% endfor %}
+
+</ul>
+
+<hr>
+
+<h6>Ofertas</h6>
+
+<table class="table table-sm">
+
+<thead>
+
+<tr>
+
+<th>CUE</th>
+<th>Establecimiento</th>
+<th>Oferta</th>
+<th></th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for oferta in regional.ofertas.all %}
+
+<tr>
+
+<td>
+{{ oferta.cueanexo }}
+</td>
+
+<td>
+{{ oferta.nom_est }}
+</td>
+
+<td>
+{{ oferta.oferta }}
+</td>
+
+<td>
+
+<a
+href="{% url 'oferta_delete' oferta.id %}">
+
+❌
+
+</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+{% endfor %}
