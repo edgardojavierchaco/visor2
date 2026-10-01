@@ -6,6 +6,12 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import ModelChoiceField
 from django.utils import timezone
+from apps.bnhalumnos.models import (
+    normalizar_cuil_opcional,
+    normalizar_documento_bnh,
+    validar_cuil_con_documento,
+)
+from apps.bnhpersonas.models import DocumentoTipo, Sexo
 from .models import (
     AlumnoSeccion,
     CatalogoTipoEstructuraEspecial,
@@ -142,22 +148,120 @@ class EspecialDatosCUEAnexoForm(forms.ModelForm):
         return cleaned_data
 
 class EspecialBusquedaAlumnoForm(forms.Form):
-    """Formulario de búsqueda de alumno por CUIL."""
-    cuil = forms.CharField(
-        max_length=13,
+    """Busca identidad sin depender del formulario de CEF."""
+
+    tipo_doc = forms.ModelChoiceField(
+        label="Tipo de documento",
+        queryset=DocumentoTipo.objects.all(),
+        empty_label=None,
         required=True,
-        label="CUIL",
-        widget=forms.TextInput(attrs={
-            "class": "form-control",
-            "placeholder": "Ej: 20-12345678-9",
-            "pattern": r"\d{11}|[\d-]{13}",
-        }),
+        widget=forms.Select(attrs={"class": "form-select", "data-cef-select": "1"}),
     )
-    def clean_cuil(self):
-        cuil = re.sub(r"\D", "", self.cleaned_data.get("cuil", ""))
-        if len(cuil) != 11:
-            raise ValidationError("El CUIL debe tener 11 dígitos.")
-        return cuil
+    nro_doc = forms.CharField(
+        label="Número de documento",
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "autocomplete": "off",
+                "data-identity-document": "1",
+            }
+        ),
+    )
+    cuil = forms.CharField(
+        label="CUIL",
+        max_length=13,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "Opcional · 11 dígitos",
+                "inputmode": "numeric",
+                "autocomplete": "off",
+            }
+        ),
+    )
+    apellidos = forms.CharField(
+        label="Apellidos",
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control", "autocomplete": "off"}),
+    )
+    nombres = forms.CharField(
+        label="Nombres",
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control", "autocomplete": "off"}),
+    )
+    fecha_nacimiento = forms.DateField(
+        label="Fecha de nacimiento",
+        required=False,
+        input_formats=["%Y-%m-%d"],
+        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+    )
+    sexo = forms.ModelChoiceField(
+        label="Sexo",
+        queryset=Sexo.objects.all(),
+        required=False,
+        empty_label="Seleccionar",
+        widget=forms.Select(attrs={"class": "form-select", "data-cef-select": "1"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            self.fields["tipo_doc"].initial = 1
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def clean(self):
+        cleaned = super().clean()
+        tipo_doc = cleaned.get("tipo_doc")
+        if not tipo_doc:
+            return cleaned
+
+        nro_doc_raw = (cleaned.get("nro_doc") or "").strip()
+        try:
+            nro_doc = normalizar_documento_bnh(tipo_doc, nro_doc_raw)
+        except ValidationError as exc:
+            self.add_error("nro_doc", exc)
+            nro_doc = None
+        try:
+            cuil = normalizar_cuil_opcional(cleaned.get("cuil"), "CUIL") or ""
+        except ValidationError as exc:
+            self.add_error("cuil", exc)
+            cuil = ""
+        if not self.errors:
+            try:
+                validar_cuil_con_documento(cuil, tipo_doc, nro_doc, "CUIL")
+            except ValidationError as exc:
+                self.add_error("cuil", exc)
+
+        clase = getattr(tipo_doc, "pk", None)
+        sin_numero = clase == 11 or (clase == 12 and not nro_doc)
+        if sin_numero:
+            faltantes = {
+                "apellidos": "Indique los apellidos.",
+                "nombres": "Indique los nombres.",
+                "fecha_nacimiento": "Indique la fecha de nacimiento.",
+                "sexo": "Indique el sexo.",
+            }
+            for campo, mensaje in faltantes.items():
+                if not cleaned.get(campo):
+                    self.add_error(campo, mensaje)
+            if cuil:
+                self.add_error("cuil", "El CUIL solo puede informarse junto con un DNI.")
+            cleaned["busqueda_sin_identidad"] = not self.errors
+            cleaned["nro_doc"] = ""
+        elif not nro_doc and not cuil:
+            raise ValidationError(
+                "Para este tipo de documento debe ingresar el número o un CUIL."
+            )
+        cleaned["tipo_doc_obj"] = tipo_doc
+        cleaned["nro_doc"] = nro_doc or ""
+        cleaned["cuil"] = cuil
+        return cleaned
 
 class EspecialBusquedaDocenteForm(forms.Form):
     """Formulario de búsqueda de docente por CUIL."""
