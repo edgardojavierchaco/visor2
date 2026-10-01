@@ -1,14 +1,14 @@
 {% extends "especial/base_operativo_especial.html" %}
 
-{% block especial_subtitle %}Previsualización anual sin escritura para Educación Especial.{% endblock %}
+{% block especial_subtitle %}{% if modo_visualizacion_actual %}Consulta de datos actuales del ciclo de Educación Especial.{% else %}Previsualización anual sin escritura para Educación Especial.{% endif %}{% endblock %}
 
 {% block especial_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
         <div>
-            <span class="cef-section-kicker">Previsualización anual</span>
+            <span class="cef-section-kicker">{% if modo_visualizacion_actual %}Visualización del ciclo actual{% else %}Previsualización anual{% endif %}</span>
             <h2 class="cef-panel-title">
-                Ciclo {{ origen.anio }} <span>→ {{ siguiente_anio }}</span>
+                Ciclo {{ origen.anio }}{% if not modo_visualizacion_actual %} <span>→ {{ siguiente_anio }}</span>{% endif %}
             </h2>
         </div>
         <div class="cef-panel-actions">
@@ -23,31 +23,30 @@
 
     <div class="cef-panel-body">
         <div class="alert alert-info">
-            <strong>PREVISUALIZACIÓN · sin escritura.</strong>
-            Este análisis responde qué ocurriría si el siguiente ciclo se generara hoy.
-            No crea ciclos, no copia filas, no cambia estados y no produce bajas.
+            <strong>{% if modo_visualizacion_actual %}CONSULTA · sólo lectura.{% else %}PREVISUALIZACIÓN · sin escritura.{% endif %}</strong>
+            {% if modo_visualizacion_actual %}Estos son los datos actuales del ciclo seleccionado. No se modifica ninguna información.{% else %}Este análisis responde qué ocurriría si el siguiente ciclo se generara hoy. No crea ciclos, no copia filas, no cambia estados y no produce bajas.{% endif %}
         </div>
 
         <div class="cef-context-summary mb-4">
             <div class="cef-context-summary-item">
-                <span>Ciclo origen</span>
+                <span>{% if modo_visualizacion_actual %}Ciclo consultado{% else %}Ciclo origen{% endif %}</span>
                 <strong>{{ origen.anio }} · {% if origen.cerrado %}Cerrado{% else %}Actual y abierto{% endif %}</strong>
             </div>
-            <div class="cef-context-summary-item">
+            {% if not modo_visualizacion_actual %}<div class="cef-context-summary-item">
                 <span>Ciclo proyectado</span>
                 <strong>{{ siguiente_anio }}</strong>
-            </div>
+            </div>{% endif %}
             <div class="cef-context-summary-item">
-                <span>Fecha simulada</span>
+                <span>{% if modo_visualizacion_actual %}Fecha de consulta{% else %}Fecha simulada{% endif %}</span>
                 <strong>{{ resultado.fecha_simulada|date:"d/m/Y" }}</strong>
             </div>
             <div class="cef-context-summary-item">
-                <span>Escuela especial involucrada</span>
+                <span>{% if modo_visualizacion_actual %}CUE-Anexo consultado{% else %}Escuela especial involucrada{% endif %}</span>
                 <strong>{% if resultado.cueanexo %}1{% else %}0{% endif %}</strong>
             </div>
         </div>
 
-        <section class="cef-card mb-4">
+        {% if not modo_visualizacion_actual %}<section class="cef-card mb-4">
             <div class="cef-card-header">
                 <h3><i class="fa-solid fa-calendar-check me-2"></i>Generación real</h3>
                 <span class="badge text-bg-{% if origen.cerrado %}success{% else %}secondary{% endif %}">
@@ -66,23 +65,23 @@
                     <p class="mb-0">La simulación está lista. La generación real se implementará en el siguiente paso.</p>
                 {% endif %}
             </div>
-        </section>
+        </section>{% endif %}
 
         <section class="cef-card mb-4">
             <div class="cef-card-header">
-                <h3><i class="fa-solid fa-list-check me-2"></i>Conteos de la proyección</h3>
+                <h3><i class="fa-solid fa-list-check me-2"></i>{% if modo_visualizacion_actual %}Datos actuales{% else %}Conteos de la proyección{% endif %}</h3>
                 <span class="badge text-bg-primary">{{ resultado.total_registros }}</span>
             </div>
             <div class="cef-card-body">
                 <div class="cef-table-wrap">
                     <table class="cef-dt">
-                        <thead><tr><th>Entidad</th><th>Encontrados en {{ origen.anio }}</th><th>Proyectables a {{ siguiente_anio }}</th></tr></thead>
+                        <thead><tr><th>Entidad</th><th>{% if modo_visualizacion_actual %}Cantidad actual{% else %}Encontrados en {{ origen.anio }}{% endif %}</th>{% if not modo_visualizacion_actual %}<th>Proyectables a {{ siguiente_anio }}</th>{% endif %}</tr></thead>
                         <tbody>
-                            <tr><td><strong>Secciones activas</strong></td><td>{{ resultado.secciones }}</td><td>{{ resultado.secciones }}</td></tr>
-                            <tr><td><strong>Alumnos activos en banco</strong></td><td>{{ resultado.alumnos }}</td><td>{{ resultado.alumnos }}</td></tr>
-                            <tr><td><strong>Docentes activos en banco</strong></td><td>{{ resultado.docentes }}</td><td>{{ resultado.docentes }}</td></tr>
-                            <tr><td><strong>Inscripciones activas</strong></td><td>{{ resultado.inscripciones }}</td><td>{{ resultado.inscripciones }}</td></tr>
-                            <tr><td><strong>Asignaciones docentes activas</strong></td><td>{{ resultado.asignaciones }}</td><td>{{ resultado.asignaciones }}</td></tr>
+                            <tr><td><strong>Secciones activas</strong></td><td>{{ resultado.secciones }}</td>{% if not modo_visualizacion_actual %}<td>{{ resultado.secciones }}</td>{% endif %}</tr>
+                            <tr><td><strong>Alumnos activos en banco</strong></td><td>{{ resultado.alumnos }}</td>{% if not modo_visualizacion_actual %}<td>{{ resultado.alumnos }}</td>{% endif %}</tr>
+                            <tr><td><strong>Docentes activos en banco</strong></td><td>{{ resultado.docentes }}</td>{% if not modo_visualizacion_actual %}<td>{{ resultado.docentes }}</td>{% endif %}</tr>
+                            <tr><td><strong>Inscripciones activas</strong></td><td>{{ resultado.inscripciones }}</td>{% if not modo_visualizacion_actual %}<td>{{ resultado.inscripciones }}</td>{% endif %}</tr>
+                            <tr><td><strong>Asignaciones docentes activas</strong></td><td>{{ resultado.asignaciones }}</td>{% if not modo_visualizacion_actual %}<td>{{ resultado.asignaciones }}</td>{% endif %}</tr>
                         </tbody>
                     </table>
                 </div>
@@ -114,8 +113,8 @@
         </section>
 
         <section class="cef-card">
-            <div class="cef-card-header"><h3><i class="fa-solid fa-shield-halved me-2"></i>Criterios de la simulación</h3></div>
-            <div class="cef-card-body"><ul class="mb-0"><li>Las secciones proyectables conservarían trazabilidad hacia la sección de origen.</li><li>Los alumnos y docentes activos del banco serían candidatos a continuidad en el siguiente ciclo.</li><li>Las inscripciones y asignaciones activas serían candidatas a copiarse sólo si su sección también es proyectable.</li><li>No se realizan bajas automáticas ni cambios de estado.</li><li>Esta previsualización no modifica la base de datos.</li></ul></div>
+            <div class="cef-card-header"><h3><i class="fa-solid fa-shield-halved me-2"></i>{% if modo_visualizacion_actual %}Alcance de la consulta{% else %}Criterios de la simulación{% endif %}</h3></div>
+            <div class="cef-card-body"><ul class="mb-0">{% if modo_visualizacion_actual %}<li>Se muestran únicamente registros activos del ciclo {{ origen.anio }}.</li><li>La consulta se limita al CUE-Anexo seleccionado.</li><li>La visualización no modifica la base de datos.</li>{% else %}<li>Las secciones proyectables conservarían trazabilidad hacia la sección de origen.</li><li>Los alumnos y docentes activos del banco serían candidatos a continuidad en el siguiente ciclo.</li><li>Las inscripciones y asignaciones activas serían candidatas a copiarse sólo si su sección también es proyectable.</li><li>No se realizan bajas automáticas ni cambios de estado.</li><li>Esta previsualización no modifica la base de datos.</li>{% endif %}</ul></div>
         </section>
     </div>
 </div>
