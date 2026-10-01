@@ -32,6 +32,17 @@
                 </div>
             {% endif %}
 
+            {% if docente_row %}
+                <div class="alert alert-warning mb-3" role="status">
+                    <i class="fa-solid {% if docente_tiene_cargo %}fa-briefcase{% else %}fa-triangle-exclamation{% endif %} me-1"></i>
+                    {% if docente_tiene_cargo %}
+                        El docente buscado tiene un cargo asignado en BNH.
+                    {% else %}
+                        El docente buscado no tiene ningún cargo asignado en BNH.
+                    {% endif %}
+                </div>
+            {% endif %}
+
             <div class="cef-docente-table-wrap">
                 <table class="cef-docente-table">
                     <thead>
@@ -80,10 +91,10 @@
                                         {% endif %}
                                     {% endif %}
 
-                                    {# Botón editar: usa url_editar_docente (enviado por views_docentes.py) #}
+                                    {# Botón ficha: usa url_editar_docente (enviado por views_docentes.py) #}
                                     {% if especial_context.puede_operar and url_editar_docente %}
                                         <a class="btn btn-outline-primary btn-sm" href="{{ url_editar_docente }}" target="_blank" rel="noopener">
-                                            <i class="fa-solid fa-pen-to-square"></i> Editar datos
+                                            <i class="fa-solid fa-id-card"></i> Ver ficha
                                         </a>
                                     {% endif %}
                                 </td>
