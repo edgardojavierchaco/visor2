@@ -67,7 +67,6 @@ def export_personnel(user, cueanexos):
     writer = csv.writer(response)
     writer.writerow(
         [
-            "ID Puesto",
             "CUEANEXO",
             "CUIL",
             "DNI",
@@ -95,7 +94,6 @@ def export_personnel(user, cueanexos):
             person = activity.persona
             writer.writerow(
                 [
-                    activity.id_puesto,
                     activity.cueanexo,
                     person.cuil or "",
                     person.dni or "",
