@@ -106,7 +106,26 @@ def nueva_actividad(request, persona_id):
 @operator_required
 @require_http_methods(["GET", "POST"])
 def vincular_persona(request):
-    form = VincularPersonaForm(request.POST if request.method == "POST" else None)
+    vincular_data = request.POST if request.method == "POST" else None
+    vincular_initial = None
+    if request.method == "GET":
+        cuil_inicial = re.sub(r"\D", "", request.GET.get("cuil", ""))
+        if cuil_inicial:
+            vincular_initial = {"cuil": cuil_inicial}
+            persona = Personas.objects.filter(
+                cuil=cuil_inicial,
+                archivada=False,
+            ).only("dni", "apellido", "nombre").first()
+            if persona:
+                vincular_initial.update(
+                    {
+                        "dni": persona.dni or "",
+                        "apellido": persona.apellido or "",
+                        "nombre": persona.nombre or "",
+                    }
+                )
+
+    form = VincularPersonaForm(vincular_data, initial=vincular_initial)
     activity = ActividadDirectorForm(request.POST if request.method == "POST" else None, user=request.user, prefix="actividad")
     if request.method == "POST":
         valid_person, valid_activity = form.is_valid(), activity.is_valid()
