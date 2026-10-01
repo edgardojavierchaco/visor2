@@ -193,8 +193,8 @@
                     </button>
                 </form>
                 <div class="especial-ciclo-admin-secondary-actions">
-                <a href="{% url 'especial:prevalidar_ciclo_anual' ciclo_actual_admin.pk %}?cueanexo={{ especial_context.cueanexo }}&amp;ciclo={{ ciclo_actual_admin.pk }}" class="btn btn-outline-primary btn-sm">
-                    <i class="fa-solid fa-magnifying-glass me-1"></i>Previsualizar generación {{ ciclo_actual_admin.anio|add:"1" }}
+                <a href="{% url 'especial:prevalidar_ciclo_anual' ciclo_actual_admin.pk %}?cueanexo={{ especial_context.cueanexo }}&amp;ciclo={{ ciclo_actual_admin.pk }}&amp;modo=actual" class="btn btn-outline-primary btn-sm">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Visualizar ciclo actual
                 </a>
                 <form method="post" class="m-0" onsubmit="return confirm('¿Está seguro de querer cerrar este ciclo? Esta acción no se puede deshacer.');">
                     {% csrf_token %}
@@ -292,10 +292,11 @@
                                         {% endif %}
                                     </td>
                                     <td class="cef-act-cell">
-                                        {% if ciclo.cerrado %}
-                                            —
-                                        {% elif not ciclo.actual %}
-                                            <form method="post" class="m-0">
+                                        {% if ciclo.actual %}
+                                            <a href="{% url 'especial:prevalidar_ciclo_anual' ciclo.pk %}?cueanexo={{ especial_context.cueanexo }}&amp;ciclo={{ ciclo.pk }}" class="btn btn-outline-primary btn-sm">
+                                                <i class="fa-solid fa-magnifying-glass me-1"></i>Previsualizar generación {{ ciclo.anio|add:"1" }}
+                                            </a>
+                                        {% elif not ciclo.cerrado %}<form method="post" class="m-0">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="accion" value="marcar_actual">
                                                 <input type="hidden" name="ciclo_id" value="{{ ciclo.pk }}">
@@ -307,10 +308,23 @@
                                                     <i class="fa-solid fa-check"></i> Marcar actual
                                                 </button>
                                             </form>
-                                        {% else %}
-                                            <a href="{% url 'especial:prevalidar_ciclo_anual' ciclo.pk %}?cueanexo={{ especial_context.cueanexo }}&amp;ciclo={{ ciclo.pk }}" class="btn btn-outline-primary btn-sm">
-                                                <i class="fa-solid fa-magnifying-glass me-1"></i>Previsualizar generación {{ ciclo.anio|add:"1" }}
-                                            </a>
+                                        {% endif %}
+                                        <a href="{% url 'especial:prevalidar_ciclo_anual' ciclo.pk %}?cueanexo={{ especial_context.cueanexo }}&amp;ciclo={{ ciclo.pk }}&amp;modo=consulta" class="btn btn-outline-secondary btn-sm mt-1">
+                                            <i class="fa-solid fa-eye me-1"></i>Visualizar ciclo
+                                        </a>
+                                        {% if not ciclo.actual %}
+                                            <form id="eliminar-ciclo-{{ ciclo.pk }}" method="post" class="m-0 mt-1">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="accion" value="eliminar">
+                                                <input type="hidden" name="ciclo_id" value="{{ ciclo.pk }}">
+                                                <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
+                                                {% if especial_context.ciclo %}
+                                                    <input type="hidden" name="ciclo_contexto" value="{{ especial_context.ciclo.pk }}">
+                                                {% endif %}
+                                                <button type="button" class="btn btn-outline-danger btn-sm" data-ciclo-eliminar data-ciclo-id="{{ ciclo.pk }}" data-ciclo-anio="{{ ciclo.anio }}">
+                                                    <i class="fa-solid fa-trash me-1"></i>Borrar ciclo
+                                                </button>
+                                            </form>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -380,3 +394,108 @@
         </div>
     </section>
 </div>
+
+<style>
+    .especial-ciclo-delete-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 1050;
+        display: grid;
+        place-items: center;
+        padding: 1rem;
+        background: rgba(15, 23, 42, .58);
+    }
+    .especial-ciclo-delete-modal[hidden] { display: none; }
+    .especial-ciclo-delete-card {
+        width: min(100%, 30rem);
+        background: #fff;
+        border: 1px solid #fecaca;
+        border-radius: 1rem;
+        box-shadow: 0 1.25rem 3rem rgba(15, 23, 42, .25);
+        overflow: hidden;
+    }
+    .especial-ciclo-delete-head {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        padding: 1rem 1.25rem;
+        color: #991b1b;
+        background: #fef2f2;
+        border-bottom: 1px solid #fee2e2;
+    }
+    .especial-ciclo-delete-head i { font-size: 1.25rem; }
+    .especial-ciclo-delete-body { padding: 1.25rem; color: #334155; }
+    .especial-ciclo-delete-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: .625rem;
+        padding: 0 1.25rem 1.25rem;
+    }
+</style>
+
+<div id="especial-ciclo-delete-modal" class="especial-ciclo-delete-modal" role="dialog" aria-modal="true" aria-labelledby="especial-ciclo-delete-title" hidden>
+    <div class="especial-ciclo-delete-card">
+        <div class="especial-ciclo-delete-head">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <h2 id="especial-ciclo-delete-title" class="h5 mb-0">Eliminar ciclo</h2>
+        </div>
+        <div class="especial-ciclo-delete-body">
+            <p class="mb-2">¿Confirmás eliminar el ciclo <strong data-ciclo-delete-year></strong>?</p>
+            <p class="small mb-0 text-danger">Esta acción no se puede deshacer. Si el ciclo tiene datos asociados, la operación será rechazada.</p>
+        </div>
+        <div class="especial-ciclo-delete-actions">
+            <button type="button" class="btn btn-outline-secondary" data-ciclo-delete-cancelar>Cancelar</button>
+            <button type="button" class="btn btn-danger" data-ciclo-delete-confirmar><i class="fa-solid fa-trash me-1"></i>Eliminar ciclo</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    if (window.especialCiclosDeleteModalInitialized) return;
+    window.especialCiclosDeleteModalInitialized = true;
+
+    function inicializarModal() {
+        const modal = document.getElementById("especial-ciclo-delete-modal");
+        if (!modal) return;
+        const year = modal.querySelector("[data-ciclo-delete-year]");
+        const confirmar = modal.querySelector("[data-ciclo-delete-confirmar]");
+        const cancelar = modal.querySelector("[data-ciclo-delete-cancelar]");
+        let formulario = null;
+
+        function cerrar() {
+            modal.hidden = true;
+            modal.setAttribute("aria-hidden", "true");
+            formulario = null;
+        }
+
+        document.addEventListener("click", (event) => {
+            const boton = event.target.closest("[data-ciclo-eliminar]");
+            if (!boton) return;
+                formulario = document.getElementById(`eliminar-ciclo-${boton.dataset.cicloId}`);
+                if (!formulario) return;
+                year.textContent = boton.dataset.cicloAnio || "seleccionado";
+                modal.hidden = false;
+                modal.setAttribute("aria-hidden", "false");
+                cancelar.focus();
+        });
+
+        cancelar.addEventListener("click", cerrar);
+        confirmar.addEventListener("click", () => {
+            if (formulario) formulario.submit();
+        });
+        modal.addEventListener("click", (event) => {
+            if (event.target === modal) cerrar();
+        });
+        document.addEventListener("keydown", (event) => {
+            if (!modal.hidden && event.key === "Escape") cerrar();
+        });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", inicializarModal, { once: true });
+    } else {
+        inicializarModal();
+    }
+})();
+</script>

@@ -5,13 +5,12 @@ import logging
 import re
 from urllib.parse import urlencode
 
-from django.apps import apps
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import DatabaseError, IntegrityError, transaction
 from django.db.utils import OperationalError, ProgrammingError
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import NoReverseMatch, reverse
+from django.urls import reverse
 from django.utils import timezone
 
 from .forms import EspecialBusquedaAlumnoForm, EspecialInscripcionForm
@@ -32,6 +31,13 @@ from .services.alumnos import (
     inscribir_alumno_en_seccion,
     ultima_matricula_compartida,
 )
+from .services.alumnos_identidad import (
+    _alumno_por_id,
+    _buscar_alumno_sin_documento,
+    _persona_sge_row,
+    _resolver_alumno_o_sge,
+    _url_carga_alumno as _url_carga_alumno_base,
+)
 from .views_contexto import contexto_base, redirect_con_contexto
 
 
@@ -46,9 +52,6 @@ ESTADOS_INSCRIPCION_ABIERTA = [
 def _solo_digitos(valor):
     return re.sub(r"\D", "", str(valor or ""))
 
-
-def _alumno_model():
-    return apps.get_model("bnhalumnos", "Alumno")
 
 
 def _seccion_segura(seccion_id, especial_context, for_update=False):
@@ -135,9 +138,6 @@ def _inscripciones_seccion(seccion):
         ),
     )
 
-
-def _buscar_alumno(cuil):
-    return _alumno_model().objects.filter(cuil=cuil).first()
 
 
 def crear_inscripcion_activa(
@@ -347,31 +347,46 @@ def _alumno_row(alumno):
     }
 
 
-def _url_carga_alumno(cuil, next_url, return_label="Volver a la sección"):
-    try:
-        base = reverse("bnhalumnos:carga_alumno")
-    except NoReverseMatch:
-        return ""
 
-    params = {}
-    if cuil:
-        params["cuil"] = cuil
-    if next_url:
-        params["next"] = next_url
-    if return_label:
-        params["return_label"] = return_label
-    return f"{base}?{urlencode(params)}" if params else base
-
-
-def _url_modal_seccion(seccion, especial_context, cuil=""):
+def _url_modal_seccion(
+    seccion,
+    especial_context,
+    *,
+    alumno_id="",
+    tipo_doc="",
+    nro_doc="",
+    cuil="",
+    apellidos="",
+    nombres="",
+    fecha_nacimiento="",
+    sexo="",
+):
     params = {}
     if especial_context.get("cueanexo"):
         params["cueanexo"] = especial_context["cueanexo"]
     if especial_context.get("ciclo"):
         params["ciclo"] = especial_context["ciclo"].pk
     params["abrir_modal_alumno"] = "1"
+    if alumno_id:
+        params["alumno_id"] = getattr(alumno_id, "pk", alumno_id)
+    if tipo_doc:
+        params["tipo_doc"] = getattr(tipo_doc, "pk", tipo_doc)
+    if nro_doc:
+        params["nro_doc"] = nro_doc
     if cuil:
         params["cuil"] = cuil
+    if apellidos:
+        params["apellidos"] = apellidos
+    if nombres:
+        params["nombres"] = nombres
+    if fecha_nacimiento:
+        params["fecha_nacimiento"] = (
+            fecha_nacimiento.isoformat()
+            if hasattr(fecha_nacimiento, "isoformat")
+            else fecha_nacimiento
+        )
+    if sexo:
+        params["sexo"] = getattr(sexo, "pk", sexo)
     return f"{reverse('especial:inscripcion_seccion', kwargs={'seccion_id': seccion.pk})}?{urlencode(params)}"
 
 
@@ -408,10 +423,7 @@ def inscripcion_seccion(request, seccion_id):
     especial_context = context["especial_context"]
     _completar_contexto_desde_seccion(request, seccion_id, especial_context)
     if request.method == "POST" and especial_context.get("ciclo_cerrado"):
-        messages.error(
-            request,
-            "El ciclo seleccionado está cerrado y sólo puede consultarse.",
-        )
+        messages.error(request, "El ciclo seleccionado está cerrado y sólo puede consultarse.")
         return redirect(request.get_full_path())
 
     if not especial_context["puede_consultar"]:
@@ -423,17 +435,75 @@ def inscripcion_seccion(request, seccion_id):
 
     seccion = _seccion_segura(seccion_id, especial_context)
     alumno = None
+    persona_sge = None
     inscripcion_abierta = None
+    tipo_doc_buscado = "1"
+    nro_doc_buscado = ""
     cuil_buscado = ""
+    apellidos_buscados = ""
+    nombres_buscados = ""
+    fecha_nacimiento_buscada = ""
+    sexo_buscado = ""
     cuil_error = ""
+    busqueda_sin_identidad = False
+    busqueda_sin_documento_realizada = False
     matricula_compartida_cueanexo = ""
     modal_feedback = ""
     modal_feedback_level = "error"
     abrir_modal = request.GET.get("abrir_modal_alumno") == "1"
 
+    def procesar_busqueda(form, datos):
+        nonlocal alumno, persona_sge, cuil_error
+        nonlocal tipo_doc_buscado, nro_doc_buscado, cuil_buscado
+        nonlocal apellidos_buscados, nombres_buscados
+        nonlocal fecha_nacimiento_buscada, sexo_buscado
+        nonlocal busqueda_sin_identidad, busqueda_sin_documento_realizada
+        tipo_doc_buscado = datos.get("tipo_doc") or "1"
+        nro_doc_buscado = (datos.get("nro_doc") or "").strip().upper()
+        cuil_buscado = _solo_digitos(datos.get("cuil"))
+        apellidos_buscados = (datos.get("apellidos") or "").strip()
+        nombres_buscados = (datos.get("nombres") or "").strip()
+        fecha_nacimiento_buscada = (datos.get("fecha_nacimiento") or "").strip()
+        sexo_buscado = (datos.get("sexo") or "").strip()
+        if not form.is_valid():
+            cuil_error = _errores_form(form)
+            return
+        tipo_doc = form.cleaned_data["tipo_doc_obj"]
+        tipo_doc_buscado = str(tipo_doc.pk)
+        nro_doc_buscado = form.cleaned_data["nro_doc"]
+        cuil_buscado = form.cleaned_data["cuil"]
+        if form.cleaned_data.get("busqueda_sin_identidad"):
+            busqueda_sin_identidad = True
+            apellidos_buscados = form.cleaned_data["apellidos"]
+            nombres_buscados = form.cleaned_data["nombres"]
+            fecha_nacimiento_buscada = form.cleaned_data["fecha_nacimiento"]
+            sexo_obj = form.cleaned_data["sexo"]
+            sexo_buscado = str(sexo_obj.pk)
+            try:
+                alumno = _buscar_alumno_sin_documento(
+                    apellidos=apellidos_buscados,
+                    nombres=nombres_buscados,
+                    tipo_doc=tipo_doc,
+                    fecha_nacimiento=fecha_nacimiento_buscada,
+                    sexo=sexo_obj,
+                )
+                busqueda_sin_documento_realizada = True
+            except ValidationError as exc:
+                cuil_error = "; ".join(exc.messages)
+            return
+        try:
+            alumno, persona_sge = _resolver_alumno_o_sge(
+                tipo_doc=tipo_doc,
+                nro_doc=nro_doc_buscado,
+                cuil=cuil_buscado,
+            )
+        except ValidationError as exc:
+            cuil_error = "; ".join(exc.messages)
+
     if request.method == "POST":
         busqueda_form = EspecialBusquedaAlumnoForm(request.POST)
         abrir_modal = True
+        alumno_id_post = request.POST.get("alumno_id")
         cueanexo_asociado_recibido = str(
             request.POST.get("cueanexo_matricula_compartida") or ""
         ).strip()
@@ -441,25 +511,34 @@ def inscripcion_seccion(request, seccion_id):
             normalizar_cueanexo(cueanexo_asociado_recibido)
             or cueanexo_asociado_recibido
         )
-
-        if busqueda_form.is_valid():
-            cuil_buscado = busqueda_form.cleaned_data["cuil"]
-            alumno = _buscar_alumno(cuil_buscado)
+        if alumno_id_post:
+            alumno = _alumno_por_id(alumno_id_post)
+            if not alumno:
+                cuil_error = "El alumno seleccionado ya no existe o no es válido."
         else:
-            cuil_buscado = _solo_digitos(request.POST.get("cuil"))
-            cuil_error = _errores_form(busqueda_form)
-            modal_feedback = cuil_error
+            procesar_busqueda(busqueda_form, request.POST)
 
         if not alumno:
-            modal_feedback = cuil_error or "Primero buscá un alumno existente por CUIL."
-            messages.error(request, modal_feedback)
+            if persona_sge and not cuil_error:
+                modal_feedback = (
+                    "Alumno encontrado en SGE. Complete los datos faltantes antes de inscribirlo."
+                )
+                messages.info(request, modal_feedback)
+            elif busqueda_sin_identidad and not cuil_error:
+                modal_feedback = "No se encontró un alumno ya cargado con esos datos."
+                messages.info(request, modal_feedback)
+            else:
+                modal_feedback = cuil_error or "Primero buscá y seleccioná un alumno existente."
+                messages.error(request, modal_feedback)
         else:
+            cuil_buscado = getattr(alumno, "cuil", "") or cuil_buscado
             logger.info(
                 "Inscripción Especial recibida: seccion_id=%s cue_especial=%s ciclo_id=%s "
-                "cuil=%s cue_asociado=%s",
+                "alumno_id=%s cuil=%s cue_asociado=%s",
                 seccion.pk,
                 seccion.cueanexo,
                 seccion.ciclo_id,
+                alumno.pk,
                 cuil_buscado,
                 matricula_compartida_cueanexo,
             )
@@ -468,13 +547,9 @@ def inscripcion_seccion(request, seccion_id):
                 alumno=alumno,
                 estado__in=ESTADOS_INSCRIPCION_ABIERTA,
             ).first()
-
             if inscripcion_abierta:
                 modal_feedback = "El alumno ya se encuentra inscripto en esta sección."
-                messages.error(
-                    request,
-                    modal_feedback,
-                )
+                messages.error(request, modal_feedback)
             else:
                 try:
                     _, creada, _ = inscribir_alumno_en_seccion(
@@ -483,36 +558,26 @@ def inscripcion_seccion(request, seccion_id):
                         user=request.user,
                         cueanexo_asociado=cueanexo_asociado_recibido,
                     )
-                    if creada:
-                        messages.success(request, "Alumno inscripto correctamente.")
-                        return redirect(
-                            redirect_con_contexto(
-                                "especial:inscripcion_seccion",
-                                especial_context,
-                                seccion_id=seccion.pk,
-                            )
+                    messages.success(
+                        request,
+                        "Alumno inscripto correctamente."
+                        if creada
+                        else "La inscripción del alumno fue reactivada correctamente.",
+                    )
+                    return redirect(
+                        redirect_con_contexto(
+                            "especial:inscripcion_seccion",
+                            especial_context,
+                            seccion_id=seccion.pk,
                         )
-                    else:
-                        messages.success(
-                            request,
-                            "La inscripción del alumno fue reactivada correctamente.",
-                        )
-                        return redirect(
-                            redirect_con_contexto(
-                                "especial:inscripcion_seccion",
-                                especial_context,
-                                seccion_id=seccion.pk,
-                            )
-                        )
+                    )
                 except ValidationError as exc:
                     modal_feedback = "; ".join(exc.messages)
                     logger.warning(
-                        "Inscripción Especial rechazada: seccion_id=%s cue_especial=%s "
-                        "ciclo_id=%s cuil=%s cue_asociado=%s motivo=%s",
+                        "Inscripción Especial rechazada: seccion_id=%s alumno_id=%s "
+                        "cue_asociado=%s motivo=%s",
                         seccion.pk,
-                        seccion.cueanexo,
-                        seccion.ciclo_id,
-                        cuil_buscado,
+                        alumno.pk,
                         matricula_compartida_cueanexo,
                         modal_feedback,
                     )
@@ -523,68 +588,64 @@ def inscripcion_seccion(request, seccion_id):
                         "una inscripción activa."
                     )
                     logger.exception(
-                        "Inscripción Especial rechazada por integridad: seccion_id=%s "
-                        "cuil=%s cue_asociado=%s",
+                        "Inscripción Especial rechazada por integridad: seccion_id=%s alumno_id=%s",
                         seccion.pk,
-                        cuil_buscado,
-                        matricula_compartida_cueanexo,
+                        alumno.pk,
                     )
-                    messages.error(
-                        request,
-                        modal_feedback,
-                    )
+                    messages.error(request, modal_feedback)
                 except (OperationalError, ProgrammingError):
                     modal_feedback = (
-                        "No se pudo consultar el padrón o la base de datos. "
-                        "Intentá nuevamente."
+                        "No se pudo consultar el padrón o la base de datos. Intentá nuevamente."
                     )
-                    logger.exception(
-                        "Inscripción Especial con error de base: seccion_id=%s "
-                        "cuil=%s cue_asociado=%s",
-                        seccion.pk,
-                        cuil_buscado,
-                        matricula_compartida_cueanexo,
-                    )
+                    logger.exception("Error de base al inscribir alumno Especial.")
                     messages.error(request, modal_feedback)
                 except DatabaseError:
                     modal_feedback = "No se pudo completar la inscripción por un error de base de datos."
-                    logger.exception(
-                        "Inscripción Especial con error de base no clasificado: seccion_id=%s "
-                        "cuil=%s cue_asociado=%s",
-                        seccion.pk,
-                        cuil_buscado,
-                        matricula_compartida_cueanexo,
-                    )
+                    logger.exception("Error de base no clasificado al inscribir alumno Especial.")
                     messages.error(request, modal_feedback)
                 except Exception:
                     modal_feedback = "No se pudo completar la inscripción. Revisá los datos e intentá nuevamente."
-                    logger.exception(
-                        "Inscripción Especial con error no controlado: seccion_id=%s "
-                        "cuil=%s cue_asociado=%s",
-                        seccion.pk,
-                        cuil_buscado,
-                        matricula_compartida_cueanexo,
-                    )
+                    logger.exception("Error no controlado al inscribir alumno Especial.")
                     messages.error(request, modal_feedback)
     else:
-        busqueda_form = EspecialBusquedaAlumnoForm(
-            request.GET if request.GET.get("cuil") else None
+        busqueda_solicitada = bool(
+            request.GET.get("alumno_id")
+            or request.GET.get("tipo_doc")
+            or request.GET.get("nro_doc")
+            or request.GET.get("cuil")
+            or request.GET.get("apellidos")
+            or request.GET.get("nombres")
+            or request.GET.get("fecha_nacimiento")
+            or request.GET.get("sexo")
         )
+        busqueda_form = EspecialBusquedaAlumnoForm(
+            request.GET if busqueda_solicitada else None
+        )
+        if request.GET.get("alumno_id"):
+            alumno = _alumno_por_id(request.GET.get("alumno_id"))
+            if not alumno:
+                cuil_error = "El alumno seleccionado ya no existe o no es válido."
+        elif busqueda_solicitada:
+            procesar_busqueda(busqueda_form, request.GET)
+        if alumno:
+            inscripcion_abierta = AlumnoSeccion.objects.filter(
+                seccion=seccion,
+                alumno=alumno,
+                estado__in=ESTADOS_INSCRIPCION_ABIERTA,
+            ).first()
 
-        if busqueda_form.is_valid():
-            cuil_buscado = busqueda_form.cleaned_data["cuil"]
-            alumno = _buscar_alumno(cuil_buscado)
-            if alumno:
-                inscripcion_abierta = AlumnoSeccion.objects.filter(
-                    seccion=seccion,
-                    alumno=alumno,
-                    estado__in=ESTADOS_INSCRIPCION_ABIERTA,
-                ).first()
-        elif request.GET.get("cuil"):
-            cuil_buscado = _solo_digitos(request.GET.get("cuil"))
-            cuil_error = _errores_form(busqueda_form)
-
-    next_url = _url_modal_seccion(seccion, especial_context, cuil_buscado)
+    next_url = _url_modal_seccion(
+        seccion,
+        especial_context,
+        alumno_id=alumno.pk if alumno else "",
+        tipo_doc=tipo_doc_buscado,
+        nro_doc=nro_doc_buscado,
+        cuil=cuil_buscado,
+        apellidos=apellidos_buscados,
+        nombres=nombres_buscados,
+        fecha_nacimiento=fecha_nacimiento_buscada,
+        sexo=sexo_buscado,
+    )
     alumno_en_banco = bool(
         alumno
         and EspecialAlumnoBanco.objects.filter(
@@ -615,6 +676,11 @@ def inscripcion_seccion(request, seccion_id):
     for item in inscripciones:
         banco = bancos_por_alumno.get(item.alumno_id)
         item.cueanexo_matricula_compartida = banco.matricula_compartida if banco else ""
+        item.reinscripcion_url = _url_modal_seccion(
+            seccion,
+            especial_context,
+            alumno_id=item.alumno_id,
+        )
     context.update(
         {
             "seccion": seccion,
@@ -625,9 +691,18 @@ def inscripcion_seccion(request, seccion_id):
             ],
             "busqueda_form": busqueda_form,
             "alumno": alumno,
-            "alumno_row": _alumno_row(alumno),
+            "alumno_row": _alumno_row(alumno) or _persona_sge_row(persona_sge),
+            "alumno_desde_sge": bool(persona_sge and not alumno),
+            "tipo_doc_buscado": tipo_doc_buscado,
+            "nro_doc_buscado": nro_doc_buscado,
             "cuil_buscado": cuil_buscado,
+            "apellidos_buscados": apellidos_buscados,
+            "nombres_buscados": nombres_buscados,
+            "fecha_nacimiento_buscada": fecha_nacimiento_buscada,
+            "sexo_buscado": sexo_buscado,
             "cuil_error": cuil_error,
+            "busqueda_sin_identidad": busqueda_sin_identidad,
+            "busqueda_sin_documento_realizada": busqueda_sin_documento_realizada,
             "matricula_compartida_cueanexo": matricula_compartida_cueanexo,
             "inscripcion_abierta": inscripcion_abierta,
             "alumno_en_banco": alumno_en_banco,
@@ -642,8 +717,26 @@ def inscripcion_seccion(request, seccion_id):
             "mostrar_cueanexo_matricula": seccion.es_oferta_integracion,
             "gestionar_seccion_modo": True,
             "gestionar_seccion_url": _url_gestionar_seccion(seccion, especial_context),
-            "url_carga_alumno": _url_carga_alumno(cuil_buscado, next_url),
-            "url_editar_alumno": _url_carga_alumno(cuil_buscado, next_url),
+            "url_carga_alumno": _url_carga_alumno_base(
+                next_url,
+                return_label="Volver a la sección",
+                tipo_doc=tipo_doc_buscado,
+                nro_doc=nro_doc_buscado,
+                cuil=cuil_buscado,
+                apellidos=apellidos_buscados,
+                nombres=nombres_buscados,
+                fecha_nacimiento=fecha_nacimiento_buscada,
+                sexo=sexo_buscado,
+            ),
+            "url_editar_alumno": (
+                _url_carga_alumno_base(
+                    next_url,
+                    return_label="Volver a la sección",
+                    alumno=alumno,
+                )
+                if alumno
+                else ""
+            ),
             "modal_alumno_abierto": abrir_modal,
             "modal_action_url": _url_modal_seccion(seccion, especial_context),
             "modal_tiene_seccion": True,

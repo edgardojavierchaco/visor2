@@ -117,3 +117,91 @@ def prevalidar_generacion_anual(ciclo, cueanexo=""):
         "asignaciones": resultado["asignaciones"],
     }]
     return resultado
+
+
+def visualizar_ciclo(ciclo, cueanexo=""):
+    """Resume los datos de cualquier ciclo sin modificar información."""
+    cueanexo = str(cueanexo or "").strip()
+    resultado = {
+        "origen": ciclo,
+        "siguiente_anio": None,
+        "fecha_simulada": timezone.localdate(),
+        "cueanexo": cueanexo,
+        "errores": [],
+        "advertencias": [],
+        "bloqueado": False,
+        "secciones": 0,
+        "alumnos": 0,
+        "docentes": 0,
+        "inscripciones": 0,
+        "asignaciones": 0,
+        "total_registros": 0,
+        "por_cueanexo": [],
+    }
+
+    if ciclo is None:
+        resultado["errores"].append("El ciclo seleccionado no existe.")
+    if not cueanexo:
+        resultado["errores"].append("No existe un CUE-Anexo seleccionado.")
+
+    if resultado["errores"]:
+        resultado["bloqueado"] = True
+        return resultado
+
+    secciones = SeccionEspecial.objects.filter(
+        ciclo=ciclo,
+        cueanexo=cueanexo,
+        estado=SeccionEspecial.Estado.ACTIVO,
+    )
+    alumnos = EspecialAlumnoBanco.objects.filter(
+        ciclo=ciclo,
+        cueanexo=cueanexo,
+        estado=EspecialAlumnoBanco.Estado.ACTIVO,
+    )
+    docentes = EspecialDocenteBanco.objects.filter(
+        ciclo=ciclo,
+        cueanexo=cueanexo,
+        estado=EspecialDocenteBanco.Estado.ACTIVO,
+    )
+    inscripciones = AlumnoSeccion.objects.filter(
+        seccion__in=secciones,
+        estado=AlumnoSeccion.Estado.ACTIVO,
+    )
+    asignaciones = DocenteSeccion.objects.filter(
+        seccion__in=secciones,
+        estado=DocenteSeccion.Estado.ACTIVO,
+    )
+
+    resultado.update(
+        secciones=secciones.count(),
+        alumnos=alumnos.count(),
+        docentes=docentes.count(),
+        inscripciones=inscripciones.count(),
+        asignaciones=asignaciones.count(),
+    )
+    resultado["total_registros"] = sum(
+        resultado[campo]
+        for campo in ("secciones", "alumnos", "docentes", "inscripciones", "asignaciones")
+    )
+    if not resultado["secciones"]:
+        resultado["advertencias"].append(
+            f"El ciclo {ciclo.anio} no posee secciones activas para consultar."
+        )
+    if not resultado["alumnos"]:
+        resultado["advertencias"].append("No hay alumnos activos en banco.")
+    if not resultado["docentes"]:
+        resultado["advertencias"].append("No hay docentes activos en banco.")
+    if not resultado["inscripciones"]:
+        resultado["advertencias"].append("No hay inscripciones activas.")
+    if not resultado["asignaciones"]:
+        resultado["advertencias"].append("No hay asignaciones docentes activas.")
+
+    resultado["por_cueanexo"] = [{
+        "cueanexo": cueanexo,
+        "secciones": resultado["secciones"],
+        "alumnos": resultado["alumnos"],
+        "docentes": resultado["docentes"],
+        "inscripciones": resultado["inscripciones"],
+        "asignaciones": resultado["asignaciones"],
+    }]
+    return resultado
