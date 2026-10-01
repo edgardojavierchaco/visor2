@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import EspecialCicloForm
@@ -15,7 +16,7 @@ from .permisos import especial_required, get_permisos_especial_request
 from .services.previsualizacion_anual import (
     origen_anual_previsualizable,
     prevalidar_generacion_anual,
-    previsualizar_ciclo_actual,
+    visualizar_ciclo,
 )
 from .services.baja_docentes import aplicar_traslados_docentes
 from .views_contexto import contexto_base, redirect_con_contexto, render_especial
@@ -48,16 +49,16 @@ def _exigir_admin(request):
 def prevalidar_ciclo_anual(request, ciclo_id):
     """Muestra una simulación anual de sólo lectura para administradores."""
     _exigir_admin(request)
-    modo_actual = request.GET.get("modo") == "actual"
+    modo_visualizacion = request.GET.get("modo") in {"actual", "consulta"}
     context = contexto_base(
         request,
         "ciclos",
-        "Visualización del ciclo actual" if modo_actual else "Previsualización anual Especial",
+        "Visualización del ciclo" if modo_visualizacion else "Previsualización anual Especial",
     )
     especial_context = context["especial_context"]
     ciclo = EspecialCiclo.objects.filter(pk=ciclo_id).first()
-    if modo_actual:
-        resultado = previsualizar_ciclo_actual(
+    if modo_visualizacion:
+        resultado = visualizar_ciclo(
             ciclo,
             especial_context.get("cueanexo"),
         )
@@ -83,9 +84,9 @@ def prevalidar_ciclo_anual(request, ciclo_id):
     context.update(
         {
             "origen": ciclo,
-            "siguiente_anio": None if modo_actual else ciclo.anio + 1,
+            "siguiente_anio": None if modo_visualizacion else ciclo.anio + 1,
             "resultado": resultado,
-            "modo_visualizacion_actual": modo_actual,
+            "modo_visualizacion_ciclo": modo_visualizacion,
             "volver_url": redirect_con_contexto(
                 "especial:administrar_ciclos", especial_context
             ),
@@ -174,6 +175,27 @@ def administrar_ciclos(request):
                 ciclo.save(update_fields=["actual", "activo", "actualizado_por", "actualizado_en"])
             messages.success(request, "Ciclo actual actualizado correctamente.")
             return _redirect_admin_ciclos(especial_context, ciclo)
+
+        if accion == "eliminar":
+            ciclo_id = request.POST.get("ciclo_id")
+            with transaction.atomic():
+                ciclo = get_object_or_404(
+                    EspecialCiclo.objects.select_for_update(),
+                    pk=ciclo_id,
+                )
+                if ciclo.actual:
+                    messages.error(request, "No se puede eliminar el ciclo actual.")
+                    return _redirect_admin_ciclos(especial_context, ciclo)
+                try:
+                    ciclo.delete()
+                except ProtectedError:
+                    messages.error(
+                        request,
+                        "No se puede eliminar este ciclo porque tiene datos asociados.",
+                    )
+                    return _redirect_admin_ciclos(especial_context, ciclo)
+            messages.success(request, f"El ciclo {ciclo.anio} fue eliminado correctamente.")
+            return _redirect_admin_ciclos(especial_context)
 
         if form.is_valid():
             with transaction.atomic():

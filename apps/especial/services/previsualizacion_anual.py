@@ -119,8 +119,8 @@ def prevalidar_generacion_anual(ciclo, cueanexo=""):
     return resultado
 
 
-def previsualizar_ciclo_actual(ciclo, cueanexo=""):
-    """Resume los datos actuales sin proyectar ni modificar información."""
+def visualizar_ciclo(ciclo, cueanexo=""):
+    """Resume los datos de cualquier ciclo sin modificar información."""
     cueanexo = str(cueanexo or "").strip()
     resultado = {
         "origen": ciclo,
@@ -139,10 +139,8 @@ def previsualizar_ciclo_actual(ciclo, cueanexo=""):
         "por_cueanexo": [],
     }
 
-    if ciclo is None or not ciclo.actual:
-        resultado["errores"].append(
-            "El ciclo seleccionado no es el ciclo actual."
-        )
+    if ciclo is None:
+        resultado["errores"].append("El ciclo seleccionado no existe.")
     if not cueanexo:
         resultado["errores"].append("No existe un CUE-Anexo seleccionado.")
 
