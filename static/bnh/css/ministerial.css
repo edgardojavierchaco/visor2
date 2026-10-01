@@ -82,3 +82,52 @@ option.bnh-native-option-not-applicable {
     background: #fff3cd;
 }
 
+
+
+/* ==========================================================
+   BNH - SWITCH BOOLEANOS
+   No seleccionado: rojo / NO
+   Seleccionado: verde / SÍ
+========================================================== */
+.bnh-switch .form-check-input {
+    width: 2.75rem;
+    height: 1.35rem;
+    margin-top: 0.15rem;
+    cursor: pointer;
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.bnh-switch .form-check-input:not(:checked) {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.bnh-switch .form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.bnh-switch .form-check-input:focus {
+    border-color: currentColor;
+    box-shadow: 0 0 0 .2rem rgba(0, 0, 0, .10);
+}
+
+.bnh-switch .form-check-label {
+    cursor: pointer;
+    user-select: none;
+}
+
+.bnh-switch-status::before {
+    content: "NO";
+    display: inline-block;
+    margin-left: .45rem;
+    min-width: 1.8rem;
+    font-weight: 700;
+    color: #dc3545;
+}
+
+.bnh-switch .form-check-input:checked + .form-check-label .bnh-switch-status::before {
+    content: "SÍ";
+    color: #198754;
+}
