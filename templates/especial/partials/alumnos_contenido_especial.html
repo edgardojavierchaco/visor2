@@ -40,7 +40,7 @@
                             <th>Estado en Especial</th>
                             <th>Fecha alta</th>
                             <th>Secciones / inscripciones</th>
-                            <th>ACCIONES</th>
+                            {% if especial_context.puede_operar %}<th>ACCIONES</th>{% endif %}
                         </tr>
                     </thead>
                     <tbody>
@@ -58,7 +58,7 @@
                                         {% if total_secciones %}
                                             <div class="cef-alumno-secciones">
                                                 {% for inscripcion in item.inscripciones_seccion %}
-                                                    <a class="cef-alumno-seccion-item{% if forloop.counter > 2 %} cef-alumno-seccion-item-adicional{% endif %}" href="{% url 'especial:gestionar_seccion' inscripcion.seccion.pk %}{% if alumnos_querystring %}?{{ alumnos_querystring }}{% endif %}" aria-label="Gestionar sección {{ inscripcion.seccion.nombre_seccion }}"{% if forloop.counter > 2 %} data-cef-alumno-seccion-adicional="true" hidden{% endif %}>
+                                                    <a class="cef-alumno-seccion-item{% if forloop.counter > 2 %} cef-alumno-seccion-item-adicional{% endif %}" href="{% url 'especial:gestionar_seccion' inscripcion.seccion.pk %}{% if alumnos_querystring %}?{{ alumnos_querystring }}{% endif %}" aria-label="{% if especial_context.puede_operar %}Gestionar sección{% else %}Ver datos de sección{% endif %} {{ inscripcion.seccion.nombre_seccion }}"{% if forloop.counter > 2 %} data-cef-alumno-seccion-adicional="true" hidden{% endif %}>
                                                         <span class="cef-alumno-seccion-icon" aria-hidden="true">
                                                             <i class="fa-solid fa-layer-group"></i>
                                                         </span>
@@ -80,6 +80,7 @@
                                         {% endif %}
                                     {% endwith %}
                                 </td>
+                                {% if especial_context.puede_operar %}
                                 <td class="cef-act-cell">
                                     <div class="dropdown cef-secciones-row-actions" data-cef-row-actions>
                                         <button class="btn btn-primary btn-sm dropdown-toggle cef-secciones-actions-toggle" type="button" data-cef-row-actions-toggle aria-expanded="false" aria-haspopup="menu" title="Acciones del alumno" aria-label="Acciones del alumno">
@@ -156,6 +157,7 @@
                                         </ul>
                                     </div>
                                 </td>
+                                {% endif %}
                             </tr>
                         {% endfor %}
                     </tbody>
