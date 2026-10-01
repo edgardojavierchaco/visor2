@@ -19,7 +19,7 @@ from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.shortcuts import get_object_or_404 # Asegúrate de tener este import
-from apps.bnhpersonas.models import Personas
+from apps.bnhpersonas.models import Personas, RegistroActividades
 from .forms import EspecialBajaDocenteForm, EspecialDocenteSeccionForm
 
 from .forms import EspecialBusquedaDocenteForm
@@ -572,6 +572,22 @@ def _url_edicion_docente(cuil, next_url=None, return_label="Volver a Especial"):
     return _url_carga_docente(cuil, next_url, return_label)
 
 
+def _url_vinculacion_docente(cuil):
+    """URL de BNH para crear el primer cargo de una persona existente."""
+    return f"{reverse('bnhpersonas:vincular_persona')}?{urlencode({'cuil': _solo_digitos(cuil)})}"
+
+
+def _docente_tiene_cargo(cuil):
+    """Indica si el docente posee al menos una actividad no eliminada en BNH."""
+    cuil_normalizado = _solo_digitos(cuil)
+    if len(cuil_normalizado) != 11:
+        return False
+    return RegistroActividades.objects.filter(
+        persona__cuil=cuil_normalizado,
+        eliminado=False,
+    ).exists()
+
+
 def _url_modal_docentes(especial_context, cuil=""):
     params = {}
     if especial_context.get("cueanexo"):
@@ -607,6 +623,20 @@ def agregar_docente_banco_desde_bnh(request):
         return JsonResponse(
             {"ok": False, "error": "El docente no existe todavía en BNH."},
             status=404,
+        )
+
+    if not _docente_tiene_cargo(cuil):
+        return JsonResponse(
+            {
+                "ok": False,
+                "requiere_vinculacion": True,
+                "redirect_url": _url_vinculacion_docente(cuil),
+                "error": (
+                    "El docente existe en BNH, pero no tiene cargos. "
+                    "Primero debe vincularse mediante un nuevo cargo."
+                ),
+            },
+            status=409,
         )
 
     try:
@@ -1158,6 +1188,8 @@ def docentes(request):
                 request,
                 "Seleccioná un CUE-Anexo y un ciclo lectivo para agregar docentes al banco.",
             )
+        elif not _docente_tiene_cargo(cuil_buscado):
+            return redirect(_url_vinculacion_docente(cuil_buscado))
         else:
             try:
                 banco, creado, tabla_pendiente = _asegurar_docente_banco(
