@@ -194,30 +194,42 @@ def activity_catalogs(
     ):
         return empty
 
-    config = (
-        ModalidadNivelCeic.objects
-        .filter(
-            modalidad_id=modalidad,
-            nivel_id=nivel,
-        )
-        .first()
-    )
-
-    ceic = (
-        NomencladorCeic.objects
-        .filter(
-            pk__in=(
-                expandir_rangos(
-                    config.rango_ceic
-                )
-                if config
-                else []
+    # ========================================================
+    # CEIC DOCENTE
+    # ========================================================
+    # Regla jurisdiccional del nomenclador:
+    #
+    #   * Modalidad COMÚN (c_modalidad = 1): el CEIC depende
+    #     del NIVEL seleccionado.
+    #       t_nivel = "Nivel" y c_niv = nivel
+    #
+    #   * Resto de las modalidades (c_modalidad > 1): el CEIC
+    #     depende de la MODALIDAD.
+    #       t_nivel = "Modalidad" y c_niv = modalidad
+    #
+    # No se usa rango_ceic para construir el desplegable. Esa
+    # configuración quedó desactualizada cuando se incorporaron
+    # códigos posteriores (por ejemplo 220-228) y provocaba que
+    # cargos válidos no aparecieran. El propio nomenclador CEIC
+    # ya contiene la relación mediante t_nivel + c_niv.
+    if int(modalidad) == 1:
+        ceic = (
+            NomencladorCeic.objects
+            .filter(
+                t_nivel__iexact="Nivel",
+                c_niv=nivel,
             )
+            .order_by("descripcion")
         )
-        .order_by(
-            "descripcion"
+    else:
+        ceic = (
+            NomencladorCeic.objects
+            .filter(
+                t_nivel__iexact="Modalidad",
+                c_niv=modalidad,
+            )
+            .order_by("descripcion")
         )
-    )
 
     # Sólo por compatibilidad.
     # El formulario nuevo NO utiliza estos querysets.

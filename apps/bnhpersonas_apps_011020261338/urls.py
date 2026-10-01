@@ -200,4 +200,12 @@ urlpatterns = [
             namespace="monitoring",
         ),
     ),
+
+    path(
+        "reportes/",
+        include(
+            "apps.bnhpersonas.reportes.urls",
+            namespace="reportes",
+        ),
+    ),
 ]

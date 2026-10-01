@@ -814,7 +814,12 @@ class RegistroActividades(AuditoriaModel):
     # Designación fue eliminada. Sólo queda Tipo de designación.
     t_designacion = models.ForeignKey('TipoDesigFunc', on_delete=models.PROTECT)
 
-    ceic = models.ForeignKey('NomencladorCeic', on_delete=models.PROTECT)
+    ceic = models.ForeignKey(
+        'NomencladorCeic',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
 
     # ========================================================
     # CIRCUITO CURRICULAR (INDEPENDIENTE DEL CEIC)
@@ -1025,6 +1030,7 @@ class RegistroActividades(AuditoriaModel):
         from .domain.catalogs import (
             activity_catalogs,
             available_levels,
+            ceic_aplica,
             curricular_catalogs,
             titulacion_source,
             valid_titulacion,
@@ -1044,13 +1050,26 @@ class RegistroActividades(AuditoriaModel):
             if not available_levels(self.modalidad_id).filter(pk=self.niveles_id).exists():
                 errors["niveles"] = "El nivel no pertenece a la modalidad del cargo seleccionada."
 
+            aplica_ceic = ceic_aplica(
+                self.modalidad_id,
+                self.niveles_id,
+                tipo_personal=tipo_personal_codigo,
+            )
             ceic, _, _ = activity_catalogs(
                 self.modalidad_id,
                 self.niveles_id,
                 tipo_personal=tipo_personal_codigo,
             )
-            if self.ceic_id and not ceic.filter(pk=self.ceic_id).exists():
-                errors["ceic"] = "El Cargo / CEIC no corresponde a la modalidad y nivel del cargo."
+
+            if aplica_ceic:
+                if not self.ceic_id:
+                    errors["ceic"] = "Seleccione el Cargo / CEIC correspondiente."
+                elif not ceic.filter(pk=self.ceic_id).exists():
+                    errors["ceic"] = "El Cargo / CEIC no corresponde a la modalidad y nivel del cargo."
+            elif self.ceic_id:
+                errors["ceic"] = (
+                    "Para esta combinación Modalidad + Nivel, Cargo / CEIC no corresponde."
+                )
 
         # ----------------------------------------------------
         # CIRCUITO CURRICULAR NUEVO

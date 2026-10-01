@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 
 from ..models import (
     EspacioCurricularNombre,
@@ -130,6 +131,90 @@ def available_levels(modalidad):
     )
 
 
+CEIC_NO_APLICA = {
+    # Modalidad COMÚN / ATENCIÓN DOMICILIARIA Y HOSPITALARIA
+    # Esta combinación no posee Cargo / CEIC por definición funcional.
+    (1, 4700),
+}
+
+
+def ceic_aplica(modalidad, nivel, *, tipo_personal=None, categoria=None):
+    """Indica si la combinación requiere selección de Cargo / CEIC.
+
+    Para personal NO DOCENTE el CEIC siempre aplica y se resuelve por la
+    regla 1023-1025. Para personal DOCENTE se contemplan explícitamente
+    combinaciones jurisdiccionales donde CEIC no corresponde.
+    """
+    if is_no_docente(tipo_personal, categoria):
+        return True
+    try:
+        pair = (int(modalidad), int(nivel))
+    except (TypeError, ValueError):
+        return True
+    return pair not in CEIC_NO_APLICA
+
+
+def ceic_docente(modalidad, nivel):
+    """Devuelve los CEIC válidos para Modalidad + Nivel.
+
+    La auditoría del nomenclador jurisdiccional mostró dos comportamientos:
+
+      * COMÚN (modalidad 1): el catálogo completo se define por NIVEL.
+        Esta regla es necesaria especialmente en PRIMARIO, donde el rango
+        histórico configurado no contiene toda la nómina vigente.
+
+      * RESTO DE MODALIDADES: la combinación Modalidad + Nivel se resuelve
+        por la configuración explícita ModalidadNivelCeic.rango_ceic.
+        Esto evita errores como ADULTOS/SECUNDARIO (no debe usar los ocho
+        cargos generales de ADULTOS) y BIBLIOTECA (no tiene CEIC por
+        t_nivel='Modalidad').
+
+    Si una modalidad no COMÚN carece de configuración, se utiliza como
+    respaldo la relación directa del nomenclador por Nivel o Modalidad.
+    """
+    if not modalidad or not nivel:
+        return NomencladorCeic.objects.none()
+
+    modalidad = int(modalidad)
+    nivel = int(nivel)
+
+    if not ceic_aplica(modalidad, nivel):
+        return NomencladorCeic.objects.none()
+
+    # COMÚN: el nomenclador vigente depende del nivel.
+    if modalidad == 1:
+        return (
+            NomencladorCeic.objects
+            .filter(t_nivel__iexact='Nivel', c_niv=nivel)
+            .order_by('descripcion')
+        )
+
+    # Otras modalidades: configuración explícita modalidad + nivel.
+    config = (
+        ModalidadNivelCeic.objects
+        .filter(modalidad_id=modalidad, nivel_id=nivel)
+        .first()
+    )
+
+    if config and str(config.rango_ceic or '').strip():
+        return (
+            NomencladorCeic.objects
+            .filter(pk__in=expandir_rangos(config.rango_ceic))
+            .order_by('descripcion')
+        )
+
+    # Respaldo defensivo para nuevas combinaciones aún no configuradas.
+    return (
+        NomencladorCeic.objects
+        .filter(
+            Q(t_nivel__iexact='Nivel', c_niv=nivel)
+            | Q(t_nivel__iexact='Modalidad', c_niv=modalidad)
+        )
+        .distinct()
+        .order_by('descripcion')
+    )
+
+
 def activity_catalogs(
     modalidad,
     nivel,
@@ -137,41 +222,26 @@ def activity_catalogs(
     tipo_personal=None,
     categoria=None,
 ):
+    """Catálogo del CIRCUITO CARGO / CEIC.
+
+    DOCENTE:
+      - valida la relación modalidad + nivel;
+      - COMÚN se resuelve por nivel;
+      - las demás modalidades usan la configuración ModalidadNivelCeic;
+      - el nomenclador directo queda como respaldo defensivo;
+      - admite combinaciones donde CEIC no corresponde.
+
+    NO DOCENTE:
+      - mantiene la regla jurisdiccional c_niv 1023-1025.
+
+    Los catálogos curriculares son independientes de este circuito.
     """
-    Catálogo del CIRCUITO CARGO / CEIC.
-
-    Este circuito conserva íntegramente la lógica anterior.
-
-    Los nuevos catálogos curriculares NO intervienen
-    en la selección de Cargo / CEIC.
-
-    Retorna:
-
-        (
-            ceic,
-            grados_legacy,
-            secciones_legacy
-        )
-
-    Los grados y secciones del formulario nuevo se
-    resuelven mediante curricular_catalogs().
-    """
-
-    # ========================================================
-    # PERSONAL NO DOCENTE
-    # ========================================================
-
     if is_no_docente(tipo_personal, categoria):
-
         return (
             ceic_no_docente(),
             Grado_anio.objects.none(),
             Secciones.objects.none(),
         )
-
-    # ========================================================
-    # PERSONAL DOCENTE
-    # ========================================================
 
     empty = (
         NomencladorCeic.objects.none(),
@@ -182,70 +252,16 @@ def activity_catalogs(
     if (
         not modalidad
         or not nivel
-        or not (
-            available_levels(
-                modalidad
-            )
-            .filter(
-                pk=nivel
-            )
-            .exists()
-        )
+        or not available_levels(modalidad).filter(pk=nivel).exists()
     ):
         return empty
 
-    # ========================================================
-    # CEIC DOCENTE
-    # ========================================================
-    # Regla jurisdiccional del nomenclador:
-    #
-    #   * Modalidad COMÚN (c_modalidad = 1): el CEIC depende
-    #     del NIVEL seleccionado.
-    #       t_nivel = "Nivel" y c_niv = nivel
-    #
-    #   * Resto de las modalidades (c_modalidad > 1): el CEIC
-    #     depende de la MODALIDAD.
-    #       t_nivel = "Modalidad" y c_niv = modalidad
-    #
-    # No se usa rango_ceic para construir el desplegable. Esa
-    # configuración quedó desactualizada cuando se incorporaron
-    # códigos posteriores (por ejemplo 220-228) y provocaba que
-    # cargos válidos no aparecieran. El propio nomenclador CEIC
-    # ya contiene la relación mediante t_nivel + c_niv.
-    if int(modalidad) == 1:
-        ceic = (
-            NomencladorCeic.objects
-            .filter(
-                t_nivel__iexact="Nivel",
-                c_niv=nivel,
-            )
-            .order_by("descripcion")
-        )
-    else:
-        ceic = (
-            NomencladorCeic.objects
-            .filter(
-                t_nivel__iexact="Modalidad",
-                c_niv=modalidad,
-            )
-            .order_by("descripcion")
-        )
-
-    # Sólo por compatibilidad.
-    # El formulario nuevo NO utiliza estos querysets.
-
-    grados = (
-        Grado_anio.objects.none()
-    )
-
-    secciones = (
-        Secciones.objects.none()
-    )
+    ceic = ceic_docente(modalidad, nivel)
 
     return (
         ceic,
-        grados,
-        secciones,
+        Grado_anio.objects.none(),
+        Secciones.objects.none(),
     )
 
 

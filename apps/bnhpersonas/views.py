@@ -8,9 +8,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from .domain.access import operator_required, person_scope, activity_scope, is_admin, is_regional
-from .domain.catalogs import activity_catalogs, available_levels, condiciones_actividad, curricular_catalogs
+from .domain.catalogs import activity_catalogs, available_levels, ceic_aplica, condiciones_actividad, curricular_catalogs
 from .forms import PersonaForm, ActividadDirectorForm, HorarioActividadForm, ConfirmacionForm, VincularPersonaForm
-from .models import Personas, RegistroActividades, HorarioActividad, Localidades, CodAreasTelefonos, TipoPersonal, validar_cuil
+from .models import Personas, RegistroActividades, HorarioActividad, Localidades, CodAreasTelefonos, TipoPersonal, SituacionServicio, validar_cuil
 from .services.rate_limit import user_rate_limit
 from .services.crud import (
     Conflict,
@@ -473,11 +473,23 @@ def filtrar_datos_actividad(request):
             tipo_personal=tipo_personal,
         )
 
+        aplica_ceic = ceic_aplica(
+            modalidad,
+            nivel,
+            tipo_personal=tipo_personal,
+        ) if modalidad and nivel else True
+
         return JsonResponse({
             "tipo_personal": tipo_personal,
             "modo": "DOCENTE",
             "niveles": list(niveles.values("c_nivel", "descrip_nivel")),
             "ceic": list(ceic.values("c_ceic", "c_niv", "descripcion")),
+            "ceic_aplica": aplica_ceic,
+            "ceic_motivo": (
+                "NO_CORRESPONDE"
+                if not aplica_ceic
+                else ""
+            ),
             "grado": [],
             "secciones": [],
             "dependencia_seccion": "circuito_curricular_independiente",
@@ -576,22 +588,44 @@ def filtrar_condiciones_actividad(request):
         ).exists():
             raise ValidationError("Tipo de personal inválido.")
 
+        if situacion_revista and not SituacionServicio.objects.filter(
+            cod_sitrev=situacion_revista
+        ).exists():
+            raise ValidationError("Situación de revista inválida.")
+
         qs = condiciones_actividad(
             tipo_personal,
             situacion_revista,
         )
 
+        condiciones = [
+            {
+                "id": obj.pk,
+                "c_nomen": obj.c_nomen,
+                "denominacion": obj.denominacion,
+                "encuadre": obj.encuadre,
+                "label": str(obj),
+            }
+            for obj in qs
+        ]
+
+        # No se amplía el catálogo cuando la combinación exacta no existe:
+        # una condición válida depende de Tipo de personal + Situación de revista.
+        # En cambio se devuelve un diagnóstico explícito para evitar un desplegable
+        # vacío sin explicación.
+        warning = ""
+        if tipo_personal and situacion_revista and not condiciones:
+            warning = (
+                "No hay condiciones de actividad configuradas para el Tipo de personal "
+                "y la Situación de revista seleccionados. Revise el catálogo "
+                "condicion_actividad_nombre."
+            )
+
         return JsonResponse({
-            "condiciones": [
-                {
-                    "id": obj.pk,
-                    "c_nomen": obj.c_nomen,
-                    "denominacion": obj.denominacion,
-                    "encuadre": obj.encuadre,
-                    "label": str(obj),
-                }
-                for obj in qs
-            ]
+            "condiciones": condiciones,
+            "warning": warning,
+            "tipo_personal": tipo_personal,
+            "sit_revista": situacion_revista,
         })
 
     except ValidationError as exc:

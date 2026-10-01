@@ -515,7 +515,6 @@
             let curricularPending = false;
             let localityPending = false;
             let conditionPending = false;
-            let ceicNoAplica = false;
 
             const status = document.createElement("div");
             status.className = "alert alert-info mt-3";
@@ -579,7 +578,7 @@
                 setDisabled("niveles", !value("modalidad") || cargoPending);
                 setDisabled(
                     "ceic",
-                    ceicNoAplica || cargoPending || (!nonTeaching() && !value("niveles"))
+                    cargoPending || (!nonTeaching() && !value("niveles"))
                 );
 
                 // Circuito curricular
@@ -838,33 +837,21 @@
                     if (id !== cargoRequestId) return;
 
                     if (nonTeaching()) {
-                        ceicNoAplica = false;
                         // Modalidad/nivel legacy siguen funcionando, pero NO determinan el CEIC.
                         if (value("modalidad")) {
                             fillOptions(field("niveles"), data.niveles, "c_nivel", "descrip_nivel", selected.nivel);
                         }
-                        // Regla jurisdiccional: CEIC 1023-1025.
+                        // Regla histórica: CEIC 1023-1025.
                         fillOptions(field("ceic"), data.ceic, "c_ceic", "descripcion", selected.ceic);
                     } else {
                         if (value("modalidad")) {
                             fillOptions(field("niveles"), data.niveles, "c_nivel", "descrip_nivel", selected.nivel);
                         }
                         if (selected.nivel || value("niveles")) {
-                            ceicNoAplica = data.ceic_aplica === false;
-                            if (ceicNoAplica) {
-                                fillOptions(field("ceic"), [], "c_ceic", "descripcion", "", "NO CORRESPONDE");
-                            } else {
-                                fillOptions(field("ceic"), data.ceic, "c_ceic", "descripcion", selected.ceic);
-                            }
-                        } else {
-                            ceicNoAplica = false;
+                            fillOptions(field("ceic"), data.ceic, "c_ceic", "descripcion", selected.ceic);
                         }
                     }
-                    message(
-                        ceicNoAplica
-                            ? "Para esta combinación Modalidad + Nivel, Cargo / CEIC no corresponde."
-                            : ""
-                    );
+                    message("");
                 } catch (error) {
                     if (id === cargoRequestId && error.name !== "AbortError") message(error.message);
                 } finally {
@@ -1053,11 +1040,7 @@
                         selected,
                         "Seleccione condición de actividad"
                     );
-                    if (data.warning) {
-                        message(data.warning);
-                    } else {
-                        message("");
-                    }
+                    message("");
                 } catch (error) {
                     if (
                         conditionController === current
