@@ -48,6 +48,7 @@ class StyledForm(forms.ModelForm):
                 continue
             if isinstance(field, forms.BooleanField):
                 field.widget.attrs["class"] = "form-check-input"
+                field.widget.attrs["role"] = "switch"
             elif isinstance(field.widget, forms.Select):
                 field.widget.attrs["class"] = "form-select select2"
             else:
@@ -400,7 +401,9 @@ class ActividadDirectorForm(StyledForm):
     def expose_duplicate_warning(self, message=None):
         """Hace visible la confirmación sólo después de una detección real."""
         field = self.fields["confirmar_posible_duplicado"]
-        field.widget = forms.CheckboxInput(attrs={"class": "form-check-input"})
+        field.widget = forms.CheckboxInput(
+            attrs={"class": "form-check-input", "role": "switch"}
+        )
         if message:
             field.help_text = message + " " + field.help_text
 
@@ -656,7 +659,10 @@ class VincularPersonaForm(forms.Form):
     apellido = forms.CharField(max_length=150, label="Apellido")
     nombre = forms.CharField(max_length=150, label="Nombre")
     confirmo = forms.BooleanField(
-        label="Confirmo que esta persona presta servicios en la institución seleccionada."
+        label="Confirmo que esta persona presta servicios en la institución seleccionada.",
+        widget=forms.CheckboxInput(
+            attrs={"class": "form-check-input", "role": "switch"}
+        ),
     )
 
     def __init__(self, *args, **kwargs):

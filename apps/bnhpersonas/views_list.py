@@ -969,7 +969,6 @@ def exportar_personal(
             +
             writer.writerow(
                 [
-                    "ID Puesto",
                     "CUEANEXO",
                     "Apellido",
                     "Nombre",
@@ -998,7 +997,6 @@ def exportar_personal(
                     csv_cell(x)
 
                     for x in (
-                        obj.id_puesto,
                         obj.cueanexo,
                         obj.persona.apellido,
                         obj.persona.nombre,
