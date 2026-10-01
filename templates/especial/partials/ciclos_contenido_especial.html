@@ -193,8 +193,8 @@
                     </button>
                 </form>
                 <div class="especial-ciclo-admin-secondary-actions">
-                <a href="{% url 'especial:prevalidar_ciclo_anual' ciclo_actual_admin.pk %}?cueanexo={{ especial_context.cueanexo }}&amp;ciclo={{ ciclo_actual_admin.pk }}" class="btn btn-outline-primary btn-sm">
-                    <i class="fa-solid fa-magnifying-glass me-1"></i>Previsualizar generación {{ ciclo_actual_admin.anio|add:"1" }}
+                <a href="{% url 'especial:prevalidar_ciclo_anual' ciclo_actual_admin.pk %}?cueanexo={{ especial_context.cueanexo }}&amp;ciclo={{ ciclo_actual_admin.pk }}&amp;modo=actual" class="btn btn-outline-primary btn-sm">
+                    <i class="fa-solid fa-magnifying-glass me-1"></i>Visualizar ciclo actual
                 </a>
                 <form method="post" class="m-0" onsubmit="return confirm('¿Está seguro de querer cerrar este ciclo? Esta acción no se puede deshacer.');">
                     {% csrf_token %}

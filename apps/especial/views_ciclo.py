@@ -12,7 +12,11 @@ from django.shortcuts import get_object_or_404, redirect, render
 from .forms import EspecialCicloForm
 from .models import EspecialCiclo
 from .permisos import especial_required, get_permisos_especial_request
-from .services.previsualizacion_anual import origen_anual_previsualizable, prevalidar_generacion_anual
+from .services.previsualizacion_anual import (
+    origen_anual_previsualizable,
+    prevalidar_generacion_anual,
+    previsualizar_ciclo_actual,
+)
 from .services.baja_docentes import aplicar_traslados_docentes
 from .views_contexto import contexto_base, redirect_con_contexto, render_especial
 
@@ -44,10 +48,25 @@ def _exigir_admin(request):
 def prevalidar_ciclo_anual(request, ciclo_id):
     """Muestra una simulación anual de sólo lectura para administradores."""
     _exigir_admin(request)
-    context = contexto_base(request, "ciclos", "Previsualización anual Especial")
+    modo_actual = request.GET.get("modo") == "actual"
+    context = contexto_base(
+        request,
+        "ciclos",
+        "Visualización del ciclo actual" if modo_actual else "Previsualización anual Especial",
+    )
     especial_context = context["especial_context"]
     ciclo = EspecialCiclo.objects.filter(pk=ciclo_id).first()
-    if ciclo is None or not origen_anual_previsualizable(ciclo):
+    if modo_actual:
+        resultado = previsualizar_ciclo_actual(
+            ciclo,
+            especial_context.get("cueanexo"),
+        )
+        if resultado["bloqueado"]:
+            messages.error(request, resultado["errores"][0])
+            return redirect(
+                redirect_con_contexto("especial:administrar_ciclos", especial_context)
+            )
+    elif ciclo is None or not origen_anual_previsualizable(ciclo):
         messages.error(
             request,
             (
@@ -56,13 +75,17 @@ def prevalidar_ciclo_anual(request, ciclo_id):
             ),
         )
         return redirect(redirect_con_contexto("especial:administrar_ciclos", especial_context))
-
-    resultado = prevalidar_generacion_anual(ciclo, especial_context.get("cueanexo"))
+    else:
+        resultado = prevalidar_generacion_anual(
+            ciclo,
+            especial_context.get("cueanexo"),
+        )
     context.update(
         {
             "origen": ciclo,
-            "siguiente_anio": ciclo.anio + 1,
+            "siguiente_anio": None if modo_actual else ciclo.anio + 1,
             "resultado": resultado,
+            "modo_visualizacion_actual": modo_actual,
             "volver_url": redirect_con_contexto(
                 "especial:administrar_ciclos", especial_context
             ),
