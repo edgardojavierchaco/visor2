@@ -17,10 +17,11 @@
 
 <div class="col-md-6" data-field="{{ field.name }}">
   {% if field.widget_type == 'checkbox' %}
-    <div class="form-check form-switch pt-2">
+    <div class="form-check form-switch pt-2 bnh-switch">
       {{ field }}
       <label class="form-check-label" for="{{ field.id_for_label }}">
         {{ field.label }}{% if field.field.required %} <span aria-label="obligatorio">*</span>{% endif %}
+        <span class="bnh-switch-status" aria-hidden="true"></span>
       </label>
     </div>
   {% else %}
