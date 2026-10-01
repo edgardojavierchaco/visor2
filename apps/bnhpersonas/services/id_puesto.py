@@ -48,8 +48,9 @@ def construir_puesto_base(actividad) -> str:
     if not cueanexo:
         raise ValidationError("No se puede generar ID Puesto sin CUEANEXO.")
 
-    if not actividad.ceic_id:
-        raise ValidationError("No se puede generar ID Puesto sin Cargo / CEIC.")
+    # Algunas combinaciones jurisdiccionales no poseen Cargo / CEIC.
+    # En esos casos se representa el componente con -2, igual que los
+    # demás componentes no correspondientes del identificador.
 
     componentes = (
         cueanexo,

@@ -9,6 +9,7 @@ from .domain.catalogs import (
     activity_catalogs,
     available_curricular_levels,
     available_levels,
+    ceic_aplica,
     condiciones_actividad,
     curricular_catalogs,
     common_curricular_spaces,
@@ -292,6 +293,29 @@ class ActividadDirectorForm(StyledForm):
         except ValidationError:
             ceic = NomencladorCeic.objects.none()
         self.fields["ceic"].queryset = ceic
+        self.fields["ceic"].required = (
+            bool(tipo_personal == 2)
+            or (
+                bool(modalidad and nivel)
+                and ceic_aplica(
+                    modalidad,
+                    nivel,
+                    tipo_personal=tipo_personal,
+                )
+            )
+        )
+        if (
+            modalidad
+            and nivel
+            and not ceic_aplica(
+                modalidad,
+                nivel,
+                tipo_personal=tipo_personal,
+            )
+        ):
+            self.fields["ceic"].help_text = (
+                "Para esta combinación Modalidad + Nivel, Cargo / CEIC no corresponde."
+            )
 
         # ====================================================
         # CIRCUITO CURRICULAR NUEVO
@@ -465,6 +489,35 @@ class ActividadDirectorForm(StyledForm):
             modalidad=modalidad, nivel=nivel
         ).exists():
             self.add_error("niveles", "El nivel no está habilitado para esta modalidad del cargo.")
+
+        if modalidad and nivel:
+            aplica_ceic = ceic_aplica(
+                modalidad.pk,
+                nivel.pk,
+                tipo_personal=tipo_personal_codigo,
+            )
+            if aplica_ceic:
+                if not ceic:
+                    self.add_error(
+                        "ceic",
+                        "Seleccione el Cargo / CEIC correspondiente.",
+                    )
+                else:
+                    valid_ceic, _, _ = activity_catalogs(
+                        modalidad.pk,
+                        nivel.pk,
+                        tipo_personal=tipo_personal_codigo,
+                    )
+                    if not valid_ceic.filter(pk=ceic.pk).exists():
+                        self.add_error(
+                            "ceic",
+                            "El Cargo / CEIC no corresponde a la modalidad y nivel seleccionados.",
+                        )
+            elif ceic:
+                self.add_error(
+                    "ceic",
+                    "Para esta combinación Modalidad + Nivel, Cargo / CEIC no corresponde.",
+                )
 
         if es_no_docente:
             if ceic and not (1023 <= ceic.c_niv <= 1025):
