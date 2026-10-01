@@ -38,11 +38,29 @@ def construir_contexto_carga(request):
     - No resuelve Proyecto Especial porque ese flujo usa su vista especializada.
     """
     nivel_activo = obtener_nivel_activo(request)
-    tiene_contexto = bool(request.GET.get("anio") and request.GET.get("nivel"))
+    anio_solicitado = str(request.GET.get("anio", "") or "").strip()
+    tiene_contexto = bool(anio_solicitado and request.GET.get("nivel"))
+    origen_exportar = (
+        str(request.GET.get("origen", "") or "").strip().lower() == "exportar"
+    )
+    cueanexo_inicial = str(request.GET.get("cueanexo", "") or "").strip()
+    if not cueanexo_inicial.isdigit() or len(cueanexo_inicial) != 9:
+        cueanexo_inicial = ""
+
     anios_reunida = obtener_anios_reunidas_disponibles()
+    atajo_exportar_valido = bool(
+        origen_exportar
+        and tiene_contexto
+        and anio_solicitado in anios_reunida
+        and nivel_activo
+        and cueanexo_inicial
+    )
 
     anio_reunida_activo = obtener_anio_activo(request, permitir_vacio=True)
-    if anio_reunida_activo not in anios_reunida:
+    if origen_exportar and not atajo_exportar_valido:
+        anio_reunida_activo = ""
+        nivel_activo = ""
+    elif anio_reunida_activo not in anios_reunida:
         anio_reunida_activo = anios_reunida[0] if anios_reunida else ""
 
     return {
@@ -51,6 +69,11 @@ def construir_contexto_carga(request):
         "niveles": obtener_lista_niveles(orden=ORDEN_NIVELES_CARGA),
         "nivel_activo": nivel_activo,
         "nivel_codigo": nivel_activo if tiene_contexto else "",
+        "cueanexo_inicial": (
+            cueanexo_inicial
+            if atajo_exportar_valido
+            else ""
+        ),
     }
 
 

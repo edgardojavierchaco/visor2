@@ -180,6 +180,7 @@ def _resumir_establecimiento(localizacion):
 
 def _serializar_cargo(cargo):
     localizacion = cargo.localizacion
+    snapshot = _obtener_snapshot_vigente(localizacion)
 
     return {
         "id": cargo.id,
@@ -187,6 +188,15 @@ def _serializar_cargo(cargo):
         "cue": _derivar_cue(localizacion.cueanexo),
         "anexo": _derivar_anexo(localizacion.cueanexo),
         "establecimiento": _resumir_establecimiento(localizacion),
+        "zona_educativa_tipo": _valor_o_guion(
+            snapshot.zona_educativa_tipo if snapshot else ""
+        ),
+        "zona_educativa": _valor_o_guion(
+            snapshot.zona_educativa if snapshot else ""
+        ),
+        "puntos_zona_educativa": _valor_o_guion(
+            snapshot.puntos_zona_educativa if snapshot else None
+        ),
         "unidad": cargo.get_unidad_cantidad_display(),
         "ceic": _valor_o_guion(cargo.ceic),
         "cargo": _valor_o_guion(cargo.cargo),

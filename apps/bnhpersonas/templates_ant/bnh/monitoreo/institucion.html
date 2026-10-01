@@ -1,0 +1,76 @@
+{% extends "bnh/base.html" %}
+{% load static %}
+{% block title %}{{ institution.cueanexo }} · Seguimiento BNH{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'bnh/css/monitoring.css' %}?v=20260919.2">
+{% endblock %}
+
+{% block content %}
+<nav class="monitor-back"><a href="{% url 'bnhpersonas:monitoring:dashboard' %}">← Volver al seguimiento</a></nav>
+
+<section class="monitor-hero">
+  <div>
+    <p class="monitor-eyebrow">{{ institution.cueanexo }}</p>
+    <h1>{{ institution.nom_est|default:"Unidad de servicio" }}</h1>
+    <p class="monitor-lead">{{ institution.region|default:"Sin regional informada" }}</p>
+  </div>
+  <div class="monitor-scope"><span class="monitor-scope-label">Ámbito efectivo</span><strong>{{ scope.label }}</strong></div>
+</section>
+
+<section class="monitor-kpis monitor-kpis-detail">
+  <article class="monitor-card"><span>Personas</span><strong>{{ metrics.personas|default:0 }}</strong></article>
+  <article class="monitor-card"><span>Cargos</span><strong>{{ metrics.cargos|default:0 }}</strong></article>
+  <article class="monitor-card"><span>Docentes</span><strong>{{ metrics.docentes|default:0 }}</strong></article>
+  <article class="monitor-card"><span>No docentes</span><strong>{{ metrics.no_docentes|default:0 }}</strong></article>
+  <article class="monitor-card"><span>Pendientes</span><strong>{{ metrics.borradores|default:0 }}</strong></article>
+  <article class="monitor-card monitor-card-warning"><span>Observados</span><strong>{{ metrics.observados|default:0 }}</strong></article>
+  <article class="monitor-card"><span>Validados</span><strong>{{ metrics.validados|default:0 }}</strong></article>
+</section>
+
+<section class="monitor-panel">
+  <div class="monitor-panel-head"><h2>Ofertas institucionales</h2></div>
+  <div class="monitor-offers">
+    {% for oferta in institution.ofertas %}
+      <span class="monitor-offer">{{ oferta.acronimo|default:"" }} {{ oferta.oferta }}</span>
+    {% empty %}<span class="text-muted">Sin ofertas informadas.</span>{% endfor %}
+  </div>
+</section>
+
+<section class="monitor-panel">
+  <div class="monitor-panel-head"><h2>Personal registrado</h2><span>Lectura ministerial</span></div>
+  <div class="table-responsive">
+    <table class="table monitor-table align-middle">
+      <thead><tr><th>Persona</th><th>Tipo</th><th>CEIC / cargo</th><th>Situación</th><th>Designación</th><th>Período</th><th>Horas</th><th>Validación</th></tr></thead>
+      <tbody>
+      {% for activity in page_obj %}
+        <tr>
+          <td><strong>{{ activity.persona.apellido }}, {{ activity.persona.nombre }}</strong><small class="monitor-sub">CUIL {{ activity.persona.cuil|default:"—" }}</small></td>
+          <td>{{ activity.tipo_personal }}</td>
+          <td><strong>{{ activity.ceic_id }}</strong> · {{ activity.ceic }}</td>
+          <td>{{ activity.sit_revista }}</td>
+          <td>{{ activity.t_designacion }}</td>
+          <td>{{ activity.f_desde|date:"d/m/Y" }} → {% if activity.f_hasta %}{{ activity.f_hasta|date:"d/m/Y" }}{% else %}vigente{% endif %}</td>
+          <td>{{ activity.carga_horaria }}</td>
+          <td>
+            {% if activity.validacion == "VALIDADO" %}<span class="badge text-bg-success">Validado</span>
+            {% elif activity.validacion == "OBSERVADO" %}<span class="badge text-bg-danger">Observado</span>
+            {% else %}<span class="badge text-bg-warning">Pendiente</span>{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8" class="text-muted">La unidad aún no posee personal registrado.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="monitor-panel">
+  <div class="monitor-panel-head"><h2>Trazabilidad reciente</h2><span>Últimos 50 eventos</span></div>
+  <div class="monitor-timeline">
+    {% for event in audit %}
+      <div class="monitor-event"><strong>{{ event.accion }}</strong><span>{{ event.fecha|date:"d/m/Y H:i" }} · {{ event.usuario }}</span><small>{{ event.entidad }} #{{ event.objeto_id }}{% if event.motivo %} · {{ event.motivo|truncatechars:120 }}{% endif %}</small></div>
+    {% empty %}<p class="text-muted">Sin eventos de auditoría para esta unidad.</p>{% endfor %}
+  </div>
+</section>
+{% endblock %}

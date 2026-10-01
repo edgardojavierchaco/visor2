@@ -5,7 +5,6 @@ import re
 import unicodedata
 from types import SimpleNamespace
 from urllib.parse import urlencode
-from django.apps import apps
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -14,7 +13,7 @@ from django.db.utils import OperationalError, ProgrammingError
 from django.db.models import CharField, Count, Exists, Min, OuterRef, Q
 from django.db.models.functions import Cast, Lower
 from django.http import Http404, JsonResponse
-from django.urls import NoReverseMatch, reverse
+from django.urls import reverse
 from django.shortcuts import get_object_or_404, redirect, render
 from .forms import (
     EspecialBajaMotivoForm,
@@ -35,6 +34,13 @@ from .services.alumnos import (
     asegurar_alumno_banco,
     dar_baja_alumno_banco,
     reincorporar_alumno_banco,
+)
+from .services.alumnos_identidad import (
+    _alumno_por_id,
+    _buscar_alumno_sin_documento,
+    _persona_sge_row,
+    _resolver_alumno_o_sge,
+    _url_carga_alumno,
 )
 from .views_contexto import contexto_base, render_especial
 from .views_inscripcion_seccion import crear_inscripcion_activa
@@ -64,12 +70,6 @@ MSG_BANCO_ALUMNOS_PENDIENTE = (
 def _solo_digitos(valor):
     return re.sub(r"\D", "", str(valor or ""))
 
-def _alumno_model():
-    return apps.get_model("bnhalumnos", "Alumno")
-
-def _buscar_alumno(cuil):
-    return _alumno_model().objects.filter(cuil=cuil).first()
-
 def _texto(valor):
     if valor is None:
         return ""
@@ -92,20 +92,6 @@ def _alumno_row(alumno):
             or ""
         ),
     }
-
-def _url_carga_alumno(cuil, next_url, return_label="Volver a Alumnos"):
-    try:
-        base = reverse("bnhalumnos:carga_alumno")
-    except NoReverseMatch:
-        return ""
-    params = {}
-    if cuil:
-        params["cuil"] = cuil
-    if next_url:
-        params["next"] = next_url
-    if return_label:
-        params["return_label"] = return_label
-    return f"{base}?{urlencode(params)}" if params else base
 
 def _alumnos_state_params(
     especial_context,
@@ -130,8 +116,15 @@ def _alumnos_state_params(
 
 def _url_modal_alumnos(
     especial_context,
-    cuil="",
     *,
+    alumno_id="",
+    tipo_doc="",
+    nro_doc="",
+    cuil="",
+    apellidos="",
+    nombres="",
+    fecha_nacimiento="",
+    sexo="",
     seccion_id=None,
     vista="actuales",
     termino="",
@@ -144,8 +137,26 @@ def _url_modal_alumnos(
         pagina=pagina,
     )
     params["abrir_modal_alumno"] = "1"
+    if alumno_id:
+        params["alumno_id"] = getattr(alumno_id, "pk", alumno_id)
+    if tipo_doc:
+        params["tipo_doc"] = getattr(tipo_doc, "pk", tipo_doc)
+    if nro_doc:
+        params["nro_doc"] = nro_doc
     if cuil:
         params["cuil"] = cuil
+    if apellidos:
+        params["apellidos"] = apellidos
+    if nombres:
+        params["nombres"] = nombres
+    if fecha_nacimiento:
+        params["fecha_nacimiento"] = (
+            fecha_nacimiento.isoformat()
+            if hasattr(fecha_nacimiento, "isoformat")
+            else fecha_nacimiento
+        )
+    if sexo:
+        params["sexo"] = getattr(sexo, "pk", sexo)
     if seccion_id:
         params["seccion"] = seccion_id
     return f"{reverse('especial:alumnos')}?{urlencode(params)}"
@@ -1175,8 +1186,17 @@ def alumnos(request):
         )
     
     alumno = None
+    persona_sge = None
+    tipo_doc_buscado = "1"
+    nro_doc_buscado = ""
     cuil_buscado = ""
+    apellidos_buscados = ""
+    nombres_buscados = ""
+    fecha_nacimiento_buscada = ""
+    sexo_buscado = ""
     cuil_error = ""
+    busqueda_sin_identidad = False
+    busqueda_sin_documento_realizada = False
     alumno_en_banco = False
     alumno_banco_actual = None
     # La pantalla general nunca decide ni valida matrícula compartida.
@@ -1196,6 +1216,54 @@ def alumnos(request):
     modal_feedback = ""
     modal_feedback_level = "error"
     busqueda_form = EspecialBusquedaAlumnoForm()
+
+    def procesar_busqueda(form, datos):
+        nonlocal alumno, persona_sge, cuil_error
+        nonlocal tipo_doc_buscado, nro_doc_buscado, cuil_buscado
+        nonlocal apellidos_buscados, nombres_buscados
+        nonlocal fecha_nacimiento_buscada, sexo_buscado
+        nonlocal busqueda_sin_identidad, busqueda_sin_documento_realizada
+        tipo_doc_buscado = datos.get("tipo_doc") or "1"
+        nro_doc_buscado = (datos.get("nro_doc") or "").strip().upper()
+        cuil_buscado = _solo_digitos(datos.get("cuil"))
+        apellidos_buscados = (datos.get("apellidos") or "").strip()
+        nombres_buscados = (datos.get("nombres") or "").strip()
+        fecha_nacimiento_buscada = (datos.get("fecha_nacimiento") or "").strip()
+        sexo_buscado = (datos.get("sexo") or "").strip()
+        if not form.is_valid():
+            cuil_error = _errores_form(form)
+            return
+        tipo_doc = form.cleaned_data["tipo_doc_obj"]
+        tipo_doc_buscado = str(tipo_doc.pk)
+        nro_doc_buscado = form.cleaned_data["nro_doc"]
+        cuil_buscado = form.cleaned_data["cuil"]
+        if form.cleaned_data.get("busqueda_sin_identidad"):
+            busqueda_sin_identidad = True
+            apellidos_buscados = form.cleaned_data["apellidos"]
+            nombres_buscados = form.cleaned_data["nombres"]
+            fecha_nacimiento_buscada = form.cleaned_data["fecha_nacimiento"]
+            sexo_obj = form.cleaned_data["sexo"]
+            sexo_buscado = str(sexo_obj.pk)
+            try:
+                alumno = _buscar_alumno_sin_documento(
+                    apellidos=apellidos_buscados,
+                    nombres=nombres_buscados,
+                    tipo_doc=tipo_doc,
+                    fecha_nacimiento=fecha_nacimiento_buscada,
+                    sexo=sexo_obj,
+                )
+                busqueda_sin_documento_realizada = True
+            except ValidationError as exc:
+                cuil_error = "; ".join(exc.messages)
+            return
+        try:
+            alumno, persona_sge = _resolver_alumno_o_sge(
+                tipo_doc=tipo_doc,
+                nro_doc=nro_doc_buscado,
+                cuil=cuil_buscado,
+            )
+        except ValidationError as exc:
+            cuil_error = "; ".join(exc.messages)
 
     if request.method == "POST" and request.POST.get("accion") == "baja_especial":
         if not especial_context["puede_operar"]:
@@ -1229,15 +1297,27 @@ def alumnos(request):
     elif request.method == "POST":
         busqueda_form = EspecialBusquedaAlumnoForm(request.POST)
         abrir_modal = True
-        if busqueda_form.is_valid():
-            cuil_buscado = busqueda_form.cleaned_data["cuil"]
-            alumno = _buscar_alumno(cuil_buscado)
+        alumno_id_post = request.POST.get("alumno_id")
+        if alumno_id_post:
+            alumno = _alumno_por_id(alumno_id_post)
+            if not alumno:
+                cuil_error = "El alumno seleccionado ya no existe o no es válido."
         else:
-            cuil_buscado = _solo_digitos(request.POST.get("cuil"))
-            cuil_error = _errores_form(busqueda_form)
+            procesar_busqueda(busqueda_form, request.POST)
 
         if not alumno:
-            messages.error(request, "Primero buscá un alumno existente por CUIL.")
+            if persona_sge and not cuil_error:
+                messages.info(
+                    request,
+                    "Alumno encontrado en SGE. Complete los datos antes de incorporarlo a Educación Especial.",
+                )
+            elif busqueda_sin_identidad and not cuil_error:
+                messages.info(request, "No se encontró un alumno ya cargado con esos datos.")
+            else:
+                messages.error(
+                    request,
+                    cuil_error or "Primero buscá y seleccioná un alumno existente.",
+                )
         elif not especial_context["puede_operar"]:
             messages.error(
                 request,
@@ -1264,12 +1344,11 @@ def alumnos(request):
                             pagina=pagina_solicitada,
                         )
                     )
-                else:
-                    modal_feedback = (
-                        "Ese alumno ya está activo en el banco de este "
-                        "establecimiento y ciclo."
-                    )
-                    messages.info(request, modal_feedback)
+                modal_feedback = (
+                    "Ese alumno ya está activo en el banco de este "
+                    "establecimiento y ciclo."
+                )
+                messages.info(request, modal_feedback)
             except ValidationError as exc:
                 modal_feedback = "; ".join(exc.messages)
                 messages.error(request, modal_feedback)
@@ -1283,15 +1362,25 @@ def alumnos(request):
                 )
                 messages.error(request, modal_feedback)
     else:
-        busqueda_form = EspecialBusquedaAlumnoForm(
-            request.GET if request.GET.get("cuil") else None
+        busqueda_solicitada = bool(
+            request.GET.get("alumno_id")
+            or request.GET.get("tipo_doc")
+            or request.GET.get("nro_doc")
+            or request.GET.get("cuil")
+            or request.GET.get("apellidos")
+            or request.GET.get("nombres")
+            or request.GET.get("fecha_nacimiento")
+            or request.GET.get("sexo")
         )
-        if busqueda_form.is_valid():
-            cuil_buscado = busqueda_form.cleaned_data["cuil"]
-            alumno = _buscar_alumno(cuil_buscado)
-        elif request.GET.get("cuil"):
-            cuil_buscado = _solo_digitos(request.GET.get("cuil"))
-            cuil_error = _errores_form(busqueda_form)
+        busqueda_form = EspecialBusquedaAlumnoForm(
+            request.GET if busqueda_solicitada else None
+        )
+        if request.GET.get("alumno_id"):
+            alumno = _alumno_por_id(request.GET.get("alumno_id"))
+            if not alumno:
+                cuil_error = "El alumno seleccionado ya no existe o no es válido."
+        elif busqueda_solicitada:
+            procesar_busqueda(busqueda_form, request.GET)
 
         if abrir_modal_baja:
             baja_modal_alumno = _alumno_baja_modal(
@@ -1310,7 +1399,13 @@ def alumnos(request):
 
     next_url = _url_modal_alumnos(
         especial_context,
-        cuil_buscado,
+        tipo_doc=tipo_doc_buscado,
+        nro_doc=nro_doc_buscado,
+        cuil=cuil_buscado,
+        apellidos=apellidos_buscados,
+        nombres=nombres_buscados,
+        fecha_nacimiento=fecha_nacimiento_buscada,
+        sexo=sexo_buscado,
         vista=vista,
         termino=termino_busqueda,
         pagina=pagina_estado,
@@ -1403,8 +1498,8 @@ def alumnos(request):
             ]
             item.secciones_bloqueadas = item.inscripciones_seccion
             item.url_editar_alumno = _url_carga_alumno(
-                item.alumno_cuil_snapshot or getattr(item.alumno, "cuil", ""),
                 url_alumnos,
+                alumno=item.alumno,
             )
         page_obj = Paginator(
             alumnos_banco,
@@ -1436,7 +1531,8 @@ def alumnos(request):
         {
             "busqueda_form": busqueda_form,
             "alumno": alumno,
-            "alumno_row": _alumno_row(alumno),
+            "alumno_row": _alumno_row(alumno) or _persona_sge_row(persona_sge),
+            "alumno_desde_sge": bool(persona_sge and not alumno),
             "alumnos": alumnos_banco,
             "alumnos_querystring": querystring_alumnos,
             "actuales_url": actuales_url,
@@ -1452,10 +1548,31 @@ def alumnos(request):
             "alumnos_banco_tabla_pendiente": alumnos_banco_tabla_pendiente,
             "alumno_en_banco": alumno_en_banco,
             "alumno_banco_actual": alumno_banco_actual,
+            "tipo_doc_buscado": tipo_doc_buscado,
+            "nro_doc_buscado": nro_doc_buscado,
             "cuil_buscado": cuil_buscado,
+            "apellidos_buscados": apellidos_buscados,
+            "nombres_buscados": nombres_buscados,
+            "fecha_nacimiento_buscada": fecha_nacimiento_buscada,
+            "sexo_buscado": sexo_buscado,
             "cuil_error": cuil_error,
-            "url_carga_alumno": _url_carga_alumno(cuil_buscado, next_url),
-            "url_editar_alumno": _url_carga_alumno(cuil_buscado, next_url),
+            "busqueda_sin_identidad": busqueda_sin_identidad,
+            "busqueda_sin_documento_realizada": busqueda_sin_documento_realizada,
+            "url_carga_alumno": _url_carga_alumno(
+                next_url,
+                tipo_doc=tipo_doc_buscado,
+                nro_doc=nro_doc_buscado,
+                cuil=cuil_buscado,
+                apellidos=apellidos_buscados,
+                nombres=nombres_buscados,
+                fecha_nacimiento=fecha_nacimiento_buscada,
+                sexo=sexo_buscado,
+            ),
+            "url_editar_alumno": (
+                _url_carga_alumno(next_url, alumno=alumno)
+                if alumno
+                else ""
+            ),
             "modal_alumno_abierto": abrir_modal,
             "modal_action_url": _url_modal_alumnos(
                 especial_context,

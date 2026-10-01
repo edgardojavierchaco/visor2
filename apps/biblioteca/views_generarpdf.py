@@ -33,7 +33,6 @@ from .models import (
     InstitucionesPrestaServicios,
     Aguapey,
     RegistroDestinoFondos,
-    BibliotecariosCue,
     ProcesosTecnicos,
     ServicioPrestamo
 )
@@ -68,6 +67,10 @@ def build_table(data):
     return table
 
 
+def valor_pdf(valor):
+    return '—' if valor is None or valor == '' else valor
+
+
 def build_qr(data_str):
     qr = qrcode.QRCode(
         version=None,
@@ -95,12 +98,16 @@ class ReportEngine:
         self.story = story
         self.styles = styles
 
-    def add_section(self, title, table, qr=None):
+    def add_section(self, title, table, qr=None, extra_flowables=None):
         block = []
 
         block.append(Paragraph(title, self.styles["Heading3"]))
         block.append(table)
         block.append(Spacer(1, 6))
+
+        if extra_flowables:
+            block.extend(extra_flowables)
+            block.append(Spacer(1, 6))
 
         if qr:
             block.append(qr)
@@ -539,30 +546,6 @@ def generar_pdf_material_bibliografico(request):
         "10. COMPRAS REALIZADAS CON EL FONDO BIBLIOTECARIO CHAQUEÑO",
         build_table(data),
         build_qr(qr_fondos_data)
-    )
-
-
-    # =========================================================
-    # 11. BIBLIOTECARIOS
-    # =========================================================
-    bib = BibliotecariosCue.objects.filter(
-        cueanexo=cueanexo_activo, mes=mes, anio=anio
-    )
-
-    data = [["CUIL", "APELLIDO", "NOMBRE", "CARGO", "FECHA INGRESO", "FECHA HASTA","TURNO", "LICENCIA", "DESDE","HASTA"]] + [
-        [r.cuil, r.apellidos, r.nombres, r.cargo, r.f_ingreso, r.f_hasta, r.turno, r.licencia_permiso, r.f_desde_lic, r.f_hasta_lic]
-        for r in bib
-    ]
-    
-    qr_bibliotecarios_data = "\n".join([
-        f"{r.cuil} | {r.apellidos} | {r.nombres} | {r.cargo} | {r.f_ingreso} | {r.f_hasta} | {r.turno} | {r.licencia_permiso} | {r.f_desde_lic} | {r.f_hasta_lic}"
-        for r in bib    
-    ])
-
-    engine.add_section(
-        "11. PERSONAL BIBLIOTECARIO",
-        build_table(data),
-        build_qr(qr_bibliotecarios_data)
     )
 
     doc.build(story, canvasmaker=canvasmaker)

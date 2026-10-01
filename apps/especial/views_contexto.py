@@ -380,10 +380,11 @@ def render_especial(request, full_template, context, partial_template):
 def construir_accesos_rapidos_especial(especial_context):
     """Arma los accesos rápidos de Inicio reutilizando la metadata centralizada."""
     querystring = especial_context.get("querystring", "")
+    es_admin = bool(especial_context.get("es_admin_especial"))
     accesos = []
 
     for acceso in ESPECIAL_ACCESOS_RAPIDOS:
-        if acceso["requires_admin"] and not especial_context.get("puede_ver_ciclos"):
+        if acceso["requires_admin"] and not es_admin:
             continue
 
         metadata = metadata_menu_especial(acceso["menu"])
@@ -466,13 +467,7 @@ def resolver_contexto_operativo(request, scope="cargables"):
 def contexto_base(request, active_menu, title=None, subtitle=None):
     """Contexto base para todas las vistas de Especial."""
     with perf_phase(request, "context"):
-        permisos = get_permisos_especial_request(request)
-        scope = (
-            "visualizacion"
-            if active_menu in {"localizaciones", "cueanexo"}
-            or not permisos["puede_cargar"]
-            else "cargables"
-        )
+        scope = "visualizacion" if active_menu in {"localizaciones", "cueanexo"} else "cargables"
         especial_context = resolver_contexto_operativo(request, scope=scope)
         metadata = metadata_menu_especial(active_menu)
         if title is not None:

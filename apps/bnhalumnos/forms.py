@@ -19,8 +19,8 @@ from .models import (
     PlanesSociales,
     Parental,
     CatalogoSinoTipo,
+    normalizar_cuil_opcional,
 )
-from .models import validar_cuil
 
 
 TRUE_VALUES = {True, 1, "1", "true", "t", "yes", "y", "si", "s", "on"}
@@ -189,18 +189,6 @@ def _validar_contacto(form, cleaned_data, requerido=False):
     cleaned_data["telefono"] = telefono
 
 
-def _validar_cuil(valor, nombre):
-    """Normaliza y valida CUIL antes de que llegue al modelo."""
-
-    cuil = limpiar_digitos(valor)
-    if not cuil:
-        raise ValidationError(f"{nombre} es obligatorio.")
-    if len(cuil) != 11:
-        raise ValidationError(f"{nombre} debe tener 11 digitos.")
-    validar_cuil(cuil)
-    return cuil
-
-
 def _limpiar_estado(valor):
     """Normaliza estados de relaciones hijas y usa ACTIVO por defecto."""
 
@@ -267,7 +255,8 @@ class AlumnoForm(forms.ModelForm):
 
     # ModelForm conecta formulario + modelo:
     # views.py le pasa los datos del frontend y Meta.model indica que se guardan como Alumno.
-    cuil = forms.CharField(required=True)
+    cuil = NullableCharField(required=False, max_length=20)
+    nro_doc = NullableCharField(required=False, max_length=20)
     email = forms.EmailField(required=False, max_length=150)
     telefono = NullableCharField(max_length=8)
     es_celular = FlexibleBooleanField()
@@ -317,13 +306,17 @@ class AlumnoForm(forms.ModelForm):
         return validar_texto_persona(self.cleaned_data.get("nombres"))
 
     def clean_nro_doc(self):
-        return validar_solo_digitos(
+        return limpiar_texto(
             self.cleaned_data.get("nro_doc"),
-            "El número de documento es inválido. Ingrese solo números.",
+            upper=True,
+            none=True,
         )
 
     def clean_cuil(self):
-        return _validar_cuil(self.cleaned_data.get("cuil"), "CUIL del alumno")
+        return normalizar_cuil_opcional(
+            self.cleaned_data.get("cuil"),
+            "CUIL del alumno",
+        )
 
     def clean_telefono(self):
         return validar_solo_digitos(
@@ -347,6 +340,7 @@ class AlumnoForm(forms.ModelForm):
         """Aplica validaciones cruzadas de nacimiento, residencia y contacto."""
 
         cleaned_data = super().clean()
+
         pais_nacimiento = cleaned_data.get("pais_nacimiento")
         # Argentina requiere provincia/localidad del catalogo; pais extranjero
         # requiere texto libre y limpia las ForeignKey locales.
@@ -372,19 +366,30 @@ class AlumnoForm(forms.ModelForm):
                     "El lugar de nacimiento es obligatorio cuando el país de nacimiento no es Argentina.",
                 )
 
-        if not cleaned_data.get("pais_residencia"):
-            self.add_error("pais_residencia", "Debe seleccionar el pais de residencia.")
-        if not cleaned_data.get("prov_residencia"):
-            self.add_error("prov_residencia", "Debe seleccionar la provincia de residencia.")
-        if not cleaned_data.get("loc_residencia"):
-            self.add_error("loc_residencia", "Debe seleccionar la localidad de residencia.")
-        _validar_localidad_en_provincia(
-            self,
-            cleaned_data.get("loc_residencia"),
-            cleaned_data.get("prov_residencia"),
-            "loc_residencia",
-            "La localidad de residencia no corresponde a la provincia seleccionada.",
-        )
+        pais_residencia = cleaned_data.get("pais_residencia")
+        if not pais_residencia:
+            self.add_error("pais_residencia", "Debe seleccionar el país de residencia.")
+        elif _pais_es_argentina(pais_residencia):
+            if not cleaned_data.get("prov_residencia"):
+                self.add_error(
+                    "prov_residencia",
+                    "La provincia de residencia es obligatoria para Argentina.",
+                )
+            if not cleaned_data.get("loc_residencia"):
+                self.add_error(
+                    "loc_residencia",
+                    "La localidad de residencia es obligatoria para Argentina.",
+                )
+            _validar_localidad_en_provincia(
+                self,
+                cleaned_data.get("loc_residencia"),
+                cleaned_data.get("prov_residencia"),
+                "loc_residencia",
+                "La localidad de residencia no corresponde a la provincia seleccionada.",
+            )
+        else:
+            cleaned_data["prov_residencia"] = None
+            cleaned_data["loc_residencia"] = None
 
         # Comunidad originaria solo se conserva cuando la respuesta es SI.
         pertenece = cleaned_data.get("pertenece_pueblo_indigena")
@@ -408,7 +413,8 @@ class TutorForm(forms.ModelForm):
     """Valida y guarda tutores reutilizables por CUIL o documento."""
 
     # TutorForm funciona igual que AlumnoForm, pero guarda/actualiza un models.Tutor.
-    cuil_tutor = forms.CharField(required=True)
+    cuil_tutor = NullableCharField(required=False, max_length=20)
+    nro_doc = NullableCharField(required=False, max_length=20)
     mail = forms.EmailField(required=False)
     telefono = forms.CharField(required=True, max_length=8)
     es_celular = FlexibleBooleanField()
@@ -443,7 +449,10 @@ class TutorForm(forms.ModelForm):
         ]
 
     def clean_cuil_tutor(self):
-        return _validar_cuil(self.cleaned_data.get("cuil_tutor"), "CUIL del tutor")
+        return normalizar_cuil_opcional(
+            self.cleaned_data.get("cuil_tutor"),
+            "CUIL del tutor",
+        )
 
     def clean_apellidos(self):
         return validar_texto_persona(self.cleaned_data.get("apellidos"))
@@ -452,9 +461,10 @@ class TutorForm(forms.ModelForm):
         return validar_texto_persona(self.cleaned_data.get("nombres"))
 
     def clean_nro_doc(self):
-        return validar_solo_digitos(
+        return limpiar_texto(
             self.cleaned_data.get("nro_doc"),
-            "El número de documento es inválido. Ingrese solo números.",
+            upper=True,
+            none=True,
         )
 
     def clean_ocupacion(self):
@@ -486,6 +496,7 @@ class TutorForm(forms.ModelForm):
         """Valida residencia y contacto obligatorio del tutor."""
 
         cleaned_data = super().clean()
+
         if not cleaned_data.get("prov_resid"):
             self.add_error("prov_resid", "Debe seleccionar la provincia de residencia del tutor.")
         if not cleaned_data.get("loc_resid"):

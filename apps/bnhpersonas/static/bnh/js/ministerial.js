@@ -2,9 +2,62 @@
 "use strict";
 
 (() => {
-    const VERSION = "20260919.1";
+    const VERSION = "20260927.1";
     const jq = () => window.jQuery;
     const hasSelect2 = () => Boolean(jq() && jq().fn && jq().fn.select2);
+
+
+    // ============================================================
+    // OPCIONES DESTACADAS EN DESPLEGABLES
+    // ============================================================
+    const normalizeOptionText = text => String(text || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .replace(/\s+/g, " ")
+        .trim();
+
+    function highlightedOptionKind(text) {
+        const normalized = normalizeOptionText(text);
+        if (/(^|[^A-Z])EN ACTIVIDAD([^A-Z]|$)/.test(normalized)) return "active";
+        if (/(^|[^A-Z])NO CORRESPONDE([^A-Z]|$)/.test(normalized)) return "not-applicable";
+        return "";
+    }
+
+    function markNativeHighlightedOptions(select) {
+        if (!select) return;
+        Array.from(select.options || []).forEach(option => {
+            option.classList.remove(
+                "bnh-native-option-highlight",
+                "bnh-native-option-active",
+                "bnh-native-option-not-applicable"
+            );
+            const kind = highlightedOptionKind(option.textContent);
+            if (!kind) return;
+            option.classList.add(
+                "bnh-native-option-highlight",
+                kind === "active"
+                    ? "bnh-native-option-active"
+                    : "bnh-native-option-not-applicable"
+            );
+        });
+    }
+
+    function renderHighlightedSelect2Option(data) {
+        const $ = jq();
+        if (!$) return data?.text || "";
+
+        const text = String(data?.text || "");
+        const kind = highlightedOptionKind(text);
+        const node = $("<span>").text(text);
+        if (!kind) return node;
+
+        node.addClass(
+            "bnh-option-highlight " +
+            (kind === "active" ? "bnh-option-active" : "bnh-option-not-applicable")
+        );
+        return node;
+    }
 
     function refresh(select) {
         if (select && hasSelect2()) jq()(select).trigger("change.select2");
@@ -17,6 +70,7 @@
         }
         select.replaceChildren(new Option(placeholder, ""));
         rows.forEach(row => select.add(new Option(String(row[label] ?? ""), String(row[key] ?? ""))));
+        markNativeHighlightedOptions(select);
         const target = String(selected ?? "");
         select.value = Array.from(select.options).some(o => o.value === target) ? target : "";
         refresh(select);
@@ -58,7 +112,14 @@
         if (hasSelect2()) {
             document.querySelectorAll("select.select2").forEach(select => {
                 try {
-                    if (!jq()(select).data("select2")) jq()(select).select2({ width: "100%" });
+                    markNativeHighlightedOptions(select);
+                    if (!jq()(select).data("select2")) {
+                        jq()(select).select2({
+                            width: "100%",
+                            templateResult: renderHighlightedSelect2Option,
+                            templateSelection: renderHighlightedSelect2Option
+                        });
+                    }
                 } catch (error) {
                     console.warn("No se pudo inicializar Select2 en", select.name, error);
                 }
@@ -70,7 +131,10 @@
             form.dataset.bnhVersion = VERSION;
 
             const field = name => form.querySelector(
-                `[name="${name}"], [name="actividad-${name}"], [name="persona-${name}"]`
+                `[name="${name}"], ` +
+                `[name="actividad-${name}"], ` +
+                `[name="persona-${name}"], ` +
+                `[name$="-${name}"]`
             );
             const value = name => field(name)?.value || "";
             const personalTypeCode = () => Number(value("tipo_personal") || 0);
@@ -482,9 +546,13 @@
                 const curricularFields = [
                     "modalidad_curricular",
                     "nivel_curricular",
+                    "multiplan",
                     "titulacion",
+                    "titulaciones_multiplan",
                     "espacio_curricular",
+                    "tipo_ubicacion",
                     "grado_anio",
+                    "turno",
                     "secciones"
                 ];
                 curricularFields.forEach(name => setVisible(name, !nonTeaching()));
@@ -536,6 +604,25 @@
                     "secciones",
                     hideCurricular || curricularPending || !value("nivel_curricular")
                 );
+                setDisabled("tipo_ubicacion", hideCurricular || curricularPending || !value("nivel_curricular"));
+                setDisabled("multiplan", hideCurricular || curricularPending || !value("nivel_curricular"));
+                setDisabled("titulaciones_multiplan", hideCurricular || curricularPending || !value("nivel_curricular") || !isMultiplan());
+
+                const multi = isMultiplan();
+                setVisible("titulacion", !hideCurricular && !multi);
+                setVisible("titulaciones_multiplan", !hideCurricular && multi);
+                const isMultipleLocation = value("tipo_ubicacion") === "MULTIPLE";
+                const extraBox = form.querySelector("[data-ubicaciones-extra]");
+                if (extraBox) extraBox.hidden = hideCurricular || !isMultipleLocation;
+                // En sección múltiple la ubicación se edita desde la grilla repetible.
+                // Los campos históricos permanecen activos pero ocultos y se sincronizan
+                // con la primera fila para mantener compatibilidad e id_puesto.
+                ["grado_anio", "secciones", "turno"].forEach(name => {
+                    const input = field(name);
+                    if (!input) return;
+                    const wrapper = input.closest("[data-field]");
+                    if (wrapper) wrapper.hidden = hideCurricular || isMultipleLocation;
+                });
 
                 setDisabled(
                     "cond_actividad",
@@ -544,6 +631,164 @@
 
                 setDisabled("localidad", !value("provincia") || localityPending);
             }
+
+            function isMultiplan() {
+                const el = field("multiplan");
+                if (!el) return false;
+                if (el.type === "checkbox") return el.checked;
+                return ["1", "true", "True", "on"].includes(String(el.value));
+            }
+
+            function selectedMultiplanTitles() {
+                const el = field("titulaciones_multiplan");
+                if (!el) return [];
+                return Array.from(el.selectedOptions || []).map(o => o.value).filter(Boolean);
+            }
+
+            function turnOptions(selected = "") {
+                const source = field("turno");
+                if (!source) return "";
+                return Array.from(source.options).map(opt =>
+                    `<option value="${opt.value}" ${String(opt.value) === String(selected) ? "selected" : ""}>${opt.textContent}</option>`
+                ).join("");
+            }
+
+            function catalogOptions(name, selected = "") {
+                const source = field(name);
+                if (!source) return "";
+                return Array.from(source.options).filter(o => o.value).map(opt =>
+                    `<option value="${opt.value}" ${String(opt.value) === String(selected) ? "selected" : ""}>${opt.textContent}</option>`
+                ).join("");
+            }
+
+            function getMultipleLocationRows() {
+                return Array.from(form.querySelectorAll("[data-ubicacion-row]")).map(row => ({
+                    grado: row.querySelector("[data-u-grado]")?.value || "",
+                    seccion: row.querySelector("[data-u-seccion]")?.value || "",
+                    turno: row.querySelector("[data-u-turno]")?.value || ""
+                }));
+            }
+
+            function getCompleteMultipleLocations() {
+                return getMultipleLocationRows().filter(x => x.grado && x.seccion && x.turno);
+            }
+
+            function syncPrimaryLocationFromFirstRow() {
+                if (value("tipo_ubicacion") !== "MULTIPLE") return;
+                const first = getMultipleLocationRows()[0];
+                if (!first) return;
+                if (field("grado_anio")) field("grado_anio").value = first.grado || "";
+                if (field("secciones")) field("secciones").value = first.seccion || "";
+                if (field("turno")) field("turno").value = first.turno || "";
+            }
+
+            function syncLocations() {
+                const hidden = field("ubicaciones_json");
+                if (!hidden) return;
+                let items = [];
+
+                if (value("tipo_ubicacion") === "MULTIPLE") {
+                    syncPrimaryLocationFromFirstRow();
+                    items = getCompleteMultipleLocations();
+                } else {
+                    const primary = {
+                        grado: value("grado_anio"),
+                        seccion: value("secciones"),
+                        turno: value("turno")
+                    };
+                    if (primary.grado && primary.seccion && primary.turno) items.push(primary);
+                }
+                hidden.value = JSON.stringify(items);
+            }
+
+            function addLocationRow(data = {}) {
+                const list = form.querySelector("[data-ubicaciones-list]");
+                if (!list) return;
+                const row = document.createElement("div");
+                row.className = "row g-2 align-items-end mb-2 p-2 border rounded bg-white";
+                row.setAttribute("data-ubicacion-row", "1");
+                row.innerHTML = `
+                    <div class="col-md-4"><label class="form-label small">Grado / Año</label><select class="form-select" data-u-grado><option value="">Seleccione</option>${catalogOptions("grado_anio", data.grado)}</select></div>
+                    <div class="col-md-3"><label class="form-label small">Sección</label><select class="form-select" data-u-seccion><option value="">Seleccione</option>${catalogOptions("secciones", data.seccion)}</select></div>
+                    <div class="col-md-4"><label class="form-label small">Turno</label><select class="form-select" data-u-turno>${turnOptions(data.turno)}</select></div>
+                    <div class="col-md-1"><button type="button" class="btn btn-outline-danger w-100" data-remove-ubicacion aria-label="Quitar ubicación">×</button></div>`;
+                list.appendChild(row);
+
+                row.querySelector("[data-remove-ubicacion]")?.addEventListener("click", () => {
+                    const rows = form.querySelectorAll("[data-ubicacion-row]");
+                    if (value("tipo_ubicacion") === "MULTIPLE" && rows.length <= 2) {
+                        message("Una sección múltiple debe conservar al menos dos componentes.");
+                        return;
+                    }
+                    row.remove();
+                    syncLocations();
+                });
+                row.querySelectorAll("select").forEach(el => el.addEventListener("change", () => {
+                    message("");
+                    syncLocations();
+                }));
+            }
+
+            function ensureMultipleLocationRows() {
+                if (value("tipo_ubicacion") !== "MULTIPLE") return;
+                const list = form.querySelector("[data-ubicaciones-list]");
+                if (!list) return;
+                const existing = list.querySelectorAll("[data-ubicacion-row]");
+                if (existing.length) return;
+
+                addLocationRow({
+                    grado: value("grado_anio"),
+                    seccion: value("secciones"),
+                    turno: value("turno")
+                });
+                // Se crea una segunda fila vacía para dejar explícito que una sección
+                // múltiple requiere al menos dos componentes.
+                addLocationRow();
+                syncLocations();
+            }
+
+            function rebuildExtraLocationOptions() {
+                if (value("tipo_ubicacion") !== "MULTIPLE") return;
+                const saved = getMultipleLocationRows();
+                const list = form.querySelector("[data-ubicaciones-list]");
+                if (list) list.innerHTML = "";
+                if (saved.length) saved.forEach(addLocationRow);
+                else ensureMultipleLocationRows();
+                syncLocations();
+            }
+
+            function restoreLocations() {
+                const hidden = field("ubicaciones_json");
+                let items = [];
+                if (hidden?.value) {
+                    try {
+                        const parsed = JSON.parse(hidden.value);
+                        if (Array.isArray(parsed)) items = parsed;
+                    } catch (_) {}
+                }
+
+                if (value("tipo_ubicacion") === "MULTIPLE") {
+                    const list = form.querySelector("[data-ubicaciones-list]");
+                    if (list) list.innerHTML = "";
+                    if (items.length) items.forEach(addLocationRow);
+                    else ensureMultipleLocationRows();
+                    syncLocations();
+                    return;
+                }
+
+                if (items.length) {
+                    const first = items[0];
+                    if (first.grado) field("grado_anio").value = String(first.grado);
+                    if (first.seccion) field("secciones").value = String(first.seccion);
+                    if (first.turno) field("turno").value = String(first.turno);
+                }
+                syncLocations();
+            }
+
+            form.querySelector("[data-add-ubicacion]")?.addEventListener("click", () => {
+                addLocationRow();
+                syncLocations();
+            });
 
             // ============================================================
             // CIRCUITO CARGO / CEIC (LEGACY)
@@ -635,20 +880,21 @@
                 const selected = {
                     nivel: value("nivel_curricular"),
                     titulacion: value("titulacion"),
+                    titulaciones: selectedMultiplanTitles(),
                     espacio: value("espacio_curricular"),
                     grado: value("grado_anio"),
                     seccion: value("secciones")
                 };
 
                 if (source === "modalidad_curricular") {
-                    ["nivel_curricular", "titulacion", "espacio_curricular", "grado_anio", "secciones"].forEach(clear);
+                    ["nivel_curricular", "titulacion", "titulaciones_multiplan", "espacio_curricular", "grado_anio", "secciones"].forEach(clear);
                     selected.nivel = "";
                     selected.titulacion = "";
                     selected.espacio = "";
                     selected.grado = "";
                     selected.seccion = "";
                 } else if (source === "nivel_curricular") {
-                    ["titulacion", "espacio_curricular", "grado_anio", "secciones"].forEach(clear);
+                    ["titulacion", "titulaciones_multiplan", "espacio_curricular", "grado_anio", "secciones"].forEach(clear);
                     selected.titulacion = "";
                     selected.espacio = "";
                     selected.grado = "";
@@ -675,6 +921,7 @@
                     url.searchParams.set("modalidad_curricular", value("modalidad_curricular"));
                     url.searchParams.set("nivel_curricular", selected.nivel);
                     url.searchParams.set("titulacion", selected.titulacion);
+                    if (isMultiplan()) url.searchParams.set("titulaciones", selected.titulaciones.join(","));
 
                     const data = await getJson(url, current);
                     if (id !== curricularRequestId) return;
@@ -696,6 +943,18 @@
                         selected.titulacion,
                         "Seleccione titulación"
                     );
+                    const multiSelect = field("titulaciones_multiplan");
+                    if (multiSelect) {
+                        const selectedSet = new Set(selected.titulaciones.map(String));
+                        multiSelect.innerHTML = "";
+                        data.titulaciones.forEach(item => {
+                            const opt = document.createElement("option");
+                            opt.value = String(item.id_titulacion);
+                            opt.textContent = item.descripcion;
+                            opt.selected = selectedSet.has(opt.value);
+                            multiSelect.appendChild(opt);
+                        });
+                    }
 
                     const sourceField = field("titulacion_fuente");
                     if (sourceField) sourceField.value = data.fuente_titulacion || "";
@@ -725,6 +984,7 @@
                         "Seleccione sección"
                     );
 
+                    rebuildExtraLocationOptions();
                     message("");
                 } catch (error) {
                     if (id === curricularRequestId && error.name !== "AbortError") message(error.message);
@@ -843,6 +1103,9 @@
                     "modalidad_curricular",
                     "nivel_curricular",
                     "titulacion",
+                    "tipo_ubicacion",
+                    "multiplan",
+                    "titulaciones_multiplan",
                     "provincia"
                 ];
                 const name = names.find(key => field(key) === target);
@@ -874,6 +1137,38 @@
                         loadCargoCatalogs(currentName);
                         return;
                     }
+
+                    // Sección única / múltiple: solo cambia la interfaz.
+                    // No recargar catálogos curriculares.
+                    if (currentName === "tipo_ubicacion") {
+                        const isMultipleLocation = value("tipo_ubicacion") === "MULTIPLE";
+                        const extraBox = form.querySelector("[data-ubicaciones-extra]");
+                        if (extraBox) extraBox.hidden = !isMultipleLocation;
+
+                        ["grado_anio", "secciones", "turno"].forEach(name => {
+                            const input = field(name);
+                            const wrapper = input?.closest("[data-field]");
+                            if (wrapper) wrapper.hidden = isMultipleLocation;
+                        });
+
+                        if (isMultipleLocation) {
+                            ensureMultipleLocationRows();
+                        } else {
+                            const list = form.querySelector("[data-ubicaciones-list]");
+                            if (list) list.innerHTML = "";
+                        }
+
+                        enable();
+                        syncLocations();
+                        return;
+                    }
+
+                    // Estos dos campos tienen listeners específicos que recargan
+                    // únicamente lo necesario para Multiplan.
+                    if (currentName === "multiplan" || currentName === "titulaciones_multiplan") {
+                        return;
+                    }
+
                     loadCurricularCatalogs(currentName);
                 });
             }
@@ -938,7 +1233,55 @@
             enable();
 
             if (value("modalidad") || nonTeaching()) loadCargoCatalogs("inicio");
+            field("multiplan")?.addEventListener("change", () => {
+                const multi = isMultiplan();
+                if (multi && value("titulacion")) {
+                    const multiSelect = field("titulaciones_multiplan");
+                    Array.from(multiSelect?.options || []).forEach(o => { o.selected = o.value === value("titulacion"); });
+                }
+                clear("espacio_curricular");
+                enable();
+                loadCurricularCatalogs("multiplan");
+            });
+            field("titulaciones_multiplan")?.addEventListener("change", () => {
+                const ids = selectedMultiplanTitles();
+                if (ids.length) field("titulacion").value = ids[0];
+                clear("espacio_curricular");
+                loadCurricularCatalogs("titulaciones_multiplan");
+            });
+            field("tipo_ubicacion")?.addEventListener("change", () => {
+                const isMultipleLocation = value("tipo_ubicacion") === "MULTIPLE";
+
+                // Actualización inmediata de la interfaz. No depende de AJAX ni de
+                // la recarga de catálogos curriculares.
+                const extraBox = form.querySelector("[data-ubicaciones-extra]");
+                if (extraBox) extraBox.hidden = !isMultipleLocation;
+
+                ["grado_anio", "secciones", "turno"].forEach(name => {
+                    const input = field(name);
+                    const wrapper = input?.closest("[data-field]");
+                    if (wrapper) wrapper.hidden = isMultipleLocation;
+                });
+
+                if (isMultipleLocation) {
+                    ensureMultipleLocationRows();
+                } else {
+                    const list = form.querySelector("[data-ubicaciones-list]");
+                    if (list) list.innerHTML = "";
+                }
+
+                enable();
+                syncLocations();
+            });
+            ["grado_anio", "secciones", "turno"].forEach(name => field(name)?.addEventListener("change", syncLocations));
+            form.addEventListener("submit", () => {
+                const ids = selectedMultiplanTitles();
+                if (isMultiplan() && ids.length) field("titulacion").value = ids[0];
+                syncLocations();
+            });
+
             if (!nonTeaching() && value("modalidad_curricular")) loadCurricularCatalogs("inicio");
+            setTimeout(() => { restoreLocations(); enable(); }, 0);
             if (value("tipo_personal") && value("sit_revista")) loadConditions();
         });
 

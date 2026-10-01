@@ -315,6 +315,31 @@
         </p>
 
 
+        {% if a.tipo_personal.c_tpersonal != 2 %}
+        <div class="border rounded-3 p-3 mb-3 bg-light">
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                <strong>Ubicación curricular</strong>
+                <span class="badge text-bg-secondary">{{ a.get_tipo_ubicacion_display }}</span>
+                {% if a.multiplan %}<span class="badge text-bg-info">Multiplan</span>{% endif %}
+            </div>
+            {% if a.titulaciones_ui %}
+                <div class="small mb-2"><strong>Titulación{% if a.titulaciones_ui|length > 1 %}es{% endif %}:</strong>
+                    {% for t in a.titulaciones_ui %}{{ t.label }}{% if not forloop.last %} · {% endif %}{% endfor %}
+                </div>
+            {% endif %}
+            {% if a.espacio_curricular %}
+                <div class="small mb-2"><strong>Espacio curricular:</strong> {{ a.espacio_curricular }}</div>
+            {% endif %}
+            {% if a.ubicaciones_ui %}
+                <div class="small"><strong>Grado/Año · Sección · Turno:</strong><br>
+                    {% for u in a.ubicaciones_ui %}
+                        {{ u.grado_anio }} · {{ u.seccion }} · {{ u.turno }}{% if not forloop.last %}<br>{% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <p class="text-muted">
 
             {{ a.modalidad }}

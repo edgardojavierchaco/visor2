@@ -1,3 +1,4 @@
+import json
 import re
 
 from django import forms
@@ -10,6 +11,7 @@ from .domain.catalogs import (
     available_levels,
     condiciones_actividad,
     curricular_catalogs,
+    common_curricular_spaces,
     titulacion_options,
     titulacion_source,
     valid_titulacion,
@@ -29,6 +31,8 @@ from .models import (
     Secciones,
     TipoPersonal,
     CondicionActividadNombre,
+    RegistroActividadUbicacion,
+    RegistroActividadTitulacion,
     validar_cuil,
     validar_dni,
 )
@@ -148,6 +152,13 @@ class ActividadDirectorForm(StyledForm):
         choices=[("", "Seleccione titulación")],
     )
     titulacion_fuente = forms.CharField(widget=forms.HiddenInput, required=False)
+    titulaciones_multiplan = forms.MultipleChoiceField(
+        label="Titulaciones / planes",
+        required=False,
+        choices=[],
+        help_text="Seleccione dos o más titulaciones. El espacio curricular se limitará a los espacios comunes.",
+    )
+    ubicaciones_json = forms.CharField(widget=forms.HiddenInput, required=False)
 
     class Meta:
         model = RegistroActividades
@@ -164,12 +175,16 @@ class ActividadDirectorForm(StyledForm):
             # Circuito curricular nuevo
             "modalidad_curricular",
             "nivel_curricular",
+            "multiplan",
             "titulacion",
+            "titulaciones_multiplan",
             "titulacion_fuente",
             "espacio_curricular",
+            "tipo_ubicacion",
             "grado_anio",
             "turno",
             "secciones",
+            "ubicaciones_json",
             # Fechas / funciones
             "f_desde",
             "f_hasta",
@@ -189,6 +204,8 @@ class ActividadDirectorForm(StyledForm):
             "ceic": "Cargo / CEIC",
             "modalidad_curricular": "Modalidad curricular",
             "nivel_curricular": "Nivel curricular",
+            "multiplan": "Multiplan",
+            "tipo_ubicacion": "Tipo de ubicación",
             "espacio_curricular": "Espacio curricular",
             "grado_anio": "Grado / Año",
             "secciones": "Sección",
@@ -300,6 +317,41 @@ class ActividadDirectorForm(StyledForm):
             (item["id_titulacion"], item["descripcion"])
             for item in title_options
         ]
+        self.fields["titulaciones_multiplan"].choices = [
+            (str(item["id_titulacion"]), item["descripcion"])
+            for item in title_options
+        ]
+        self.fields["titulaciones_multiplan"].widget.attrs.update({
+            "size": "6",
+            "data-multiplan-select": "1",
+        })
+
+        if self.instance.pk and not self.is_bound:
+            saved_titles = list(
+                self.instance.titulaciones_curriculares
+                .order_by("orden", "pk")
+                .values_list("titulacion", flat=True)
+            )
+            if not saved_titles and self.instance.titulacion:
+                saved_titles = [self.instance.titulacion]
+            self.initial["titulaciones_multiplan"] = [str(v) for v in saved_titles]
+
+            saved_locations = list(
+                self.instance.ubicaciones_curriculares
+                .order_by("orden", "pk")
+                .values("grado_anio_id", "seccion_id", "turno")
+            )
+            if not saved_locations and self.instance.grado_anio_id and self.instance.secciones_id:
+                saved_locations = [{
+                    "grado_anio_id": self.instance.grado_anio_id,
+                    "seccion_id": self.instance.secciones_id,
+                    "turno": self.instance.turno,
+                }]
+
+            self.initial["ubicaciones_json"] = json.dumps([
+                {"grado": row["grado_anio_id"], "seccion": row["seccion_id"], "turno": row["turno"]}
+                for row in saved_locations
+            ])
 
         self.fields["espacio_curricular"].queryset = catalogs["espacios"]
         self.fields["grado_anio"].queryset = catalogs["grados"]
@@ -315,13 +367,17 @@ class ActividadDirectorForm(StyledForm):
         self.fields["espacio_curricular"].required = False
         self.fields["grado_anio"].required = False
         self.fields["secciones"].required = False
+        self.fields["titulaciones_multiplan"].required = False
+        self.fields["ubicaciones_json"].required = False
 
         if es_no_docente:
             for name in (
                 "modalidad_curricular",
                 "nivel_curricular",
                 "titulacion",
+                "titulaciones_multiplan",
                 "espacio_curricular",
+                "tipo_ubicacion",
                 "grado_anio",
                 "secciones",
             ):
@@ -420,6 +476,10 @@ class ActividadDirectorForm(StyledForm):
             data["titulacion"] = None
             data["titulacion_fuente"] = ""
             data["espacio_curricular"] = None
+            data["multiplan"] = False
+            data["tipo_ubicacion"] = "UNICA"
+            data["titulaciones_multiplan"] = []
+            data["ubicaciones_normalizadas"] = []
             data["grado_anio"] = None
             data["secciones"] = None
             return data
@@ -468,21 +528,99 @@ class ActividadDirectorForm(StyledForm):
         elif titulacion:
             self.add_error("titulacion", "El nivel seleccionado no tiene catálogo de titulaciones configurado.")
 
+        # Multiplan: varias titulaciones comparten UN único espacio curricular.
+        multiplan = bool(data.get("multiplan"))
+        raw_titles = data.get("titulaciones_multiplan") or []
+        selected_titles = []
+        for raw in raw_titles:
+            try:
+                tid = int(raw)
+            except (TypeError, ValueError):
+                continue
+            if tid not in selected_titles:
+                selected_titles.append(tid)
+
+        if multiplan:
+            if len(selected_titles) < 2:
+                self.add_error("titulaciones_multiplan", "Para Multiplan seleccione al menos dos titulaciones.")
+            for tid in selected_titles:
+                if not valid_titulacion(modalidad_curricular.pk, nivel_curricular.pk, tid, source):
+                    self.add_error("titulaciones_multiplan", "Una de las titulaciones seleccionadas no corresponde a la modalidad y nivel curricular.")
+                    break
+            if selected_titles:
+                data["titulacion"] = selected_titles[0]
+                titulacion = selected_titles[0]
+        else:
+            selected_titles = [int(titulacion)] if titulacion else []
+        data["titulaciones_normalizadas"] = selected_titles
+
         catalogs = curricular_catalogs(
             modalidad_curricular.pk,
             nivel_curricular.pk,
             titulacion,
+            titulaciones_seleccionadas=selected_titles if multiplan else None,
             tipo_personal=tipo_personal_codigo,
         )
 
         if espacio and not catalogs["espacios"].filter(pk=espacio.pk).exists():
-            self.add_error("espacio_curricular", "El espacio curricular no corresponde a la titulación seleccionada.")
+            msg = (
+                "El espacio curricular debe encontrarse en todas las titulaciones seleccionadas."
+                if multiplan
+                else "El espacio curricular no corresponde a la titulación seleccionada."
+            )
+            self.add_error("espacio_curricular", msg)
 
         if grado and not catalogs["grados"].filter(pk=grado.pk).exists():
             self.add_error("grado_anio", "El grado/año no corresponde a la modalidad y nivel curricular.")
 
         if seccion and not catalogs["secciones"].filter(pk=seccion.pk).exists():
             self.add_error("secciones", "La sección no corresponde a la modalidad y nivel curricular.")
+
+        # Ubicaciones: una actividad puede ser una sección única o una sección múltiple.
+        tipo_ubicacion = data.get("tipo_ubicacion") or "UNICA"
+        locations = []
+        raw_locations = data.get("ubicaciones_json") or ""
+        if raw_locations:
+            try:
+                parsed = json.loads(raw_locations)
+                if not isinstance(parsed, list):
+                    raise ValueError
+                for row in parsed:
+                    grado_id = int(row.get("grado"))
+                    seccion_id = int(row.get("seccion"))
+                    turno_value = str(row.get("turno") or "").strip()
+                    key = (grado_id, seccion_id, turno_value)
+                    if key not in [(x["grado"], x["seccion"], x["turno"]) for x in locations]:
+                        locations.append({"grado": grado_id, "seccion": seccion_id, "turno": turno_value})
+            except (TypeError, ValueError, json.JSONDecodeError):
+                self.add_error(None, "La composición de la ubicación curricular es inválida.")
+
+        if not locations and grado and seccion and data.get("turno"):
+            locations = [{"grado": grado.pk, "seccion": seccion.pk, "turno": data.get("turno")}]
+
+        valid_turnos = {value for value, _ in RegistroActividades._meta.get_field("turno").choices}
+        for row in locations:
+            if not catalogs["grados"].filter(pk=row["grado"]).exists():
+                self.add_error("grado_anio", "Una ubicación contiene un grado/año inválido para modalidad y nivel.")
+                break
+            if not catalogs["secciones"].filter(pk=row["seccion"]).exists():
+                self.add_error("secciones", "Una ubicación contiene una sección inválida para modalidad y nivel.")
+                break
+            if row["turno"] not in valid_turnos:
+                self.add_error("turno", "Una ubicación contiene un turno inválido.")
+                break
+
+        if tipo_ubicacion == "MULTIPLE" and len(locations) < 2:
+            self.add_error("tipo_ubicacion", "Sección múltiple requiere al menos dos combinaciones de grado/año, sección y turno.")
+        if tipo_ubicacion == "UNICA" and len(locations) > 1:
+            self.add_error("tipo_ubicacion", "Sección única admite solamente una combinación de grado/año, sección y turno.")
+
+        data["ubicaciones_normalizadas"] = locations
+        if locations:
+            first = locations[0]
+            data["grado_anio"] = catalogs["grados"].filter(pk=first["grado"]).first()
+            data["secciones"] = catalogs["secciones"].filter(pk=first["seccion"]).first()
+            data["turno"] = first["turno"]
 
         return data
 

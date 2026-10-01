@@ -8,6 +8,7 @@ app_name = "asistencia_dashboard"
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
+    path("guia/", views.guia, name="guia"),
     path("api/filtros/", views.api_filtros, name="api_filtros"),
     path("api/semanas/", views.api_semanas, name="api_semanas"),
     path("api/resumen/", views.api_resumen, name="api_resumen"),

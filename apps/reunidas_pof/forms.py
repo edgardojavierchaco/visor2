@@ -314,6 +314,11 @@ class GuardarCargaPofForm(forms.Form):
     nivel = forms.CharField(required=False)
     proyecto_especial_id = forms.IntegerField(required=False, min_value=1)
     tipo_operacion = forms.ChoiceField(choices=LoteCargaPof.TipoOperacion.choices, required=False)
+    zona_educativa_tipo = forms.ChoiceField(
+        choices=SnapshotPadronLocalizacionPof.TipoZonaEducativa.choices,
+        required=False,
+    )
+    zona_educativa = forms.CharField(required=False, max_length=50)
     observacion = forms.CharField(required=False)
 
     def clean(self):
@@ -323,6 +328,29 @@ class GuardarCargaPofForm(forms.Form):
         tipo_operacion = cleaned_data.get("tipo_operacion")
         if not tipo_operacion:
             cleaned_data["tipo_operacion"] = LoteCargaPof.TipoOperacion.AFECTADO
+
+        zona_tipo = _texto(cleaned_data.get("zona_educativa_tipo")).upper()
+        zona = _texto(cleaned_data.get("zona_educativa"))
+        cleaned_data["zona_educativa_tipo"] = zona_tipo
+        cleaned_data["zona_educativa"] = zona
+
+        if bool(zona_tipo) != bool(zona):
+            self.add_error(
+                "zona_educativa",
+                "Debe indicar tipo y Zona Educativa en conjunto.",
+            )
+
+        if cabecera_tipo in {"REUNIDA", "PROYECTO_ESPECIAL"}:
+            if not zona_tipo:
+                self.add_error(
+                    "zona_educativa_tipo",
+                    "Debe indicar el tipo de Zona Educativa.",
+                )
+            if not zona:
+                self.add_error(
+                    "zona_educativa",
+                    "Debe seleccionar una Zona Educativa.",
+                )
 
         if cabecera_tipo == "REUNIDA":
             anio = cleaned_data.get("anio")
@@ -448,6 +476,8 @@ def validar_payload_guardar_carga(datos):
             "nivel": cabecera_limpia.get("nivel") or "",
             "proyecto_especial_id": cabecera_limpia.get("proyecto_especial_id"),
             "tipo_operacion": cabecera_limpia["tipo_operacion"],
+            "zona_educativa_tipo": cabecera_limpia.get("zona_educativa_tipo", ""),
+            "zona_educativa": cabecera_limpia.get("zona_educativa", ""),
             "observacion": cabecera_limpia.get("observacion", ""),
             "padron": padron_limpio,
             "cargos": cargos_limpios,

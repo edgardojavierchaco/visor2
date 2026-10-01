@@ -1,0 +1,126 @@
+{% extends "archivos/base/layout.html" %}
+
+{% block content %}
+
+<div class="container">
+
+<div class="card">
+
+<div class="card-header">
+
+Asignar Oferta
+
+</div>
+
+<div class="card-body">
+
+<form method="post">
+
+{% csrf_token %}
+
+<input
+type="hidden"
+name="cueanexo"
+id="cueanexo">
+
+<input
+type="hidden"
+name="oferta"
+id="oferta">
+
+<label>
+
+Buscar Oferta
+
+</label>
+
+<select
+id="oferta_select"
+class="form-control">
+
+</select>
+
+<hr>
+
+<button
+class="btn btn-success">
+
+Guardar
+
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<link
+href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+
+$("#oferta_select").select2({
+
+ajax: {
+
+url:
+"{% url 'ajax_ofertas' %}",
+
+dataType:
+"json",
+
+delay:
+250,
+
+data:
+function(params){
+
+return {
+term: params.term
+};
+
+},
+
+processResults:
+function(data){
+
+return data;
+
+}
+
+}
+
+});
+
+$("#oferta_select").on(
+"select2:select",
+function(e){
+
+let valor =
+e.params.data.id;
+
+let partes =
+valor.split("|");
+
+$("#cueanexo")
+.val(partes[0]);
+
+$("#oferta")
+.val(partes[1]);
+
+}
+);
+
+</script>
+
+{% endblock %}

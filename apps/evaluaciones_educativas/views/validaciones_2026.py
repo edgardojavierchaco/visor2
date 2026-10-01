@@ -1,10 +1,17 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.views.decorators.http import require_POST
 from django.urls import reverse
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Value
+from django.db.models.functions import Replace
+
+from apps.evaluaciones_educativas.forms.validaciones_2026 import (
+    ValVeedorForm,
+    ValAplicadorForm,
+    ValPersonaEditForm,
+)
 
 from apps.evaluaciones_educativas.models.validaciones_2026 import (
     ValReferenteCargaTemporal,
@@ -14,6 +21,9 @@ from apps.evaluaciones_educativas.models.validaciones_2026 import (
     ValCabecera,
     ValHistorialMatriculas,
     ValHistorialCambiosEstablecimiento,
+    ValPersona,
+    ValAplicador,
+    ValVeedor,
 )
 
 
@@ -29,6 +39,72 @@ def _get_cuil(request):
 def _get_referente(cuil):
     """Obtiene el primer referente con ese CUIL (puede ser None)."""
     return ValReferenteCargaTemporal.objects.filter(cuil=cuil).first()
+
+
+# Cupo de veedores por establecimiento: uno solo, salvo que tenga 2 o más
+# secciones habilitadas, en cuyo caso admite un segundo.
+MAX_VEEDORES_BASE = 1
+MAX_VEEDORES_AMPLIADO = 2
+
+
+def _cant_secciones(est):
+    """Secciones habilitadas del establecimiento."""
+    return (
+        ValSeccion.objects
+        .filter(grado__establecimiento=est)
+        .exclude(estado_validacion="DESHABILITADO")
+        .count()
+    )
+
+
+def _max_veedores(cant_secciones):
+    """Cuántos veedores admite un establecimiento según sus secciones."""
+    return MAX_VEEDORES_AMPLIADO if cant_secciones >= 2 else MAX_VEEDORES_BASE
+
+
+def _error_cuil_duplicado(cuil_persona, excluir_pk=None):
+    """
+    Un CUIL solo puede estar una vez entre veedores y aplicadores: quien es
+    aplicador no puede ser veedor ni aplicador de otra sección, y quien es
+    veedor no puede serlo de otra escuela ni ser aplicador.
+
+    Compara sin guiones porque hay registros viejos guardados con guiones.
+    `excluir_pk` es la persona que se está editando, para que no choque
+    consigo misma. Devuelve el mensaje de error, o None si el CUIL está libre.
+    """
+    existente = (
+        ValPersona.objects
+        .annotate(cuil_normalizado=Replace('cuil', Value('-'), Value('')))
+        .filter(cuil_normalizado=cuil_persona)
+        .exclude(pk=excluir_pk)
+        .select_related(
+            'valveedor__establecimiento',
+            'valaplicador__seccion__grado__establecimiento',
+        )
+        .first()
+    )
+    if not existente:
+        return None
+
+    quien = f'{existente.apellido}, {existente.nombre}'
+    if hasattr(existente, 'valveedor'):
+        escuela = existente.valveedor.establecimiento
+        donde = f'como veedor en {escuela.escuela} ({escuela.cueanexo})'
+    elif hasattr(existente, 'valaplicador'):
+        seccion = existente.valaplicador.seccion
+        escuela = seccion.grado.establecimiento
+        donde = (
+            f'como aplicador en {escuela.escuela} ({escuela.cueanexo}), '
+            f'Sección {seccion.seccion} — {seccion.turno}'
+        )
+    else:
+        donde = 'en el sistema'
+    return f'El CUIL ya está registrado para {quien} {donde}. Una persona no puede estar cargada dos veces.'
+
+
+# Si dos altas con el mismo CUIL pasan el chequeo al mismo tiempo, la segunda
+# choca contra el unique de ValPersona.cuil. Se responde igual que un duplicado.
+ERROR_CUIL_CONCURRENTE = 'El CUIL ya está registrado. Una persona no puede estar cargada dos veces.'
 
 
 
@@ -803,3 +879,496 @@ def validar_establecimiento_completo(request, cueanexo):
         )
 
     return JsonResponse({'ok': True, 'carga_completa': est.carga_completa})
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PERSONAS — Aplicadores y Veedores
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ---------------------------------------------------------------------------
+# PASO 0-P: Seleccionar región (personas)
+# ---------------------------------------------------------------------------
+@login_required
+def seleccionar_region_personas(request):
+    """
+    Landing de personas: muestra las regiones disponibles para el referente.
+    Reutiliza la misma lógica que seleccionar_region pero redirige al flujo
+    de personas.
+    """
+    cuil = _get_cuil(request)
+
+    regiones = list(
+        ValReferenteCargaTemporal.objects
+        .filter(cuil=cuil)
+        .values_list('region', flat=True)
+        .distinct()
+        .order_by('region')
+    )
+
+    if not regiones:
+        return render(request, 'validaciones_2026/seleccionar_region.html', {
+            'sin_acceso': True,
+            'cuil': cuil,
+            'modo_personas': True,
+        })
+
+    regiones_info = []
+    for region in regiones:
+        ests = ValEstablecimiento.objects.filter(region=region, participa_aprender="participa")
+        total_r = ests.count()
+        # Contar personas asignadas en la región
+        total_veedores = ValVeedor.objects.filter(establecimiento__region=region).count()
+        total_aplicadores = ValAplicador.objects.filter(seccion__grado__establecimiento__region=region).count()
+        regiones_info.append({
+            'nombre': region,
+            'total': total_r,
+            'veedores': total_veedores,
+            'aplicadores': total_aplicadores,
+            'total_personas': total_veedores + total_aplicadores,
+        })
+
+    return render(request, 'validaciones_2026/seleccionar_region.html', {
+        'sin_acceso': False,
+        'cuil': cuil,
+        'regiones_info': regiones_info,
+        'modo_personas': True,
+    })
+
+
+# ---------------------------------------------------------------------------
+# PASO 1-P: Lista de establecimientos de una región (personas)
+# ---------------------------------------------------------------------------
+@login_required
+def lista_establecimientos_personas(request, region):
+    """
+    Muestra los establecimientos de la región con botones de gestión
+    de aplicadores y veedores.
+    """
+    cuil = _get_cuil(request)
+
+    regiones_autorizadas = list(
+        ValReferenteCargaTemporal.objects
+        .filter(cuil=cuil)
+        .values_list('region', flat=True)
+        .distinct()
+    )
+    if not regiones_autorizadas:
+        return render(request, 'validaciones_2026/establecimientos_personas.html', {
+            'sin_acceso': True,
+            'cuil': cuil,
+        })
+    if region not in regiones_autorizadas:
+        return redirect('evaluaciones_educativas:validaciones_2026:personas_lista')
+
+    establecimientos = (
+        ValEstablecimiento.objects
+        .filter(region=region, participa_aprender="participa")
+        .order_by('escuela')
+    )
+
+    total_est = establecimientos.count()
+
+    establecimientos_list = list(establecimientos)
+
+    # Veedores y aplicadores por establecimiento, en dos consultas agrupadas
+    # en vez de dos por cada tarjeta.
+    veedores_por_est = dict(
+        ValVeedor.objects
+        .filter(establecimiento__region=region)
+        .values_list('establecimiento')
+        .annotate(total=Count('pk'))
+    )
+    aplicadores_por_est = dict(
+        ValAplicador.objects
+        .filter(seccion__grado__establecimiento__region=region)
+        .values_list('seccion__grado__establecimiento')
+        .annotate(total=Count('pk'))
+    )
+
+    # Secciones habilitadas por establecimiento: definen el cupo de veedores.
+    secciones_por_est = dict(
+        ValSeccion.objects
+        .filter(grado__establecimiento__region=region)
+        .exclude(estado_validacion="DESHABILITADO")
+        .values_list('grado__establecimiento')
+        .annotate(total=Count('pk'))
+    )
+
+    for est in establecimientos_list:
+        est.cant_veedores = veedores_por_est.get(est.cueanexo, 0)
+        est.cant_aplicadores = aplicadores_por_est.get(est.cueanexo, 0)
+        est.cant_personas = est.cant_veedores + est.cant_aplicadores
+        est.cant_secciones = secciones_por_est.get(est.cueanexo, 0)
+        est.max_veedores = _max_veedores(est.cant_secciones)
+
+    contexto = {
+        'sin_acceso': False,
+        'cuil': cuil,
+        'region_actual': region,
+        'regiones_autorizadas': regiones_autorizadas,
+        'establecimientos': establecimientos_list,
+        'total_est': total_est,
+        'form_veedor': ValVeedorForm(),
+        'form_aplicador': ValAplicadorForm(),
+        'form_editar': ValPersonaEditForm(),
+    }
+    return render(request, 'validaciones_2026/establecimientos_personas.html', contexto)
+
+
+# ---------------------------------------------------------------------------
+# API: Secciones de un establecimiento (JSON)
+# ---------------------------------------------------------------------------
+@login_required
+def secciones_establecimiento_json(request, cueanexo):
+    """
+    Devuelve las secciones del establecimiento en JSON para el select
+    dinámico al crear un aplicador.
+    """
+    cuil = _get_cuil(request)
+    est = ValEstablecimiento.objects.for_referente(cuil, cueanexo)
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    secciones = (
+        ValSeccion.objects
+        .filter(grado__establecimiento=est)
+        .exclude(estado_validacion="DESHABILITADO")
+        .select_related('grado')
+        .order_by('grado__nombre_grado', 'seccion', 'turno')
+    )
+
+    # Marcar cuáles ya tienen aplicador asignado
+    data = []
+    for sec in secciones:
+        tiene_aplicador = ValAplicador.objects.filter(seccion=sec).exists()
+        data.append({
+            'id': sec.pk,
+            'public_id': str(sec.public_id),
+            'grado': sec.grado.nombre_grado,
+            'seccion': sec.seccion,
+            'turno': sec.turno,
+            'tiene_aplicador': tiene_aplicador,
+            'label': f"{sec.grado.nombre_grado} — Sección {sec.seccion} — {sec.turno}",
+        })
+
+    return JsonResponse({'ok': True, 'secciones': data})
+
+
+# ---------------------------------------------------------------------------
+# API: Listar personas de un establecimiento (JSON)
+# ---------------------------------------------------------------------------
+@login_required
+def listar_personas_establecimiento(request, cueanexo):
+    """
+    Devuelve JSON con los veedores y aplicadores asignados al establecimiento.
+    """
+    cuil = _get_cuil(request)
+    est = ValEstablecimiento.objects.for_referente(cuil, cueanexo)
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    veedores = ValVeedor.objects.filter(establecimiento=est)
+    aplicadores = ValAplicador.objects.filter(
+        seccion__grado__establecimiento=est
+    ).select_related('seccion', 'seccion__grado')
+
+    data_veedores = [
+        {
+            'id': v.pk,
+            'nombre': v.nombre,
+            'apellido': v.apellido,
+            'cuil': v.cuil,
+            'correo': v.correo,
+            'codigo_area': v.codigo_area,
+            'numero_telefono': v.numero_telefono,
+            'tipo': 'veedor',
+        }
+        for v in veedores
+    ]
+
+    data_aplicadores = [
+        {
+            'id': a.pk,
+            'nombre': a.nombre,
+            'apellido': a.apellido,
+            'cuil': a.cuil,
+            'correo': a.correo,
+            'codigo_area': a.codigo_area,
+            'numero_telefono': a.numero_telefono,
+            'tipo': 'aplicador',
+            'seccion_id': a.seccion.pk,
+            'seccion_label': f"{a.seccion.grado.nombre_grado} — Sección {a.seccion.seccion} — {a.seccion.turno}",
+        }
+        for a in aplicadores
+    ]
+
+    return JsonResponse({
+        'ok': True,
+        'veedores': data_veedores,
+        'aplicadores': data_aplicadores,
+    })
+
+
+# ---------------------------------------------------------------------------
+# CRUD: Crear Veedor
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def crear_veedor(request, cueanexo):
+    cuil = _get_cuil(request)
+    est = ValEstablecimiento.objects.for_referente(cuil, cueanexo)
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    # Cupo de veedores: 1 por establecimiento, o 2 si tiene 2 o más secciones.
+    # Para cambiar uno ya cargado hay que eliminarlo primero.
+    cant_secciones = _cant_secciones(est)
+    cupo = _max_veedores(cant_secciones)
+    asignados = ValVeedor.objects.filter(establecimiento=est).count()
+    if asignados >= cupo:
+        if cupo == 1:
+            detalle = (
+                f'Admite un solo veedor porque tiene {cant_secciones} '
+                f'{"sección" if cant_secciones == 1 else "secciones"}.'
+            )
+        else:
+            detalle = f'Admite hasta {cupo} veedores y ya tiene {asignados}.'
+        return JsonResponse({
+            'ok': False,
+            'error': (
+                f'Este establecimiento ya alcanzó el máximo de veedores. '
+                f'{detalle} Para cambiarlos, primero eliminá alguno.'
+            ),
+        }, status=400)
+
+    form = ValVeedorForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'ok': False, 'error': form.errores_legibles()}, status=400)
+    # CUIL único entre veedores y aplicadores
+    cd = form.cleaned_data
+    error_cuil = _error_cuil_duplicado(cd['cuil'])
+    if error_cuil:
+        return JsonResponse({'ok': False, 'error': error_cuil}, status=400)
+
+    try:
+        veedor = ValVeedor.objects.create(
+            nombre=cd['nombre'],
+            apellido=cd['apellido'],
+            cuil=cd['cuil'],
+            correo=cd['correo'],
+            codigo_area=cd['codigo_area'],
+            numero_telefono=cd['numero_telefono'],
+            establecimiento=est,
+        )
+    except IntegrityError:
+        return JsonResponse({'ok': False, 'error': ERROR_CUIL_CONCURRENTE}, status=400)
+
+    return JsonResponse({
+        'ok': True,
+        'id': veedor.pk,
+        'nombre': veedor.nombre,
+        'apellido': veedor.apellido,
+        'mensaje': f'Veedor {veedor.apellido}, {veedor.nombre} creado correctamente.',
+    })
+
+
+# ---------------------------------------------------------------------------
+# CRUD: Editar Veedor
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def editar_veedor(request, veedor_id):
+    cuil = _get_cuil(request)
+    try:
+        veedor = ValVeedor.objects.select_related('establecimiento').get(pk=veedor_id)
+    except ValVeedor.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Veedor no encontrado.'}, status=404)
+
+    est = ValEstablecimiento.objects.for_referente(cuil, veedor.establecimiento.cueanexo)
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    form = ValPersonaEditForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'ok': False, 'error': form.errores_legibles()}, status=400)
+
+    # CUIL único entre veedores y aplicadores (sin contar al propio veedor)
+    cd = form.cleaned_data
+    error_cuil = _error_cuil_duplicado(cd['cuil'], excluir_pk=veedor.pk)
+    if error_cuil:
+        return JsonResponse({'ok': False, 'error': error_cuil}, status=400)
+
+    veedor.nombre = cd['nombre']
+    veedor.apellido = cd['apellido']
+    veedor.cuil = cd['cuil']
+    veedor.correo = cd['correo']
+    veedor.codigo_area = cd['codigo_area']
+    veedor.numero_telefono = cd['numero_telefono']
+    try:
+        veedor.save()
+    except IntegrityError:
+        return JsonResponse({'ok': False, 'error': ERROR_CUIL_CONCURRENTE}, status=400)
+
+    return JsonResponse({
+        'ok': True,
+        'mensaje': f'Veedor {veedor.apellido}, {veedor.nombre} actualizado.',
+    })
+
+
+# ---------------------------------------------------------------------------
+# CRUD: Eliminar Veedor
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def eliminar_veedor(request, veedor_id):
+    cuil = _get_cuil(request)
+    try:
+        veedor = ValVeedor.objects.select_related('establecimiento').get(pk=veedor_id)
+    except ValVeedor.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Veedor no encontrado.'}, status=404)
+
+    est = ValEstablecimiento.objects.for_referente(cuil, veedor.establecimiento.cueanexo)
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    nombre_completo = f'{veedor.apellido}, {veedor.nombre}'
+    veedor.delete()
+
+    return JsonResponse({
+        'ok': True,
+        'mensaje': f'Veedor {nombre_completo} eliminado.',
+    })
+
+
+# ---------------------------------------------------------------------------
+# CRUD: Crear Aplicador
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def crear_aplicador(request, cueanexo):
+    cuil = _get_cuil(request)
+    est = ValEstablecimiento.objects.for_referente(cuil, cueanexo)
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    form = ValAplicadorForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'ok': False, 'error': form.errores_legibles()}, status=400)
+
+    cd = form.cleaned_data
+    seccion_id = cd['seccion_id']
+
+    try:
+        seccion = ValSeccion.objects.exclude(estado_validacion="DESHABILITADO").get(
+            pk=seccion_id, grado__establecimiento=est
+        )
+    except ValSeccion.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Sección no encontrada.'}, status=404)
+
+    # Verificar que la sección no tenga ya un aplicador
+    if ValAplicador.objects.filter(seccion=seccion).exists():
+        return JsonResponse({'ok': False, 'error': 'Esta sección ya tiene un aplicador asignado.'}, status=400)
+    
+    # CUIL único entre veedores y aplicadores
+    error_cuil = _error_cuil_duplicado(cd['cuil'])
+    if error_cuil:
+        return JsonResponse({'ok': False, 'error': error_cuil}, status=400)
+
+    try:
+        aplicador = ValAplicador.objects.create(
+            nombre=cd['nombre'],
+            apellido=cd['apellido'],
+            cuil=cd['cuil'],
+            correo=cd['correo'],
+            codigo_area=cd['codigo_area'],
+            numero_telefono=cd['numero_telefono'],
+            seccion=seccion,
+        )
+    except IntegrityError:
+        return JsonResponse({'ok': False, 'error': ERROR_CUIL_CONCURRENTE}, status=400)
+
+    return JsonResponse({
+        'ok': True,
+        'id': aplicador.pk,
+        'nombre': aplicador.nombre,
+        'apellido': aplicador.apellido,
+        'seccion_label': f"{seccion.grado.nombre_grado} — Sección {seccion.seccion} — {seccion.turno}",
+        'mensaje': f'Aplicador {aplicador.apellido}, {aplicador.nombre} creado correctamente.',
+    })
+
+
+# ---------------------------------------------------------------------------
+# CRUD: Editar Aplicador
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def editar_aplicador(request, aplicador_id):
+    cuil = _get_cuil(request)
+    try:
+        aplicador = ValAplicador.objects.select_related(
+            'seccion', 'seccion__grado', 'seccion__grado__establecimiento'
+        ).get(pk=aplicador_id)
+    except ValAplicador.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Aplicador no encontrado.'}, status=404)
+
+    est = ValEstablecimiento.objects.for_referente(
+        cuil, aplicador.seccion.grado.establecimiento.cueanexo
+    )
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    form = ValPersonaEditForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'ok': False, 'error': form.errores_legibles()}, status=400)
+
+    # CUIL único entre veedores y aplicadores (sin contar al propio aplicador)
+    cd = form.cleaned_data
+    error_cuil = _error_cuil_duplicado(cd['cuil'], excluir_pk=aplicador.pk)
+    if error_cuil:
+        return JsonResponse({'ok': False, 'error': error_cuil}, status=400)
+
+    aplicador.nombre = cd['nombre']
+    aplicador.apellido = cd['apellido']
+    aplicador.cuil = cd['cuil']
+    aplicador.correo = cd['correo']
+    aplicador.codigo_area = cd['codigo_area']
+    aplicador.numero_telefono = cd['numero_telefono']
+    try:
+        aplicador.save()
+    except IntegrityError:
+        return JsonResponse({'ok': False, 'error': ERROR_CUIL_CONCURRENTE}, status=400)
+
+    return JsonResponse({
+        'ok': True,
+        'mensaje': f'Aplicador {aplicador.apellido}, {aplicador.nombre} actualizado.',
+    })
+
+
+# ---------------------------------------------------------------------------
+# CRUD: Eliminar Aplicador
+# ---------------------------------------------------------------------------
+@login_required
+@require_POST
+def eliminar_aplicador(request, aplicador_id):
+    cuil = _get_cuil(request)
+    try:
+        aplicador = ValAplicador.objects.select_related(
+            'seccion', 'seccion__grado', 'seccion__grado__establecimiento'
+        ).get(pk=aplicador_id)
+    except ValAplicador.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Aplicador no encontrado.'}, status=404)
+
+    est = ValEstablecimiento.objects.for_referente(
+        cuil, aplicador.seccion.grado.establecimiento.cueanexo
+    )
+    if not est:
+        return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
+
+    nombre_completo = f'{aplicador.apellido}, {aplicador.nombre}'
+    aplicador.delete()
+
+    return JsonResponse({
+        'ok': True,
+        'mensaje': f'Aplicador {nombre_completo} eliminado.',
+    })
+
