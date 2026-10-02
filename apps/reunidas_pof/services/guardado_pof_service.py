@@ -39,6 +39,7 @@ from .zona_educativa_service import (
     construir_identidad_zona,
     obtener_asignacion_snapshot,
     obtener_asignacion_vigente_bloqueada,
+    normalizar_observacion_zona_educativa,
     resolver_zona_educativa_catalogo,
     seleccion_zona_coincide_asignacion,
     sincronizar_zona_faltante_identidad,
@@ -60,6 +61,9 @@ CAMPOS_IDENTIDAD_PADRON_MANUAL = (
 )
 
 logger = logging.getLogger(__name__)
+MENSAJE_CARGO_ORIGEN_PROTEGIDO = (
+    "No se puede eliminar este cargo porque es origen de un cargo de un ciclo posterior."
+)
 
 
 def _texto(valor):
@@ -401,7 +405,7 @@ def _validar_datos_guardado_minimos(datos):
     Valida solo la entrada mínima confiable del flujo de guardado.
 
     - Verifica cabecera, padrón y lista de cargos antes de la oficialización CEIC.
-    - Exige tipo+Zona Educativa en Reunidas y Proyecto Especial.
+    - Zona Educativa es opcional; si se informa, exige tipo+zona completos.
     - Nunca acepta puntos de Zona como dato autoritativo.
     - Rechaza CUE, Anexo y CUEANEXO cuando Proyecto Especial usa ingreso manual controlado.
     - No depende de cargo, puntos CEIC, total ni snapshot enviados por frontend.
@@ -447,14 +451,7 @@ def _validar_datos_guardado_minimos(datos):
         errores["tipo_operacion"] = ["El tipo de operacion no es valido."]
 
     try:
-        seleccion_zona = _seleccion_zona_payload(datos)
-        if (
-            cabecera_tipo in {CABECERA_REUNIDA, CABECERA_PROYECTO_ESPECIAL}
-            and seleccion_zona is None
-        ):
-            errores["zona_educativa"] = [
-                "Debe seleccionar una Zona Educativa."
-            ]
+        _seleccion_zona_payload(datos)
     except ValidationError as error:
         errores.update(_errores_validation_error(error))
 
@@ -1033,7 +1030,13 @@ def _resolver_asignacion_zona_guardado(datos, reunida, proyecto):
     return identidad, None
 
 
-def _obtener_snapshot(localizacion, padron, usuario, asignacion_zona=None):
+def _obtener_snapshot(
+    localizacion,
+    padron,
+    usuario,
+    asignacion_zona=None,
+    observacion_zona="",
+):
     snapshot_payload = armar_snapshot_payload(padron)
     origen_datos = _normalizar_origen_datos(
         padron.get("origen_datos") or snapshot_payload.get("origen_datos")
@@ -1076,6 +1079,19 @@ def _obtener_snapshot(localizacion, padron, usuario, asignacion_zona=None):
                 ]
             })
 
+    evento_zona = bool(
+        asignacion_efectiva is not None
+        and not asignaciones_zona_equivalentes(
+            asignacion_anterior,
+            asignacion_efectiva,
+        )
+    )
+    observacion_zona_evento = (
+        normalizar_observacion_zona_educativa(observacion_zona)
+        if evento_zona
+        else ""
+    )
+
     datos_snapshot = {
         "tipo_snapshot": SnapshotPadronLocalizacionPof.TipoSnapshot.INICIAL,
         "origen_datos": origen_datos,
@@ -1105,6 +1121,8 @@ def _obtener_snapshot(localizacion, padron, usuario, asignacion_zona=None):
         "puntos_zona_educativa": (
             asignacion_efectiva["puntos"] if asignacion_efectiva else None
         ),
+        "zona_educativa_evento": evento_zona,
+        "observacion_zona_educativa": observacion_zona_evento,
         "datos_padron": snapshot_payload.get("datos_padron", {}),
         "usuario": usuario,
         "fecha_snapshot": timezone.now(),
@@ -1132,6 +1150,8 @@ def _valores_nuevos_cargo(cargo):
             "total": _decimal_texto(cargo.total),
             "estado_pof": cargo.estado_pof,
             "observacion": cargo.observacion,
+            "ofertas_seleccionadas": cargo.ofertas_seleccionadas,
+            "snapshot_ceic": cargo.snapshot_ceic,
         }
     )
 
@@ -1175,6 +1195,34 @@ def _clave_oferta_padron(oferta):
         _texto(oferta.get("padron_cueanexo") or oferta.get("cueanexo")),
         _texto(oferta.get("cuof_loc") or oferta.get("cuof")),
     )
+
+
+def _valores_cargo_comparables(valores, ofertas=None):
+    """Compara selecciones por claves oficiales y normaliza representación CEIC."""
+    comparables = _json_dict_seguro(valores)
+    selecciones = comparables.get("ofertas_seleccionadas", []) if ofertas is None else ofertas
+    comparables["ofertas_seleccionadas"] = sorted({
+        _clave_oferta_padron(oferta)
+        for oferta in selecciones
+        if isinstance(oferta, dict)
+    })
+    snapshot = comparables.get("snapshot_ceic")
+    if isinstance(snapshot, dict):
+        for campo in ("cargo", "nivel"):
+            if campo in snapshot:
+                snapshot[campo] = _texto(snapshot[campo])
+        for campo in ("ceic", "puntos_asignados"):
+            if campo not in snapshot:
+                continue
+            try:
+                numero = Decimal(str(snapshot[campo]))
+                snapshot[campo] = (
+                    str(int(numero)) if campo == "ceic" and numero == numero.to_integral_value()
+                    else _decimal_texto(numero)
+                )
+            except (InvalidOperation, TypeError, ValueError, OverflowError):
+                snapshot[campo] = _texto(snapshot[campo])
+    return comparables
 
 
 def _ofertas_cargo_con_fallback(cargo, snapshot):
@@ -1250,10 +1298,18 @@ def _serializar_cargo_detalle(cargo):
     reunida = localizacion.reunida
     proyecto = localizacion.proyecto_especial
     snapshot = _obtener_snapshot_vigente(localizacion)
-    ofertas_disponibles, ofertas_seleccionadas, oferta_texto = _catalogo_ofertas_cargo(
+    ofertas_seleccionadas, oferta_texto = _ofertas_cargo_con_fallback(
         cargo,
         snapshot,
     )
+    ofertas_seleccionadas = [
+        {
+            **dict(oferta),
+            "seleccionada": True,
+        }
+        for oferta in ofertas_seleccionadas
+        if isinstance(oferta, dict)
+    ]
 
     if reunida:
         cabecera = f"POF {reunida.anio} - {reunida.get_nivel_display()}"
@@ -1268,7 +1324,8 @@ def _serializar_cargo_detalle(cargo):
         "cargo": cargo.cargo,
         "oferta": oferta_texto,
         "ofertas_seleccionadas": ofertas_seleccionadas,
-        "ofertas_disponibles": ofertas_disponibles,
+        "ofertas_disponibles": ofertas_seleccionadas,
+        "ofertas_catalogo_cargado": False,
         "requiere_ofertas": _cargo_requiere_ofertas(cargo, snapshot),
         "cantidad": _cantidad_texto(cargo.cantidad),
         "unidad_cantidad": cargo.unidad_cantidad,
@@ -1319,6 +1376,31 @@ def obtener_detalle_cargo_pof(cargo_id):
         "localizacion__proyecto_especial",
     ).get(pk=cargo_id)
     return _serializar_cargo_detalle(cargo)
+
+
+def obtener_catalogo_ofertas_cargo_pof(cargo_id):
+    """
+    Consulta el catálogo de Padrón sólo cuando el usuario abre el selector de
+    ofertas en Gestión Cargo. El detalle base del modal queda libre de esta
+    consulta remota/costosa.
+    """
+    cargo = CargoPof.objects.select_related(
+        "localizacion",
+        "localizacion__reunida",
+        "localizacion__proyecto_especial",
+    ).get(pk=cargo_id)
+    snapshot = _obtener_snapshot_vigente(cargo.localizacion)
+    ofertas_disponibles, ofertas_seleccionadas, oferta_texto = _catalogo_ofertas_cargo(
+        cargo,
+        snapshot,
+    )
+    return _json_dict_seguro({
+        "cargo_id": cargo.id,
+        "oferta": oferta_texto,
+        "ofertas_seleccionadas": ofertas_seleccionadas,
+        "ofertas_disponibles": ofertas_disponibles,
+        "requiere_ofertas": _cargo_requiere_ofertas(cargo, snapshot),
+    })
 
 
 def _validar_payload_modificacion(datos):
@@ -1498,6 +1580,8 @@ def modificar_cargo_pof(cargo_id, datos, usuario=None):
                     "estado_pof": datos_limpios["estado_pof"],
                     "cargo": ceic_puntos["cargo"],
                     "oferta": oferta_texto,
+                    "ofertas_seleccionadas": _json_primitivo(ofertas_oficiales),
+                    "snapshot_ceic": _snapshot_ceic_seguro(ceic_puntos),
                     "observacion": datos_limpios["observacion"],
                 }
             )
@@ -1506,7 +1590,12 @@ def modificar_cargo_pof(cargo_id, datos, usuario=None):
             )
             valores_enviados_sin_estado = dict(valores_enviados)
             valores_enviados_sin_estado["estado_pof"] = valores_anteriores["estado_pof"]
-            hay_cambios_datos = valores_anteriores != valores_enviados_sin_estado
+            hay_cambios_datos = (
+                _valores_cargo_comparables(
+                    valores_anteriores,
+                    ofertas=ofertas_anteriores if requiere_ofertas else None,
+                ) != _valores_cargo_comparables(valores_enviados_sin_estado)
+            )
             hay_cambio_estado = (
                 valores_anteriores["estado_pof"] != valores_enviados["estado_pof"]
             )
@@ -1784,6 +1873,7 @@ def guardar_gestion_cargo_pof(cargo_id, datos, usuario=None):
                 zona_payload.get("tipo", ""),
                 zona_payload.get("zona", ""),
                 usuario=usuario,
+                observacion=zona_payload.get("observacion", ""),
             )
             zona_modificada = bool(resultado_zona.get("ok"))
             zona_sin_cambios = resultado_zona.get("tipo") == "sin_cambios"
@@ -1948,6 +2038,30 @@ def cambiar_estado_cargo_pof(cargo_id, estado_nuevo, usuario=None):
         }
 
 
+def obtener_impacto_eliminacion_cargo_pof(cargo_id):
+    """Consulta el impacto actual antes de habilitar la confirmación del modal."""
+    cargo = CargoPof.objects.get(pk=cargo_id)
+    cantidad = MovimientoCargoPof.objects.filter(cargo_id=cargo.pk).count()
+    bloqueado = cargo.cargos_derivados.exists()
+    if bloqueado:
+        mensaje = MENSAJE_CARGO_ORIGEN_PROTEGIDO
+    elif cantidad:
+        mensaje = (
+            f"Este cargo tiene {cantidad} "
+            f"{'movimiento registrado' if cantidad == 1 else 'movimientos registrados'}. "
+            "Al eliminarlo también se eliminará todo su historial de movimientos. "
+            "Esta acción no se puede deshacer."
+        )
+    else:
+        mensaje = "Este cargo se eliminará permanentemente. Esta acción no se puede deshacer."
+    return {
+        "cargo_id": cargo.pk,
+        "cantidad_movimientos": cantidad,
+        "puede_eliminar": not bloqueado,
+        "mensaje": mensaje,
+    }
+
+
 def eliminar_cargo_pof(cargo_id, usuario=None):
     try:
         with transaction.atomic():
@@ -1968,6 +2082,14 @@ def eliminar_cargo_pof(cargo_id, usuario=None):
             "tipo": "no_encontrado",
             "mensaje": "No se encontró el cargo solicitado.",
             "errores": {"cargo_id": ["No se encontró el cargo solicitado."]},
+        }
+    except ProtectedError:
+        # Fuera del bloque atomic: el borrado previo de movimientos ya se revirtió.
+        return {
+            "ok": False,
+            "tipo": "validacion",
+            "mensaje": MENSAJE_CARGO_ORIGEN_PROTEGIDO,
+            "errores": {"cargo_id": [MENSAJE_CARGO_ORIGEN_PROTEGIDO]},
         }
     except (ValidationError, IntegrityError) as error:
         errores = _errores_validation_error(error) if isinstance(error, ValidationError) else {"__all__": [str(error)]}
@@ -2086,12 +2208,20 @@ def _existen_movimientos_cabecera(dependencias):
 
     - Consulta solo existencia y no carga ni cuenta movimientos completos.
     - Usa los IDs de dependencias ya acotados y bloqueados por la cabecera objetivo.
-    - Mantiene a MovimientoCargoPof como unica señal de actividad administrativa.
+    - La actividad de Zona se comprueba por separado en sus snapshots.
     """
     return MovimientoCargoPof.objects.filter(
         Q(cargo_id__in=dependencias["cargo_ids"])
         | Q(lote_carga_id__in=dependencias["lote_ids"])
         | Q(snapshot_padron_id__in=dependencias["snapshot_ids"])
+    ).exists()
+
+
+def _existen_eventos_zona_cabecera(dependencias):
+    """Protege cambios administrativos de Zona; la herencia sin evento no bloquea."""
+    return SnapshotPadronLocalizacionPof.objects.filter(
+        pk__in=dependencias["snapshot_ids"],
+        zona_educativa_evento=True,
     ).exists()
 
 
@@ -2140,7 +2270,13 @@ def eliminar_reunida_pof(reunida_id):
             dependencias = resultado_dependencias["dependencias"]
             if _existen_movimientos_cabecera(dependencias):
                 return _resultado_eliminacion_bloqueada(
-                    "No se puede eliminar esta POF porque registra actividad administrativa posterior.",
+                    "No se puede eliminar esta POF porque registra actividad administrativa.",
+                    "reunida",
+                )
+
+            if _existen_eventos_zona_cabecera(dependencias):
+                return _resultado_eliminacion_bloqueada(
+                    "No se puede eliminar esta POF porque registra cambios de Zona Educativa.",
                     "reunida",
                 )
 
@@ -2196,6 +2332,12 @@ def eliminar_proyecto_especial_pof(proyecto_id):
             if _existen_movimientos_cabecera(dependencias):
                 return _resultado_eliminacion_bloqueada(
                     "No se puede eliminar este Proyecto Especial porque registra actividad administrativa.",
+                    "proyecto",
+                )
+
+            if _existen_eventos_zona_cabecera(dependencias):
+                return _resultado_eliminacion_bloqueada(
+                    "No se puede eliminar este Proyecto Especial porque registra cambios de Zona Educativa.",
                     "proyecto",
                 )
 
@@ -2289,6 +2431,7 @@ def guardar_carga_pof(datos, usuario=None):
                 datos["padron"],
                 usuario,
                 asignacion_zona=asignacion_zona,
+                observacion_zona=datos.get("observacion_zona_educativa", ""),
             )
 
             if asignacion_zona is not None:
@@ -2297,6 +2440,22 @@ def guardar_carga_pof(datos, usuario=None):
                     asignacion_zona,
                     usuario=usuario,
                     excluir_localizacion_ids={localizacion.id},
+                    observacion=(
+                        snapshot.observacion_zona_educativa
+                        if snapshot.zona_educativa_evento
+                        else ""
+                    ),
+                )
+
+            resultado_anexo = None
+            if "anexo_pof" in datos:
+                propietario_anexo = resolver_propietario_anexo_pof_localizacion(
+                    localizacion
+                )
+                resultado_anexo = aplicar_seleccion_anexo_pof(
+                    propietario=propietario_anexo,
+                    catalogo_ids=datos["anexo_pof"].get("catalogo_ids", []),
+                    usuario=usuario,
                 )
 
             lote = LoteCargaPof.objects.create(

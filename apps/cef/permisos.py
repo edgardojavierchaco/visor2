@@ -7,6 +7,7 @@ from functools import wraps
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
+from django.views.decorators.cache import never_cache
 
 from .models import (
     get_cueanexos_cargables_usuario,
@@ -15,11 +16,12 @@ from .models import (
 from .performance import perf_begin, perf_capture_queries, perf_finish
 
 
-PERMISOS_CEF_CACHE_VERSION = "v3"
+PERMISOS_CEF_CACHE_VERSION = "v4"
 PERMISOS_CEF_CACHE_TTL = 60
 ROLES_METRICAS_CEF = {
     "administrador",
     "director de servicios complementarios",
+    "director",
 }
 
 
@@ -69,6 +71,7 @@ def get_permisos_cef_request(request):
 def _validar_acceso_cef(
     request,
     permitir_solo_asistencia=False,
+    permitir_solo_metricas=False,
     requerir_metricas=False,
 ):
     permisos = get_permisos_cef_request(request)
@@ -78,15 +81,20 @@ def _validar_acceso_cef(
         raise PermissionDenied(
             "El rol Profesor CEF sólo puede acceder a la sección Asistencia."
         )
+    if permisos.get("solo_metricas") and not permitir_solo_metricas:
+        raise PermissionDenied(
+            "El rol Director sólo puede acceder a la sección Consultas CEF."
+        )
     if requerir_metricas and not permisos.get("puede_metricas", False):
         raise PermissionDenied(
-            "No tenés permisos para acceder a Métricas CEF."
+            "No tenés permisos para acceder a Consultas CEF."
         )
 
 
 def _cef_required(
     view_func,
     permitir_solo_asistencia=False,
+    permitir_solo_metricas=False,
     requerir_metricas=False,
 ):
     @wraps(view_func)
@@ -95,6 +103,7 @@ def _cef_required(
             _validar_acceso_cef(
                 request,
                 permitir_solo_asistencia,
+                permitir_solo_metricas,
                 requerir_metricas,
             )
             return view_func(request, *args, **kwargs)
@@ -106,6 +115,7 @@ def _cef_required(
                 _validar_acceso_cef(
                     request,
                     permitir_solo_asistencia,
+                    permitir_solo_metricas,
                     requerir_metricas,
                 )
                 response = view_func(request, *args, **kwargs)
@@ -117,13 +127,23 @@ def _cef_required(
 
         return response
 
-    return login_required(_wrapped_view)
+    return never_cache(login_required(_wrapped_view))
 
 
 def cef_required(view_func):
-    """Protege las vistas generales, excluyendo al rol Profesor CEF."""
+    """Protege las vistas generales, excluyendo roles restringidos de CEF."""
 
-    return _cef_required(view_func, permitir_solo_asistencia=False)
+    return _cef_required(view_func)
+
+
+def cef_inicio_required(view_func):
+    """Permite entrar al inicio para redirigir roles restringidos a su única sección."""
+
+    return _cef_required(
+        view_func,
+        permitir_solo_asistencia=True,
+        permitir_solo_metricas=True,
+    )
 
 
 def cef_asistencia_required(view_func):
@@ -133,10 +153,10 @@ def cef_asistencia_required(view_func):
 
 
 def cef_metricas_required(view_func):
-    """Protege Métricas para Administrador y Director de Servicios Complementarios."""
+    """Protege Consultas para los perfiles habilitados, incluido Director de CEF."""
 
     return _cef_required(
         view_func,
-        permitir_solo_asistencia=False,
+        permitir_solo_metricas=True,
         requerir_metricas=True,
     )

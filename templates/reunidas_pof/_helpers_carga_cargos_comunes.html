@@ -113,3 +113,469 @@ async function solicitarJsonLecturaResiliente(url, opciones) {
 
     throw ultimoError || new Error("No se pudo completar la lectura.");
 }
+
+/**
+ * Editor común de Código(s) Anexo POF para los flujos de Afectar Cargos.
+ *
+ * El catálogo puede crearse de inmediato; las asociaciones no se mutan aquí:
+ * se devuelve la selección final para incluirla en el guardado atómico de cargos.
+ */
+function crearEditorAnexoPofCarga(configuracion) {
+    const config = configuracion || {};
+    const toggle = config.toggle;
+    const resumen = config.resumen;
+    const opciones = config.opciones;
+    const nuevoPanel = config.nuevoPanel;
+    const nuevoCodigo = config.nuevoCodigo;
+    const crearButton = config.crearButton;
+    const cancelarButton = config.cancelarButton;
+    const seleccionadosInput = config.seleccionadosInput;
+    const estado = config.estado;
+    const propietarioTexto = config.propietarioTexto;
+
+    let catalogo = [];
+    let asociaciones = [];
+    let seleccionados = new Set();
+    let propietarioActual = null;
+    let catalogoCargado = false;
+    let asociacionesCargadas = false;
+    let cargando = false;
+    let creando = false;
+    let secuencia = 0;
+    let notificarCambios = false;
+
+    function mostrarEstado(tipo, mensaje) {
+        if (!estado) {
+            return;
+        }
+        estado.className = "pof-status" + (tipo ? " " + tipo : "");
+        estado.textContent = mensaje || "";
+    }
+
+    function cerrarOpciones() {
+        if (!opciones || !toggle) {
+            return;
+        }
+        opciones.classList.add("pof-hidden");
+        toggle.setAttribute("aria-expanded", "false");
+    }
+
+    function cerrarAlta(limpiar) {
+        if (!nuevoPanel) {
+            return;
+        }
+        nuevoPanel.classList.add("pof-hidden");
+        if (limpiar && nuevoCodigo) {
+            nuevoCodigo.value = "";
+        }
+    }
+
+    function asociacionPorCatalogoId(catalogoId) {
+        return asociaciones.find(function (item) {
+            return Number(item.catalogo_id) === Number(catalogoId);
+        }) || null;
+    }
+
+    function itemCatalogoPorId(catalogoId) {
+        return catalogo.find(function (item) {
+            return Number(item.id) === Number(catalogoId);
+        }) || null;
+    }
+
+    function itemsSeleccionados() {
+        return Array.from(seleccionados)
+            .map(function (catalogoId) {
+                const itemCatalogo = itemCatalogoPorId(catalogoId);
+                const asociacion = asociacionPorCatalogoId(catalogoId);
+                return {
+                    id: Number(catalogoId),
+                    codigo: String(
+                        (itemCatalogo && itemCatalogo.codigo)
+                        || (asociacion && asociacion.codigo)
+                        || ""
+                    ).trim(),
+                };
+            })
+            .filter(function (item) { return Boolean(item.codigo); })
+            .sort(function (a, b) {
+                return a.codigo.localeCompare(b.codigo, "es", { numeric: true });
+            });
+    }
+
+    function opcionesSeleccionables() {
+        const porId = new Map();
+
+        catalogo.forEach(function (item) {
+            if (item && item.activo) {
+                porId.set(Number(item.id), {
+                    id: Number(item.id),
+                    codigo: String(item.codigo || "").trim(),
+                    catalogo_activo: true,
+                });
+            }
+        });
+
+        asociaciones.forEach(function (item) {
+            if (!item || !item.activo) {
+                return;
+            }
+            const id = Number(item.catalogo_id);
+            if (!porId.has(id)) {
+                porId.set(id, {
+                    id: id,
+                    codigo: String(item.codigo || "").trim(),
+                    catalogo_activo: Boolean(item.catalogo_activo),
+                });
+            }
+        });
+
+        return Array.from(porId.values()).sort(function (a, b) {
+            return a.codigo.localeCompare(b.codigo, "es", { numeric: true });
+        });
+    }
+
+    function renderizar() {
+        if (!toggle || !resumen || !opciones || !seleccionadosInput) {
+            return;
+        }
+
+        const seleccion = itemsSeleccionados();
+        const texto = seleccion.map(function (item) { return item.codigo; }).join(", ");
+        resumen.textContent = texto || "Seleccionar Anexos POF";
+        seleccionadosInput.value = texto;
+        seleccionadosInput.placeholder = !asociacionesCargadas
+            ? "Estado actual no disponible"
+            : (seleccion.length ? "" : "Ninguno seleccionado");
+
+        const items = opcionesSeleccionables();
+        const opcionesHtml = items.length
+            ? items.map(function (item) {
+                const seleccionado = seleccionados.has(Number(item.id));
+                const retirado = !item.catalogo_activo;
+                return (
+                    '<label class="pof-admin-offers-option'
+                    + (retirado ? ' pof-admin-anexo-option-retired' : '')
+                    + '">'
+                    + '<input type="checkbox" data-anexo-carga-catalogo-id="'
+                    + Number(item.id)
+                    + '"'
+                    + (seleccionado ? " checked" : "")
+                    + (!asociacionesCargadas ? " disabled" : "")
+                    + '>'
+                    + '<span><strong>' + escaparHtml(item.codigo) + '</strong>'
+                    + (retirado
+                        ? '<small>Catálogo retirado · vigente actualmente</small>'
+                        : '')
+                    + '</span></label>'
+                );
+            }).join("")
+            : '<div class="pof-admin-offers-empty">No hay códigos disponibles todavía.</div>';
+
+        opciones.innerHTML = opcionesHtml
+            + '<button type="button" class="pof-admin-anexo-create-option" data-anexo-carga-crear-nuevo'
+            + (!asociacionesCargadas ? " disabled" : "")
+            + '>'
+            + '<span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">add</span>'
+            + '<span>Crear nuevo Anexo POF</span>'
+            + '</button>';
+
+        const bloqueado = cargando || creando || !propietarioActual || !catalogoCargado;
+        toggle.disabled = bloqueado;
+        if (nuevoCodigo) {
+            nuevoCodigo.disabled = bloqueado || !asociacionesCargadas;
+        }
+        if (crearButton) {
+            crearButton.disabled = bloqueado || !asociacionesCargadas;
+        }
+        if (cancelarButton) {
+            cancelarButton.disabled = creando;
+        }
+        if (notificarCambios && typeof config.onChange === "function") {
+            config.onChange();
+        }
+    }
+
+    function reset() {
+        secuencia += 1;
+        catalogo = [];
+        asociaciones = [];
+        seleccionados = new Set();
+        propietarioActual = null;
+        catalogoCargado = false;
+        asociacionesCargadas = false;
+        cargando = false;
+        creando = false;
+        if (propietarioTexto) {
+            propietarioTexto.textContent = "Propietario administrativo";
+        }
+        cerrarOpciones();
+        cerrarAlta(true);
+        mostrarEstado("", "");
+        renderizar();
+    }
+
+    function validarRespuestaLectura(resultado, mensajeFallback) {
+        const response = resultado && resultado.response;
+        const data = resultado && resultado.data || {};
+        if (!response || !response.ok || !data.ok) {
+            const error = new Error(data.mensaje || mensajeFallback);
+            error.detalle = data.errores || {};
+            throw error;
+        }
+        return data;
+    }
+
+    async function cargar(propietario) {
+        reset();
+        const tipo = String(propietario && propietario.tipo || "").trim().toUpperCase();
+        const valor = String(propietario && propietario.valor || "").trim();
+        if (!tipo || !valor) {
+            mostrarEstado("error", "No se pudo resolver el propietario de Anexo POF.");
+            return false;
+        }
+
+        propietarioActual = { tipo: tipo, valor: valor };
+        if (propietarioTexto) {
+            propietarioTexto.textContent = tipo + " " + valor;
+        }
+        const miSecuencia = ++secuencia;
+        cargando = true;
+        mostrarEstado("warn", "Cargando Código(s) Anexo POF...");
+        renderizar();
+
+        try {
+            const urlCatalogo = new URL(config.catalogoUrl, window.location.origin);
+            urlCatalogo.searchParams.set("incluir_inactivos", "1");
+            const urlAsociaciones = new URL(config.asociacionesUrl, window.location.origin);
+            urlAsociaciones.searchParams.set("tipo", tipo);
+            urlAsociaciones.searchParams.set("valor", valor);
+            urlAsociaciones.searchParams.set("incluir_inactivas", "1");
+
+            const resultados = await Promise.allSettled([
+                solicitarJsonLecturaResiliente(urlCatalogo.toString()),
+                solicitarJsonLecturaResiliente(urlAsociaciones.toString()),
+            ]);
+
+            if (miSecuencia !== secuencia) {
+                return false;
+            }
+
+            const errores = [];
+            if (resultados[0].status === "fulfilled") {
+                const dataCatalogo = validarRespuestaLectura(
+                    resultados[0].value,
+                    "No se pudo cargar el catálogo Anexo POF."
+                );
+                catalogo = Array.isArray(dataCatalogo.data && dataCatalogo.data.codigos)
+                    ? dataCatalogo.data.codigos
+                    : [];
+                catalogoCargado = true;
+            } else {
+                errores.push("No se pudo cargar el catálogo Anexo POF.");
+            }
+
+            if (resultados[1].status === "fulfilled") {
+                const dataAsociaciones = validarRespuestaLectura(
+                    resultados[1].value,
+                    "No se pudieron cargar las asociaciones Anexo POF."
+                );
+                asociaciones = Array.isArray(
+                    dataAsociaciones.data && dataAsociaciones.data.asociaciones
+                )
+                    ? dataAsociaciones.data.asociaciones
+                    : [];
+                asociacionesCargadas = true;
+                seleccionados = new Set(
+                    asociaciones
+                        .filter(function (item) { return Boolean(item.activo); })
+                        .map(function (item) { return Number(item.catalogo_id); })
+                );
+            } else {
+                errores.push("No se pudieron cargar las asociaciones Anexo POF.");
+            }
+
+            cargando = false;
+            renderizar();
+
+            if (errores.length) {
+                mostrarEstado(
+                    "error",
+                    errores.join(" ")
+                    + " Reintentá antes de guardar para evitar modificar asociaciones sin conocer su estado actual."
+                );
+                return false;
+            }
+
+            mostrarEstado("ok", "Código(s) Anexo POF listos para editar. No es obligatorio seleccionar un código.");
+            return true;
+        } catch (error) {
+            if (miSecuencia !== secuencia) {
+                return false;
+            }
+            cargando = false;
+            catalogoCargado = false;
+            asociacionesCargadas = false;
+            renderizar();
+            mostrarEstado("error", error && error.message
+                ? error.message
+                : "No se pudo cargar Anexo POF.");
+            return false;
+        }
+    }
+
+    async function crearCodigo() {
+        if (
+            creando
+            || !propietarioActual
+            || !catalogoCargado
+            || !asociacionesCargadas
+        ) {
+            return;
+        }
+
+        const codigo = String(nuevoCodigo && nuevoCodigo.value || "").trim();
+        if (!codigo) {
+            mostrarEstado("warn", "Ingresá un Código Anexo POF.");
+            if (nuevoCodigo) {
+                nuevoCodigo.focus();
+            }
+            return;
+        }
+
+        creando = true;
+        renderizar();
+        mostrarEstado("warn", "Creando Código Anexo POF...");
+
+        try {
+            const response = await fetch(config.catalogoCrearUrl, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": obtenerCsrfToken(),
+                    "X-Requested-With": "XMLHttpRequest",
+                    "Accept": "application/json",
+                },
+                body: JSON.stringify({ codigo: codigo }),
+            });
+            const texto = await response.text();
+            let data = {};
+            try {
+                data = texto ? JSON.parse(texto) : {};
+            } catch (errorParseo) {
+                throw new Error("Respuesta inesperada del servidor al crear el Código Anexo POF.");
+            }
+            if (!response.ok || !data.ok) {
+                throw new Error(data.mensaje || "No se pudo crear el Código Anexo POF.");
+            }
+
+            const item = data.data && data.data.codigo;
+            if (!item || !Number(item.id)) {
+                throw new Error("El servidor no devolvió el Código Anexo POF creado.");
+            }
+
+            const id = Number(item.id);
+            catalogo = catalogo.filter(function (existente) {
+                return Number(existente.id) !== id;
+            });
+            catalogo.push(item);
+            seleccionados.add(id);
+            cerrarAlta(true);
+            cerrarOpciones();
+            mostrarEstado(
+                "ok",
+                "Código creado y seleccionado. La asociación se confirmará al guardar la carga."
+            );
+        } catch (error) {
+            mostrarEstado(
+                "error",
+                error && error.message
+                    ? error.message
+                    : "No se pudo crear el Código Anexo POF."
+            );
+        } finally {
+            creando = false;
+            renderizar();
+        }
+    }
+
+    if (toggle) {
+        toggle.addEventListener("click", function () {
+            if (toggle.disabled) {
+                return;
+            }
+            const abrir = opciones.classList.contains("pof-hidden");
+            opciones.classList.toggle("pof-hidden", !abrir);
+            toggle.setAttribute("aria-expanded", abrir ? "true" : "false");
+        });
+    }
+
+    if (opciones) {
+        opciones.addEventListener("change", function (event) {
+            const input = event.target.closest("[data-anexo-carga-catalogo-id]");
+            if (!input || !asociacionesCargadas) {
+                return;
+            }
+            const id = Number(input.dataset.anexoCargaCatalogoId);
+            if (!id) {
+                return;
+            }
+            if (input.checked) {
+                seleccionados.add(id);
+            } else {
+                seleccionados.delete(id);
+            }
+            renderizar();
+        });
+
+        opciones.addEventListener("click", function (event) {
+            const button = event.target.closest("[data-anexo-carga-crear-nuevo]");
+            if (!button || button.disabled || !nuevoPanel) {
+                return;
+            }
+            nuevoPanel.classList.remove("pof-hidden");
+            cerrarOpciones();
+            if (nuevoCodigo) {
+                nuevoCodigo.focus();
+            }
+        });
+    }
+
+    if (crearButton) {
+        crearButton.addEventListener("click", crearCodigo);
+    }
+    if (cancelarButton) {
+        cancelarButton.addEventListener("click", function () {
+            cerrarAlta(true);
+            mostrarEstado("", "");
+        });
+    }
+
+    renderizar();
+    notificarCambios = true;
+
+    return {
+        reset: reset,
+        cargar: cargar,
+        estaListo: function () {
+            return Boolean(
+                propietarioActual
+                && catalogoCargado
+                && asociacionesCargadas
+                && !cargando
+                && !creando
+            );
+        },
+        obtenerCatalogoIdsSeleccionados: function () {
+            return Array.from(seleccionados)
+                .map(Number)
+                .filter(function (id) { return id > 0; })
+                .sort(function (a, b) { return a - b; });
+        },
+        obtenerPropietario: function () {
+            return propietarioActual
+                ? { tipo: propietarioActual.tipo, valor: propietarioActual.valor }
+                : null;
+        },
+    };
+}

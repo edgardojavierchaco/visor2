@@ -43,20 +43,18 @@
             {% include "cef/gestionar_grupo_resumen_cef.html" %}
         </div>
 
-        {% if modo_historial %}
-            <section class="cef-course-section">
-                <div class="cef-course-section-head"><h3>Trazabilidad del estado</h3></div>
-                <div class="alert alert-light mb-2">Alta inicial · {{ grupo.creado_en|date:"d/m/Y" }}</div>
-                {% for movimiento in movimientos_estado %}
-                    <div class="alert alert-light mb-2">
-                        <strong>{% if movimiento.estado_resultante == 'activo' %}Reactivado{% else %}Baja{% endif %}</strong>
-                        · {{ movimiento.fecha|date:"d/m/Y" }}{% if movimiento.motivo %} — {{ movimiento.motivo }}{% endif %}
-                    </div>
-                {% empty %}
-                    <div class="text-muted small">No existen movimientos posteriores registrados.</div>
-                {% endfor %}
-            </section>
-        {% endif %}
+        <section class="cef-course-section">
+            <div class="cef-course-section-head"><h3>Trazabilidad del estado</h3></div>
+            <div class="alert alert-light mb-2"><strong>Alta inicial</strong> · {{ grupo.creado_en|date:"d/m/Y" }}</div>
+            {% for movimiento in movimientos_estado %}
+                <div class="alert alert-light mb-2">
+                    <strong>{% if movimiento.estado_resultante == 'activo' %}Reactivado{% else %}Baja{% endif %}</strong>
+                    · {{ movimiento.fecha|date:"d/m/Y" }}{% if movimiento.motivo %} — {{ movimiento.motivo }}{% endif %}
+                </div>
+            {% empty %}
+                <div class="text-muted small">No existen movimientos posteriores registrados.</div>
+            {% endfor %}
+        </section>
 
         {% include "cef/gestionar_grupo_docentes_seccion_cef.html" %}
 

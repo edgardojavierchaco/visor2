@@ -36,7 +36,7 @@ from ..models import (
     usuario_tiene_alcance_restringido_pof,
 )
 from .anexo_pof_service import (
-    TIPO_PROPIETARIO_CUE,
+    TIPO_PROPIETARIO_CUEANEXO,
     TIPO_PROPIETARIO_CUOF,
     obtener_codigos_activos_propietarios,
 )
@@ -1032,6 +1032,48 @@ def _obtener_queryset_base(request):
     return _aplicar_alcance_visualizacion(queryset, request.user)
 
 
+def _motor_busqueda_normalizada():
+    # Importacion diferida: Exportar importa Reunidas, que a su vez importa Visualizacion.
+    from . import exportacion_reunida
+
+    return exportacion_reunida
+
+
+def _campos_busqueda_normalizada_columna():
+    motor = _motor_busqueda_normalizada()
+    return {
+        "cueanexo": ("localizacion__cueanexo", motor._BUSQUEDA_IDENTIFICADOR_DIGITOS),
+        "cue": ("localizacion__cueanexo", motor._BUSQUEDA_IDENTIFICADOR_DIGITOS),
+        "anexo": ("localizacion__cueanexo", motor._BUSQUEDA_IDENTIFICADOR_DIGITOS),
+        "cuof": ("localizacion__cuof", motor._BUSQUEDA_IDENTIFICADOR_ALNUM),
+        "cui": ("localizacion__cui", motor._BUSQUEDA_IDENTIFICADOR_ALNUM),
+        "ceic": ("ceic", motor._BUSQUEDA_IDENTIFICADOR_DIGITOS),
+        "cargo": ("cargo", motor._BUSQUEDA_TEXTO),
+        "oferta": ("oferta", motor._BUSQUEDA_TEXTO),
+        "observacion": ("observacion", motor._BUSQUEDA_TEXTO),
+    }
+
+
+def _anotar_busquedas_normalizadas_columna(queryset, columnas_ids):
+    columnas_ids = set(columnas_ids)
+    campos = _campos_busqueda_normalizada_columna()
+    motor = _motor_busqueda_normalizada()
+    anotaciones = {
+        f"_busqueda_{columna_id}_visualizacion": motor._expresion_normalizada_busqueda_exportacion(
+            campo,
+            tipo_campo,
+        )
+        for columna_id, (campo, tipo_campo) in campos.items()
+        if columna_id in columnas_ids
+    }
+    if columnas_ids.intersection(OFERTA_CARGO_COLUMNAS) - {"oferta"}:
+        anotaciones["_busqueda_ofertas_visualizacion"] = motor._expresion_normalizada_busqueda_exportacion(
+            "ofertas_seleccionadas",
+            motor._BUSQUEDA_TEXTO,
+        )
+    return queryset.annotate(**anotaciones) if anotaciones else queryset
+
+
 def _agregar_anotaciones_busqueda(queryset):
     return queryset.annotate(
         ceic_busqueda=Cast("ceic", CharField()),
@@ -1086,6 +1128,28 @@ def _snapshot_lookup_q(campo, operador, valor):
 def _oferta_cargo_lookup_q(campo_id, operador, valor):
     exacto = operador in {"2", "7"}
     sin_ofertas = Q(ofertas_seleccionadas=[]) | Q(ofertas_seleccionadas__isnull=True)
+
+    if operador == "0":
+        motor = _motor_busqueda_normalizada()
+        alias = (
+            "_busqueda_oferta_visualizacion"
+            if campo_id == "oferta"
+            else "_busqueda_ofertas_visualizacion"
+        )
+        consulta = motor._condicion_busqueda_normalizada_exportacion(
+            alias,
+            valor,
+            motor._BUSQUEDA_TEXTO,
+        )
+        snapshot = motor._exists_busqueda_snapshot_inteligente_exportacion(
+            campo_id,
+            valor,
+            motor._BUSQUEDA_TEXTO,
+        )
+        if consulta is None or snapshot is None:
+            return None
+        sin_valor = Q(oferta="") & sin_ofertas if campo_id == "oferta" else sin_ofertas
+        return consulta | (sin_valor & Q(snapshot))
 
     if campo_id == "oferta":
         consulta = Q(oferta__icontains=valor)
@@ -1184,6 +1248,10 @@ def _aplicar_filtro_q(queryset, filtro_q, operador):
 
 
 def _aplicar_filtros_avanzados(queryset, filtros_avanzados):
+    queryset = _anotar_busquedas_normalizadas_columna(
+        queryset,
+        [filtro["campo"] for filtro in filtros_avanzados if filtro["operador"] == "0"],
+    )
     grupos = {}
     filtros_sueltos = []
 
@@ -1315,15 +1383,16 @@ def _aplicar_busqueda_general(queryset, busqueda):
 
 def _observacion_parecido_q(valor):
     """
-    Construye la consulta por términos para Observación con operador 0.
+    Construye la consulta normalizada para Observacion con operador 0.
 
-    - Ignora espacios iniciales, finales y repetidos mediante `split()`.
-    - Limita la consulta a cinco términos útiles.
-    - Combina cada término con `AND` usando `observacion__icontains` en PostgreSQL.
+    - Reutiliza tokens sin tildes, mayusculas ni puntuacion de Exportar POF.
+    - Conserva el limite de cinco terminos utiles y su combinacion AND.
     """
+    motor = _motor_busqueda_normalizada()
+    terminos = motor._tokens_texto_busqueda_exportacion(valor)[:MAX_TERMINOS_BUSQUEDA_OBSERVACION]
     consulta = Q()
-    for termino in str(valor or "").split()[:MAX_TERMINOS_BUSQUEDA_OBSERVACION]:
-        consulta &= Q(observacion__icontains=termino)
+    for termino in terminos:
+        consulta &= Q(_busqueda_observacion_visualizacion__contains=termino)
     return consulta
 
 
@@ -1333,34 +1402,53 @@ def _busqueda_columna_q(columna_id, valor):
 
     - Centraliza la semántica `parecido a` que también usa el filtro avanzado
       canónico con operador 0.
-    - Conserva búsquedas parciales, sufijos y estados según cada columna.
-    - Busca Observación por hasta cinco términos independientes solo con operador 0.
+    - Normaliza texto e identificadores con el mismo motor de Exportar POF.
+    - Conserva sufijos de Anexo, estados y hasta cinco terminos en Observacion.
     - Devuelve solo expresiones Q; no consulta ni materializa registros.
     """
-    if columna_id == "cueanexo":
-        return Q(localizacion__cueanexo__icontains=valor)
-    if columna_id == "cue":
-        return Q(localizacion__cueanexo__icontains=valor)
+    motor = _motor_busqueda_normalizada()
+    campos = _campos_busqueda_normalizada_columna()
+    if columna_id == "observacion":
+        return _observacion_parecido_q(valor)
     if columna_id == "anexo":
-        return Q(localizacion__cueanexo__endswith=valor)
-    if columna_id == "cuof":
-        return Q(localizacion__cuof__icontains=valor)
-    if columna_id == "cui":
-        return Q(localizacion__cui__icontains=valor)
+        normalizado = motor._normalizar_identificador_busqueda_exportacion(
+            valor,
+            solo_digitos=True,
+        )
+        return Q(_busqueda_anexo_visualizacion__endswith=normalizado) if normalizado else None
     if columna_id in OFERTA_CARGO_COLUMNAS:
         return _oferta_cargo_lookup_q(columna_id, "0", valor)
+    if columna_id in campos:
+        _campo, tipo_campo = campos[columna_id]
+        return motor._condicion_busqueda_normalizada_exportacion(
+            f"_busqueda_{columna_id}_visualizacion",
+            valor,
+            tipo_campo,
+        )
     if columna_id in SNAPSHOT_COLUMNAS:
-        return _snapshot_filter_q(SNAPSHOT_COLUMNAS[columna_id], valor)
-    if columna_id == "ceic":
-        return Q(ceic_busqueda__icontains=valor)
-    if columna_id == "cargo":
-        return Q(cargo__icontains=valor)
+        if columna_id == "puntos_zona_educativa":
+            return _snapshot_filter_q(SNAPSHOT_COLUMNAS[columna_id], valor)
+        tipo_campo = (
+            motor._BUSQUEDA_IDENTIFICADOR_ALNUM
+            if columna_id == "numero_establecimiento"
+            else motor._BUSQUEDA_TEXTO
+        )
+        snapshot = motor._exists_busqueda_snapshot_inteligente_exportacion(
+            SNAPSHOT_COLUMNAS[columna_id],
+            valor,
+            tipo_campo,
+        )
+        return Q(snapshot) if snapshot is not None else None
     if columna_id == "cantidad":
         return Q(cantidad_busqueda__icontains=valor)
     if columna_id == "unidad_cantidad":
         return _estado_o_unidad_q("unidad_cantidad", valor, CargoPof.UnidadCantidad.choices)
     if columna_id == "puntos_asignados":
-        return Q(puntos_busqueda__icontains=valor)
+        consulta = Q(puntos_busqueda__icontains=valor)
+        numero = _decimal_valor(valor)
+        if numero is not None:
+            consulta |= Q(puntos_asignados=numero)
+        return consulta
     if columna_id == "total":
         return Q(total_busqueda__icontains=valor)
     if columna_id == "estado_pof":
@@ -1370,8 +1458,6 @@ def _busqueda_columna_q(columna_id, valor):
             CargoPof.EstadoPof.choices,
             extras={CargoPof.EstadoPof.DESAFECTADO: "Baja"},
         )
-    if columna_id == "observacion":
-        return _observacion_parecido_q(valor)
     if columna_id == "actualizado_en":
         return Q(actualizado_busqueda__icontains=valor)
 
@@ -1386,6 +1472,7 @@ def _aplicar_busqueda_columna(queryset, columna_id, valor):
     - Mantiene la búsqueda como una operación ORM sin datasets intermedios.
     - Deja intacto el queryset si la columna no es reconocida.
     """
+    queryset = _anotar_busquedas_normalizadas_columna(queryset, [columna_id])
     filtro_q = _busqueda_columna_q(columna_id, valor)
     return queryset.filter(filtro_q) if filtro_q is not None else queryset
 
@@ -1673,11 +1760,11 @@ def _aplicar_estado_zona_fila_visualizacion(fila_raw, estado_zona):
 
 
 def _resolver_propietario_anexo_pof_visualizacion(localizacion):
-    cue = str(getattr(localizacion, "cue_base", "") or "").strip()
-    if len(cue) == 7 and cue.isdigit():
+    cueanexo = str(getattr(localizacion, "cueanexo", "") or "").strip()
+    if len(cueanexo) == 9 and cueanexo.isdigit():
         return {
-            "tipo": TIPO_PROPIETARIO_CUE,
-            "valor": cue,
+            "tipo": TIPO_PROPIETARIO_CUEANEXO,
+            "valor": cueanexo,
         }
 
     es_proyecto_especial = bool(
@@ -1698,8 +1785,8 @@ def _resolver_codigos_anexo_pof_visualizacion(cargos):
     """
     Resuelve Código(s) Anexo POF para un conjunto materializado de cargos.
 
-    Ejecuta una sola consulta bulk y conserva la precedencia CUE > CUOF.
-    Reunidas sin CUE no caen a CUOF; el fallback CUOF existe sólo para PE.
+    Ejecuta una sola consulta bulk y conserva la precedencia CUEANEXO > CUOF.
+    Reunidas sin CUEANEXO no caen a CUOF; el fallback CUOF existe sólo para PE.
     """
     propietarios = []
     claves_por_cargo = {}

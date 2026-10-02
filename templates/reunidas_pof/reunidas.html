@@ -223,6 +223,15 @@
 
 <div class="pof-page">
     {% include "reunidas_pof/menu_pof.html" with seccion_activa="reunidas" %}
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="pof-status {% if 'success' in message.tags %}ok{% elif 'warning' in message.tags %}warn{% elif 'error' in message.tags %}error{% else %}info{% endif %}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
     <div class="pof-view-header">
         <div class="pof-view-header-icon-box" aria-hidden="true">
             <span class="pof-header-icon material-symbols-outlined" aria-hidden="true">collections_bookmark</span>
@@ -327,9 +336,6 @@
                                         <span class="pof-action-icon pof-material-symbol pof-icon-settings material-symbols-outlined" aria-hidden="true">settings_account_box</span>
                                     </button>
                                     <div class="dropdown-menu pof-grid-dropdown-menu pof-grid-actions-menu">
-                                        <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-detail" href="{% url 'reunidas_pof:detalle_reunida' %}?anio={{ reunida.anio }}&amp;nivel={{ reunida.nivel_codigo }}">
-                                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">info</span> VER DETALLE
-                                        </a>
                                         <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-primary" href="{% url 'reunidas_pof:cargar_cargos' %}?cabecera_tipo=REUNIDA&amp;anio={{ reunida.anio }}&amp;nivel={{ reunida.nivel_codigo|urlencode }}">
                                             <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">group</span> AFECTAR CARGOS
                                         </a>

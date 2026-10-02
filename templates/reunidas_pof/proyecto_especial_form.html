@@ -17,6 +17,9 @@
         {% csrf_token %}
         <h2>Datos del Proyecto Especial</h2>
         <div class="pof-help">El año y el nombre son obligatorios. La resolución, observación y proyecto base son opcionales.</div>
+        {% if form.identidad_bloqueada %}
+            <div class="pof-help">El año y el proyecto base están bloqueados porque este proyecto ya tiene datos. Podés editar nombre, resolución y observación.</div>
+        {% endif %}
 
         {% if form.non_field_errors %}
             <div class="pof-status error">

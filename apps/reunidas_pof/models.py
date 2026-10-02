@@ -448,6 +448,19 @@ class ProyectosEspecialesPof(models.Model):
 
         ordering = ["-anio", "nombre"]
 
+    def tiene_datos_operativos(self):
+        """Indica si la identidad anual/base ya fue utilizada por datos propios."""
+        if not self.pk:
+            return False
+        return (
+            LocalizacionPof.objects.filter(proyecto_especial_id=self.pk).exists()
+            or CargoPof.objects.filter(localizacion__proyecto_especial_id=self.pk).exists()
+            or LoteCargaPof.objects.filter(proyecto_especial_id=self.pk).exists()
+            or SnapshotPadronLocalizacionPof.objects.filter(
+                localizacion__proyecto_especial_id=self.pk
+            ).exists()
+        )
+
     def clean(self):
         """
         Valida reglas internas antes de guardar el Proyecto Especial POF.
@@ -468,6 +481,19 @@ class ProyectosEspecialesPof(models.Model):
             raise ValidationError({
                 "nombre": "El nombre de los Proyectos Especiales POF es obligatorio."
             })
+
+        if self.pk:
+            original = type(self).objects.filter(pk=self.pk).values(
+                "anio", "proyecto_base_anterior_id"
+            ).first()
+            if original:
+                cambios_identidad = {}
+                if original["anio"] != self.anio:
+                    cambios_identidad["anio"] = "No se puede cambiar el año de un proyecto que ya tiene datos."
+                if original["proyecto_base_anterior_id"] != self.proyecto_base_anterior_id:
+                    cambios_identidad["proyecto_base_anterior"] = "No se puede cambiar la base de un proyecto que ya tiene datos."
+                if cambios_identidad and self.tiene_datos_operativos():
+                    raise ValidationError(cambios_identidad)
 
         if self.proyecto_base_anterior_id:
             if self.pk and self.proyecto_base_anterior_id == self.pk:
@@ -702,7 +728,7 @@ class AsignacionAnexoPof(models.Model):
     MODELO LEGACY 0014. No utilizar en funcionalidad nueva ni vigente.
 
     Se conserva exclusivamente para mantener alineado el estado de modelos con las
-    tablas históricas mientras el dominio canónico opera por CUE/CUOF.
+    tablas históricas mientras el dominio canónico opera por CUEANEXO/CUOF.
     """
 
     reunida = models.ForeignKey(
@@ -982,14 +1008,14 @@ class HistorialAnexoPof(models.Model):
         )
 
 
-# ANEXO POF - DOMINIO CANONICO POR CUE/CUOF ------------------------------------------------------------
+# ANEXO POF - DOMINIO CANONICO POR CUEANEXO/CUOF --------------------------------------------------------
 
 class CatalogoAnexoPof(models.Model):
     """
     Catálogo global de valores posibles de Código Anexo POF.
 
     El estado activo controla si el código puede utilizarse para nuevas
-    asociaciones. Desactivarlo no modifica asociaciones CUE/CUOF existentes.
+    asociaciones. Desactivarlo no modifica asociaciones CUEANEXO/CUOF existentes.
     El valor del código es inmutable una vez creado.
     """
 
@@ -1152,18 +1178,18 @@ class AsociacionAnexoPof(models.Model):
     Asociación canónica entre un Código Anexo POF y su propietario.
 
     El propietario es exactamente uno:
-    - CUE para el dominio normal y para Proyecto Especial cuando existe CUE.
-    - CUOF únicamente como fallback de Proyecto Especial cuando no existe CUE.
+    - CUEANEXO de Padrón para el dominio normal y para Proyecto Especial cuando existe.
+    - CUOF únicamente como fallback de Proyecto Especial cuando no existe CUEANEXO.
 
     Una asociación no se elimina físicamente: su vigencia se controla con activo.
     La identidad propietario+código es inmutable una vez creada.
     """
 
-    cue = models.CharField(
-        max_length=7,
+    cueanexo = models.CharField(
+        max_length=9,
         blank=True,
         default="",
-        verbose_name="CUE",
+        verbose_name="CUEANEXO",
     )
 
     cuof = models.CharField(
@@ -1212,21 +1238,21 @@ class AsociacionAnexoPof(models.Model):
             models.CheckConstraint(
                 condition=(
                     (
-                        ~models.Q(cue="")
+                        ~models.Q(cueanexo="")
                         & models.Q(cuof="")
                     )
                     |
                     (
-                        models.Q(cue="")
+                        models.Q(cueanexo="")
                         & ~models.Q(cuof="")
                     )
                 ),
                 name="ck_asoc_anexo_pof_propietario",
             ),
             models.UniqueConstraint(
-                fields=["cue", "codigo_catalogo"],
-                condition=~models.Q(cue=""),
-                name="uq_asoc_anexo_pof_cue_codigo",
+                fields=["cueanexo", "codigo_catalogo"],
+                condition=~models.Q(cueanexo=""),
+                name="uq_asoc_anexo_pof_cueanexo_codigo",
             ),
             models.UniqueConstraint(
                 fields=["cuof", "codigo_catalogo"],
@@ -1236,8 +1262,8 @@ class AsociacionAnexoPof(models.Model):
         ]
         indexes = [
             models.Index(
-                fields=["cue", "activo"],
-                name="idx_asoc_anexo_cue_activo",
+                fields=["cueanexo", "activo"],
+                name="idx_asoc_anexo_cueanexo_activo",
             ),
             models.Index(
                 fields=["cuof", "activo"],
@@ -1248,21 +1274,29 @@ class AsociacionAnexoPof(models.Model):
     def clean(self):
         super().clean()
 
-        self.cue = str(self.cue or "").strip()
+        self.cueanexo = str(self.cueanexo or "").strip()
         self.cuof = str(self.cuof or "").strip()
 
-        tiene_cue = bool(self.cue)
+        tiene_cueanexo = bool(self.cueanexo)
         tiene_cuof = bool(self.cuof)
 
-        if tiene_cue == tiene_cuof:
+        if tiene_cueanexo == tiene_cuof:
             raise ValidationError({
-                "cue": "La asociación debe tener exactamente un propietario: CUE o CUOF.",
-                "cuof": "La asociación debe tener exactamente un propietario: CUE o CUOF.",
+                "cueanexo": (
+                    "La asociación debe tener exactamente un propietario: "
+                    "CUEANEXO o CUOF."
+                ),
+                "cuof": (
+                    "La asociación debe tener exactamente un propietario: "
+                    "CUEANEXO o CUOF."
+                ),
             })
 
-        if tiene_cue and (len(self.cue) != 7 or not self.cue.isdigit()):
+        if tiene_cueanexo and (
+            len(self.cueanexo) != 9 or not self.cueanexo.isdigit()
+        ):
             raise ValidationError({
-                "cue": "El CUE debe tener exactamente 7 dígitos."
+                "cueanexo": "El CUEANEXO debe tener exactamente 9 dígitos."
             })
 
         if tiene_cuof and any(not caracter.isprintable() for caracter in self.cuof):
@@ -1274,20 +1308,21 @@ class AsociacionAnexoPof(models.Model):
             identidad_original = (
                 type(self).objects
                 .filter(pk=self.pk)
-                .values("cue", "cuof", "codigo_catalogo_id")
+                .values("cueanexo", "cuof", "codigo_catalogo_id")
                 .first()
             )
             if identidad_original is not None:
                 identidad_actual = {
-                    "cue": self.cue,
+                    "cueanexo": self.cueanexo,
                     "cuof": self.cuof,
                     "codigo_catalogo_id": self.codigo_catalogo_id,
                 }
                 if identidad_original != identidad_actual:
                     raise ValidationError({
                         "__all__": (
-                            "La identidad CUE/CUOF + Código Anexo POF no puede modificarse. "
-                            "Desactive la asociación y cree otra si corresponde."
+                            "La identidad CUEANEXO/CUOF + Código Anexo POF "
+                            "no puede modificarse. Desactive la asociación y cree "
+                            "otra si corresponde."
                         )
                     })
 
@@ -1297,11 +1332,11 @@ class AsociacionAnexoPof(models.Model):
 
     @property
     def tipo_propietario(self):
-        return "CUE" if self.cue else "CUOF"
+        return "CUEANEXO" if self.cueanexo else "CUOF"
 
     @property
     def propietario(self):
-        return self.cue or self.cuof
+        return self.cueanexo or self.cuof
 
     def __str__(self):
         estado = "activo" if self.activo else "inactivo"
@@ -1577,6 +1612,22 @@ class SnapshotPadronLocalizacionPof(models.Model):
         null=True,
         blank=True,
         verbose_name="Puntos Zona Educativa",
+    )
+
+    # Marca una acción humana explícita de asignación/cambio de Zona Educativa.
+    # Permite distinguir la primera asignación manual de una Zona heredada al crear ciclo.
+    zona_educativa_evento = models.BooleanField(
+        default=False,
+        verbose_name="Evento explícito de Zona Educativa",
+    )
+
+    # Observación opcional escrita por el usuario para documentar este cambio de Zona.
+    # No se hereda ni se reutiliza en snapshots posteriores.
+    observacion_zona_educativa = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name="Observación del cambio de Zona Educativa",
     )
 
     # Datos completos del padrón en formato JSON para conservar la foto original.
@@ -1944,6 +1995,19 @@ class CargoPof(models.Model):
         verbose_name="Lote de carga POF",
     )
 
+    # Procedencia exacta del cargo cuando se copia desde una cabecera anterior.
+    # Las altas nuevas y los registros históricos sin trazabilidad quedan sin origen.
+    cargo_origen = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        editable=False,
+        related_name="cargos_derivados",
+        verbose_name="Cargo de origen",
+        help_text="Cargo de la cabecera base que dio origen a esta copia.",
+    )
+
     # Código CEIC del cargo.
     ceic = models.PositiveIntegerField(
         db_index=True,
@@ -2109,6 +2173,38 @@ class CargoPof(models.Model):
             ),
         ]
 
+    def _validar_cargo_origen(self, localizacion):
+        """Valida sólo el vínculo explícito con la base declarada del ciclo."""
+        if not self.cargo_origen_id:
+            return
+        mensaje = "El cargo de origen debe pertenecer a la base anterior declarada y a un año anterior."
+        if self.pk and self.cargo_origen_id == self.pk:
+            raise ValidationError({"cargo_origen": "Un cargo no puede ser su propio origen."})
+        try:
+            origen = self.cargo_origen.localizacion
+            if localizacion.reunida_id and not localizacion.proyecto_especial_id:
+                cabecera = localizacion.reunida
+                base_id = cabecera.reunida_base_anterior_id
+                compatible = (
+                    base_id and origen.reunida_id == base_id
+                    and not origen.proyecto_especial_id
+                )
+                cabecera_origen = origen.reunida if compatible else None
+            elif localizacion.proyecto_especial_id and not localizacion.reunida_id:
+                cabecera = localizacion.proyecto_especial
+                base_id = cabecera.proyecto_base_anterior_id
+                compatible = (
+                    base_id and origen.proyecto_especial_id == base_id
+                    and not origen.reunida_id
+                )
+                cabecera_origen = origen.proyecto_especial if compatible else None
+            else:
+                raise ValidationError({"cargo_origen": mensaje})
+        except ObjectDoesNotExist:
+            raise ValidationError({"cargo_origen": "No existe una procedencia válida para este cargo."})
+        if not compatible or cabecera_origen.anio >= cabecera.anio:
+            raise ValidationError({"cargo_origen": mensaje})
+
     def clean(self):
         """
         Valida reglas internas antes de guardar el cargo.
@@ -2156,6 +2252,8 @@ class CargoPof(models.Model):
             raise ValidationError({
                 "lote_carga": "El lote de carga no pertenece a la localización indicada."
             })
+
+        self._validar_cargo_origen(localizacion)
 
     def save(self, *args, **kwargs):
         """

@@ -104,6 +104,22 @@
                 {% endif %}
 
                 <div class="pof-visual-toolbar-actions">
+                    {% if es_proyecto_especial %}
+                        <a href="{% url 'reunidas_pof:cargar_cargos_proyecto_especial' %}?proyecto_especial_id={{ proyecto_especial.id|urlencode }}"
+                           class="pof-btn pof-btn-primary pof-visual-toolbar-btn pof-visual-toggle-btn"
+                           title="Afectar cargos en este Proyecto Especial"
+                           aria-label="Afectar cargos en este Proyecto Especial">
+                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">add</span> Afectar cargos
+                        </a>
+                    {% else %}
+                        <a href="{% url 'reunidas_pof:cargar_cargos' %}?anio={{ reunida.anio|urlencode }}&amp;nivel={{ reunida.nivel_codigo|urlencode }}"
+                           class="pof-btn pof-btn-primary pof-visual-toolbar-btn pof-visual-toggle-btn"
+                           title="Afectar cargos en esta Reunida"
+                           aria-label="Afectar cargos en esta Reunida">
+                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">add</span> Afectar cargos
+                        </a>
+                    {% endif %}
+
                     <button type="button"
                             class="pof-btn pof-btn-outline-primary pof-visual-toolbar-btn pof-visual-toggle-btn{% if filtros_exportacion_activos %} pof-visual-toggle-active{% endif %}"
                             data-pof-export-filters-toggle
@@ -169,13 +185,6 @@
 
         <div class="pof-export-title">
 
-            {% if cabecera_querystring %}
-                <a href="{% url 'reunidas_pof:detalle_reunida' %}?{{ cabecera_querystring }}"
-                class="pof-export-btn-mini pof-export-btn-light pof-export-detail-btn">
-                    <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">arrow_circle_right</span> Ir a Detalles
-                </a>
-            {% endif %}
-
             {% if not es_proyecto_especial %}
                 <div class="pof-group-legend" aria-label="Separadores de grupo">
                     <span class="pof-group-legend-item"><span class="pof-group-legend-line pof-group-legend-line-cue" aria-hidden="true"></span>CUE</span>
@@ -199,6 +208,42 @@
                 {% endif %}
 
                 {% if cabecera_querystring %}
+                    <div class="dropdown pof-grid-dropdown pof-sort-dropdown"
+                         data-pof-sort-control
+                         data-current-sort="{% if orden_recientes_activo %}recientes{% else %}default{% endif %}">
+                        <button type="button"
+                                class="pof-btn pof-btn-outline-primary pof-visual-toolbar-btn pof-visual-toggle-btn dropdown-toggle{% if orden_recientes_activo %} pof-sort-button-active{% endif %}"
+                                data-toggle="dropdown"
+                                data-pof-sort-button
+                                aria-haspopup="true"
+                                aria-expanded="false"
+                                title="Cambiar el orden de la tabla">
+                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">sort</span>
+                            <span data-pof-sort-label>Ordenar por: {% if orden_recientes_activo %}&Uacute;ltima modificaci&oacute;n{% else %}Predeterminado{% endif %}</span>
+                        </button>
+
+                        <div class="dropdown-menu dropdown-menu-right pof-grid-dropdown-menu pof-sort-dropdown-menu">
+                            <button type="button"
+                                    class="dropdown-item pof-grid-dropdown-item pof-sort-option{% if not orden_recientes_activo %} pof-sort-option-active{% endif %}"
+                                    data-pof-sort-option
+                                    data-sort-value="default">
+                                <span class="pof-action-icon pof-material-symbol material-symbols-outlined pof-sort-option-check"
+                                      data-pof-sort-option-check
+                                      {% if orden_recientes_activo %}hidden{% endif %}>check</span>
+                                <span>Predeterminado</span>
+                            </button>
+                            <button type="button"
+                                    class="dropdown-item pof-grid-dropdown-item pof-sort-option{% if orden_recientes_activo %} pof-sort-option-active{% endif %}"
+                                    data-pof-sort-option
+                                    data-sort-value="recientes">
+                                <span class="pof-action-icon pof-material-symbol material-symbols-outlined pof-sort-option-check"
+                                      data-pof-sort-option-check
+                                      {% if not orden_recientes_activo %}hidden{% endif %}>check</span>
+                                <span>&Uacute;ltima modificaci&oacute;n</span>
+                            </button>
+                        </div>
+                    </div>
+
                     {% if es_proyecto_especial %}
                         <div class="dropdown pof-grid-dropdown">
                             <button type="button"
@@ -333,7 +378,7 @@
                                     <th data-pof-quantity-visual-column {% if not mostrar_columna_modificacion_cantidad %}hidden{% endif %}>Modificaci&oacute;n de cantidad</th>
                                 {% endif %}
                                 {% if columna.es_columna_observacion %}
-                                    <th data-pof-observation-visual-column {% if not mostrar_columna_modificacion_observacion %}hidden{% endif %}>Modificaci&oacute;n de observaci&oacute;n</th>
+                                    <th data-pof-observation-visual-column {% if not mostrar_columna_modificacion_observacion %}hidden{% endif %}>&Uacute;ltima modificaci&oacute;n del cargo</th>
                                 {% endif %}
                             {% endfor %}
                         {% elif columnas_preview_config %}
@@ -343,7 +388,7 @@
                                     <th data-pof-quantity-visual-column {% if not mostrar_columna_modificacion_cantidad %}hidden{% endif %}>Modificaci&oacute;n de cantidad</th>
                                 {% endif %}
                                 {% if columna.es_columna_observacion %}
-                                    <th data-pof-observation-visual-column {% if not mostrar_columna_modificacion_observacion %}hidden{% endif %}>Modificaci&oacute;n de observaci&oacute;n</th>
+                                    <th data-pof-observation-visual-column {% if not mostrar_columna_modificacion_observacion %}hidden{% endif %}>&Uacute;ltima modificaci&oacute;n del cargo</th>
                                 {% endif %}
                             {% endfor %}
                         {% else %}
@@ -402,6 +447,20 @@
                                                                 title="Ver historial de cantidad"><span class="pof-action-icon pof-history-detail-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">clock_loader_10</span></button>
                                                     {% endif %}
                                                 </span>
+                                            {% elif celda.es_columna_zona_educativa %}
+                                                <span class="pof-quantity-cell">
+                                                    {{ celda.valor|default:"—" }}
+                                                    {% if fila.mostrar_historial_zona and fila.cargo_id_historial_zona %}
+                                                        <button type="button"
+                                                                class="pof-history-detail-btn pof-quantity-history-btn pof-material-history-btn"
+                                                                data-pof-zone-history
+                                                                data-localizacion-id="{{ fila.localizacion_id }}"
+                                                                data-cargo-id="{{ fila.cargo_id_historial_zona }}"
+                                                                data-zone-label="{% if fila.cueanexo %}CUEANEXO {{ fila.cueanexo }}{% else %}CUOF {{ fila.cuof }}{% endif %}"
+                                                                aria-label="Ver historial de Zona Educativa"
+                                                                title="Ver historial de Zona Educativa"><span class="pof-action-icon pof-history-detail-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">clock_loader_10</span></button>
+                                                    {% endif %}
+                                                </span>
                                             {% elif celda.es_columna_estado_pof %}
                                                 <span class="pof-quantity-cell">
 
@@ -444,10 +503,10 @@
                                         {% endif %}
                                         {% if celda.es_columna_observacion %}
                                             <td data-pof-observation-visual-column {% if not mostrar_columna_modificacion_observacion %}hidden{% endif %}>
-                                                {% if fila.tiene_modificacion_observacion %}
-                                                    <span class="pof-grid-badge pof-grid-badge-modificacion">Modificado</span>
+                                                {% if fila.ultima_actividad %}
+                                                    {{ fila.ultima_actividad|date:"d/m/Y H:i" }}
                                                 {% else %}
-                                                    <span class="pof-grid-badge pof-grid-badge-desafectado">Sin modificaci&oacute;n</span>
+                                                    &mdash;
                                                 {% endif %}
                                             </td>
                                         {% endif %}
@@ -497,6 +556,17 @@
                     Mostrando CUEANEXO {{ paginacion_preview.primer_cueanexo }}-{{ paginacion_preview.ultimo_cueanexo }} de {{ paginacion_preview.total_cueanexo }}
                     &middot; P&aacute;gina {{ paginacion_preview.pagina_actual }} de {{ paginacion_preview.total_paginas }}
                 </span>
+                <label class="pof-page-size" for="exportarReunidaPageSize">
+                    Mostrar
+                    <select id="exportarReunidaPageSize"
+                            data-pof-export-page-size
+                            data-current-page-size="{{ paginacion_preview.cueanexos_por_pagina }}">
+                        {% for page_size in paginacion_preview.opciones_cueanexos_por_pagina %}
+                            <option value="{{ page_size }}"{% if page_size == paginacion_preview.cueanexos_por_pagina %} selected{% endif %}>{{ page_size }}</option>
+                        {% endfor %}
+                    </select>
+                    CUE-Anexo por p&aacute;gina
+                </label>
                 <nav class="pof-pagination" aria-label="Paginaci&oacute;n del preview por CUEANEXO">
                     {% if paginacion_preview.tiene_anterior %}
                         <a class="pof-page-btn"
@@ -531,6 +601,7 @@
     {% include "reunidas_pof/historial_cantidad_modal.html" %}
     {% include "reunidas_pof/historial_observacion_modal.html" %}
     {% include "reunidas_pof/historial_estado_modal.html" %}
+    {% include "reunidas_pof/zona_educativa_modales.html" %}
     {% include "reunidas_pof/gestion_cargo_modal.html" with gestion_cargo_success_mode="reload" %}
 
     
@@ -541,11 +612,12 @@
 {% block scripts %}
 {{ block.super }}
 <script src="{% static 'reunidas_pof/js/pof_api.js' %}?v=20260924-1"></script>
+<script src="{% static 'reunidas_pof/js/zona_educativa_detalle.js' %}?v=20261001-2"></script>
 <script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260829-1"></script>
 <script src="{% static 'reunidas_pof/js/historial_cantidad.js' %}?v=20260924-1"></script>
-<script src="{% static 'reunidas_pof/js/historial_observacion.js' %}?v=20260924-1"></script>
+<script src="{% static 'reunidas_pof/js/historial_observacion.js' %}?v=20261002-1"></script>
 <script src="{% static 'reunidas_pof/js/historial_estado.js' %}?v=20260924-1"></script>
-<script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20260924-7"></script>
+<script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20261002-2"></script>
 <script>
     (function () {
         const preview = document.querySelector(".pof-export-preview");
@@ -580,6 +652,16 @@
         const filterForm = document.querySelector("#exportarReunidaFiltrosForm");
         const filtersPanel = document.querySelector("#pofExportFiltersPanel");
         const filtersToggle = document.querySelector("[data-pof-export-filters-toggle]");
+        const sortControl = document.querySelector("[data-pof-sort-control]");
+        const sortButton = sortControl
+            ? sortControl.querySelector("[data-pof-sort-button]")
+            : null;
+        const sortLabel = sortControl
+            ? sortControl.querySelector("[data-pof-sort-label]")
+            : null;
+        const sortOptions = sortControl
+            ? Array.from(sortControl.querySelectorAll("[data-pof-sort-option]"))
+            : [];
         const filterDialog = document.querySelector("#exportarReunidaDialogFiltro");
         const filterBackdrop = document.querySelector("#exportarReunidaFiltroBackdrop");
         const filterDialogTitle = document.querySelector("#exportarReunidaDialogTitulo");
@@ -599,6 +681,8 @@
         const esProyectoEspecial = {% if es_proyecto_especial %}true{% else %}false{% endif %};
         const SEARCH_TO_ADVANCED = {
             cueanexo: "cueanexo",
+            numero_establecimiento: "numero_establecimiento",
+            nombre_establecimiento: "nombre_establecimiento",
             cuof: "cuof",
             ceic: "ceic",
             cargo: "cargo",
@@ -881,7 +965,6 @@
                 url.searchParams.set("col_" + nextState.columnId, nextState.value);
             }
             url.searchParams.delete("page");
-            url.searchParams.delete("page_size");
             return url;
         }
 
@@ -1591,7 +1674,6 @@
                 params.append("valor_filtro", value);
             });
             params.delete("page");
-            params.delete("page_size");
         }
 
         function replaceAdvancedFilterByIndex(url, indexToReplace, field, operator, values) {
@@ -1620,7 +1702,6 @@
                 params.append("valor_filtro", value);
             });
             params.delete("page");
-            params.delete("page_size");
         }
 
         function removeAdvancedFilterByIndex(url, indexToRemove) {
@@ -1642,7 +1723,6 @@
                 params.append("valor_filtro", valores[index] || "");
             });
             params.delete("page");
-            params.delete("page_size");
         }
 
         function editFilterFromChip(chip) {
@@ -1676,7 +1756,6 @@
                 url.searchParams.delete("col_" + field);
             }
             url.searchParams.delete("page");
-            url.searchParams.delete("page_size");
             void refreshPreviewFromUrl(url.toString());
         }
 
@@ -1689,7 +1768,6 @@
                 url.searchParams.delete(param);
             });
             url.searchParams.delete("page");
-            url.searchParams.delete("page_size");
             return url;
         }
 
@@ -1739,7 +1817,10 @@
                 + "#exportarReunidaFiltrosActivos [data-pof-export-clear-all], "
                 + "[data-pof-export-filters-toggle], "
                 + "#pofExportFiltersPanel .pof-visual-filter-btn, "
-                + "[data-pof-export-preview-pagination] a[href]"
+                + "[data-pof-sort-button], "
+                + "[data-pof-sort-option], "
+                + "[data-pof-export-preview-pagination] a[href], "
+                + "[data-pof-export-page-size]"
             );
             controls.forEach(function (control) {
                 if (!queryControlStates.has(control)) {
@@ -1927,6 +2008,61 @@
             return url.toString();
         }
 
+        function normalizeSortValue(value) {
+            return value === "recientes" ? "recientes" : "default";
+        }
+
+        function applySortState(value, loading) {
+            if (!sortControl) {
+                return;
+            }
+
+            const normalized = normalizeSortValue(value);
+            const isRecent = normalized === "recientes";
+            sortControl.dataset.currentSort = normalized;
+
+            if (sortButton) {
+                sortButton.classList.toggle("pof-sort-button-active", isRecent);
+                sortButton.setAttribute("aria-busy", loading ? "true" : "false");
+            }
+
+            if (sortLabel) {
+                sortLabel.textContent = loading
+                    ? "Ordenando..."
+                    : "Ordenar por: " + (isRecent ? "Última modificación" : "Predeterminado");
+            }
+
+            sortOptions.forEach(function (option) {
+                const active = normalizeSortValue(option.dataset.sortValue) === normalized;
+                option.classList.toggle("pof-sort-option-active", active);
+                if (active) {
+                    option.setAttribute("aria-current", "true");
+                } else {
+                    option.removeAttribute("aria-current");
+                }
+
+                const marker = option.querySelector("[data-pof-sort-option-check]");
+                if (marker) {
+                    marker.hidden = !active;
+                }
+            });
+        }
+
+        function buildSortPreviewHref(value) {
+            const targetUrl = new URL(window.location.href);
+            ["page", "accion", "alcance", "download_token"].forEach(function (key) {
+                targetUrl.searchParams.delete(key);
+            });
+
+            if (normalizeSortValue(value) === "recientes") {
+                targetUrl.searchParams.set("orden", "recientes");
+            } else {
+                targetUrl.searchParams.delete("orden");
+            }
+
+            return buildPreviewHref(targetUrl.toString());
+        }
+
         /**
          * Envía la búsqueda de columna usando el refresco AJAX existente del preview.
          *
@@ -2037,7 +2173,6 @@
             }
             url.searchParams.delete("col_" + columnId);
             url.searchParams.delete("page");
-            url.searchParams.delete("page_size");
             return refreshPreviewFromUrl(url.toString());
         }
 
@@ -2060,7 +2195,6 @@
             searchInteractionDirty = false;
             clearSearchParams(url);
             url.searchParams.delete("page");
-            url.searchParams.delete("page_size");
             return refreshPreviewFromUrl(url.toString()).then(function (succeeded) {
                 if (!succeeded) {
                     searchInteractionDirty = previousDirty;
@@ -2148,6 +2282,16 @@
             const nextPanel = documento.querySelector("[data-pof-export-columns-panel]");
             if (nextPanel) {
                 panel.dataset.rowCount = nextPanel.dataset.rowCount || "0";
+            }
+
+            const nextSortControl = documento.querySelector(
+                "[data-pof-sort-control]"
+            );
+            if (sortControl && nextSortControl) {
+                applySortState(
+                    nextSortControl.dataset.currentSort || "default",
+                    false
+                );
             }
         }
 
@@ -2388,7 +2532,6 @@
                             url.searchParams.delete(filterDialogState.param);
                         }
                         url.searchParams.delete("page");
-                        url.searchParams.delete("page_size");
                     } else {
                         url.searchParams.delete(filterDialogState.param);
                         replaceFilterValuesForField(url, field, operator, values);
@@ -2432,6 +2575,30 @@
             });
         }
 
+        sortOptions.forEach(function (option) {
+            option.addEventListener("click", function (event) {
+                event.preventDefault();
+                if (consultaEnCurso || !sortControl) {
+                    return;
+                }
+
+                const previousSort = normalizeSortValue(
+                    sortControl.dataset.currentSort
+                );
+                const nextSort = normalizeSortValue(option.dataset.sortValue);
+                if (nextSort === previousSort) {
+                    return;
+                }
+
+                applySortState(nextSort, true);
+                void refreshPreviewFromUrl(buildSortPreviewHref(nextSort)).then(function (succeeded) {
+                    if (!succeeded) {
+                        applySortState(previousSort, false);
+                    }
+                });
+            });
+        });
+
         checks.forEach(function (check) {
             check.addEventListener("change", updateColumns);
         });
@@ -2445,6 +2612,26 @@
             if (disabledExcel) {
                 event.preventDefault();
             }
+        });
+
+        preview.addEventListener("change", function (event) {
+            const select = event.target.closest("[data-pof-export-page-size]");
+            if (!select) {
+                return;
+            }
+            const previousValue = select.dataset.currentPageSize;
+            if (consultaEnCurso) {
+                select.value = previousValue;
+                return;
+            }
+            const url = new URL(window.location.href);
+            url.searchParams.delete("page");
+            url.searchParams.set("page_size", select.value);
+            void refreshPreviewFromUrl(buildPreviewHref(url.toString())).then(function (succeeded) {
+                if (!succeeded) {
+                    select.value = previousValue;
+                }
+            });
         });
 
         if (pagination) {

@@ -194,6 +194,22 @@
         outline: none;
     }
 
+    .cef-asistencia-table td.cef-asistencia-missing {
+        background: rgba(254,226,226,.52);
+    }
+
+    .cef-asistencia-table .form-select.cef-asistencia-select-missing,
+    .cef-asistencia-table .form-select.cef-asistencia-select-missing:focus {
+        background-color: #fff7f7;
+        border-color: var(--red-700);
+        box-shadow: 0 0 0 3px rgba(185,28,28,.12);
+        color: var(--red-700);
+    }
+
+    .cef-asistencia-progress.has-missing {
+        color: var(--red-700);
+    }
+
     .cef-asistencia-savebar {
         align-items: center;
         background: var(--surface-muted);
@@ -248,7 +264,6 @@
         .cef-asistencia-date-head { align-items: flex-start; }
         .cef-asistencia-date-head > .btn { width: 100%; }
         .cef-asistencia-date-edit .form-control { max-width: none; width: 100%; }
-        .cef-asistencia-section-head [data-cef-marcar-presentes] { width: 100%; }
         .cef-asistencia-count { margin-right: 0; }
         .cef-asistencia-savebar { align-items: stretch; }
         .cef-asistencia-savebar .btn-primary { width: 100%; }

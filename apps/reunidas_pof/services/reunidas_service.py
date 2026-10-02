@@ -14,7 +14,7 @@ from .filtros_pof_service import (
 
 from ..models import CargoPof, ProyectosEspecialesPof, ReunidaPof, SnapshotPadronLocalizacionPof
 from .anexo_pof_service import (
-    TIPO_PROPIETARIO_CUE,
+    TIPO_PROPIETARIO_CUEANEXO,
     TIPO_PROPIETARIO_CUOF,
     obtener_codigos_activos_propietarios,
 )
@@ -33,6 +33,7 @@ from .historial_service import (
     enriquecer_filas_con_historial_cantidad,
     enriquecer_filas_con_historial_estado,
     enriquecer_filas_con_historial_observacion,
+    enriquecer_filas_con_historial_zona,
 )
 from .filtros_pof_service import (
     MENSAJE_FILTROS_INVALIDOS,
@@ -1590,42 +1591,80 @@ def _es_cueanexo_oficial_detalle(cueanexo):
 
 def _enriquecer_grupos_detalle_con_anexo_pof(grupos, *, es_proyecto_especial):
     """
-    Agrega los códigos Anexo POF vigentes a los grupos visibles del Detalle.
+    Agrega Código(s) Anexo POF al nivel real de su propietario administrativo.
 
-    - Reunida usa exclusivamente CUE como propietario.
-    - Proyecto Especial usa CUE cuando existe y CUOF sólo como fallback sin CUE.
+    - CUEANEXO es siempre el propietario cuando existe.
+    - CUOF sólo es fallback para Proyecto Especial sin CUEANEXO.
+    - Los grupos visuales por CUE nunca son propietarios de Anexo POF.
+    - Soporta grupos normales con anexos y grupos de Proyecto con localizaciones.
     - Resuelve todos los propietarios visibles mediante una única consulta bulk.
-    - Mantiene listas vacías cuando el grupo no tiene códigos o propietario válido.
     """
     grupos = list(grupos or [])
     propietarios = []
-    clave_propietario_por_indice = {}
+    claves_anexo = {}
+    claves_localizacion = {}
+    claves_grupo = {}
 
-    for indice, grupo in enumerate(grupos):
-        grupo["codigos_anexo_pof"] = []
-        grupo["anexo_pof_propietario_tipo"] = ""
-        grupo["anexo_pof_propietario_valor"] = ""
+    def resolver_propietario(item):
+        cueanexo = str(item.get("cueanexo") or "").strip()
+        cuof = str(item.get("cuof") or "").strip()
 
-        cue = str(grupo.get("cue") or "").strip()
-        cuof = str(grupo.get("cuof") or "").strip()
-
-        propietario = None
-        if len(cue) == 7 and cue.isdigit():
-            propietario = {
-                "tipo": TIPO_PROPIETARIO_CUE,
-                "valor": cue,
+        if _es_cueanexo_oficial_detalle(cueanexo):
+            return {
+                "tipo": TIPO_PROPIETARIO_CUEANEXO,
+                "valor": cueanexo,
             }
-        elif es_proyecto_especial and cuof:
-            propietario = {
+        if es_proyecto_especial and cuof:
+            return {
                 "tipo": TIPO_PROPIETARIO_CUOF,
                 "valor": cuof,
             }
+        return None
 
+    def inicializar_item(item):
+        item["codigos_anexo_pof"] = []
+        item["anexo_pof_propietario_tipo"] = ""
+        item["anexo_pof_propietario_valor"] = ""
+
+    for indice_grupo, grupo in enumerate(grupos):
+        inicializar_item(grupo)
+
+        anexos = list(grupo.get("anexos") or [])
+        if anexos:
+            for indice_anexo, anexo in enumerate(anexos):
+                inicializar_item(anexo)
+                propietario = resolver_propietario(anexo)
+                if propietario is None:
+                    continue
+
+                clave = (propietario["tipo"], propietario["valor"])
+                claves_anexo[(indice_grupo, indice_anexo)] = clave
+                propietarios.append(propietario)
+                anexo["anexo_pof_propietario_tipo"] = propietario["tipo"]
+                anexo["anexo_pof_propietario_valor"] = propietario["valor"]
+            continue
+
+        localizaciones = list(grupo.get("localizaciones") or [])
+        if localizaciones:
+            for indice_localizacion, localizacion in enumerate(localizaciones):
+                inicializar_item(localizacion)
+                propietario = resolver_propietario(localizacion)
+                if propietario is None:
+                    continue
+
+                clave = (propietario["tipo"], propietario["valor"])
+                claves_localizacion[(indice_grupo, indice_localizacion)] = clave
+                propietarios.append(propietario)
+                localizacion["anexo_pof_propietario_tipo"] = propietario["tipo"]
+                localizacion["anexo_pof_propietario_valor"] = propietario["valor"]
+            continue
+
+        propietario = resolver_propietario(grupo)
         if propietario is None:
             continue
 
         clave = (propietario["tipo"], propietario["valor"])
-        clave_propietario_por_indice[indice] = clave
+        claves_grupo[indice_grupo] = clave
         propietarios.append(propietario)
         grupo["anexo_pof_propietario_tipo"] = propietario["tipo"]
         grupo["anexo_pof_propietario_valor"] = propietario["valor"]
@@ -1634,8 +1673,18 @@ def _enriquecer_grupos_detalle_con_anexo_pof(grupos, *, es_proyecto_especial):
         propietarios=propietarios,
     )
 
-    for indice, clave in clave_propietario_por_indice.items():
-        grupos[indice]["codigos_anexo_pof"] = list(
+    for (indice_grupo, indice_anexo), clave in claves_anexo.items():
+        grupos[indice_grupo]["anexos"][indice_anexo]["codigos_anexo_pof"] = list(
+            mapa_codigos.get(clave, [])
+        )
+
+    for (indice_grupo, indice_localizacion), clave in claves_localizacion.items():
+        grupos[indice_grupo]["localizaciones"][indice_localizacion][
+            "codigos_anexo_pof"
+        ] = list(mapa_codigos.get(clave, []))
+
+    for indice_grupo, clave in claves_grupo.items():
+        grupos[indice_grupo]["codigos_anexo_pof"] = list(
             mapa_codigos.get(clave, [])
         )
 
@@ -1659,6 +1708,37 @@ def _construir_grupos_detalle_proyecto(cargos, proyecto_especial_id):
     cargos = list(cargos)
     grupos_por_clave = {}
     info_cue_por_cue = _obtener_info_cue_proyecto(cargos)
+
+    filas_historial_zona = [
+        {
+            "cargo_ids": [cargo.id],
+            "localizacion_id": cargo.localizacion_id,
+        }
+        for cargo in cargos
+        if cargo.id
+    ]
+    enriquecer_filas_con_historial_zona(filas_historial_zona)
+    historial_zona_por_localizacion = {}
+    for fila in filas_historial_zona:
+        localizacion_id = fila.get("localizacion_id")
+        if not localizacion_id:
+            continue
+        estado = historial_zona_por_localizacion.setdefault(
+            localizacion_id,
+            {
+                "tiene_modificacion_zona": False,
+                "cargo_id_historial_zona": None,
+            },
+        )
+        if fila.get("tiene_modificacion_zona"):
+            estado["tiene_modificacion_zona"] = True
+            estado["cargo_id_historial_zona"] = fila.get(
+                "cargo_id_historial_zona"
+            )
+        elif estado["cargo_id_historial_zona"] is None:
+            estado["cargo_id_historial_zona"] = fila.get(
+                "cargo_id_historial_zona"
+            )
 
     for cargo in cargos:
         localizacion = cargo.localizacion
@@ -1721,6 +1801,16 @@ def _construir_grupos_detalle_proyecto(cargos, proyecto_especial_id):
                     snapshot.puntos_zona_educativa
                     if snapshot
                     else None
+                ),
+                "tiene_modificacion_zona": bool(
+                    historial_zona_por_localizacion.get(
+                        localizacion.id, {}
+                    ).get("tiene_modificacion_zona")
+                ),
+                "cargo_id_historial_zona": (
+                    historial_zona_por_localizacion.get(
+                        localizacion.id, {}
+                    ).get("cargo_id_historial_zona")
                 ),
                 "cantidad_cargos": 0,
                 "admin_querystring": _construir_querystring_administrar_proyecto(
@@ -2031,7 +2121,7 @@ def construir_contexto_detalle_reunida(request):
             "es_proyecto_especial": True,
             "seccion_activa": "proyectos_especiales",
             "titulo_detalle": "DETALLE DE PROYECTO ESPECIAL",
-            "descripcion_detalle": "Detalle operativo de cargos del Proyecto Especial por CUE/Anexo o CUOF, según la identidad disponible.",
+            "descripcion_detalle": "Detalle operativo de cargos del Proyecto Especial por CUEANEXO o CUOF, según la identidad disponible.",
             "cabecera_detalle_nombre": "Proyecto Especial",
             "cabecera_querystring": cabecera_querystring,
             "detalle_exportar_querystring": detalle_exportar_querystring,

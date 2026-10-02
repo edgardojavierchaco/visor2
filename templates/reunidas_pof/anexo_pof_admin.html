@@ -28,14 +28,14 @@
         </div>
         <div class="pof-view-header-copy">
             <h1>ADMINISTRACI&Oacute;N ANEXO POF</h1>
-            <p>Gestion&aacute; el cat&aacute;logo global y sus asociaciones administrativas por CUE o CUOF.</p>
+            <p>Gestion&aacute; el cat&aacute;logo global y sus asociaciones administrativas por CUEANEXO o CUOF.</p>
         </div>
     </div>
 
     <div class="pof-note pof-anexo-domain-note">
         <strong>Regla de negocio:</strong>
-        los C&oacute;digos Anexo POF pertenecen al CUE. El CUOF se utiliza &uacute;nicamente
-        para Proyecto Especial cuando realmente no existe CUE. Las cargas POF no son propietarias de este dato.
+        los C&oacute;digos Anexo POF pertenecen al CUEANEXO de Padr&oacute;n. El CUOF se utiliza
+        &uacute;nicamente para Proyecto Especial cuando realmente no existe CUEANEXO. Las cargas POF no son propietarias de este dato.
     </div>
 
     <section class="pof-card pof-card-accent" aria-labelledby="anexoCatalogoTitulo">
@@ -102,21 +102,21 @@
                 <label for="anexoPropietarioTipo">Tipo de propietario</label>
                 <span class="pof-native-select-wrap">
                     <select id="anexoPropietarioTipo" class="pof-form-select" data-anexo-propietario-tipo>
-                        <option value="CUE">CUE</option>
-                        <option value="CUOF">CUOF - Proyecto Especial sin CUE</option>
+                        <option value="CUEANEXO">CUEANEXO</option>
+                        <option value="CUOF">CUOF - Proyecto Especial sin CUEANEXO</option>
                     </select>
                 </span>
             </div>
 
             <div class="pof-field pof-col-6">
-                <label for="anexoPropietarioValor" data-anexo-propietario-label>CUE</label>
+                <label for="anexoPropietarioValor" data-anexo-propietario-label>CUEANEXO</label>
                 <input type="text"
                        id="anexoPropietarioValor"
                        class="pof-form-control"
-                       maxlength="7"
+                       maxlength="9"
                        inputmode="numeric"
                        autocomplete="off"
-                       placeholder="7 dígitos"
+                       placeholder="9 dígitos"
                        data-anexo-propietario-valor>
             </div>
 
@@ -130,7 +130,7 @@
 
         <div class="pof-note pof-anexo-cuof-note pof-hidden" data-anexo-cuof-note>
             <strong>CUOF es fallback.</strong>
-            Usalo s&oacute;lo para un Proyecto Especial que no tenga CUE. Si existe CUE, la administraci&oacute;n corresponde al CUE.
+            Usalo s&oacute;lo para un Proyecto Especial que no tenga CUEANEXO. Si existe CUEANEXO, la administraci&oacute;n corresponde a ese CUEANEXO.
         </div>
 
         <div class="pof-status pof-api-status" role="status" aria-live="polite" data-anexo-propietario-status></div>

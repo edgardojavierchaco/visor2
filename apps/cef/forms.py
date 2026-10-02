@@ -3,6 +3,8 @@
 import re
 
 from django import forms
+from django.apps import apps
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from .models import (
@@ -257,6 +259,13 @@ class CefDatosRelevamientoForm(forms.ModelForm):
 
         for field in self.fields.values():
             _aplicar_clases_bootstrap(field)
+
+        # Este select controla en vivo Fuente y Prestación mediante un listener
+        # DOM nativo en editar_datos_cueanexo_cef.html. Al estar enriquecido con
+        # Select2, debe volver a emitir change nativo igual que el buscador de alumnos.
+        self.fields["beneficio_alimentario_gratuito"].widget.attrs[
+            "data-cef-select-native-change"
+        ] = "true"
 
     def _no_corresponde(self, modelo):
         return modelo.objects.filter(activo=True, codigo=-1).first()
@@ -513,25 +522,201 @@ class CefInventarioMaterialEstadoForm(forms.ModelForm):
 
 
 class CefBusquedaAlumnoForm(forms.Form):
+    tipo_doc = forms.ChoiceField(
+        label="Tipo de documento",
+        choices=(),
+        required=True,
+        widget=forms.Select(
+            attrs={
+                "data-cef-select": "1",
+                "data-cef-select-style": "bnh",
+                "data-cef-select-dropdown-parent": "body",
+                "data-cef-select-search-threshold": "10",
+                "data-cef-select-native-change": "true",
+            }
+        ),
+    )
+    nro_doc = forms.CharField(
+        label="Número de documento",
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "autocomplete": "off",
+                "placeholder": "Según el tipo seleccionado",
+            }
+        ),
+    )
     cuil = forms.CharField(
-        label="CUIL del alumno",
+        label="CUIL",
         max_length=20,
+        required=False,
         widget=forms.TextInput(
             attrs={
                 "class": "form-control",
                 "inputmode": "numeric",
-                "placeholder": "Ingresá 11 dígitos",
+                "autocomplete": "off",
+                "placeholder": "Opcional · 11 dígitos",
+            }
+        ),
+    )
+    apellidos = forms.CharField(
+        label="Apellidos",
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "autocomplete": "off",
+                "placeholder": "Apellidos",
+            }
+        ),
+    )
+    nombres = forms.CharField(
+        label="Nombres",
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "autocomplete": "off",
+                "placeholder": "Nombres",
+            }
+        ),
+    )
+    fecha_nacimiento = forms.DateField(
+        label="Fecha de nacimiento",
+        required=False,
+        widget=forms.DateInput(
+            attrs={
+                "class": "form-control",
+                "type": "date",
+            }
+        ),
+    )
+    sexo = forms.ChoiceField(
+        label="Sexo",
+        choices=(),
+        required=False,
+        widget=forms.Select(
+            attrs={
+                "data-cef-select": "1",
+                "data-cef-select-style": "bnh",
+                "data-cef-select-dropdown-parent": "body",
+                "data-cef-select-search-threshold": "10",
+                "data-cef-select-native-change": "true",
             }
         ),
     )
 
-    def clean_cuil(self):
-        cuil = _solo_digitos(self.cleaned_data.get("cuil"))
-        if not cuil:
-            raise forms.ValidationError("Ingresá el CUIL del alumno.")
-        if len(cuil) != 11:
-            raise forms.ValidationError("El CUIL del alumno debe tener 11 dígitos.")
-        return cuil
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        alumno_model = apps.get_model("bnhalumnos", "Alumno")
+        tipo_model = alumno_model._meta.get_field("tipo_doc").remote_field.model
+        opciones = list(tipo_model.objects.all().order_by("pk"))
+        self.fields["tipo_doc"].choices = [(str(item.pk), str(item)) for item in opciones]
+
+        sexo_model = alumno_model._meta.get_field("sexo").remote_field.model
+        opciones_sexo = list(sexo_model.objects.all().order_by("pk"))
+        self.fields["sexo"].choices = [
+            ("", "Seleccione"),
+            *((str(item.pk), str(item)) for item in opciones_sexo),
+        ]
+
+        codigos = {str(item.pk) for item in opciones}
+        if not self.is_bound:
+            self.initial["tipo_doc"] = (
+                "1"
+                if "1" in codigos
+                else (str(opciones[0].pk) if opciones else "")
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        tipo_id = cleaned_data.get("tipo_doc")
+        if not tipo_id:
+            return cleaned_data
+
+        alumno_model = apps.get_model("bnhalumnos", "Alumno")
+        tipo_model = alumno_model._meta.get_field("tipo_doc").remote_field.model
+        try:
+            tipo_doc = tipo_model.objects.get(pk=tipo_id)
+        except tipo_model.DoesNotExist:
+            self.add_error("tipo_doc", "El tipo de documento seleccionado no es válido.")
+            return cleaned_data
+
+        from apps.bnhalumnos.models import (
+            clasificar_tipo_documento,
+            normalizar_cuil_opcional,
+            normalizar_documento_bnh,
+            validar_cuil_con_documento,
+        )
+
+        nro_doc = None
+        cuil = None
+        nro_doc_valido = True
+        cuil_valido = True
+
+        try:
+            nro_doc = normalizar_documento_bnh(
+                tipo_doc,
+                cleaned_data.get("nro_doc"),
+                "Número de documento",
+            )
+        except ValidationError as exc:
+            nro_doc_valido = False
+            self.add_error("nro_doc", exc)
+
+        try:
+            cuil = normalizar_cuil_opcional(cleaned_data.get("cuil"), "CUIL")
+        except ValidationError as exc:
+            cuil_valido = False
+            self.add_error("cuil", exc)
+
+        if nro_doc_valido and cuil_valido:
+            try:
+                validar_cuil_con_documento(cuil, tipo_doc, nro_doc, "CUIL")
+            except ValidationError as exc:
+                cuil_valido = False
+                self.add_error("cuil", exc)
+
+        busqueda_sin_identidad = False
+        if nro_doc_valido and cuil_valido and not nro_doc and not cuil:
+            clase_documento = clasificar_tipo_documento(tipo_doc)
+            if clase_documento in {"no_posee", "en_tramite"}:
+                # Sin número documental, CEF exige los datos actuales que BNH
+                # mantiene como obligatorios para recuperar la persona de forma exacta.
+                busqueda_sin_identidad = True
+                apellidos = str(cleaned_data.get("apellidos") or "").strip()
+                nombres = str(cleaned_data.get("nombres") or "").strip()
+                fecha_nacimiento = cleaned_data.get("fecha_nacimiento")
+                sexo_id = cleaned_data.get("sexo")
+
+                if not apellidos:
+                    self.add_error("apellidos", "Ingresá los apellidos para buscar al alumno.")
+                if not nombres:
+                    self.add_error("nombres", "Ingresá los nombres para buscar al alumno.")
+                if not fecha_nacimiento:
+                    self.add_error(
+                        "fecha_nacimiento",
+                        "Ingresá la fecha de nacimiento para buscar al alumno.",
+                    )
+                if not sexo_id:
+                    self.add_error("sexo", "Seleccioná el sexo para buscar al alumno.")
+
+                cleaned_data["apellidos"] = apellidos
+                cleaned_data["nombres"] = nombres
+            else:
+                raise forms.ValidationError(
+                    "Para buscar un alumno necesitás un número de documento o un CUIL informado."
+                )
+
+        cleaned_data["tipo_doc_obj"] = tipo_doc
+        cleaned_data["nro_doc"] = nro_doc or ""
+        cleaned_data["cuil"] = cuil or ""
+        cleaned_data["busqueda_sin_identidad"] = busqueda_sin_identidad
+        return cleaned_data
 
 
 class CefBajaMotivoForm(forms.Form):

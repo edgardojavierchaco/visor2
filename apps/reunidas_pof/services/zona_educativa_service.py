@@ -28,6 +28,7 @@ TIPOS_IDENTIDAD_ZONA = {
 
 TABLA_ZONAS_URBANAS = "reunidas_pof.zonas_educativas_urbanas"
 TABLA_ZONAS_RURALES = "reunidas_pof.zonas_educativas_rurales"
+MAX_OBSERVACION_ZONA_EDUCATIVA = 500
 
 _ESPACIOS_RE = re.compile(r"\s+")
 
@@ -38,6 +39,20 @@ def _texto(valor):
 
 def _normalizar_espacios(valor):
     return _ESPACIOS_RE.sub(" ", _texto(valor))
+
+
+def normalizar_observacion_zona_educativa(valor):
+    observacion = _texto(valor)
+    if len(observacion) > MAX_OBSERVACION_ZONA_EDUCATIVA:
+        raise ValidationError({
+            "observacion_zona_educativa": [
+                (
+                    "La observación de Zona Educativa no puede superar "
+                    f"{MAX_OBSERVACION_ZONA_EDUCATIVA} caracteres."
+                )
+            ]
+        })
+    return observacion
 
 
 def _normalizar_tipo_zona(valor):
@@ -595,13 +610,21 @@ def seleccion_zona_coincide_asignacion(tipo, zona, asignacion):
     )
 
 
-def _crear_snapshot_sincronizacion_zona(snapshot_origen, asignacion, usuario=None):
+def _crear_snapshot_sincronizacion_zona(
+    snapshot_origen,
+    asignacion,
+    usuario=None,
+    observacion="",
+    marcar_evento=True,
+):
     """
     Versiona sólo Zona/Puntos conservando intacto el estado Padrón del snapshot.
 
     Una asignación None representa una eliminación explícita de Zona Educativa:
     el nuevo snapshot queda nuevamente pendiente, con tipo/zona vacíos y puntos NULL.
+    La observación documenta exclusivamente este acto y nunca se hereda.
     """
+    observacion = normalizar_observacion_zona_educativa(observacion)
     if snapshot_origen is None:
         raise ValidationError({
             "zona_educativa": [
@@ -656,6 +679,8 @@ def _crear_snapshot_sincronizacion_zona(snapshot_origen, asignacion, usuario=Non
         zona_educativa_tipo=tipo,
         zona_educativa=zona,
         puntos_zona_educativa=puntos,
+        zona_educativa_evento=bool(marcar_evento),
+        observacion_zona_educativa=observacion if marcar_evento else "",
         datos_padron=deepcopy(snapshot_origen.datos_padron),
         usuario=usuario,
         fecha_snapshot=momento,
@@ -667,6 +692,7 @@ def sincronizar_zona_faltante_identidad(
     asignacion,
     usuario=None,
     excluir_localizacion_ids=None,
+    observacion="",
 ):
     """
     Completa Zona en snapshots vigentes aún vacíos de la misma identidad/ciclo.
@@ -712,6 +738,8 @@ def sincronizar_zona_faltante_identidad(
                 snapshot,
                 asignacion,
                 usuario=usuario,
+                observacion=observacion,
+                marcar_evento=True,
             )
             sincronizados.append(nuevo_snapshot.id)
             continue
@@ -854,19 +882,25 @@ def obtener_historial_zona_localizacion(localizacion_id):
     snapshot_anterior = None
 
     for snapshot in snapshots:
-        if snapshot_anterior is None:
-            snapshot_anterior = snapshot
-            continue
-
-        asignacion_anterior = obtener_asignacion_snapshot(snapshot_anterior)
         asignacion_nueva = obtener_asignacion_snapshot(snapshot)
 
-        if asignaciones_zona_equivalentes(
-            asignacion_anterior,
-            asignacion_nueva,
-        ):
+        # Los snapshots de estado (incluida la herencia) no son eventos.
+        if not getattr(snapshot, "zona_educativa_evento", False):
             snapshot_anterior = snapshot
             continue
+
+        if snapshot_anterior is None:
+            # La primera asignación explícita se muestra desde "Sin zona".
+            asignacion_anterior = None
+        else:
+            asignacion_anterior = obtener_asignacion_snapshot(snapshot_anterior)
+
+            if asignaciones_zona_equivalentes(
+                asignacion_anterior,
+                asignacion_nueva,
+            ):
+                snapshot_anterior = snapshot
+                continue
 
         cambios = _cambios_asignacion_zona(
             asignacion_anterior,
@@ -881,6 +915,9 @@ def obtener_historial_zona_localizacion(localizacion_id):
                 "anterior": _serializar_asignacion_zona(asignacion_anterior),
                 "nuevo": _serializar_asignacion_zona(asignacion_nueva),
                 "cambios": cambios,
+                "observacion": _texto(
+                    getattr(snapshot, "observacion_zona_educativa", "")
+                ),
             })
 
         snapshot_anterior = snapshot
@@ -933,6 +970,7 @@ def cambiar_zona_educativa_localizacion(
     tipo,
     zona,
     usuario=None,
+    observacion="",
 ):
     """
     Cambia explícitamente la Zona de toda la identidad lógica dentro del ciclo.
@@ -949,6 +987,7 @@ def cambiar_zona_educativa_localizacion(
 
     bloquear_identidad_zona(identidad)
     asignacion_nueva = _resolver_asignacion_cambio_zona(tipo, zona)
+    observacion = normalizar_observacion_zona_educativa(observacion)
 
     localizaciones = list(
         queryset_localizaciones_identidad_zona(
@@ -1019,6 +1058,8 @@ def cambiar_zona_educativa_localizacion(
             snapshot_actual,
             asignacion_nueva,
             usuario=usuario,
+            observacion=observacion,
+            marcar_evento=True,
         )
         snapshots_creados.append(nuevo_snapshot.id)
 

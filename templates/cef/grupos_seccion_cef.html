@@ -16,7 +16,7 @@
                 <a class="nav-link{% if vista == 'actuales' %} active{% endif %}" href="{% url 'cef:carga_grupo' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=actuales" data-cef-view-link data-cef-fragment-url="{% url 'cef:grupos_fragmento' %}">Actuales</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link{% if vista == 'historial' %} active{% endif %}" href="{% url 'cef:carga_grupo' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=historial" data-cef-view-link data-cef-fragment-url="{% url 'cef:grupos_fragmento' %}">Historial</a>
+                <a class="nav-link{% if vista == 'historial' %} active{% endif %}" href="{% url 'cef:carga_grupo' %}?{% if cef_context.querystring %}{{ cef_context.querystring }}&{% endif %}vista=historial" data-cef-view-link data-cef-fragment-url="{% url 'cef:grupos_fragmento' %}">Bajas e históricos</a>
             </li>
         </ul>
         {% if cef_context.establecimiento %}

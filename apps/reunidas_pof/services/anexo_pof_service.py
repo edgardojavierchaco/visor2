@@ -10,7 +10,7 @@ from ..models import (
 )
 
 
-TIPO_PROPIETARIO_CUE = "CUE"
+TIPO_PROPIETARIO_CUEANEXO = "CUEANEXO"
 TIPO_PROPIETARIO_CUOF = "CUOF"
 MAX_CODIGO_ANEXO_POF = 50
 MAX_CUOF_ANEXO_POF = 100
@@ -50,15 +50,15 @@ def normalizar_codigo_anexo_pof(valor):
     return codigo
 
 
-def normalizar_cue_anexo_pof(valor):
-    cue = str(valor or "").strip()
+def normalizar_cueanexo_anexo_pof(valor):
+    cueanexo = str(valor or "").strip()
 
-    if not cue or len(cue) != 7 or not cue.isdigit():
+    if not cueanexo or len(cueanexo) != 9 or not cueanexo.isdigit():
         raise ValidationError({
-            "cue": "El CUE debe tener exactamente 7 dígitos."
+            "cueanexo": "El CUEANEXO debe tener exactamente 9 dígitos."
         })
 
-    return cue
+    return cueanexo
 
 
 def normalizar_cuof_anexo_pof(valor):
@@ -66,7 +66,10 @@ def normalizar_cuof_anexo_pof(valor):
 
     if not cuof:
         raise ValidationError({
-            "cuof": "El CUOF es obligatorio cuando Anexo POF no dispone de CUE."
+            "cuof": (
+                "El CUOF es obligatorio cuando Anexo POF no dispone "
+                "de CUEANEXO."
+            )
         })
 
     if len(cuof) > MAX_CUOF_ANEXO_POF:
@@ -82,26 +85,33 @@ def normalizar_cuof_anexo_pof(valor):
     return cuof
 
 
-def resolver_propietario_anexo_pof(*, cue="", cuof="", es_proyecto_especial=False):
+def resolver_propietario_anexo_pof(
+    *,
+    cueanexo="",
+    cuof="",
+    es_proyecto_especial=False,
+):
     """
     Resuelve el propietario canónico de Anexo POF.
 
-    - Si existe CUE, siempre gana CUE, incluso en Proyecto Especial.
-    - CUOF sólo es fallback para Proyecto Especial cuando no existe CUE.
-    - Reunida sin CUE es inconsistente y no cae silenciosamente a CUOF.
+    - Si existe CUEANEXO válido, siempre gana CUEANEXO.
+    - CUOF sólo es fallback para Proyecto Especial cuando no existe CUEANEXO.
+    - Reunida sin CUEANEXO es inconsistente y no cae silenciosamente a CUOF.
     """
-    cue = str(cue or "").strip()
+    cueanexo = str(cueanexo or "").strip()
     cuof = str(cuof or "").strip()
 
-    if cue:
+    if cueanexo:
         return {
-            "tipo": TIPO_PROPIETARIO_CUE,
-            "valor": normalizar_cue_anexo_pof(cue),
+            "tipo": TIPO_PROPIETARIO_CUEANEXO,
+            "valor": normalizar_cueanexo_anexo_pof(cueanexo),
         }
 
     if not es_proyecto_especial:
         raise ValidationError({
-            "cue": "Anexo POF de una Reunida requiere un CUE válido."
+            "cueanexo": (
+                "Anexo POF de una Reunida requiere un CUEANEXO válido."
+            )
         })
 
     return {
@@ -114,22 +124,22 @@ def resolver_propietario_anexo_pof_localizacion(localizacion):
     """
     Resuelve el propietario desde LocalizacionPof sin consultar la BD.
 
-    LocalizacionPof.cue_base es la fuente canónica del CUE. Sólo un Proyecto
-    Especial sin cue_base utiliza CUOF como fallback.
+    LocalizacionPof.cueanexo es la identidad canónica del propietario. Sólo un
+    Proyecto Especial sin CUEANEXO utiliza CUOF como fallback.
     """
     if localizacion is None:
         raise ValidationError({
             "localizacion": "Debe indicar una localización POF."
         })
 
-    cue = str(getattr(localizacion, "cue_base", "") or "").strip()
+    cueanexo = str(getattr(localizacion, "cueanexo", "") or "").strip()
     cuof = str(getattr(localizacion, "cuof", "") or "").strip()
     es_proyecto_especial = bool(
         getattr(localizacion, "proyecto_especial_id", None)
     )
 
     return resolver_propietario_anexo_pof(
-        cue=cue,
+        cueanexo=cueanexo,
         cuof=cuof,
         es_proyecto_especial=es_proyecto_especial,
     )
@@ -147,10 +157,10 @@ def normalizar_propietario_anexo_pof(propietario):
     tipo = str(propietario.get("tipo") or "").strip().upper()
     valor = propietario.get("valor")
 
-    if tipo == TIPO_PROPIETARIO_CUE:
+    if tipo == TIPO_PROPIETARIO_CUEANEXO:
         return {
-            "tipo": TIPO_PROPIETARIO_CUE,
-            "valor": normalizar_cue_anexo_pof(valor),
+            "tipo": TIPO_PROPIETARIO_CUEANEXO,
+            "valor": normalizar_cueanexo_anexo_pof(valor),
         }
 
     if tipo == TIPO_PROPIETARIO_CUOF:
@@ -160,21 +170,21 @@ def normalizar_propietario_anexo_pof(propietario):
         }
 
     raise ValidationError({
-        "propietario": "El propietario debe ser CUE o CUOF."
+        "propietario": "El propietario debe ser CUEANEXO o CUOF."
     })
 
 
 def _filtro_propietario(propietario):
     propietario = normalizar_propietario_anexo_pof(propietario)
 
-    if propietario["tipo"] == TIPO_PROPIETARIO_CUE:
+    if propietario["tipo"] == TIPO_PROPIETARIO_CUEANEXO:
         return {
-            "cue": propietario["valor"],
+            "cueanexo": propietario["valor"],
             "cuof": "",
         }
 
     return {
-        "cue": "",
+        "cueanexo": "",
         "cuof": propietario["valor"],
     }
 
@@ -381,7 +391,7 @@ def obtener_codigos_activos_propietarios(*, propietarios):
     """
     Resuelve en bloque los códigos vigentes de múltiples propietarios.
 
-    - Normaliza y deduplica CUE/CUOF antes de consultar.
+    - Normaliza y deduplica CUEANEXO/CUOF antes de consultar.
     - Ejecuta una única consulta para todas las asociaciones activas.
     - Conserva propietarios sin códigos mediante listas vacías.
     - Ordena códigos por codigo ascendente, igual que la lectura individual.
@@ -410,10 +420,10 @@ def obtener_codigos_activos_propietarios(*, propietarios):
     if not propietarios_normalizados:
         return resultado
 
-    cues = [
+    cueanexos = [
         propietario["valor"]
         for propietario in propietarios_normalizados
-        if propietario["tipo"] == TIPO_PROPIETARIO_CUE
+        if propietario["tipo"] == TIPO_PROPIETARIO_CUEANEXO
     ]
     cuofs = [
         propietario["valor"]
@@ -422,30 +432,30 @@ def obtener_codigos_activos_propietarios(*, propietarios):
     ]
 
     filtro_propietarios = Q()
-    if cues:
-        filtro_propietarios |= Q(cue__in=cues, cuof="")
+    if cueanexos:
+        filtro_propietarios |= Q(cueanexo__in=cueanexos, cuof="")
     if cuofs:
-        filtro_propietarios |= Q(cue="", cuof__in=cuofs)
+        filtro_propietarios |= Q(cueanexo="", cuof__in=cuofs)
 
     filas = (
         AsociacionAnexoPof.objects
         .filter(filtro_propietarios, activo=True)
         .values_list(
-            "cue",
+            "cueanexo",
             "cuof",
             "codigo_catalogo__codigo",
         )
         .order_by(
-            "cue",
+            "cueanexo",
             "cuof",
             "codigo_catalogo__codigo",
             "id",
         )
     )
 
-    for cue, cuof, codigo in filas:
-        if cue:
-            clave = (TIPO_PROPIETARIO_CUE, cue)
+    for cueanexo, cuof, codigo in filas:
+        if cueanexo:
+            clave = (TIPO_PROPIETARIO_CUEANEXO, cueanexo)
         else:
             clave = (TIPO_PROPIETARIO_CUOF, cuof)
 
@@ -720,7 +730,7 @@ def aplicar_seleccion_propietario(
 ):
     """
     Aplica de forma atómica el conjunto final de Códigos Anexo POF activos
-    para un propietario CUE/CUOF.
+    para un propietario CUEANEXO/CUOF.
 
     Los códigos ya asociados y vigentes se conservan aunque su catálogo haya
     sido retirado. Un código nuevo o una reactivación requiere catálogo activo.

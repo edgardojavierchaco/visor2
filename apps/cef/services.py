@@ -20,6 +20,12 @@ from .models import (
 )
 
 
+class ConflictoHorarioInscripcionError(ValidationError):
+    def __init__(self, message, conflictos):
+        super().__init__(message)
+        self.conflictos = conflictos
+
+
 def validar_ciclo_escribible(ciclo):
     """Rechaza cualquier mutación asociada a un ciclo inexistente o cerrado."""
 
@@ -50,21 +56,20 @@ def _buscar_conflicto_horario_alumnos(
     *,
     alumnos_ids,
     grupo_destino_id,
-    actividad_id,
     ciclo_id,
     cueanexo,
     hora_inicio,
     hora_fin,
     dias_ids,
 ):
-    """Busca el primer conflicto dentro del CEF/ciclo con valores propuestos."""
+    """Busca todos los conflictos horarios dentro del mismo CEF y ciclo."""
 
     alumnos_ids = list(dict.fromkeys(alumnos_ids or []))
     dias_ids = list(dict.fromkeys(dias_ids or []))
     if not alumnos_ids or not dias_ids or not hora_inicio or not hora_fin:
-        return None
+        return []
 
-    return (
+    return list(
         CefInscripcion.objects.filter(
             alumno_id__in=alumnos_ids,
             estado=CefInscripcion.Estado.ACTIVO,
@@ -76,9 +81,10 @@ def _buscar_conflicto_horario_alumnos(
             grupo__dias_funcionamiento__dia_semana_id__in=dias_ids,
         )
         .exclude(grupo_id=grupo_destino_id)
-        .exclude(grupo__actividad_id=actividad_id)
         .values(
             "alumno_id",
+            "alumno__apellidos",
+            "alumno__nombres",
             "grupo_id",
             "grupo__actividad__nombre",
             "grupo__numero",
@@ -88,39 +94,139 @@ def _buscar_conflicto_horario_alumnos(
             "grupo__dias_funcionamiento__dia_semana__orden",
         )
         .order_by(
+            "alumno__apellidos",
+            "alumno__nombres",
             "grupo__actividad__nombre",
             "grupo__numero",
             "grupo__dias_funcionamiento__dia_semana__orden",
-            "alumno_id",
+            "grupo_id",
         )
-        .first()
     )
 
 
-def _mensaje_conflicto_horario(conflicto, *, edicion=False):
-    actividad = conflicto["grupo__actividad__nombre"]
-    numero = conflicto["grupo__numero"]
-    dia = conflicto["grupo__dias_funcionamiento__dia_semana__nombre"]
-    hora_inicio = conflicto["grupo__hora_inicio"].strftime("%H:%M")
-    hora_fin = conflicto["grupo__hora_fin"].strftime("%H:%M")
-    prefijo = (
-        "No se puede modificar el grupo porque generaría un conflicto horario"
-        if edicion
-        else "No se puede inscribir al alumno porque existe un conflicto horario"
+def _agrupar_conflictos_horarios(conflictos):
+    """Agrupa filas repetidas por día para informar cada grupo una sola vez."""
+
+    agrupados = {}
+    for conflicto in conflictos:
+        clave = (conflicto["alumno_id"], conflicto["grupo_id"])
+        if clave not in agrupados:
+            agrupados[clave] = {
+                "alumno_id": conflicto["alumno_id"],
+                "alumno_apellidos": conflicto.get("alumno__apellidos") or "",
+                "alumno_nombres": conflicto.get("alumno__nombres") or "",
+                "grupo_id": conflicto["grupo_id"],
+                "actividad": conflicto["grupo__actividad__nombre"] or "Actividad sin informar",
+                "numero": conflicto["grupo__numero"],
+                "hora_inicio": conflicto["grupo__hora_inicio"],
+                "hora_fin": conflicto["grupo__hora_fin"],
+                "dias": [],
+            }
+
+        dia = str(
+            conflicto.get("grupo__dias_funcionamiento__dia_semana__nombre") or ""
+        ).strip()
+        if dia and dia not in agrupados[clave]["dias"]:
+            agrupados[clave]["dias"].append(dia)
+
+    return list(agrupados.values())
+
+
+def _texto_dias_conflicto(dias):
+    if not dias:
+        return "día sin informar"
+    if len(dias) == 1:
+        return dias[0]
+    return f"{', '.join(dias[:-1])} y {dias[-1]}"
+
+
+def _detalle_conflicto_horario(conflicto, *, incluir_alumno=False):
+    numero = conflicto["numero"]
+    numero = numero if numero not in (None, "") else "-"
+    dias = _texto_dias_conflicto(conflicto["dias"])
+    hora_inicio = conflicto["hora_inicio"].strftime("%H:%M")
+    hora_fin = conflicto["hora_fin"].strftime("%H:%M")
+    detalle = (
+        f"{conflicto['actividad']} N.° {numero} "
+        f"({dias}, {hora_inicio} a {hora_fin})"
+    )
+    if not incluir_alumno:
+        return detalle
+
+    nombre = _nombre_alumno_conflicto(conflicto)
+    return f"{nombre}: {detalle}"
+
+
+def _nombre_alumno_conflicto(conflicto):
+    nombre = ", ".join(
+        parte
+        for parte in (
+            conflicto["alumno_apellidos"].strip(),
+            conflicto["alumno_nombres"].strip(),
+        )
+        if parte
+    )
+    if not nombre:
+        nombre = f"Alumno ID {conflicto['alumno_id']}"
+    return nombre
+
+
+def _nombre_grupo_horario(grupo):
+    actividad = getattr(getattr(grupo, "actividad", None), "nombre", None)
+    actividad = actividad or "Actividad sin informar"
+    numero = getattr(grupo, "numero", None)
+    numero = numero if numero not in (None, "") else "-"
+    return f"{actividad} N.° {numero}"
+
+
+def _mensaje_conflicto_horario(conflictos, *, edicion=False, grupo_destino=None):
+    agrupados = _agrupar_conflictos_horarios(conflictos)
+
+    if edicion:
+        detalles = "; ".join(
+            _detalle_conflicto_horario(conflicto, incluir_alumno=True)
+            for conflicto in agrupados
+        )
+        cantidad = "un conflicto horario" if len(agrupados) == 1 else "conflictos horarios"
+        return (
+            f"No se puede modificar el grupo porque generaría {cantidad} "
+            f"para alumnos ya inscriptos: {detalles}."
+        )
+
+    if len(agrupados) == 1:
+        conflicto = agrupados[0]
+        nombre = _nombre_alumno_conflicto(conflicto)
+        destino = _nombre_grupo_horario(grupo_destino)
+        numero = conflicto["numero"]
+        numero = numero if numero not in (None, "") else "-"
+        dias = _texto_dias_conflicto(conflicto["dias"])
+        hora_inicio = conflicto["hora_inicio"].strftime("%H:%M")
+        hora_fin = conflicto["hora_fin"].strftime("%H:%M")
+        return (
+            f"No se puede realizar la inscripción de {nombre}. Ya posee una inscripción en "
+            f"{conflicto['actividad']} N.° {numero}, {dias} de {hora_inicio} a {hora_fin}, "
+            f"y ese horario se superpone con el grupo seleccionado {destino}."
+        )
+
+    nombre = _nombre_alumno_conflicto(agrupados[0])
+    destino = _nombre_grupo_horario(grupo_destino)
+    detalles = "; ".join(
+        _detalle_conflicto_horario(conflicto)
+        for conflicto in agrupados
     )
     return (
-        f"{prefijo} con {actividad} Nro. {numero}, "
-        f"{dia} de {hora_inicio} a {hora_fin}."
+        f"No se puede realizar la inscripción de {nombre}. Ya posee inscripciones cuyos "
+        f"horarios se superponen con el grupo seleccionado {destino}: "
+        f"{detalles}."
     )
 
 
 def validar_disponibilidad_horaria_alumno(grupo, alumno):
     """Valida una inscripción contra grupos activos del mismo CEF y ciclo."""
 
-    conflicto = _buscar_conflicto_horario_alumnos(
+    conflictos = _buscar_conflicto_horario_alumnos(
         alumnos_ids=[alumno.pk],
         grupo_destino_id=grupo.pk,
-        actividad_id=grupo.actividad_id,
         ciclo_id=grupo.ciclo_id,
         cueanexo=grupo.cueanexo,
         hora_inicio=grupo.hora_inicio,
@@ -130,14 +236,20 @@ def validar_disponibilidad_horaria_alumno(grupo, alumno):
             flat=True,
         ),
     )
-    if conflicto:
-        raise ValidationError(_mensaje_conflicto_horario(conflicto))
+    if conflictos:
+        conflictos_agrupados = _agrupar_conflictos_horarios(conflictos)
+        raise ConflictoHorarioInscripcionError(
+            _mensaje_conflicto_horario(
+                conflictos,
+                grupo_destino=grupo,
+            ),
+            conflictos_agrupados,
+        )
 
 
 def validar_conflictos_horarios_edicion_grupo(
     grupo,
     *,
-    actividad_id,
     hora_inicio,
     hora_fin,
     dias_ids,
@@ -145,19 +257,18 @@ def validar_conflictos_horarios_edicion_grupo(
 ):
     """Valida en bloque los alumnos activos con el estado propuesto del grupo."""
 
-    conflicto = _buscar_conflicto_horario_alumnos(
+    conflictos = _buscar_conflicto_horario_alumnos(
         alumnos_ids=alumnos_ids,
         grupo_destino_id=grupo.pk,
-        actividad_id=actividad_id,
         ciclo_id=grupo.ciclo_id,
         cueanexo=grupo.cueanexo,
         hora_inicio=hora_inicio,
         hora_fin=hora_fin,
         dias_ids=dias_ids,
     )
-    if conflicto:
+    if conflictos:
         raise ValidationError(
-            _mensaje_conflicto_horario(conflicto, edicion=True)
+            _mensaje_conflicto_horario(conflictos, edicion=True)
         )
 
 
@@ -308,7 +419,7 @@ def crear_inscripcion_activa(
             ).order_by("pk").first()
             if not alumno_cef_activo:
                 raise ValidationError(
-                    "El alumno no está activo en el banco de este CEF y ciclo. "
+                    "El alumno no está activo en el banco de alumnos de este CEF y ciclo. "
                     "Reincorporalo antes de inscribirlo."
                 )
 
@@ -411,7 +522,7 @@ def crear_asignacion_docente_activa(
             ).order_by("pk").first()
             if not docente_cef_activo:
                 raise ValidationError(
-                    "El profesor no está activo en el banco de este CEF y ciclo. "
+                    "El profesor no está activo en el banco de profesores de este CEF y ciclo. "
                     "Reincorporalo antes de asignarlo."
                 )
 
@@ -485,7 +596,7 @@ def dar_baja_alumno_banco(alumno_cef, user, motivo_baja, fecha_baja=None):
         alumno_cef = CefAlumnoCef.objects.select_for_update().get(pk=alumno_cef.pk)
         validar_ciclo_escribible(alumno_cef.ciclo_id)
         if alumno_cef.estado != CefAlumnoCef.Estado.ACTIVO:
-            raise ValidationError("El alumno ya se encuentra dado de baja del banco.")
+            raise ValidationError("El alumno ya se encuentra dado de baja del banco de alumnos del CEF.")
         motivo_baja = _normalizar_motivo_baja(motivo_baja)
 
         tiene_inscripciones = CefInscripcion.objects.filter(
@@ -516,7 +627,7 @@ def dar_baja_docente_banco(docente_cef, user, motivo_baja, fecha_baja=None):
         docente_cef = CefDocenteCef.objects.select_for_update().get(pk=docente_cef.pk)
         validar_ciclo_escribible(docente_cef.ciclo_id)
         if docente_cef.estado != CefDocenteCef.Estado.ACTIVO:
-            raise ValidationError("El profesor ya se encuentra dado de baja del banco.")
+            raise ValidationError("El profesor ya se encuentra dado de baja del banco de profesores del CEF.")
         motivo_baja = _normalizar_motivo_baja(motivo_baja)
 
         tiene_asignaciones = CefDocenteGrupo.objects.filter(
