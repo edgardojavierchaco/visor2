@@ -396,6 +396,8 @@ class ActividadDirectorForm(StyledForm):
         self.fields["ubicaciones_json"].required = False
 
         if es_no_docente:
+            # Para NO DOCENTE no corresponde el circuito curricular.
+            # El TURNO sí corresponde y debe quedar disponible/obligatorio.
             for name in (
                 "modalidad_curricular",
                 "nivel_curricular",
@@ -407,6 +409,11 @@ class ActividadDirectorForm(StyledForm):
                 "secciones",
             ):
                 self.fields[name].required = False
+
+            self.fields["turno"].required = True
+            self.fields["turno"].help_text = (
+                "Seleccione el turno en el que presta servicios."
+            )
         else:
             self.fields["modalidad_curricular"].required = True
             self.fields["nivel_curricular"].required = True
@@ -538,6 +545,14 @@ class ActividadDirectorForm(StyledForm):
             data["ubicaciones_normalizadas"] = []
             data["grado_anio"] = None
             data["secciones"] = None
+
+            # Turno sí corresponde a NO DOCENTE.
+            if not data.get("turno"):
+                self.add_error(
+                    "turno",
+                    "Seleccione el turno en el que presta servicios.",
+                )
+
             return data
 
         # ====================================================
