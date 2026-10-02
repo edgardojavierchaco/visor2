@@ -323,7 +323,9 @@ def get_todas_las_escuelas_especiales():
 
 def get_escuelas_especiales_por_cuil_responsable(user):
     cuil = normalizar_cuil_usuario(user)
-    queryset = get_escuelas_especiales_base_queryset()
+    # Algunas ofertas de Integración no traen acrónimo EEE en el padrón,
+    # pero sí conservan el prefijo "Especial -" en el campo oferta.
+    queryset = get_todas_las_escuelas_especiales()
     if not cuil:
         return queryset.none()
     return (
