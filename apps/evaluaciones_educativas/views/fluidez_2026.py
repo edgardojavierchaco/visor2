@@ -1,5 +1,7 @@
+from apps.usuarios.services.user_context import get_user_rol
 from apps.evaluaciones_educativas.models.fluidez_2026 import *
 from apps.evaluaciones_educativas.forms.fluidez_2026 import *
+from django.db import connection
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse, FileResponse, Http404
 from django.core.paginator import Paginator
@@ -52,6 +54,93 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 
 
 #MODIFICACION PARA QUE ESTO FUNCIONE SOLO CON RURALES
+OFERTA_SUPERVISOR = 'Común - Primaria de 7 años'
+
+
+def _es_supervisor(usuario):
+    return (
+        getattr(usuario, 'nivelacceso_id', None) == 'Supervisor'
+        or get_user_rol(usuario) == 'Supervisor'
+    )
+
+
+def _escuelas_del_supervisor(username, oferta):
+    """Cruza asignaciones activas con el padrón por región, CUE y oferta.
+
+    El ámbito y sector provienen de la misma fila autorizada del padrón.
+    No basta con autorizar el CUE: puede contener otras ofertas educativas.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT TRIM(v.cueanexo::text), v.nom_est,
+                   TRIM(v.region_loc), TRIM(v.ambito), TRIM(v.sector)
+            FROM supervisores.supervisor_registro_supervisor AS s
+            JOIN supervisores.supervisor_registro_supervisor_regional AS sr
+              ON sr.supervisor_id = s.id AND sr.activo = TRUE
+            JOIN supervisores.supervisor_registro_supervisor_regional_oferta AS o
+              ON o.supervisor_regional_id = sr.id AND o.activo = TRUE
+            JOIN region AS r ON r.id = sr.region_id
+            JOIN public.v_capa_unica_ofertas_ant AS v
+              ON TRIM(v.cueanexo::text) = TRIM(o.cueanexo::text)
+             AND LOWER(TRIM(v.oferta)) = LOWER(TRIM(o.oferta))
+             AND LOWER(TRIM(v.region_loc)) = LOWER(TRIM(r.nombre))
+            WHERE s.cuil = %s AND s.activo = TRUE
+              AND v.oferta ILIKE %s
+            ORDER BY 1, 2, 3, 4, 5
+            """,
+            [str(username), '%' + oferta + '%'],
+        )
+        return [
+            dict(zip(('cueanexo', 'escuela', 'region', 'ambito', 'sector'), fila))
+            for fila in cursor.fetchall()
+        ]
+
+
+def _filtrar_escuelas_supervisor(escuelas, sector=None, ambito=None, region=None):
+    filtros = {'sector': sector, 'ambito': ambito, 'region': region}
+    return [
+        escuela for escuela in escuelas
+        if all(
+            not valor or str(valor).strip().upper() == 'TODOS'
+            or str(escuela.get(campo) or '').strip().casefold()
+            == str(valor).strip().casefold()
+            for campo, valor in filtros.items()
+        )
+    ]
+
+
+def _opciones_filtro_supervisor(escuelas, campo):
+    return ['TODOS'] + sorted({
+        str(escuela.get(campo) or '').strip()
+        for escuela in escuelas if escuela.get(campo)
+    })
+
+
+def _limitar_form_supervisor(form, escuelas):
+    from django import forms
+
+    form.fields['region'] = forms.ChoiceField(
+        required=False,
+        choices=[(v, v) for v in _opciones_filtro_supervisor(escuelas, 'region')],
+        initial='TODOS',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    for campo in ('sector', 'ambito'):
+        opciones = _opciones_filtro_supervisor(escuelas, campo)
+        form.fields[campo].choices = [('', '-------')] + [
+            (valor, valor) for valor in opciones
+        ]
+
+
+def _validar_cue_supervisor(usuario, cueanexo, oferta):
+    if not _es_supervisor(usuario):
+        return
+    cues = {escuela['cueanexo'] for escuela in _escuelas_del_supervisor(usuario.username, oferta)}
+    if str(cueanexo).strip() not in cues:
+        raise PermissionDenied('No tienes acceso a los registros de este establecimiento.')
+
+
 @login_required
 def lista(request,fid_actual=None):
 	
@@ -900,6 +989,10 @@ def completar_carga(request,grado_public_id):
 
 @login_required
 def analisis_evaluaciones_junio_2026(request):
+	if _es_supervisor(request.user):
+		return analisis_evaluaciones_regional_junio_2026(request)
+	if request.user.nivelacceso_id == 'Evaluacion' or get_user_rol(request.user) == 'Evaluacion':
+		return analisis_evaluaciones_ministros_junio_2026(request)
 	contexto = {
 		"alumnos_evaluados_segundo": [],
 		"alumnos_evaluados_tercero": [],
@@ -1018,10 +1111,18 @@ def analisis_evaluaciones_regional_junio_2026(request):
 	condicion = None
 	# Formateo de CUIL
 	# cuil_con_caracter = f"{cuil[:2]}-{cuil[2:10]}-{cuil[10:]}"
-	nivel_acceso = request.user.nivelacceso_id
+	nivel_acceso = 'Supervisor' if _es_supervisor(usuario) else request.user.nivelacceso_id
 	# print(f'REGIONALLLLL{nivel_acceso}')
 	contexto["rol"] = nivel_acceso
 	form_director_regional = DirectorForm(request.POST or None)
+	escuelas_supervisor = []
+	if nivel_acceso == 'Supervisor':
+		escuelas_supervisor = _escuelas_del_supervisor(cuil, OFERTA_SUPERVISOR)
+		_limitar_form_supervisor(
+			form_director_regional,
+			escuelas_supervisor,
+		)
+
 	# Inicializamos el primer formulario siempre
 	lista_cueanexos = []
 	if request.method == "POST":
@@ -1034,6 +1135,9 @@ def analisis_evaluaciones_regional_junio_2026(request):
 				nivel_acceso=nivel_acceso,
 				sector=sector,
 				ambito=ambito,
+				region=form_director_regional.cleaned_data.get('region'), escuelas_permitidas=_filtrar_escuelas_supervisor(
+				escuelas_supervisor, sector, ambito, form_director_regional.cleaned_data.get('region')
+			),
 			)
 			contexto["form_cueanexo"] = form_cueanexo
 			if form_cueanexo.is_valid():
@@ -1047,6 +1151,8 @@ def analisis_evaluaciones_regional_junio_2026(request):
 							"cueanexo_seleccionado"
 						].choices
 					]
+					if nivel_acceso == 'Supervisor':
+						lista_cueanexos = [c for c in lista_cueanexos if c and c != 'TODOS']
 					# print(f'lista{len(lista_cueanexos)}')
 				else:
 					lista_cueanexos.append(cueanexo)
@@ -1124,6 +1230,8 @@ def analisis_evaluaciones_regional_junio_2026(request):
 # #---------------------logica para SUBSE Y MINISTRO---------------------------
 @login_required
 def analisis_evaluaciones_ministros_junio_2026(request):
+	if _es_supervisor(request.user):
+		return analisis_evaluaciones_regional_junio_2026(request)
 	contexto = {
 		"alumnos_evaluados_segundo": [],
 		"alumnos_evaluados_tercero": [],
@@ -1141,7 +1249,7 @@ def analisis_evaluaciones_ministros_junio_2026(request):
 	condicion = None
 	# Formateo de CUIL
 	# cuil_con_caracter = f"{cuil[:2]}-{cuil[2:10]}-{cuil[10:]}"
-	nivel_acceso = request.user.nivelacceso_id
+	nivel_acceso = 'Evaluacion' if get_user_rol(usuario) == 'Evaluacion' else request.user.nivelacceso_id
 	# print(f'REGIONALLLLL{nivel_acceso}')
 	contexto["rol"] = nivel_acceso
 	# Inicializamos el primer formulario siempre
@@ -1733,6 +1841,9 @@ def comprension_lectora(alumnos, grado_seleccionado):
 def descargar_listado_fluidez(request):
 	# ── 1. PARÁMETROS GET ──────────────────────────────────────────────────────
 	selected_cue = request.GET.get('cueanexo', '').strip()
+	_validar_cue_supervisor(
+		request.user, selected_cue, OFERTA_SUPERVISOR
+	)
 	grado_param   = request.GET.get('grado', '').strip()   # 'segundo' o 'tercero'
 	condicion_param = request.GET.get('condicion', '').strip()
 	filtro_seccion = request.GET.get('seccion', 'TODOS').strip()
@@ -1889,6 +2000,9 @@ def descargar_listado_fluidez(request):
 def descargar_examen_individual_fluidez(request):
 	# ── 1. PARÁMETROS GET ──────────────────────────────────────────────────────
 	selected_cue = request.GET.get('cueanexo', '').strip()
+	_validar_cue_supervisor(
+		request.user, selected_cue, OFERTA_SUPERVISOR
+	)
 	dni_alumno   = request.GET.get('dni', '').strip()
 
 	if not selected_cue or not dni_alumno:

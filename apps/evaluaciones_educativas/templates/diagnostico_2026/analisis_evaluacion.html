@@ -312,7 +312,7 @@
     <aside class="sidebar">
         <h2>Reportes</h2>
 
-        {% if rol == 'Funcionario' or rol == 'Ministro' or rol == 'Subse' %}
+        {% if rol == 'Funcionario' or rol == 'Evaluacion' or rol == 'Ministro' or rol == 'Subse' %}
         <h3>Ubicación y Gestión</h3>
         <div class="sidebar-form-container">
             <label>Sector</label>
@@ -346,7 +346,7 @@
                 <!-- <option value="ambos" {% if condicion_sel == 'ambos' %}selected{% endif %}>Ambos</option> -->
             </select>
         </div>
-        {% elif rol == 'Regional' %}
+        {% elif rol == 'Regional' or rol == 'Supervisor' %}
         <h3>Sector y Ámbito</h3>
         <div class="sidebar-form-container">
             <label>Sector</label>
@@ -362,6 +362,15 @@
                 <option value="{{ amb }}" {% if amb == ambito_sel %}selected{% endif %}>{{ amb }}</option>
                 {% endfor %}
             </select>
+
+            {% if rol == 'Supervisor' %}
+            <label>Región</label>
+            <select id="select-management-region" class="management-filter">
+                {% for reg in regiones_opciones %}
+                <option value="{{ reg }}" {% if reg == region_sel %}selected{% endif %}>{{ reg }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
 
             <label style="margin-top:15px; color:#e1b12c;">Alumno con condición (Opcional)</label>
             <select id="select-condicion">

@@ -1,5 +1,7 @@
+from apps.usuarios.services.user_context import get_user_rol
 from apps.evaluaciones_educativas.models.fluidez_2025 import *
 from apps.evaluaciones_educativas.forms.fluidez_2025 import *
+from django.db import connection
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.core.paginator import Paginator
@@ -17,6 +19,85 @@ from django.core.exceptions import PermissionDenied
 from django.contrib import messages
 
 listaCueanexoPermitidos = [220002601, 220002901, 220010500, 220011100, 220011400, 220012000, 220012900, 220013400, 220017100, 220017200, 220018003, 220020500, 220021000, 220021200, 220021501, 220021800, 220022000, 220022700, 220025800, 220025901, 220026602, 220026603, 220026604, 220030700, 220031301, 220033201, 220034102, 220034104, 220034400, 220035100, 220037600, 220041900, 220046500, 220047200, 220050001, 220051400, 220051500, 220051502, 220052101, 220058400, 220058500, 220058800, 220058900, 220059000, 220059700, 220065400, 220065600, 220066500, 220069000, 220070200, 220071600, 220073301, 220074400, 220074501, 220078600, 220079500, 220091301, 220091302, 220091600, 220104800, 220105700, 220105701, 220109300, 220111101, 220111300, 220124700, 220126500, 220126700, 220129300, 220142100, 220183900, 220184100, 220184601, 220184602, 220206000, 220209200, 220220600, 220235804, 220260600, 220273100, 220006500, 220012800, 220020101, 220020300, 220021500, 220023800, 220024102, 220025902, 220034200, 220035301, 220035800, 220042601, 220047300, 220048300, 220049600, 220051503, 220053201, 220063901, 220065601, 220070201, 220075201, 220077100, 220078900, 220081700, 220084600, 220084601, 220085500, 220102802, 220104302, 220116101, 220117600, 220123000, 220124101, 220125201, 220131900, 220137101, 220139300, 220142201, 220144001, 220203900, 220204001, 220226700]
+
+
+OFERTA_SUPERVISOR = 'Común - Primaria de 7 años'
+
+
+def _es_supervisor(usuario):
+    return (
+        getattr(usuario, 'nivelacceso_id', None) == 'Supervisor'
+        or get_user_rol(usuario) == 'Supervisor'
+    )
+
+
+def _escuelas_del_supervisor(username, oferta):
+    """Cruza asignaciones activas con el padrón por región, CUE y oferta.
+
+    El ámbito y sector provienen de la misma fila autorizada del padrón.
+    No basta con autorizar el CUE: puede contener otras ofertas educativas.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT TRIM(v.cueanexo::text), v.nom_est,
+                   TRIM(v.region_loc), TRIM(v.ambito), TRIM(v.sector)
+            FROM supervisores.supervisor_registro_supervisor AS s
+            JOIN supervisores.supervisor_registro_supervisor_regional AS sr
+              ON sr.supervisor_id = s.id AND sr.activo = TRUE
+            JOIN supervisores.supervisor_registro_supervisor_regional_oferta AS o
+              ON o.supervisor_regional_id = sr.id AND o.activo = TRUE
+            JOIN region AS r ON r.id = sr.region_id
+            JOIN public.v_capa_unica_ofertas_ant AS v
+              ON TRIM(v.cueanexo::text) = TRIM(o.cueanexo::text)
+             AND LOWER(TRIM(v.oferta)) = LOWER(TRIM(o.oferta))
+             AND LOWER(TRIM(v.region_loc)) = LOWER(TRIM(r.nombre))
+            WHERE s.cuil = %s AND s.activo = TRUE
+              AND v.oferta ILIKE %s
+            ORDER BY 1, 2, 3, 4, 5
+            """,
+            [str(username), '%' + oferta + '%'],
+        )
+        return [
+            dict(zip(('cueanexo', 'escuela', 'region', 'ambito', 'sector'), fila))
+            for fila in cursor.fetchall()
+        ]
+
+
+def _filtrar_escuelas_supervisor(escuelas, sector=None, ambito=None, region=None):
+    filtros = {'sector': sector, 'ambito': ambito, 'region': region}
+    return [
+        escuela for escuela in escuelas
+        if all(
+            not valor or str(valor).strip().upper() == 'TODOS'
+            or str(escuela.get(campo) or '').strip().casefold()
+            == str(valor).strip().casefold()
+            for campo, valor in filtros.items()
+        )
+    ]
+
+
+def _opciones_filtro_supervisor(escuelas, campo):
+    return ['TODOS'] + sorted({
+        str(escuela.get(campo) or '').strip()
+        for escuela in escuelas if escuela.get(campo)
+    })
+
+
+def _limitar_form_supervisor(form, escuelas):
+    from django import forms
+
+    form.fields['region'] = forms.ChoiceField(
+        required=False,
+        choices=[(v, v) for v in _opciones_filtro_supervisor(escuelas, 'region')],
+        initial='TODOS',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    for campo in ('sector', 'ambito'):
+        opciones = _opciones_filtro_supervisor(escuelas, campo)
+        form.fields[campo].choices = [('', '-------')] + [
+            (valor, valor) for valor in opciones
+        ]
 
 
 @login_required
@@ -444,6 +525,10 @@ def descargar_excel(request,grado_public_id):
 
 @login_required
 def analisis_evaluaciones_noviembre_2025(request):
+	if _es_supervisor(request.user):
+		return analisis_evaluaciones_regional_noviembre_2025(request)
+	if request.user.nivelacceso_id == 'Evaluacion' or get_user_rol(request.user) == 'Evaluacion':
+		return analisis_evaluaciones_ministros_noviembre_2025(request)
 	contexto = {
 		'alumnos_evaluados_segundo': [],
 		'alumnos_evaluados_tercero': [],
@@ -536,17 +621,27 @@ def analisis_evaluaciones_regional_noviembre_2025(request):
 	cuil = usuario.username
 	# Formateo de CUIL
 	#cuil_con_caracter = f"{cuil[:2]}-{cuil[2:10]}-{cuil[10:]}"
-	nivel_acceso=request.user.nivelacceso_id
+	nivel_acceso = 'Supervisor' if _es_supervisor(usuario) else request.user.nivelacceso_id
 	#print(f'REGIONALLLLL{nivel_acceso}')
 	contexto['rol']=nivel_acceso
 	form_director_regional=DirectorForm(request.POST or None)
+	escuelas_supervisor = []
+	if nivel_acceso == 'Supervisor':
+		escuelas_supervisor = _escuelas_del_supervisor(cuil, OFERTA_SUPERVISOR)
+		_limitar_form_supervisor(
+			form_director_regional,
+			escuelas_supervisor,
+		)
+
 	# Inicializamos el primer formulario siempre
 	lista_cueanexos=[]
 	if request.method == 'POST':
 		if form_director_regional.is_valid():
 			sector=form_director_regional.cleaned_data['sector']
 			ambito=form_director_regional.cleaned_data['ambito']
-			form_cueanexo = CueanexoForm(request.POST or None, cuil=cuil,nivel_acceso=nivel_acceso,sector=sector,ambito=ambito)
+			form_cueanexo = CueanexoForm(request.POST or None, cuil=cuil,nivel_acceso=nivel_acceso,sector=sector,ambito=ambito,region=form_director_regional.cleaned_data.get('region'), escuelas_permitidas=_filtrar_escuelas_supervisor(
+				escuelas_supervisor, sector, ambito, form_director_regional.cleaned_data.get('region')
+			))
 			contexto["form_cueanexo"] = form_cueanexo
 			if form_cueanexo.is_valid():
 				cueanexo = form_cueanexo.cleaned_data['cueanexo_seleccionado']
@@ -554,6 +649,8 @@ def analisis_evaluaciones_regional_noviembre_2025(request):
 				if cueanexo == 'TODOS' and nivel_acceso !='Director/a':
 					# Esto te devuelve la lista de tuplas (valor, etiqueta)
 					lista_cueanexos = [valor for valor, etiqueta in form_cueanexo.fields['cueanexo_seleccionado'].choices]
+					if nivel_acceso == 'Supervisor':
+						lista_cueanexos = [c for c in lista_cueanexos if c and c != 'TODOS']
 					#print(f'lista{len(lista_cueanexos)}')
 				else:
 					lista_cueanexos.append(cueanexo)
@@ -612,6 +709,8 @@ def analisis_evaluaciones_regional_noviembre_2025(request):
 #---------------------logica para SUBSE Y MINISTRO---------------------------
 @login_required
 def analisis_evaluaciones_ministros_noviembre_2025(request):
+	if _es_supervisor(request.user):
+		return analisis_evaluaciones_regional_noviembre_2025(request)
 	contexto = {
 		'alumnos_evaluados_segundo': [],
 		'alumnos_evaluados_tercero': [],
@@ -627,7 +726,7 @@ def analisis_evaluaciones_ministros_noviembre_2025(request):
 	cuil = usuario.username
 	# Formateo de CUIL
 	#cuil_con_caracter = f"{cuil[:2]}-{cuil[2:10]}-{cuil[10:]}"
-	nivel_acceso=request.user.nivelacceso_id
+	nivel_acceso = 'Evaluacion' if get_user_rol(usuario) == 'Evaluacion' else request.user.nivelacceso_id
 	#print(f'REGIONALLLLL{nivel_acceso}')
 	contexto['rol']=nivel_acceso
 	# Inicializamos el primer formulario siempre
