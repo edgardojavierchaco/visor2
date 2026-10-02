@@ -1,4 +1,3 @@
-import logging
 import re
 
 from django.contrib import messages
@@ -13,9 +12,6 @@ from .domain.catalogs import activity_catalogs, available_levels, ceic_aplica, c
 from .forms import PersonaForm, ActividadDirectorForm, HorarioActividadForm, ConfirmacionForm, VincularPersonaForm
 from .models import Personas, RegistroActividades, HorarioActividad, Localidades, CodAreasTelefonos, TipoPersonal, SituacionServicio, validar_cuil
 from .services.rate_limit import user_rate_limit
-logger = logging.getLogger(__name__)
-
-
 from .services.crud import (
     Conflict,
     PossibleDuplicate,
@@ -60,49 +56,6 @@ def errors_to_form(form, exc, *, activity_form=None):
         target.add_error(None, message)
 
 
-
-def _validation_summary(form, *, title):
-    """
-    Registra y expone un resumen claro cuando un formulario no valida.
-
-    No sustituye los errores de campo de Django: agrega un error general para
-    que el usuario vea inmediatamente por qué no se ejecutó el guardado.
-    """
-    if not form or not form.errors:
-        return
-
-    logger.warning(
-        "BNH formulario inválido | %s | errors=%s",
-        title,
-        form.errors.as_json(),
-    )
-
-    labels = []
-    for field_name in form.errors:
-        if field_name == "__all__":
-            continue
-        field = form.fields.get(field_name)
-        label = (
-            getattr(field, "label", None)
-            or field_name.replace("_", " ").capitalize()
-        )
-        if label not in labels:
-            labels.append(str(label))
-
-    if labels:
-        form.add_error(
-            None,
-            "No se pudo guardar. Revise los siguientes campos: "
-            + ", ".join(labels)
-            + ".",
-        )
-    else:
-        form.add_error(
-            None,
-            "No se pudo guardar. Revise los datos informados en el formulario.",
-        )
-
-
 @operator_required
 @require_http_methods(["GET", "POST"])
 def carga_personal(request, pk=None):
@@ -112,21 +65,6 @@ def carga_personal(request, pk=None):
     if request.method == "POST":
         valid_person = form.is_valid()
         valid_activity = activity.is_valid() if activity else True
-
-        # Si el POST no valida, el guardado no se ejecuta.
-        # Dejamos un resumen visible y el detalle completo en el log de Django.
-        if not valid_person:
-            _validation_summary(
-                form,
-                title="Persona - Alta/edición",
-            )
-
-        if activity is not None and not valid_activity:
-            _validation_summary(
-                activity,
-                title="Actividad - Alta de personal y primer cargo",
-            )
-
         if valid_person and valid_activity:
             try:
                 if activity:
@@ -168,7 +106,26 @@ def nueva_actividad(request, persona_id):
 @operator_required
 @require_http_methods(["GET", "POST"])
 def vincular_persona(request):
-    form = VincularPersonaForm(request.POST if request.method == "POST" else None)
+    vincular_data = request.POST if request.method == "POST" else None
+    vincular_initial = None
+    if request.method == "GET":
+        cuil_inicial = re.sub(r"\D", "", request.GET.get("cuil", ""))
+        if cuil_inicial:
+            vincular_initial = {"cuil": cuil_inicial}
+            persona = Personas.objects.filter(
+                cuil=cuil_inicial,
+                archivada=False,
+            ).only("dni", "apellido", "nombre").first()
+            if persona:
+                vincular_initial.update(
+                    {
+                        "dni": persona.dni or "",
+                        "apellido": persona.apellido or "",
+                        "nombre": persona.nombre or "",
+                    }
+                )
+
+    form = VincularPersonaForm(vincular_data, initial=vincular_initial)
     activity = ActividadDirectorForm(request.POST if request.method == "POST" else None, user=request.user, prefix="actividad")
     if request.method == "POST":
         valid_person, valid_activity = form.is_valid(), activity.is_valid()

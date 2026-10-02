@@ -2,7 +2,7 @@
 "use strict";
 
 (() => {
-    const VERSION = "20261002.3";
+    const VERSION = "20260927.1";
     const jq = () => window.jQuery;
     const hasSelect2 = () => Boolean(jq() && jq().fn && jq().fn.select2);
 
@@ -553,6 +553,7 @@
                     "espacio_curricular",
                     "tipo_ubicacion",
                     "grado_anio",
+                    "turno",
                     "secciones"
                 ];
                 curricularFields.forEach(name => setVisible(name, !nonTeaching()));
@@ -617,30 +618,12 @@
                 // En sección múltiple la ubicación se edita desde la grilla repetible.
                 // Los campos históricos permanecen activos pero ocultos y se sincronizan
                 // con la primera fila para mantener compatibilidad e id_puesto.
-                ["grado_anio", "secciones"].forEach(name => {
+                ["grado_anio", "secciones", "turno"].forEach(name => {
                     const input = field(name);
                     if (!input) return;
                     const wrapper = input.closest("[data-field]");
                     if (wrapper) wrapper.hidden = hideCurricular || isMultipleLocation;
                 });
-
-                // TURNO:
-                // - NO DOCENTE: siempre visible y habilitado.
-                // - DOCENTE, sección única: visible.
-                // - DOCENTE, sección múltiple: se edita en la grilla repetible.
-                const turnoInput = field("turno");
-                if (turnoInput) {
-                    const turnoWrapper = turnoInput.closest("[data-field]");
-                    if (turnoWrapper) {
-                        turnoWrapper.hidden = !hideCurricular && isMultipleLocation;
-                    }
-                }
-
-                setDisabled(
-                    "turno",
-                    !hideCurricular
-                    && (curricularPending || !value("nivel_curricular"))
-                );
 
                 setDisabled(
                     "cond_actividad",
@@ -1029,37 +1012,16 @@
             // ============================================================
             // CONDICIÓN DE ACTIVIDAD
             // ============================================================
-            async function loadConditions({ force = false } = {}) {
-                const conditionField = field("cond_actividad");
-
-                /*
-                 * Después de un POST inválido Django vuelve a renderizar el
-                 * formulario con la condición ya seleccionada y con su queryset
-                 * correcto. En ese caso NO debemos vaciarla ni iniciar otra
-                 * petición AJAX, porque puede tapar el verdadero error del POST
-                 * con el mensaje "Cargando condiciones de actividad…".
-                 */
-                if (
-                    !force
-                    && conditionField
-                    && value("cond_actividad")
-                    && conditionField.options
-                    && conditionField.options.length > 1
-                ) {
-                    conditionPending = false;
-                    enable();
-                    return;
-                }
-
+            async function loadConditions() {
                 conditionController?.abort();
                 const current = new AbortController();
                 conditionController = current;
 
                 const selected = value("cond_actividad");
+                clear("cond_actividad");
 
                 if (!value("tipo_personal") || !value("sit_revista")) {
                     conditionPending = false;
-                    clear("cond_actividad");
                     enable();
                     return;
                 }
@@ -1070,47 +1032,29 @@
 
                 try {
                     if (!form.dataset.conditionsUrl) {
-                        throw new Error(
-                            "No está configurado el catálogo de condiciones de actividad."
-                        );
+                        throw new Error("Falta data-conditions-url.");
                     }
 
                     const url = new URL(
                         form.dataset.conditionsUrl,
                         window.location.origin
                     );
-                    url.searchParams.set(
-                        "tipo_personal",
-                        value("tipo_personal")
-                    );
-                    url.searchParams.set(
-                        "sit_revista",
-                        value("sit_revista")
-                    );
+                    url.searchParams.set("tipo_personal", value("tipo_personal"));
+                    url.searchParams.set("sit_revista", value("sit_revista"));
 
                     const data = await getJson(url, current);
                     if (conditionController !== current) return;
 
-                    const condiciones = Array.isArray(data.condiciones)
-                        ? data.condiciones
-                        : [];
-
                     fillOptions(
-                        conditionField,
-                        condiciones,
+                        field("cond_actividad"),
+                        data.condiciones || [],
                         "id",
                         "label",
                         selected,
-                        condiciones.length
-                            ? "Seleccione condición de actividad"
-                            : "Sin condiciones disponibles"
+                        "Seleccione condición de actividad"
                     );
-
-                    if (!condiciones.length) {
-                        message(
-                            data.warning
-                            || "No existen condiciones de actividad para la combinación seleccionada."
-                        );
+                    if (data.warning) {
+                        message(data.warning);
                     } else {
                         message("");
                     }
@@ -1119,10 +1063,7 @@
                         conditionController === current
                         && error.name !== "AbortError"
                     ) {
-                        message(
-                            "No se pudieron cargar las condiciones de actividad. "
-                            + error.message
-                        );
+                        message(error.message);
                     }
                 } finally {
                     if (conditionController === current) {
@@ -1202,11 +1143,11 @@
                         updateCategoryUI();
                         loadCargoCatalogs("tipo_personal");
                         loadCurricularCatalogs("tipo_personal");
-                        loadConditions({ force: true });
+                        loadConditions();
                         return;
                     }
                     if (currentName === "sit_revista") {
-                        loadConditions({ force: true });
+                        loadConditions();
                         return;
                     }
                     if (currentName === "modalidad" || currentName === "niveles") {
@@ -1333,17 +1274,11 @@
                 const extraBox = form.querySelector("[data-ubicaciones-extra]");
                 if (extraBox) extraBox.hidden = !isMultipleLocation;
 
-                ["grado_anio", "secciones"].forEach(name => {
+                ["grado_anio", "secciones", "turno"].forEach(name => {
                     const input = field(name);
                     const wrapper = input?.closest("[data-field]");
                     if (wrapper) wrapper.hidden = isMultipleLocation;
                 });
-
-                const turnoInput = field("turno");
-                const turnoWrapper = turnoInput?.closest("[data-field]");
-                if (turnoWrapper) {
-                    turnoWrapper.hidden = !nonTeaching() && isMultipleLocation;
-                }
 
                 if (isMultipleLocation) {
                     ensureMultipleLocationRows();
@@ -1364,13 +1299,7 @@
 
             if (!nonTeaching() && value("modalidad_curricular")) loadCurricularCatalogs("inicio");
             setTimeout(() => { restoreLocations(); enable(); }, 0);
-            if (
-                value("tipo_personal")
-                && value("sit_revista")
-                && !value("cond_actividad")
-            ) {
-                loadConditions();
-            }
+            if (value("tipo_personal") && value("sit_revista")) loadConditions();
         });
 
         document.querySelectorAll("form").forEach(form => {
