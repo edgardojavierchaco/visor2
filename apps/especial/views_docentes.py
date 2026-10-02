@@ -546,7 +546,12 @@ def _url_carga_docente(
     return f"{URL_CARGA_DOCENTE}?{urlencode(params)}" if params else URL_CARGA_DOCENTE
 
 
-def _url_edicion_docente(cuil, next_url=None, return_label="Volver a Especial"):
+def _url_edicion_docente(
+    cuil,
+    next_url=None,
+    return_label="Volver a Especial",
+    cueanexo=None,
+):
     """Devuelve la ficha de BNH para una persona ya existente.
 
     Especial sólo persiste el CUIL del docente; BNH requiere el ID de su
@@ -554,6 +559,8 @@ def _url_edicion_docente(cuil, next_url=None, return_label="Volver a Especial"):
     vuelve a aplicar su propio alcance de permisos.
     """
     cuil_normalizado = _solo_digitos(cuil)
+    if cueanexo and not _docente_tiene_cargo_en_cue(cuil_normalizado, cueanexo):
+        return ""
     persona_id = (
         Personas.objects
         .filter(cuil=cuil_normalizado, archivada=False)
@@ -585,6 +592,32 @@ def _docente_tiene_cargo(cuil):
     return RegistroActividades.objects.filter(
         persona__cuil=cuil_normalizado,
         eliminado=False,
+        validacion="VALIDADO",
+    ).exists()
+
+
+def _persona_bnh_existe(cuil):
+    """Indica si existe una persona activa en BNH Personas."""
+    cuil_normalizado = _solo_digitos(cuil)
+    if len(cuil_normalizado) != 11:
+        return False
+    return Personas.objects.filter(
+        cuil=cuil_normalizado,
+        archivada=False,
+    ).exists()
+
+
+def _docente_tiene_cargo_en_cue(cuil, cueanexo):
+    """Indica si el docente tiene un cargo no eliminado en el CUE indicado."""
+    cuil_normalizado = _solo_digitos(cuil)
+    cueanexo_normalizado = _solo_digitos(cueanexo)
+    if len(cuil_normalizado) != 11 or len(cueanexo_normalizado) != 9:
+        return False
+    return RegistroActividades.objects.filter(
+        persona__cuil=cuil_normalizado,
+        cueanexo=cueanexo_normalizado,
+        eliminado=False,
+        validacion="VALIDADO",
     ).exists()
 
 
@@ -634,6 +667,21 @@ def agregar_docente_banco_desde_bnh(request):
                 "error": (
                     "El docente existe en BNH, pero no tiene cargos. "
                     "Primero debe vincularse mediante un nuevo cargo."
+                ),
+            },
+            status=409,
+        )
+
+    if not _docente_tiene_cargo_en_cue(cuil, especial_context.get("cueanexo")):
+        return JsonResponse(
+            {
+                "ok": False,
+                "requiere_cargo_en_cue": True,
+                "redirect_url": _url_vinculacion_docente(cuil),
+                "error": (
+                    "El docente tiene cargos en BNH, pero ninguno está ligado "
+                    "al CUE-Anexo seleccionado. Primero debe asignar el cargo "
+                    "en BNH para este CUE-Anexo."
                 ),
             },
             status=409,
@@ -716,6 +764,7 @@ def _docentes_fragment_context(especial_context, url_docentes, estado=DOCENTES_E
             item.docente_cuil,
             url_docentes,
             "Volver a Docentes Especial",
+            especial_context.get("cueanexo"),
         )
 
     return {
@@ -1123,7 +1172,12 @@ def docentes(request):
                         item.secciones_asignables = [s for s in secciones_disp if s.pk not in ids_ocupadas]
                         item.secciones_bloqueadas = activas
                         item.url_baja_docente = _url_baja_docente(especial_context, item.pk)
-                        item.url_editar_docente = _url_edicion_docente(item.docente_cuil, url_docentes, "Volver a Docentes Especial")
+                        item.url_editar_docente = _url_edicion_docente(
+                            item.docente_cuil,
+                            url_docentes,
+                            "Volver a Docentes Especial",
+                            especial_context.get("cueanexo"),
+                        )
 
                     ctx_fragmento = {
                         "docentes": docentes_actualizados,
@@ -1190,6 +1244,16 @@ def docentes(request):
             )
         elif not _docente_tiene_cargo(cuil_buscado):
             return redirect(_url_vinculacion_docente(cuil_buscado))
+        elif not _docente_tiene_cargo_en_cue(
+            cuil_buscado,
+            especial_context.get("cueanexo"),
+        ):
+            messages.error(
+                request,
+                "El docente tiene cargos asignados en BNH, pero ninguno está "
+                "ligado al CUE-Anexo seleccionado. Primero debe asignar el "
+                "cargo en BNH para este CUE-Anexo.",
+            )
         else:
             try:
                 banco, creado, tabla_pendiente = _asegurar_docente_banco(
@@ -1228,6 +1292,16 @@ def docentes(request):
     docente_tiene_cargo = (
         bool(docente) and _docente_tiene_cargo(cuil_buscado)
     )
+    persona_bnh_existe = (
+        bool(docente) and _persona_bnh_existe(cuil_buscado)
+    )
+    docente_tiene_cargo_en_cue = (
+        bool(docente)
+        and _docente_tiene_cargo_en_cue(
+            cuil_buscado,
+            especial_context.get("cueanexo"),
+        )
+    )
     url_carga_docente = _url_carga_docente(cuil_buscado, next_url)
     url_carga_profesor = _url_carga_docente(
         cuil_buscado,
@@ -1240,6 +1314,12 @@ def docentes(request):
         cuil_buscado,
         next_url,
         "Volver a Docentes Especial",
+        especial_context.get("cueanexo"),
+    )
+    url_vinculacion_docente = (
+        _url_vinculacion_docente(cuil_buscado)
+        if docente and persona_bnh_existe and not docente_tiene_cargo_en_cue
+        else ""
     )
     docentes_banco_tabla_pendiente = False
     page_obj = Paginator([], DOCENTES_POR_PAGINA).get_page(1)
@@ -1302,6 +1382,7 @@ def docentes(request):
                 item.docente_cuil,
                 url_docentes,
                 "Volver a Docentes Especial",
+                especial_context.get("cueanexo"),
             )
 
     if abrir_modal_baja and baja_modal_docente is None:
@@ -1378,6 +1459,8 @@ def docentes(request):
             "docente": docente,
             "docente_row": _docente_row(docente),
             "docente_tiene_cargo": docente_tiene_cargo,
+            "persona_bnh_existe": persona_bnh_existe,
+            "docente_tiene_cargo_en_cue": docente_tiene_cargo_en_cue,
             "docentes": docentes,
             "docentes_actuales_url": docentes_actuales_url,
             "docentes_todos_url": docentes_todos_url,
@@ -1400,6 +1483,7 @@ def docentes(request):
             "url_carga_docente": url_carga_docente,
             "url_carga_profesor": url_carga_profesor,
             "url_editar_docente": url_ficha_docente,
+            "url_vinculacion_docente": url_vinculacion_docente,
             "modal_docente_abierto": abrir_modal,
             "abrir_modal_asignaciones": abrir_modal_asignaciones,
             "modal_asignaciones_docente_id": modal_asignaciones_docente_id,

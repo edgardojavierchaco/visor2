@@ -33,12 +33,14 @@
             {% endif %}
 
             {% if docente_row %}
-                <div class="alert alert-warning mb-3" role="status">
-                    <i class="fa-solid {% if docente_tiene_cargo %}fa-briefcase{% else %}fa-triangle-exclamation{% endif %} me-1"></i>
-                    {% if docente_tiene_cargo %}
-                        El docente buscado tiene un cargo asignado en BNH.
+                <div class="alert alert-{% if docente_tiene_cargo_en_cue %}success{% else %}warning{% endif %} mb-3" role="status">
+                    <i class="fa-solid {% if docente_tiene_cargo_en_cue %}fa-briefcase{% else %}fa-triangle-exclamation{% endif %} me-1"></i>
+                    {% if not persona_bnh_existe %}
+                        El docente no existe en BNH Personas. Debe añadirlo junto con su cargo.
+                    {% elif docente_tiene_cargo_en_cue %}
+                        El docente buscado tiene un cargo asignado en este CUE-Anexo.
                     {% else %}
-                        El docente buscado no tiene ningún cargo asignado en BNH.
+                        El docente existe en BNH Personas, pero no tiene un cargo validado en este CUE-Anexo.
                     {% endif %}
                 </div>
             {% endif %}
@@ -76,7 +78,7 @@
                                     {% elif not modal_tiene_grupo %}
                                         {% if docente_en_banco %}
                                             <span class="text-muted small">Ya está en el banco.</span>
-                                        {% elif especial_context.puede_operar %}
+                                        {% elif especial_context.puede_operar and docente_tiene_cargo_en_cue %}
                                             <form method="post" action="{{ modal_action_url }}" style="display:contents" data-docente-modal-post-form>
                                                 {% csrf_token %}
                                                 <input type="hidden" name="cueanexo_contexto" value="{{ especial_context.cueanexo }}">
@@ -86,6 +88,18 @@
                                                     <i class="fa-solid fa-user-check"></i> Agregar al banco
                                                 </button>
                                             </form>
+                                        {% elif especial_context.puede_operar and not persona_bnh_existe %}
+                                            {% if url_carga_profesor %}
+                                                <a class="btn btn-outline-primary btn-sm" href="{{ url_carga_profesor }}" target="_blank" rel="noopener">
+                                                    <i class="fa-solid fa-user-plus"></i> Añadir docente y cargo
+                                                </a>
+                                            {% endif %}
+                                        {% elif especial_context.puede_operar %}
+                                            {% if url_vinculacion_docente %}
+                                                <a class="btn btn-outline-primary btn-sm" href="{{ url_vinculacion_docente }}" target="_blank" rel="noopener">
+                                                    <i class="fa-solid fa-briefcase"></i> Asignar nuevo cargo
+                                                </a>
+                                            {% endif %}
                                         {% else %}
                                             <span class="text-muted small">Seleccioná CUE-Anexo y ciclo para agregar al banco.</span>
                                         {% endif %}

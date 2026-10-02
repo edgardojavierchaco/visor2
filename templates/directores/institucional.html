@@ -125,7 +125,7 @@
                         {% if cueanexos_data %}
                             {% for cue_data in cueanexos_data %}
                                 <h5 class="mt-3 mb-2">
-                                    <a href="#" class="cueanexo-link text-decoration-none" data-cueanexo="{{ cue_data.cueanexo }}">
+                                    <a href="{% url 'directores:matricula_uegp' %}?cueanexo={{ cue_data.cueanexo }}" class="text-decoration-none">
                                         CUEANEXO {{ cue_data.cueanexo }}
                                     </a>
                                 </h5>
@@ -212,9 +212,6 @@
 
         </div>
 
-        <!-- Contenedor para cargar matrícula vía AJAX -->
-        <div id="matricula-container" class="mt-4"></div>
-
     {% else %}
         <div class="alert alert-warning text-center">
             No se encontraron resultados para el usuario.
@@ -237,43 +234,7 @@ if (estado) {
         window.scrollTo(0, estado.scroll);
     }
 
-    // 👉 cueanexo (dispara el click automático)
-    if (estado.cueanexo) {
-        setTimeout(() => {
-            const el = document.querySelector(
-                `[data-cueanexo="${estado.cueanexo}"]`
-            );
-            if (el) el.click();
-        }, 500);
-    }
 }
-</script>
-
-<!-- JS para AJAX de matrícula -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-$(document).ready(function() {
-    $('.cueanexo-link').on('click', function(e) {
-        e.preventDefault();
-        var cueanexo = $(this).data('cueanexo');
-
-        $.ajax({
-            url: "{% url 'directores:matricula_uegp' %}",
-            data: { 'cueanexo': cueanexo },
-            type: 'GET',
-            dataType: 'html',
-            success: function(data) {
-                $('#matricula-container').html(data);
-                $('html, body').animate({
-                    scrollTop: $("#matricula-container").offset().top
-                }, 500);
-            },
-            error: function() {
-                alert('Error al cargar la matrícula.');
-            }
-        });
-    });
-});
 </script>
 
 {% endblock %}
