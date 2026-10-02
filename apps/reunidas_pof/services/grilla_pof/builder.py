@@ -4,6 +4,7 @@ from ..historial_service import (
     enriquecer_filas_con_historial_cantidad,
     enriquecer_filas_con_historial_estado,
     enriquecer_filas_con_historial_observacion,
+    enriquecer_filas_con_historial_zona,
 )
 from .detalle_politicas import obtener_politicas_detalle_reunida
 from .detalle_rows import construir_grupos_operativos_detalle
@@ -43,6 +44,7 @@ def construir_grilla_pof_desde_cargos(
     espejo=True,
     incluir_historial_cantidad=None,
     incluir_historial_observacion=None,
+    incluir_historial_zona=None,
     incluir_historial_estado=False,
 ):
     """
@@ -69,6 +71,10 @@ def construir_grilla_pof_desde_cargos(
         incluir_historial_observacion = contexto == "DETALLE_REUNIDA"
     if incluir_historial_observacion:
         enriquecer_filas_con_historial_observacion(filas_normalizadas)
+    if incluir_historial_zona is None:
+        incluir_historial_zona = contexto == "DETALLE_REUNIDA"
+    if incluir_historial_zona:
+        enriquecer_filas_con_historial_zona(filas_normalizadas)
     if incluir_historial_estado:
         enriquecer_filas_con_historial_estado(filas_normalizadas)
     filas_render = construir_filas_exportacion(

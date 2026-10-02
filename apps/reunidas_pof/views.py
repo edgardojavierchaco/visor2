@@ -63,7 +63,9 @@ from .services.guardado_pof_service import (
     eliminar_reunida_pof,
     guardar_carga_pof as guardar_carga_pof_service,
     guardar_gestion_cargo_pof,
+    obtener_catalogo_ofertas_cargo_pof,
     obtener_detalle_cargo_pof,
+    obtener_impacto_eliminacion_cargo_pof,
 )
 from .services.historial_service import (
     construir_contexto_historial,
@@ -71,6 +73,7 @@ from .services.historial_service import (
     obtener_historial_cantidad_cargos_pof,
     obtener_historial_completo_cargo_pof,
     obtener_historial_localizacion_cargos_pof,
+    obtener_historial_zona_cargo_pof,
     obtener_historial_observacion_cargos_pof,
     obtener_historial_estado_cargos_pof,
 )
@@ -1664,7 +1667,7 @@ def detalle_movimiento_pof(request, movimiento_id):
 @pof_api_required
 @require_GET
 def historial_completo_cargo_pof(request, cargo_id):
-    """Devuelve todos los movimientos del cargo fisico abierto en Gestion Cargo."""
+    """Devuelve el historial individual por ciclos enlazados mediante cargo_origen."""
     try:
         historial = obtener_historial_completo_cargo_pof(cargo_id)
     except CargoPof.DoesNotExist:
@@ -1687,9 +1690,21 @@ def historial_completo_cargo_pof(request, cargo_id):
 @pof_api_required
 @require_GET
 def historial_localizacion_cargos_pof(request, localizacion_id):
-    """Devuelve movimientos de todos los cargos de la localizacion y cabecera actuales."""
+    """Con cargo_id, devuelve la identidad de cada ciclo del cargo abierto."""
     try:
-        historial = obtener_historial_localizacion_cargos_pof(localizacion_id)
+        historial = obtener_historial_localizacion_cargos_pof(
+            localizacion_id, cargo_id=request.GET.get("cargo_id"),
+        )
+    except ValidationError as error:
+        return api_error_validacion(
+            "No se pudo obtener el historial de la localización.",
+            getattr(error, "message_dict", {"__all__": error.messages}),
+        )
+    except CargoPof.DoesNotExist:
+        return api_error_no_encontrado(
+            "No se encontró el cargo solicitado.",
+            {"cargo_id": ["El cargo indicado no existe."]},
+        )
     except LocalizacionPof.DoesNotExist:
         return api_error_no_encontrado(
             "No se encontro la localizacion solicitada.",
@@ -2436,6 +2451,7 @@ def cambiar_zona_educativa(request, localizacion_id):
 
     tipo = (payload.get("tipo") or "").strip()
     zona = (payload.get("zona") or "").strip()
+    observacion = (payload.get("observacion") or "").strip()
 
     try:
         resultado = cambiar_zona_educativa_localizacion(
@@ -2443,6 +2459,7 @@ def cambiar_zona_educativa(request, localizacion_id):
             tipo,
             zona,
             usuario=request.user,
+            observacion=observacion,
         )
     except ValidationError as error:
         return api_error_validacion(
@@ -2469,8 +2486,19 @@ def cambiar_zona_educativa(request, localizacion_id):
 @pof_visualizacion_api_required
 @require_GET
 def historial_zona_educativa(request, localizacion_id):
+    """Con cargo_id, consulta Zona en las localizaciones de su cadena histórica."""
     try:
-        historial = obtener_historial_zona_localizacion(localizacion_id)
+        cargo_id = request.GET.get("cargo_id")
+        historial = (
+            obtener_historial_zona_localizacion(localizacion_id)
+            if cargo_id is None
+            else obtener_historial_zona_cargo_pof(localizacion_id, cargo_id)
+        )
+    except CargoPof.DoesNotExist:
+        return api_error_no_encontrado(
+            "No se encontró el cargo solicitado.",
+            {"cargo_id": ["El cargo indicado no existe."]},
+        )
     except ValidationError as error:
         return api_error_validacion(
             "No se pudo obtener el historial de Zona Educativa.",
@@ -2514,6 +2542,9 @@ def _validar_parametros_grupo_detalle(cueanexo, cuof):
 @pof_api_required
 def detalle_cargo_pof(request, cargo_id):
     try:
+        if request.GET.get("impacto_eliminacion") == "1":
+            impacto = obtener_impacto_eliminacion_cargo_pof(cargo_id)
+            return api_ok(data={"impacto_eliminacion": impacto})
         detalle = obtener_detalle_cargo_pof(cargo_id)
     except ObjectDoesNotExist:
         return api_error_no_encontrado(
@@ -2527,6 +2558,28 @@ def detalle_cargo_pof(request, cargo_id):
         )
 
     return api_ok(data={"cargo": detalle})
+
+
+@pof_api_required
+@require_GET
+def catalogo_ofertas_cargo_pof(request, cargo_id):
+    try:
+        catalogo = obtener_catalogo_ofertas_cargo_pof(cargo_id)
+    except ObjectDoesNotExist:
+        return api_error_no_encontrado(
+            "No se encontró el cargo solicitado.",
+            {"cargo_id": ["No se encontró el cargo solicitado."]},
+        )
+    except Exception:
+        logger.exception(
+            "Error interno al cargar catálogo de ofertas para cargo POF %s",
+            cargo_id,
+        )
+        return api_error_interno(
+            "Ocurrió un error interno al consultar las ofertas del cargo."
+        )
+
+    return api_ok(data=catalogo)
 
 
 @pof_api_required

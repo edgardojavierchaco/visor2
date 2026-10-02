@@ -511,6 +511,10 @@
         top: 0;
     }
 
+    .cef-wrap [data-cef-select] + .select2-container .select2-selection:focus {
+        outline: none;
+    }
+
     .cef-wrap [data-cef-select] + .select2-container.select2-container--focus .select2-selection--single,
     .cef-wrap [data-cef-select] + .select2-container.select2-container--open .select2-selection--single {
         border-color: var(--primary);
@@ -1723,8 +1727,8 @@
         width: 100%;
     }
 
-    .cef-field .form-control:focus,
-    .cef-field .form-select:focus {
+    .cef-wrap .form-control:focus,
+    .cef-wrap .form-select:focus {
         border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(45,125,210,.13);
         outline: none;
@@ -1903,7 +1907,7 @@
         justify-content: center;
         line-height: 1.2;
         min-height: 36px;
-        transition: all .18s ease;
+        transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease;
         vertical-align: middle;
         white-space: nowrap;
     }
@@ -2049,6 +2053,56 @@
         background: var(--green-100);
         border-color: var(--green-700);
         color: var(--green-700);
+    }
+
+    /* Interacción común: clic limpio con mouse/touch y foco visible sólo para teclado. */
+    .cef-wrap button,
+    .cef-wrap .btn,
+    .cef-wrap [role="button"],
+    .cef-wrap .dropdown-item {
+        -webkit-tap-highlight-color: transparent;
+        transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+
+    .cef-wrap button:focus:not(:focus-visible),
+    .cef-wrap .btn:focus:not(:focus-visible),
+    .cef-wrap [role="button"]:focus:not(:focus-visible),
+    .cef-wrap .dropdown-item:focus:not(:focus-visible) {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    .cef-wrap button:focus-visible,
+    .cef-wrap .btn:focus-visible,
+    .cef-wrap [role="button"]:focus-visible,
+    .cef-wrap .dropdown-item:focus-visible {
+        outline: none !important;
+        box-shadow: 0 0 0 3px rgba(45,125,210,.18) !important;
+    }
+
+    .cef-wrap button:focus-visible:not(:hover),
+    .cef-wrap .btn:focus-visible:not(:hover),
+    .cef-wrap [role="button"]:focus-visible:not(:hover) {
+        transform: none;
+    }
+
+    .cef-wrap .nav-tabs .nav-link:focus:not(:focus-visible) {
+        outline: none;
+        box-shadow: none;
+    }
+
+    .cef-wrap .nav-tabs .nav-link:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(45,125,210,.18);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .cef-wrap button,
+        .cef-wrap .btn,
+        .cef-wrap [role="button"],
+        .cef-wrap .dropdown-item {
+            transition-duration: .01ms !important;
+        }
     }
 
     /* ============================================================
@@ -2855,12 +2909,25 @@
     </div>
 </div>
 
+<script>
+(function () {
+    "use strict";
+    window.addEventListener("pagehide", function (event) {
+        if (!event.persisted) return;
+        var region = document.querySelector("[data-cef-content-region]");
+        if (region) region.replaceChildren();
+    });
+    window.addEventListener("pageshow", function (event) {
+        if (event.persisted) window.location.reload();
+    });
+})();
+</script>
 <script src="{% static 'cef/cef_loading.js' %}?v=20260811-4"></script>
 <script src="{% static 'cef/cef_inventario.js' %}"></script>
 <script src="{% static 'cef/cef_context_selector.js' %}"></script>
 <script src="{% static 'cef/cef_dropdowns.js' %}"></script>
 <script src="{% static 'cef/cef_profesores.js' %}"></script>
-<script src="{% static 'cef/cef_partial_navigation.js' %}"></script>
-<script src="{% static 'cef/cef_asistencia.js' %}?v=20260810-3"></script>
+<script src="{% static 'cef/cef_partial_navigation.js' %}?v=20260918-1"></script>
+<script src="{% static 'cef/cef_asistencia.js' %}?v=20260924-3"></script>
 
 {% endblock %}

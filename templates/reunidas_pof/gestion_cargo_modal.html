@@ -3,6 +3,7 @@
         aria-hidden="true"
         data-cargo-gestion-modal
         data-detalle-url-base="{% url 'reunidas_pof:detalle_cargo_pof' 0 %}"
+        data-ofertas-catalogo-url-base="{% url 'reunidas_pof:catalogo_ofertas_cargo_pof' 0 %}"
         data-modificar-url-base="{% url 'reunidas_pof:modificar_cargo_pof' 0 %}"
         data-eliminar-url-base="{% url 'reunidas_pof:eliminar_cargo_pof' 0 %}"
         data-historial-cargo-url-base="{% url 'reunidas_pof:historial_completo_cargo_pof' 0 %}"
@@ -94,6 +95,14 @@
                             <input type="number" id="cargoGestionPuntosZona" class="pof-locked-control" readonly tabindex="-1">
                         </div>
                     </div>
+                    <div class="pof-field pof-admin-zone-observation">
+                        <label for="cargoGestionObservacionZona">Observación del cambio de Zona Educativa (opcional)</label>
+                        <textarea id="cargoGestionObservacionZona"
+                                  rows="2"
+                                  maxlength="500"
+                                  placeholder="Agregá una aclaración para este cambio de Zona Educativa..."></textarea>
+                        <span class="pof-field-hint">Se guarda únicamente si la Zona Educativa cambia.</span>
+                    </div>
                     <div class="pof-help pof-admin-zone-help">
                         Los cambios se aplican a la misma identidad del año: CUEANEXO; si no existe, CUOF. Para dejarla pendiente otra vez, elegí “Seleccioná una zona”. Todo se confirma con “Guardar cambios”.
                     </div>
@@ -158,7 +167,7 @@
                     </div>
 
                     <div class="pof-help pof-admin-zone-help">
-                        El Anexo POF pertenece al CUE; en Proyecto Especial sólo usa CUOF cuando no existe CUE.
+                        El Anexo POF pertenece al CUEANEXO de Padrón; en Proyecto Especial sólo usa CUOF cuando no existe CUEANEXO.
                         Marcá o desmarcá los códigos y confirmá junto con el resto mediante “Guardar cambios”.
                     </div>
                 </div>
@@ -218,9 +227,40 @@
                         </div>
                     </div>
 
-                    <div class="pof-field pof-col-12 pof-observation-panel pof-admin-observation-panel">
-                        <label for="cargoGestionObservacion">Observaci&oacute;n</label>
-                        <textarea id="cargoGestionObservacion" rows="3"></textarea>
+                    <div class="pof-field pof-col-12 pof-observation-panel pof-admin-observation-panel"
+                         data-cargo-observation-mini-shell>
+                        <div class="pof-admin-observation-mini-tabs"
+                             role="tablist"
+                             aria-label="Observaci&oacute;n del cargo">
+                            <button type="button"
+                                    class="pof-admin-observation-mini-tab pof-admin-observation-mini-tab-active"
+                                    role="tab"
+                                    aria-selected="true"
+                                    data-cargo-observation-mini-tab="editor">
+                                Observaci&oacute;n
+                            </button>
+                            <button type="button"
+                                    class="pof-admin-observation-mini-tab"
+                                    role="tab"
+                                    aria-selected="false"
+                                    data-cargo-observation-mini-tab="historial">
+                                Historial de observaci&oacute;n
+                            </button>
+                        </div>
+
+                        <div data-cargo-observation-mini-panel="editor">
+                            <textarea id="cargoGestionObservacion"
+                                      rows="3"
+                                      aria-label="Observaci&oacute;n"></textarea>
+                        </div>
+
+                        <div class="pof-admin-observation-inline-history pof-hidden"
+                             data-cargo-observation-mini-panel="historial">
+                            <div id="estadoGestionObservacionHistorialInline"
+                                 class="pof-status"></div>
+                            <div id="contenidoGestionObservacionHistorialInline"
+                                 class="pof-admin-observation-inline-history-content"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -314,7 +354,7 @@
         </div>
     </div>
     <div id="modalConfirmarEliminacionCargo" class="pof-modal-backdrop pof-hidden" aria-hidden="true">
-        <div class="pof-modal pof-delete-warning-modal" role="dialog" aria-modal="true" aria-labelledby="modalConfirmarEliminacionTitulo">
+        <div class="pof-modal pof-delete-warning-modal" role="dialog" aria-modal="true" aria-labelledby="modalConfirmarEliminacionTitulo" aria-describedby="impactoEliminacionCargo">
             <div class="pof-modal-header">
                 <div>
                     <h2 id="modalConfirmarEliminacionTitulo">Eliminar cargo permanentemente</h2>
@@ -322,11 +362,11 @@
                 </div>
                 <button type="button" class="pof-modal-close pof-delete-close" aria-label="Cerrar" data-eliminar-cancelar>&times;</button>
             </div>
-            <div class="pof-delete-warning-box">
-                El cargo seleccionado se eliminar&aacute; de forma definitiva. Confirm&aacute; solo si est&aacute;s seguro.
+            <div class="pof-delete-warning-box" id="impactoEliminacionCargo" aria-live="polite">
+                Consultando el impacto real de la eliminaci&oacute;n...
             </div>
             <div class="pof-modal-actions">
-                <button type="button" class="pof-btn pof-btn-danger pof-delete-confirm-btn" id="btnConfirmarEliminarCargo">Eliminar permanentemente</button>
+                <button type="button" class="pof-btn pof-btn-danger pof-delete-confirm-btn" id="btnConfirmarEliminarCargo" disabled>Eliminar permanentemente</button>
                 <button type="button" class="pof-btn pof-btn-light" data-eliminar-cancelar>Cancelar</button>
             </div>
         </div>

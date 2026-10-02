@@ -229,9 +229,9 @@ def _agregar_columna_anexo_pof(nivel_codigo, columnas):
     """
     Incorpora Código(s) Anexo POF inmediatamente después de CUEANEXO.
 
-    Es un dato del propietario CUE, por lo que se muestra una sola vez por CUE
-    en preview y Excel filtrable. La cercanía visual con CUEANEXO se mantiene
-    igual en todos los niveles.
+    Es un dato del propietario CUEANEXO, por lo que se muestra una sola vez
+    por CUEANEXO en preview y Excel filtrable. La cercanía visual con CUEANEXO
+    se mantiene igual en todos los niveles.
     """
     if any(columna.get("source") == "anexo_pof" for columna in columnas):
         return columnas
@@ -240,7 +240,7 @@ def _agregar_columna_anexo_pof(nivel_codigo, columnas):
         nivel_codigo,
         "Código(s) Anexo POF",
         "anexo_pof",
-        repetir=REPETIR_POR_CUE,
+        repetir=REPETIR_POR_CUEANEXO,
     )
     indice_cueanexo = next(
         (
@@ -267,8 +267,9 @@ def _agregar_columnas_zona_educativa(nivel_codigo, columnas):
     Incorpora Zona Educativa a todos los esquemas de Reunida sin reescribir
     manualmente cada formato histórico.
 
-    Se insertan antes de CEIC/cargos y se consideran datos de localización:
-    se muestran una vez por CUEANEXO en preview/Excel compacto.
+    Se ubica inmediatamente después de Código(s) Anexo POF, formando un bloque
+    de datos de localización: CUEANEXO, Anexo POF, Zona Educativa y Puntos Zona.
+    Cada valor se muestra una sola vez por CUEANEXO en preview/Excel compacto.
     """
     sources_existentes = {columna.get("source") for columna in columnas}
     nuevas = []
@@ -295,20 +296,43 @@ def _agregar_columnas_zona_educativa(nivel_codigo, columnas):
     if not nuevas:
         return columnas
 
-    indice_insercion = next(
+    indice_anexo_pof = next(
         (
             indice
             for indice, columna in enumerate(columnas)
-            if columna.get("source") in {
-                "ceic",
-                "cargo",
-                "cantidad",
-                "cantidad_cargos",
-                "cantidad_horas",
-            }
+            if columna.get("source") == "anexo_pof"
         ),
-        len(columnas),
+        None,
     )
+    indice_cueanexo = next(
+        (
+            indice
+            for indice, columna in enumerate(columnas)
+            if columna.get("source") == "cueanexo"
+        ),
+        None,
+    )
+
+    if indice_anexo_pof is not None:
+        indice_insercion = indice_anexo_pof + 1
+    elif indice_cueanexo is not None:
+        indice_insercion = indice_cueanexo + 1
+    else:
+        indice_insercion = next(
+            (
+                indice
+                for indice, columna in enumerate(columnas)
+                if columna.get("source") in {
+                    "ceic",
+                    "cargo",
+                    "cantidad",
+                    "cantidad_cargos",
+                    "cantidad_horas",
+                }
+            ),
+            len(columnas),
+        )
+
     return [
         *columnas[:indice_insercion],
         *nuevas,
@@ -345,7 +369,6 @@ COLUMNAS_REUNIDA_POR_NIVEL = {
             ("CUI", "cui_bloque_final"),
             ("N Anexo", "anexo"),
             ("CUE", "cue_anexo"),
-            ("CUI", "cui_anexo"),
             (" Ubicación", "ubicacion_anexo"),
             ("Localidad", "localidad_anexo"),
             ("Departamento", "departamento_anexo"),
@@ -766,8 +789,8 @@ def obtener_columnas_config_nivel(nivel_codigo):
         for columna in COLUMNAS_REUNIDA_POR_NIVEL[codigo]
     ]
     columnas = _normalizar_columnas_cueanexo_principal(codigo, columnas)
-    columnas = _agregar_columnas_zona_educativa(codigo, columnas)
-    return _agregar_columna_anexo_pof(codigo, columnas)
+    columnas = _agregar_columna_anexo_pof(codigo, columnas)
+    return _agregar_columnas_zona_educativa(codigo, columnas)
 
 
 def obtener_columnas_disponibles_nivel(nivel_codigo):

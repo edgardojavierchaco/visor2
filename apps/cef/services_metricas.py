@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
+from django.core.paginator import Paginator
+
 from django.db.models import (
     Case,
     CharField,
@@ -105,6 +107,10 @@ class ConsultaResuelta:
     comparar: str
     grafico: str
     filtros: dict
+    vista: str = "auto"
+    buscar: str = ""
+    pagina: int = 1
+    tamano: int = 25
 
 
 def _texto_limpio(valor):
@@ -662,13 +668,13 @@ AREAS = {
         ),
         "indicators": {
             "alumnos_inscriptos_activos": _indicador(
-                "Alumnos inscriptos actualmente",
+                "Alumnos con inscripción activa",
                 "inscripciones",
                 {"kind": "distinct", "field": "alumno_id"},
                 (
-                    "Cantidad de alumnos con al menos una inscripción activa en el "
-                    "alcance seleccionado. Cada persona cuenta una sola vez, aunque "
-                    "tenga más de una inscripción."
+                    "Alumnos con al menos una inscripción activa en los ciclos y CEF "
+                    "elegidos. Cada alumno se cuenta una sola vez, aunque esté "
+                    "inscripto en más de un grupo."
                 ),
                 (
                     "actividad", "eje", "codigo_ra", "nivel", "rango_etario",
@@ -688,11 +694,11 @@ AREAS = {
                 fixed_q=Q(estado=CefInscripcion.Estado.ACTIVO),
             ),
             "alumnos_banco_unicos": _indicador(
-                "Alumnos registrados en el banco CEF",
+                "Alumnos registrados en el banco de alumnos del CEF",
                 "alumnos_banco",
                 {"kind": "distinct", "field": "alumno_id"},
                 (
-                    "Cantidad de alumnos incorporados al banco CEF. Cada persona cuenta "
+                    "Cantidad de alumnos incorporados al banco de alumnos del CEF. Cada persona cuenta "
                     "una sola vez; no se mezclan estas incorporaciones con inscripciones "
                     "a grupos."
                 ),
@@ -700,34 +706,34 @@ AREAS = {
                 ("ciclo", "cef", "estado", "edad", "sexo", *FILTROS_TERRITORIO),
                 unit="alumnos",
                 notes=(
-                    "La edad se calcula en años completos a la fecha de alta en el banco CEF.",
+                    "La edad se calcula en años completos a la fecha de alta en el banco de alumnos del CEF.",
                 ),
             ),
             "alumnos_banco_activos": _indicador(
-                "Alumnos activos en el banco CEF",
+                "Alumnos activos en el banco de alumnos del CEF",
                 "alumnos_banco",
                 {"kind": "distinct", "field": "alumno_id"},
-                "Cantidad de alumnos cuyo registro en el banco CEF está activo. Cada "
-                "persona cuenta una sola vez.",
+                "Alumnos activos en el banco de alumnos del CEF, estén o no inscriptos en un grupo. "
+                "Cada alumno se cuenta una sola vez.",
                 ("sexo", "edad", "fecha", *FILTROS_TERRITORIO),
                 ("ciclo", "cef", "edad", "sexo", *FILTROS_TERRITORIO),
                 unit="alumnos",
                 notes=(
-                    "La edad se calcula en años completos a la fecha de alta en el banco CEF.",
+                    "La edad se calcula en años completos a la fecha de alta en el banco de alumnos del CEF.",
                 ),
                 fixed_q=Q(estado=CefAlumnoCef.Estado.ACTIVO),
             ),
             "alumnos_banco_baja": _indicador(
-                "Alumnos dados de baja del banco CEF",
+                "Alumnos dados de baja del banco de alumnos del CEF",
                 "alumnos_banco",
                 {"kind": "distinct", "field": "alumno_id"},
-                "Cantidad de alumnos con registro dado de baja en el banco CEF. Cada "
-                "persona cuenta una sola vez.",
+                "Alumnos dados de baja del banco de alumnos del CEF. "
+                "Cada alumno se cuenta una sola vez.",
                 ("sexo", "edad", "fecha", *FILTROS_TERRITORIO),
                 ("ciclo", "cef", "edad", "sexo", *FILTROS_TERRITORIO),
                 unit="alumnos",
                 notes=(
-                    "La edad se calcula en años completos a la fecha de alta en el banco CEF.",
+                    "La edad se calcula en años completos a la fecha de alta en el banco de alumnos del CEF.",
                 ),
                 fixed_q=Q(estado=CefAlumnoCef.Estado.BAJA),
                 filter_overrides={"fecha": ("fecha", "fecha_baja")},
@@ -797,32 +803,32 @@ AREAS = {
         ),
         "indicators": {
             "profesores_banco_unicos": _indicador(
-                "Profesores registrados en el banco CEF",
+                "Profesores registrados en el banco de profesores del CEF",
                 "docentes_banco",
                 {"kind": "distinct", "field": "docente_cuil"},
-                "Cantidad de profesores incorporados al banco CEF. Cada profesor cuenta "
+                "Cantidad de profesores incorporados al banco de profesores del CEF. Cada profesor cuenta "
                 "una sola vez.",
                 ("estado", "fecha", *FILTROS_TERRITORIO),
                 ("ciclo", "cef", "estado", *FILTROS_TERRITORIO),
                 unit="profesores",
             ),
             "profesores_banco_activos": _indicador(
-                "Profesores activos en el banco CEF",
+                "Profesores activos en el banco de profesores del CEF",
                 "docentes_banco",
                 {"kind": "distinct", "field": "docente_cuil"},
-                "Cantidad de profesores cuyo registro en el banco CEF está activo. Cada "
-                "profesor cuenta una sola vez.",
+                "Profesores activos en el banco de profesores del CEF, tengan o no un grupo asignado. "
+                "Cada profesor se cuenta una sola vez.",
                 ("fecha", *FILTROS_TERRITORIO),
                 ("ciclo", "cef", *FILTROS_TERRITORIO),
                 unit="profesores",
                 fixed_q=Q(estado=CefDocenteCef.Estado.ACTIVO),
             ),
             "profesores_banco_baja": _indicador(
-                "Profesores dados de baja del banco CEF",
+                "Profesores dados de baja del banco de profesores del CEF",
                 "docentes_banco",
                 {"kind": "distinct", "field": "docente_cuil"},
-                "Cantidad de profesores con registro dado de baja en el banco CEF. Cada "
-                "profesor cuenta una sola vez.",
+                "Profesores dados de baja del banco de profesores del CEF. "
+                "Cada profesor se cuenta una sola vez.",
                 ("fecha", *FILTROS_TERRITORIO),
                 ("ciclo", "cef", *FILTROS_TERRITORIO),
                 unit="profesores",
@@ -831,12 +837,12 @@ AREAS = {
                 filter_labels={"fecha": "Fecha de baja"},
             ),
             "profesores_asignados_activos": _indicador(
-                "Profesores con asignación activa",
+                "Profesores con asignación activa a un grupo",
                 "asignaciones",
                 {"kind": "distinct", "field": "docente_cuil"},
                 (
-                    "Cantidad de profesores con al menos una asignación activa a un grupo. "
-                    "Cada profesor cuenta una sola vez en el total."
+                    "Profesores con al menos una asignación activa a un grupo. "
+                    "Cada profesor se cuenta una sola vez, aunque tenga varios grupos asignados."
                 ),
                 (
                     "actividad", "eje", "codigo_ra", "nivel", "rango_etario",
@@ -909,6 +915,16 @@ AREAS = {
                 unit="asignaciones",
                 fixed_q=Q(rol=CefDocenteGrupo.Rol.SUPLENTE),
             ),
+            "asignaciones_interinas": _indicador(
+                "Asignaciones interinas de profesores",
+                "asignaciones",
+                {"kind": "count", "field": "pk"},
+                "Cantidad de asignaciones registradas con rol interino.",
+                FILTROS_GRUPO + ("fecha",),
+                tuple(d for d in DIMENSIONES_GRUPO_TERRITORIO if d != "rol"),
+                unit="asignaciones",
+                fixed_q=Q(rol=CefDocenteGrupo.Rol.INTERINO),
+            ),
         },
     },
     "grupos": {
@@ -916,17 +932,17 @@ AREAS = {
         "filter_order": (*FILTROS_GRUPO, "cupo"),
         "indicators": {
             "grupos_total": _indicador(
-                "Grupos",
+                "Cantidad de grupos (todos)",
                 "grupos",
                 {"kind": "count", "field": "pk", "distinct": True},
-                "Cantidad de grupos del alcance, contados sin unir inscripciones, docentes ni días.",
+                "Cantidad de grupos activos y dados de baja en los ciclos y CEF elegidos. Cada grupo se cuenta una sola vez.",
                 tuple(f for f in FILTROS_GRUPO if f != "estado") + ("cupo",),
                 tuple(d for d in DIMENSIONES_GRUPO_TERRITORIO if d != "estado")
                 + ("dia",),
                 unit="grupos",
             ),
             "grupos_activos": _indicador(
-                "Grupos activos",
+                "Cantidad de grupos activos",
                 "grupos",
                 {"kind": "count", "field": "pk", "distinct": True},
                 "Cantidad de grupos cuyo estado actual es activo.",
@@ -937,7 +953,7 @@ AREAS = {
                 fixed_q=Q(estado=CefGrupo.Estado.ACTIVO),
             ),
             "grupos_baja": _indicador(
-                "Grupos dados de baja",
+                "Cantidad de grupos dados de baja",
                 "grupos",
                 {"kind": "count", "field": "pk", "distinct": True},
                 "Cantidad de grupos cuyo estado actual es baja.",
@@ -983,7 +999,7 @@ AREAS = {
                 unit="vacantes",
             ),
             "ocupacion": _indicador(
-                "Porcentaje de ocupación de grupos",
+                "Ocupación de los grupos (%)",
                 "grupos",
                 {"kind": "occupancy"},
                 (
@@ -1008,10 +1024,10 @@ AREAS = {
         "filter_order": ("material", "estado", *FILTROS_TERRITORIO),
         "indicators": {
             "unidades": _indicador(
-                "Unidades de material",
+                "Unidades de materiales registradas",
                 "inventario",
                 {"kind": "sum", "field": "cantidad"},
-                "Cantidad total registrada de materiales, según su estado actual.",
+                "Suma de las cantidades registradas, según el estado de cada material.",
                 ("material", "estado", *FILTROS_TERRITORIO),
                 ("ciclo", "cef", "material", "estado", *FILTROS_TERRITORIO),
                 unit="unidades",
@@ -1028,7 +1044,7 @@ AREAS = {
         "indicators": {},
     },
     "relevamiento": {
-        "label": "Relevamiento de CEF",
+        "label": "Datos adicionales",
         "filter_order": (
             "beneficio", "financiamiento", "prestacion", "espacio_comedor",
             "orientacion", *FILTROS_TERRITORIO,
@@ -1052,43 +1068,43 @@ _DIMENSIONES_ASISTENCIA_PUBLICAS = (
 AREAS["asistencia"]["indicators"].update(
     {
         "jornadas": _indicador(
-            "Jornadas con asistencia",
+            "Jornadas con asistencia cargada",
             "asistencia",
             {"kind": "distinct", "field": "jornada_id"},
             (
-                "Cantidad de jornadas con al menos un registro de asistencia dentro de "
-                "los filtros. Cada jornada cuenta una sola vez."
+                "Cantidad de jornadas en las que se cargó al menos una asistencia "
+                "que cumple los filtros elegidos. Cada jornada se cuenta una sola vez."
             ),
             _FILTROS_ASISTENCIA,
             _DIMENSIONES_ASISTENCIA_PUBLICAS,
             unit="jornadas",
         ),
         "registros": _indicador(
-            "Registros de asistencia",
+            "Asistencias registradas",
             "asistencia",
             {"kind": "count", "field": "pk"},
-            "Cantidad de filas de asistencia efectivamente registradas.",
+            "Cantidad de asistencias cargadas. Un mismo alumno puede tener asistencia registrada en varias jornadas.",
             _FILTROS_ASISTENCIA,
             _DIMENSIONES_ASISTENCIA_PUBLICAS,
             unit="registros",
         ),
         "presentes": _indicador(
-            "Registros presentes",
+            "Presencias registradas",
             "asistencia",
             {"kind": "count", "field": "pk"},
-            "Cantidad de registros de asistencia cuyo estado es presente.",
+            "Cantidad de asistencias marcadas como presente.",
             tuple(f for f in _FILTROS_ASISTENCIA if f != "estado"),
             tuple(d for d in _DIMENSIONES_ASISTENCIA_PUBLICAS if d != "estado"),
             unit="registros",
             fixed_q=Q(estado=CefAsistencia.Estado.PRESENTE),
         ),
         "ausentes": _indicador(
-            "Registros ausentes",
+            "Ausencias registradas",
             "asistencia",
             {"kind": "count", "field": "pk"},
             (
-                "Cantidad de registros marcados explícitamente como ausente; la falta "
-                "de un registro nunca se interpreta como ausencia."
+                "Cantidad de asistencias marcadas como ausente. "
+                "Si no se cargó la asistencia, no se cuenta como ausencia."
             ),
             tuple(f for f in _FILTROS_ASISTENCIA if f != "estado"),
             tuple(d for d in _DIMENSIONES_ASISTENCIA_PUBLICAS if d != "estado"),
@@ -1099,7 +1115,7 @@ AREAS["asistencia"]["indicators"].update(
             "Ausencias justificadas",
             "asistencia",
             {"kind": "count", "field": "pk"},
-            "Cantidad de registros marcados explícitamente como ausencia justificada.",
+            "Cantidad de asistencias marcadas como ausencia justificada.",
             tuple(f for f in _FILTROS_ASISTENCIA if f != "estado"),
             tuple(d for d in _DIMENSIONES_ASISTENCIA_PUBLICAS if d != "estado"),
             unit="registros",
@@ -1109,11 +1125,11 @@ AREAS["asistencia"]["indicators"].update(
 )
 
 for _clave, _label, _estado in (
-    ("porcentaje_presentes", "Porcentaje de registros presentes", CefAsistencia.Estado.PRESENTE),
-    ("porcentaje_ausentes", "Porcentaje de registros ausentes", CefAsistencia.Estado.AUSENTE),
+    ("porcentaje_presentes", "Presentismo (%)", CefAsistencia.Estado.PRESENTE),
+    ("porcentaje_ausentes", "Ausencias (%)", CefAsistencia.Estado.AUSENTE),
     (
         "porcentaje_justificadas",
-        "Porcentaje de registros justificados",
+        "Ausencias justificadas (%)",
         CefAsistencia.Estado.JUSTIFICADA,
     ),
 ):
@@ -1122,8 +1138,9 @@ for _clave, _label, _estado in (
         "asistencia",
         {"kind": "state_ratio", "state": _estado},
         (
-            f"{_label} sobre todos los registros de asistencia incluidos en la consulta. "
-            "Si no existe un registro de asistencia, no se cuenta en el cálculo."
+            f"Porcentaje de asistencias marcadas como «{str(dict(CefAsistencia.Estado.choices)[_estado]).lower()}» "
+            "sobre todas las asistencias registradas. "
+            "Las asistencias que no se cargaron no se incluyen en el cálculo."
         ),
         tuple(f for f in _FILTROS_ASISTENCIA if f != "estado"),
         tuple(d for d in _DIMENSIONES_ASISTENCIA_PUBLICAS if d != "estado"),
@@ -1142,38 +1159,38 @@ _DIMENSIONES_RELEVAMIENTO_PUBLICAS = (
 AREAS["relevamiento"]["indicators"].update(
     {
         "cef_relevados": _indicador(
-            "CEF con relevamiento",
+            "CEF con datos adicionales cargados",
             "relevamiento",
             {"kind": "distinct", "field": "cueanexo"},
-            "Cantidad de CEF con al menos un relevamiento en el alcance. Cada CEF cuenta "
-            "una sola vez.",
+            "Cantidad de CEF con datos adicionales cargados en los ciclos elegidos. "
+            "Cada CEF se cuenta una sola vez.",
             _FILTROS_RELEVAMIENTO,
             _DIMENSIONES_RELEVAMIENTO_PUBLICAS,
             unit="CEF",
         ),
         "relevamientos": _indicador(
-            "Relevamientos registrados",
+            "Registros de datos adicionales",
             "relevamiento",
             {"kind": "count", "field": "pk"},
-            "Cantidad de relevamientos registrados para los CEF y ciclos seleccionados.",
+            "Cantidad de registros de datos adicionales para los CEF y ciclos seleccionados.",
             _FILTROS_RELEVAMIENTO,
             _DIMENSIONES_RELEVAMIENTO_PUBLICAS,
-            unit="relevamientos",
+            unit="registros",
         ),
         "porcentaje_distribucion": _indicador(
-            "Distribución de relevamientos (%)",
+            "Distribución de datos adicionales (%)",
             "relevamiento",
             {"kind": "distribution_ratio"},
             (
-                "Porcentaje de relevamientos de cada categoría sobre el total filtrado. "
-                "Con una comparación, cada celda conserva el mismo denominador global."
+                "Porcentaje de registros de datos adicionales de cada categoría sobre el total de la consulta. "
+                "Al comparar, todos los porcentajes se calculan sobre ese mismo total."
             ),
             _FILTROS_RELEVAMIENTO,
             _DIMENSIONES_RELEVAMIENTO_PUBLICAS,
             unit="%",
             notes=(
-                "Sin desglose, el resultado es 100 % cuando existen relevamientos; "
-                "sin denominador se informa como no calculable.",
+                "En la vista general, el resultado es 100 % cuando hay datos adicionales cargados. "
+                "Si no hay datos adicionales cargados, no se puede calcular el porcentaje.",
             ),
         ),
     }
@@ -1197,13 +1214,13 @@ EXPLORACIONES = (
             },
             {
                 "indicator": "alumnos_banco_activos",
-                "label": "Activos en el banco CEF",
+                "label": "Activos en el banco de alumnos del CEF",
                 "result_label": "Alumnos encontrados",
                 "default_group": "sexo",
             },
             {
                 "indicator": "alumnos_banco_baja",
-                "label": "Dados de baja del banco CEF",
+                "label": "Dados de baja del banco de alumnos del CEF",
                 "result_label": "Alumnos encontrados",
                 "default_group": "sexo",
             },
@@ -1225,13 +1242,13 @@ EXPLORACIONES = (
             },
             {
                 "indicator": "profesores_banco_activos",
-                "label": "Activos en el banco CEF",
+                "label": "Activos en el banco de profesores del CEF",
                 "result_label": "Profesores encontrados",
                 "default_group": "cef",
             },
             {
                 "indicator": "profesores_banco_baja",
-                "label": "Dados de baja del banco CEF",
+                "label": "Dados de baja del banco de profesores del CEF",
                 "result_label": "Profesores encontrados",
                 "default_group": "cef",
             },
@@ -1322,8 +1339,8 @@ EXPLORACIONES = (
     },
     {
         "key": "relevamientos",
-        "label": "Relevamientos",
-        "description": "Consultá la información relevada para cada CEF.",
+        "label": "Datos adicionales",
+        "description": "Consultá los datos adicionales cargados para cada CEF.",
         "icon": "fa-solid fa-list-check",
         "area": "relevamiento",
         "default_group": "prestacion",
@@ -1331,12 +1348,12 @@ EXPLORACIONES = (
         "variants": (
             {
                 "indicator": "relevamientos",
-                "label": "Relevamientos registrados",
-                "result_label": "Relevamientos encontrados",
+                "label": "Registros de datos adicionales",
+                "result_label": "Registros encontrados",
             },
             {
                 "indicator": "cef_relevados",
-                "label": "CEF con relevamiento",
+                "label": "CEF con datos adicionales cargados",
                 "result_label": "CEF encontrados",
             },
         ),
@@ -1426,12 +1443,19 @@ def _opciones_modelo(modelo, etiqueta="nombre"):
     return opciones
 
 
-def _opciones_grupos():
-    filas = CefGrupo.objects.order_by(
+def _opciones_grupos(cefs_permitidos=None, ciclos_permitidos=None):
+    queryset = CefGrupo.objects.all()
+    if cefs_permitidos is not None:
+        queryset = queryset.filter(cueanexo__in=tuple(cefs_permitidos))
+    if ciclos_permitidos is not None:
+        queryset = queryset.filter(ciclo_id__in=tuple(ciclos_permitidos))
+
+    filas = queryset.order_by(
         "ciclo__anio", "cueanexo", "actividad__nombre", "numero", "pk"
     ).values(
         "pk",
         "cueanexo",
+        "ciclo_id",
         "ciclo__anio",
         "nombre",
         "numero",
@@ -1450,7 +1474,14 @@ def _opciones_grupos():
             f"{actividad} · {nombre} · CEF {fila['cueanexo']} · "
             f"{fila['ciclo__anio']}"
         )
-        opciones.append({"value": str(fila["pk"]), "label": label})
+        opciones.append(
+            {
+                "value": str(fila["pk"]),
+                "label": label,
+                "cef": normalizar_cueanexo(fila.get("cueanexo")),
+                "ciclo": str(fila.get("ciclo_id") or ""),
+            }
+        )
     return opciones
 
 
@@ -1479,7 +1510,7 @@ def _opciones_territorio(cef_map, clave):
     return [{"value": valor, "label": valor} for valor in valores]
 
 
-def _opciones_filtro(area, clave, cef_map, cache):
+def _opciones_filtro(area, clave, cef_map, cache, ciclos_permitidos=None):
     cache_key = (area if clave == "estado" else "global", clave)
     if cache_key in cache:
         return cache[cache_key]
@@ -1487,7 +1518,10 @@ def _opciones_filtro(area, clave, cef_map, cache):
     if clave in CLAVES_TERRITORIO:
         opciones = _opciones_territorio(cef_map, clave)
     elif clave == "grupo":
-        opciones = _opciones_grupos()
+        opciones = _opciones_grupos(
+            cefs_permitidos=cef_map.keys(),
+            ciclos_permitidos=ciclos_permitidos,
+        )
     elif clave == "sexo":
         opciones = _opciones_sexo()
     elif clave == "mes":
@@ -1529,7 +1563,7 @@ def _opciones_filtro(area, clave, cef_map, cache):
     return opciones
 
 
-def _definicion_filtro(area, clave, cef_map, cache):
+def _definicion_filtro(area, clave, cef_map, cache, ciclos_permitidos=None):
     meta = FILTROS_META[clave]
     definicion = {
         "key": clave,
@@ -1537,7 +1571,13 @@ def _definicion_filtro(area, clave, cef_map, cache):
         "type": meta["type"],
     }
     if meta["type"] == "multi":
-        definicion["choices"] = _opciones_filtro(area, clave, cef_map, cache)
+        definicion["choices"] = _opciones_filtro(
+            area,
+            clave,
+            cef_map,
+            cache,
+            ciclos_permitidos=ciclos_permitidos,
+        )
     else:
         definicion["from_param"] = f"f_{clave}_desde"
         definicion["to_param"] = f"f_{clave}_hasta"
@@ -1548,11 +1588,24 @@ def _definicion_filtro(area, clave, cef_map, cache):
     return definicion
 
 
-def construir_configuracion_metricas():
-    """Devuelve toda la lista blanca serializable que consume la interfaz."""
+def construir_configuracion_metricas(cefs_permitidos=None, ciclos_permitidos=None):
+    """Devuelve la configuración serializable visible dentro del alcance autorizado."""
 
     ciclos_db = _cargar_ciclos()
+    if ciclos_permitidos is not None:
+        ciclos_ids = {int(valor) for valor in ciclos_permitidos}
+        ciclos_db = [fila for fila in ciclos_db if fila["pk"] in ciclos_ids]
+
     cef_map = _cargar_cefs()
+    if cefs_permitidos is not None:
+        cefs_ids = {normalizar_cueanexo(valor) for valor in cefs_permitidos}
+        cefs_ids.discard("")
+        cef_map = {
+            cueanexo: datos
+            for cueanexo, datos in cef_map.items()
+            if cueanexo in cefs_ids
+        }
+
     opciones_cache = {}
     ciclos = [
         {
@@ -1578,9 +1631,15 @@ def construir_configuracion_metricas():
             for clave in indicador["filters"]
         }
         filtros = [
-            _definicion_filtro(area_key, clave, cef_map, opciones_cache)
+            _definicion_filtro(
+                area_key,
+                clave,
+                cef_map,
+                opciones_cache,
+                ciclos_permitidos=tuple(fila["pk"] for fila in ciclos_db),
+            )
             for clave in area["filter_order"]
-            if clave in filtros_usados
+            if clave in filtros_usados and clave != "codigo_ra"
         ]
 
         dimensiones_usadas = {
@@ -1591,7 +1650,7 @@ def construir_configuracion_metricas():
         dimensiones = [
             {"key": clave, "label": DIMENSIONES_META[clave]}
             for clave in DIMENSIONES_META
-            if clave in dimensiones_usadas
+            if clave in dimensiones_usadas and clave != "codigo_ra"
         ]
         indicadores = []
         for key, indicador in area["indicators"].items():
@@ -1603,10 +1662,10 @@ def construir_configuracion_metricas():
                     "definition": indicador["definition"],
                     "notes": list(indicador["notes"]),
                     "unit": indicador["unit"],
-                    "filters": list(dict.fromkeys(indicador["filters"])),
-                    "filter_labels": etiquetas_filtro,
-                    "groupings": list(dict.fromkeys(indicador["groupings"])),
-                    "comparisons": list(dict.fromkeys(indicador["comparisons"])),
+                    "filters": [clave for clave in dict.fromkeys(indicador["filters"]) if clave != "codigo_ra"],
+                    "filter_labels": {clave: label for clave, label in etiquetas_filtro.items() if clave != "codigo_ra"},
+                    "groupings": [clave for clave in dict.fromkeys(indicador["groupings"]) if clave != "codigo_ra"],
+                    "comparisons": [clave for clave in dict.fromkeys(indicador["comparisons"]) if clave != "codigo_ra"],
                 }
             )
 
@@ -1653,6 +1712,10 @@ PARAMETROS_BASE = {
     "agrupar",
     "comparar",
     "grafico",
+    "vista",
+    "buscar",
+    "pagina",
+    "tamano",
 }
 
 
@@ -1831,6 +1894,22 @@ def _resolver_consulta(params, ciclos_db, cef_map):
             "El tipo de gráfico no es compatible con la consulta solicitada."
         )
 
+    vista = str(_parametro(params, "vista", "auto") or "auto").strip()
+    if vista not in {"auto", "resumen"}:
+        raise MetricasValidationError("La presentación solicitada no está permitida.")
+    buscar = str(_parametro(params, "buscar", "") or "").strip()
+    if len(buscar) > 200:
+        raise MetricasValidationError("La búsqueda admite hasta 200 caracteres.")
+    pagina = _valor_entero(_parametro(params, "pagina", "1"), "Página", 1)
+    tamano = _valor_entero(_parametro(params, "tamano", "25"), "Filas por página")
+    if tamano not in {10, 25, 50}:
+        raise MetricasValidationError("Elegí 10, 25 o 50 filas por página.")
+
+    cef_map_contexto = {
+        cueanexo: cef_map[cueanexo]
+        for cueanexo in cefs
+        if cueanexo in cef_map
+    }
     filtros = {}
     cache_opciones = {}
     for clave in indicador["filters"]:
@@ -1839,7 +1918,13 @@ def _resolver_consulta(params, ciclos_db, cef_map):
             valores = _parametro_lista(params, f"f_{clave}")
             if not valores:
                 continue
-            opciones = _opciones_filtro(area_key, clave, cef_map, cache_opciones)
+            opciones = _opciones_filtro(
+                area_key,
+                clave,
+                cef_map_contexto,
+                cache_opciones,
+                ciclos_permitidos=ciclos_ordenados,
+            )
             etiquetas = {opcion["value"]: opcion["label"] for opcion in opciones}
             if any(valor not in etiquetas for valor in valores):
                 raise MetricasValidationError(
@@ -1896,6 +1981,10 @@ def _resolver_consulta(params, ciclos_db, cef_map):
         comparar=comparar,
         grafico=grafico,
         filtros=filtros,
+        vista=vista,
+        buscar=buscar,
+        pagina=pagina,
+        tamano=tamano,
     )
 
 
@@ -2410,7 +2499,7 @@ def _filas_agrupadas(qs, consulta, indicador, fuente, cef_map, total):
 
 def _formatear_numero(valor, unidad):
     if valor is None:
-        return "No calculable"
+        return "Sin datos para calcular"
     valor = float(valor or 0)
     if unidad == "%" or "por grupo" in unidad:
         texto = f"{valor:.1f}"
@@ -2446,7 +2535,14 @@ def _tabla_resultado(filas, consulta, indicador):
         etiquetas_componentes = {
             "average_active_students": ("Alumnos activos", "Grupos incluidos"),
             "occupancy": ("Inscripciones activas", "Vacantes informadas"),
-            "state_ratio": ("Registros del estado", "Registros de asistencia"),
+            "state_ratio": (
+                {
+                    CefAsistencia.Estado.PRESENTE: "Presentes",
+                    CefAsistencia.Estado.AUSENTE: "Ausentes",
+                    CefAsistencia.Estado.JUSTIFICADA: "Ausencias justificadas",
+                }.get(indicador["metric"].get("state"), "Asistencias seleccionadas"),
+                "Asistencias registradas",
+            ),
             "distribution_ratio": ("Relevamientos de la categoría", "Relevamientos incluidos"),
         }
         numerador_label, denominador_label = etiquetas_componentes[kind]
@@ -2483,11 +2579,77 @@ def _tabla_resultado(filas, consulta, indicador):
     return {"columns": columnas, "rows": rows}
 
 
-def _filas_limitadas(qs, limite):
-    if limite is None:
-        return list(qs), False
-    filas = list(qs[: limite + 1])
-    return filas[:limite], len(filas) > limite
+def _paginar_filas(filas, consulta, paginar):
+    if not paginar:
+        return list(filas), None
+    paginador = Paginator(filas, consulta.tamano)
+    pagina = paginador.get_page(consulta.pagina)
+    return list(pagina.object_list), {
+        "page": pagina.number,
+        "page_size": consulta.tamano,
+        "total_rows": paginador.count,
+        "pages": paginador.num_pages,
+        "from": pagina.start_index(),
+        "to": pagina.end_index(),
+    }
+
+
+def _buscar_registros(qs, consulta, cef_map):
+    """Busca sobre todas las filas del listado, antes de paginar o exportar."""
+    if not consulta.buscar:
+        return qs
+    fuente = AREAS[consulta.area]["indicators"][consulta.indicador]["source"]
+    campos = {
+        "inscripciones": (
+            ("alumno__apellidos", "alumno__nombres", "alumno__nro_doc", "alumno__cuil"),
+            "grupo__ciclo__anio", "grupo__cueanexo",
+        ),
+        "alumnos_banco": (
+            ("alumno_nombre_snapshot", "alumno_documento_snapshot", "alumno_cuil_snapshot"),
+            "ciclo__anio", "cueanexo",
+        ),
+        "asignaciones": (
+            ("docente_nombre_snapshot", "docente_dni_snapshot", "docente_cuil"),
+            "grupo__ciclo__anio", "grupo__cueanexo",
+        ),
+        "docentes_banco": (
+            ("docente_nombre_snapshot", "docente_dni_snapshot", "docente_cuil"),
+            "ciclo__anio", "cueanexo",
+        ),
+        "inventario": (
+            ("estado__nombre", "cantidad"),
+            "inventario_material__ciclo__anio", "inventario_material__cueanexo",
+        ),
+    }
+    textos, ciclo, cef = campos[fuente]
+    expresiones = [
+        Coalesce(NullIf(Cast(F(campo), CharField()), Value("")), Value(SIN_INFORMACION))
+        for campo in (*textos, ciclo)
+    ]
+    expresiones.append(Case(
+        *(When(**{cef: clave, "then": Value(datos["label"])}) for clave, datos in cef_map.items()),
+        default=Cast(F(cef), CharField()),
+        output_field=CharField(),
+    ))
+    if fuente in {"inscripciones", "alumnos_banco"}:
+        sexo_map = _opciones_sexo_mapa({})
+        expresiones.append(Case(
+            *(When(alumno__sexo_id=clave, then=Value(label)) for clave, label in sexo_map.items()),
+            default=Value(SIN_INFORMACION),
+            output_field=CharField(),
+        ))
+    if fuente == "inventario":
+        expresiones.append(_snapshot(
+            "inventario_material__material_nombre_snapshot",
+            "inventario_material__material__nombre",
+        ))
+    partes = []
+    for expresion in expresiones:
+        partes.extend((expresion, Value(" ")))
+    qs = qs.annotate(_consulta_busqueda=Concat(*partes, output_field=CharField()))
+    for termino in consulta.buscar.replace(",", " ").split():
+        qs = qs.filter(_consulta_busqueda__icontains=termino)
+    return qs
 
 
 def _nombre_persona(apellidos="", nombres="", snapshot=""):
@@ -2506,7 +2668,7 @@ def _cef_resultado(cueanexo, cef_map):
     return cef_map.get(cueanexo, {}).get("label", cueanexo or SIN_INFORMACION)
 
 
-def _tabla_registros(qs, consulta, cef_map, limite):
+def _tabla_registros(qs, consulta, cef_map, paginar):
     indicador = consulta.indicador
 
     if indicador == "alumnos_inscriptos_activos":
@@ -2531,7 +2693,8 @@ def _tabla_registros(qs, consulta, cef_map, limite):
             )
             .distinct()
         )
-        registros, limitado = _filas_limitadas(consulta_filas, limite)
+        consulta_filas = _buscar_registros(consulta_filas, consulta, cef_map)
+        registros, paginacion = _paginar_filas(consulta_filas, consulta, paginar)
         filas = [
             {
                 "alumno": _nombre_persona(
@@ -2558,7 +2721,7 @@ def _tabla_registros(qs, consulta, cef_map, limite):
                 {"key": "cef", "label": "CEF"},
             ],
             "rows": filas,
-            "limited": limitado,
+            "pagination": paginacion,
         }
 
     if indicador in {"alumnos_banco_activos", "alumnos_banco_baja"}:
@@ -2572,10 +2735,14 @@ def _tabla_registros(qs, consulta, cef_map, limite):
                 "ciclo__anio",
                 "cueanexo",
             )
-            .order_by("alumno_nombre_snapshot", "ciclo__anio", "cueanexo")
+            .order_by(
+                "alumno_nombre_snapshot", "ciclo__anio", "cueanexo",
+                "alumno_documento_snapshot", "alumno_cuil_snapshot", "alumno__sexo_id",
+            )
             .distinct()
         )
-        registros, limitado = _filas_limitadas(consulta_filas, limite)
+        consulta_filas = _buscar_registros(consulta_filas, consulta, cef_map)
+        registros, paginacion = _paginar_filas(consulta_filas, consulta, paginar)
         filas = [
             {
                 "alumno": _nombre_persona(snapshot=fila.get("alumno_nombre_snapshot")),
@@ -2599,7 +2766,7 @@ def _tabla_registros(qs, consulta, cef_map, limite):
                 {"key": "cef", "label": "CEF"},
             ],
             "rows": filas,
-            "limited": limitado,
+            "pagination": paginacion,
         }
 
     if indicador == "profesores_asignados_activos":
@@ -2616,10 +2783,12 @@ def _tabla_registros(qs, consulta, cef_map, limite):
                 "docente_cuil",
                 "grupo__ciclo__anio",
                 "grupo__cueanexo",
+                "docente_dni_snapshot",
             )
             .distinct()
         )
-        registros, limitado = _filas_limitadas(consulta_filas, limite)
+        consulta_filas = _buscar_registros(consulta_filas, consulta, cef_map)
+        registros, paginacion = _paginar_filas(consulta_filas, consulta, paginar)
         filas = [
             {
                 "profesor": _nombre_persona(snapshot=fila.get("docente_nombre_snapshot")),
@@ -2641,7 +2810,7 @@ def _tabla_registros(qs, consulta, cef_map, limite):
                 {"key": "cef", "label": "CEF"},
             ],
             "rows": filas,
-            "limited": limitado,
+            "pagination": paginacion,
         }
 
     if indicador in {"profesores_banco_activos", "profesores_banco_baja"}:
@@ -2653,10 +2822,14 @@ def _tabla_registros(qs, consulta, cef_map, limite):
                 "ciclo__anio",
                 "cueanexo",
             )
-            .order_by("docente_nombre_snapshot", "docente_cuil", "ciclo__anio", "cueanexo")
+            .order_by(
+                "docente_nombre_snapshot", "docente_cuil", "ciclo__anio",
+                "cueanexo", "docente_dni_snapshot",
+            )
             .distinct()
         )
-        registros, limitado = _filas_limitadas(consulta_filas, limite)
+        consulta_filas = _buscar_registros(consulta_filas, consulta, cef_map)
+        registros, paginacion = _paginar_filas(consulta_filas, consulta, paginar)
         filas = [
             {
                 "profesor": _nombre_persona(snapshot=fila.get("docente_nombre_snapshot")),
@@ -2678,7 +2851,7 @@ def _tabla_registros(qs, consulta, cef_map, limite):
                 {"key": "cef", "label": "CEF"},
             ],
             "rows": filas,
-            "limited": limitado,
+            "pagination": paginacion,
         }
 
     if indicador == "unidades":
@@ -2696,7 +2869,8 @@ def _tabla_registros(qs, consulta, cef_map, limite):
             "inventario_material__cueanexo",
             "pk",
         )
-        registros, limitado = _filas_limitadas(consulta_filas, limite)
+        consulta_filas = _buscar_registros(consulta_filas, consulta, cef_map)
+        registros, paginacion = _paginar_filas(consulta_filas, consulta, paginar)
         filas = [
             {
                 "material": (
@@ -2722,7 +2896,7 @@ def _tabla_registros(qs, consulta, cef_map, limite):
                 {"key": "cef", "label": "CEF"},
             ],
             "rows": filas,
-            "limited": limitado,
+            "pagination": paginacion,
         }
 
     return None
@@ -2823,7 +2997,7 @@ def _grafico_resultado(filas, consulta, indicador):
                         ),
                         (
                             None
-                            if indicador["metric"]["kind"] in {
+                            if consulta.buscar or indicador["metric"]["kind"] in {
                                 "average_active_students",
                                 "occupancy",
                                 "state_ratio",
@@ -2929,7 +3103,7 @@ def _consulta_publica(consulta, ciclos_db, cef_map, indicador):
         f"CEF: {TODOS_LOS_CEF if consulta.todos_cef else ', '.join(cef['label'] for cef in cefs)}",
     ]
     resumen.extend(
-        f"Limitado por {filtro['label']}: {filtro['summary']}" for filtro in filtros
+        f"{filtro['label']}: {filtro['summary']}" for filtro in filtros
     )
     return {
         "area": consulta.area,
@@ -2949,21 +3123,28 @@ def _consulta_publica(consulta, ciclos_db, cef_map, indicador):
         "comparar": consulta.comparar,
         "comparar_label": DIMENSIONES_META.get(consulta.comparar, "No comparar"),
         "grafico": consulta.grafico,
+        "vista": consulta.vista,
+        "buscar": consulta.buscar,
     }
 
 
 def _notas_resultado(consulta, indicador, total):
     notas = list(indicador["notes"])
     metrica = indicador["metric"]
+    sujeto = {
+        "alumnos": "Un mismo alumno",
+        "profesores": "Un mismo profesor",
+        "jornadas": "Una misma jornada",
+        "CEF": "Un mismo CEF",
+    }.get(indicador["unit"], "Un mismo elemento")
     if metrica["kind"] == "distinct" and consulta.agrupar:
         notas.append(
-            "Una misma persona puede aparecer en más de una categoría. Por eso, la suma "
-            "de las filas puede ser mayor que el total general."
+            f"{sujeto} puede aparecer en más de una fila. Por eso, sumar las filas "
+            "puede dar un número mayor que el total, donde se cuenta una sola vez."
         )
     if len(consulta.ciclos) > 1 and metrica["kind"] == "distinct":
         notas.append(
-            "Si una misma persona aparece en más de un ciclo, se cuenta una sola vez en "
-            "el total general."
+            f"{sujeto} puede aparecer en varios ciclos. En el total se cuenta una sola vez."
         )
     if total["empty"] and metrica["kind"] in {
         "occupancy",
@@ -2985,13 +3166,13 @@ def _notas_resultado(consulta, indicador, total):
         )
     if "dia" in {consulta.agrupar, consulta.comparar}:
         notas.append(
-            "Un grupo puede funcionar varios días; las categorías por día no son "
-            "mutuamente excluyentes y su suma puede superar el total general."
+            "Un grupo puede funcionar varios días. Si sumás las cantidades por día, "
+            "un mismo grupo puede contarse más de una vez."
         )
     return list(dict.fromkeys(notas))
 
 
-def ejecutar_consulta_metricas(params, limite_detalle=500):
+def ejecutar_consulta_metricas(params, paginar_detalle=True):
     """Valida un QueryDict GET y devuelve el único resultado canónico de la consulta.
 
     El diccionario resultante es serializable y alimenta el total, el gráfico, la tabla y la
@@ -3005,9 +3186,32 @@ def ejecutar_consulta_metricas(params, limite_detalle=500):
     qs, fuente = _preparar_queryset(consulta, indicador, cef_map)
     total = _calcular_total(qs, indicador)
     filas = _filas_agrupadas(qs, consulta, indicador, fuente, cef_map, total)
-    tabla = _tabla_registros(qs, consulta, cef_map, limite_detalle)
+    tabla = None if consulta.vista == "resumen" else _tabla_registros(
+        qs, consulta, cef_map, paginar_detalle
+    )
     if tabla is None:
         tabla = _tabla_resultado(filas, consulta, indicador)
+        tabla["kind"] = "summary"
+        if consulta.buscar:
+            terminos = consulta.buscar.casefold().replace(",", " ").split()
+            def coincide(fila):
+                texto = " ".join(
+                    str(valor.get("formatted", valor.get("value", "")))
+                    if isinstance(valor, dict) else str(valor)
+                    for clave, valor in fila.items()
+                    if not clave.endswith("_key")
+                ).casefold()
+                return all(termino in texto for termino in terminos)
+            coincidencias = [
+                (fila_tabla, fila_grafico)
+                for fila_tabla, fila_grafico in zip(tabla["rows"], filas)
+                if coincide(fila_tabla)
+            ]
+            tabla["rows"] = [par[0] for par in coincidencias]
+            filas = [par[1] for par in coincidencias]
+        tabla["rows"], tabla["pagination"] = _paginar_filas(
+            tabla["rows"], consulta, paginar_detalle
+        )
     grafico = _grafico_resultado(filas, consulta, indicador)
     total_formateado = _formatear_numero(total["value"], indicador["unit"])
     if indicador["unit"] == "%" and total["value"] is not None:
@@ -3033,21 +3237,28 @@ def ejecutar_consulta_metricas(params, limite_detalle=500):
                 f"sobre {_formatear_numero(total['denominator'], '')} vacantes informadas"
             )
         elif kind == "state_ratio":
+            estado_label = str(dict(CefAsistencia.Estado.choices)[indicador["metric"]["state"]]).lower()
             total_publico["detail"] = (
-                f"{_formatear_numero(total['numerator'], '')} registros del estado "
-                f"sobre {_formatear_numero(total['denominator'], '')} registros incluidos"
+                f"{_formatear_numero(total['numerator'], '')} asistencias marcadas como «{estado_label}» "
+                f"de {_formatear_numero(total['denominator'], '')} asistencias registradas"
             )
         elif kind == "distribution_ratio":
             total_publico["detail"] = (
-                f"{_formatear_numero(total['numerator'], '')} relevamientos sobre "
+                f"{_formatear_numero(total['numerator'], '')} registros de datos adicionales sobre "
                 f"{_formatear_numero(total['denominator'], '')} incluidos"
             )
 
     notas = _notas_resultado(consulta, indicador, total)
-    if tabla.get("limited"):
+    if consulta.buscar:
         notas.append(
-            f"En pantalla se muestran los primeros {limite_detalle} registros. "
-            "El archivo Excel incluye el listado completo."
+            "La búsqueda revisa toda la tabla, no sólo la página que estás viendo. "
+            "El Excel incluye todos los resultados de esa búsqueda. "
+            "El total de la consulta no cambia al buscar en la tabla."
+        )
+    if indicador["unit"] in {"alumnos", "profesores"} and indicador["metric"]["kind"] == "distinct":
+        persona = "alumno" if indicador["unit"] == "alumnos" else "profesor"
+        notas.append(
+            f"Cada {persona} se cuenta una sola vez en el total, aunque figure en varios ciclos o CEF."
         )
 
     return {

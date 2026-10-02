@@ -116,9 +116,6 @@
                                         <span class="pof-action-icon pof-material-symbol pof-icon-settings material-symbols-outlined" aria-hidden="true">settings_account_box</span>
                                     </button>
                                     <div class="dropdown-menu pof-grid-dropdown-menu pof-grid-actions-menu">
-                                        <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-detail" href="{% url 'reunidas_pof:detalle_reunida' %}?cabecera_tipo=PROYECTO_ESPECIAL&amp;proyecto_especial_id={{ proyecto.id }}">
-                                            <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">mystery</span> VER DETALLE
-                                        </a>
                                         <a class="dropdown-item pof-grid-dropdown-item pof-grid-actions-menu-item pof-grid-dropdown-item-primary" href="{% url 'reunidas_pof:cargar_cargos_proyecto_especial' %}?proyecto_especial_id={{ proyecto.id }}">
                                             <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">add</span> AFECTAR CARGOS
                                         </a>

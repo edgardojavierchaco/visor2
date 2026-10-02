@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Max, Q
 from django.utils import timezone
 
 from ..models import (
@@ -14,6 +14,7 @@ from ..models import (
     SnapshotPadronLocalizacionPof,
 )
 from .exportacion_rows import obtener_clave_consolidacion_cargo
+from .zona_educativa_service import obtener_historial_zona_localizacion
 from .filtros_pof_service import (
     TIPOS_MOVIMIENTO_LABELS,
     MENSAJE_FILTROS_INVALIDOS,
@@ -63,7 +64,8 @@ NOMBRES_CAMPOS_DIFF = {
     "observacion": "Observación",
 }
 
-CAMPOS_EXCLUIDOS_DIFF = {"observacion"}
+CAMPOS_JSON_AUDITORIA = {"ofertas_seleccionadas", "snapshot_ceic"}
+CAMPOS_EXCLUIDOS_DIFF = {"observacion"} | CAMPOS_JSON_AUDITORIA
 CAMPOS_ENTEROS_DIFF = {"id", "ceic", "cantidad"}
 CAMPOS_DECIMALES_DIFF = {"puntos_asignados", "puntos", "total"}
 ORDEN_CAMPOS_DIFF = (
@@ -373,6 +375,164 @@ def enriquecer_filas_con_historial_observacion(filas):
     return filas
 
 
+def enriquecer_filas_con_historial_zona(filas):
+    """
+    Marca en lote las filas cuyo historial de Zona Educativa contiene al menos
+    un cambio explícito en el ciclo actual o en algún ancestro enlazado por
+    cargo_origen.
+
+    Además expone un cargo_id representativo para abrir el historial interanual
+    de Zona desde la fila visible sin tener que resolver la cadena en frontend.
+    """
+    cargo_ids = sorted({
+        cargo_id
+        for fila in filas
+        for cargo_id in fila.get("cargo_ids", [])
+        if isinstance(cargo_id, int) and cargo_id > 0
+    })
+
+    cargos_por_id = {}
+    pendientes = set(cargo_ids)
+
+    while pendientes:
+        registros = list(
+            CargoPof.objects.filter(pk__in=pendientes).values(
+                "id",
+                "cargo_origen_id",
+                "localizacion_id",
+            )
+        )
+        nuevos = set()
+        for registro in registros:
+            cargo_id = registro["id"]
+            cargos_por_id[cargo_id] = registro
+            origen_id = registro.get("cargo_origen_id")
+            if origen_id and origen_id not in cargos_por_id:
+                nuevos.add(origen_id)
+        pendientes = nuevos
+
+    localizacion_ids = {
+        registro["localizacion_id"]
+        for registro in cargos_por_id.values()
+        if registro.get("localizacion_id")
+    }
+    localizaciones_con_evento = set()
+
+    if localizacion_ids:
+        localizaciones_con_evento = set(
+            SnapshotPadronLocalizacionPof.objects.filter(
+                localizacion_id__in=localizacion_ids,
+                zona_educativa_evento=True,
+            ).values_list("localizacion_id", flat=True).distinct()
+        )
+
+    cache_tiene_historial = {}
+
+    def cargo_tiene_historial_zona(cargo_id):
+        if cargo_id in cache_tiene_historial:
+            return cache_tiene_historial[cargo_id]
+
+        visitados = set()
+        actual_id = cargo_id
+        tiene_historial = False
+
+        while actual_id and actual_id not in visitados:
+            visitados.add(actual_id)
+            registro = cargos_por_id.get(actual_id)
+            if not registro:
+                break
+            if registro.get("localizacion_id") in localizaciones_con_evento:
+                tiene_historial = True
+                break
+            actual_id = registro.get("cargo_origen_id")
+
+        for visitado in visitados:
+            cache_tiene_historial[visitado] = tiene_historial
+        return tiene_historial
+
+    for fila in filas:
+        ids_fila = sorted({
+            cargo_id
+            for cargo_id in fila.get("cargo_ids", [])
+            if isinstance(cargo_id, int) and cargo_id > 0
+        })
+        fila["cargo_ids"] = ids_fila
+
+        localizacion_fila = fila.get("localizacion_id")
+        ids_misma_localizacion = [
+            cargo_id
+            for cargo_id in ids_fila
+            if (
+                not localizacion_fila
+                or str(
+                    cargos_por_id.get(cargo_id, {}).get("localizacion_id") or ""
+                )
+                == str(localizacion_fila)
+            )
+        ]
+        ids_contexto = ids_misma_localizacion or ids_fila
+
+        cargo_id_historial = next(
+            (
+                cargo_id
+                for cargo_id in ids_contexto
+                if cargo_tiene_historial_zona(cargo_id)
+            ),
+            ids_contexto[0] if ids_contexto else None,
+        )
+        fila["cargo_id_historial_zona"] = cargo_id_historial
+        fila["tiene_modificacion_zona"] = any(
+            cargo_tiene_historial_zona(cargo_id)
+            for cargo_id in ids_contexto
+        )
+
+    return filas
+
+
+def enriquecer_filas_con_ultima_actividad(filas):
+    """
+    Anota en lote la fecha del último movimiento de los cargos de cada fila.
+
+    - Agrupa en BD por cargo y obtiene MAX(fecha).
+    - Consolida luego por los cargo_ids que representa cada fila.
+    - Evita consultas N+1 y no altera los historiales existentes.
+    """
+    cargo_ids = sorted({
+        cargo_id
+        for fila in filas
+        for cargo_id in fila.get("cargo_ids", [])
+        if isinstance(cargo_id, int) and cargo_id > 0
+    })
+    ultima_por_cargo = {}
+
+    if cargo_ids:
+        movimientos = (
+            MovimientoCargoPof.objects.filter(cargo_id__in=cargo_ids)
+            .values("cargo_id")
+            .annotate(ultima_actividad=Max("fecha"))
+        )
+        ultima_por_cargo = {
+            item["cargo_id"]: item["ultima_actividad"]
+            for item in movimientos
+            if item.get("ultima_actividad") is not None
+        }
+
+    for fila in filas:
+        ids_fila = sorted({
+            cargo_id
+            for cargo_id in fila.get("cargo_ids", [])
+            if isinstance(cargo_id, int) and cargo_id > 0
+        })
+        fechas = [
+            ultima_por_cargo[cargo_id]
+            for cargo_id in ids_fila
+            if cargo_id in ultima_por_cargo
+        ]
+        fila["ultima_actividad"] = max(fechas) if fechas else None
+
+    return filas
+
+
 def enriquecer_filas_con_historial_estado(filas):
     """
     Marca en lote las filas que poseen cambios reales de Estado POF.
@@ -430,6 +590,7 @@ def _serializar_mapa(valores):
     return {
         str(clave): _formatear_valor_campo(clave, valor)
         for clave, valor in valores.items()
+        if str(clave) not in CAMPOS_JSON_AUDITORIA
     }
 
 
@@ -595,6 +756,8 @@ def _formatear_valores(valores):
 
     partes = []
     for clave, valor in valores.items():
+        if str(clave) in CAMPOS_JSON_AUDITORIA:
+            continue
         if isinstance(valor, (dict, list)):
             valor_legible = "datos adicionales"
         elif valor in (None, ""):
@@ -1573,38 +1736,209 @@ def _serializar_contexto_localizacion_historial(localizacion):
     }
 
 
-def obtener_historial_completo_cargo_pof(cargo_id):
-    """
-    Devuelve la vida completa del cargo abierto en Gestion Cargo.
+def _cabecera_ciclo_cargo(cargo):
+    localizacion = cargo.localizacion
+    if bool(localizacion.reunida) == bool(localizacion.proyecto_especial):
+        return None, ""
+    if localizacion.reunida:
+        return localizacion.reunida, "REUNIDA"
+    return localizacion.proyecto_especial, "PROYECTO_ESPECIAL"
 
-    El alcance es el cargo fisico exacto. No mezcla otros cargos del CUEANEXO/CUOF
-    ni movimientos de otras cabeceras o ciclos.
-    """
-    cargo = CargoPof.objects.select_related(
-        "localizacion",
-        "localizacion__reunida",
-        "localizacion__proyecto_especial",
-    ).get(pk=cargo_id)
-    movimientos = _obtener_movimientos_queryset().filter(cargo_id=cargo.id)
+
+def _serializar_estado_inicial_ciclo(cargo, movimientos):
+    """Usa exclusivamente la foto propia del ciclo, nunca el estado del padre."""
+    campos = NOMBRES_CAMPOS_DIFF
+    if not movimientos:
+        valores = {campo: getattr(cargo, campo) for campo in campos}
+    else:
+        primero = movimientos[-1]  # El queryset conserva -fecha, -id.
+        anteriores = primero.valores_anteriores
+        nuevos = primero.valores_nuevos
+        if isinstance(anteriores, dict) and anteriores:
+            valores = anteriores
+        elif (
+            not cargo.cargo_origen_id
+            and (
+                _es_movimiento_afectado_inicial(primero)
+                or _es_movimiento_desafectado_inicial(primero)
+            )
+            and isinstance(nuevos, dict)
+        ):
+            valores = nuevos
+        else:
+            valores = {}
+
     return {
-        "cargo": _serializar_cargo_actual(cargo),
-        "localizacion": _serializar_contexto_localizacion_historial(cargo.localizacion),
-        "movimientos": [
-            _serializar_movimiento_historial_contextual(movimiento)
-            for movimiento in movimientos
+        "heredado": bool(cargo.cargo_origen_id),
+        "fecha": _valor_serializable(cargo.creado_en),
+        "campos": [
+            {
+                "campo": campo,
+                "nombre": NOMBRES_CAMPOS_DIFF[campo],
+                "valor": _formatear_valor_campo(campo, valores[campo]),
+            }
+            for campo in NOMBRES_CAMPOS_DIFF
+            if campo in valores
         ],
     }
 
 
-def obtener_historial_localizacion_cargos_pof(localizacion_id):
+def _serializar_observaciones_ciclo(cargo, movimientos):
+    """Reutiliza los eventos de observación reales del cargo físico del ciclo."""
+    eventos = [
+        _serializar_movimiento_observacion(movimiento)
+        for movimiento in movimientos
+        if (
+            movimiento.tipo_movimiento == MovimientoCargoPof.TipoMovimiento.MODIFICACION
+            and es_cambio_real_observacion_movimiento(movimiento)
+        )
+    ]
+    inicial = next((
+        movimiento for movimiento in reversed(movimientos)
+        if movimiento.tipo_movimiento in {
+            MovimientoCargoPof.TipoMovimiento.AFECTADO,
+            MovimientoCargoPof.TipoMovimiento.DESAFECTADO,
+        }
+    ), None)
+    if inicial and _observacion_inicial_movimiento(inicial):
+        eventos.append(_serializar_evento_observacion_inicial(inicial))
+    datos_cargo = _serializar_cargo_actual(cargo)
+    return {
+        "cargo": datos_cargo,
+        "cargos": [{**datos_cargo, "movimientos": eventos}],
+    }
+
+
+def _obtener_cadena_historica_cargo_pof(cargo_id):
+    """Recorrido único y seguro hacia atrás, exclusivamente por cargo_origen."""
+    cargos_queryset = CargoPof.objects.select_related(
+        "localizacion",
+        "localizacion__reunida",
+        "localizacion__proyecto_especial",
+    )
+    cargo = cargos_queryset.get(pk=cargo_id)
+    cadena = [cargo]
+    visitados = {cargo.id}
+    advertencia = ""
+    actual = cargo
+
+    while actual.cargo_origen_id:
+        origen_id = actual.cargo_origen_id
+        if origen_id in visitados:
+            advertencia = "Se interrumpió la continuidad histórica: la cadena de origen contiene un ciclo."
+            break
+        try:
+            origen = cargos_queryset.get(pk=origen_id)
+        except CargoPof.DoesNotExist:
+            advertencia = "Se interrumpió la continuidad histórica: no existe el cargo de origen."
+            break
+
+        cabecera_actual, tipo_actual = _cabecera_ciclo_cargo(actual)
+        cabecera_origen, tipo_origen = _cabecera_ciclo_cargo(origen)
+        if (
+            not cabecera_actual or not cabecera_origen
+            or tipo_actual != tipo_origen
+            or cabecera_origen.anio >= cabecera_actual.anio
+        ):
+            advertencia = "Se interrumpió la continuidad histórica: el origen no pertenece a un ciclo anterior compatible."
+            break
+
+        visitados.add(origen.id)
+        cadena.append(origen)
+        actual = origen
+
+    return cadena, advertencia
+
+
+def obtener_historial_completo_cargo_pof(cargo_id):
+    """Consulta los ciclos enlazados por cargo_origen, del más reciente al más antiguo."""
+    cadena, advertencia = _obtener_cadena_historica_cargo_pof(cargo_id)
+    visitados = {item.id for item in cadena}
+    movimientos_por_cargo = {item.id: [] for item in cadena}
+    for movimiento in _obtener_movimientos_queryset().filter(cargo_id__in=visitados):
+        movimientos_por_cargo[movimiento.cargo_id].append(movimiento)
+
+    ciclos = []
+    for item in cadena:
+        cabecera, _ = _cabecera_ciclo_cargo(item)
+        movimientos = movimientos_por_cargo[item.id]
+        ciclos.append({
+            "anio": cabecera.anio if cabecera else None,
+            "cargo_id": item.id,
+            "cargo_origen_id": item.cargo_origen_id,
+            "cargo": _serializar_cargo_actual(item),
+            "localizacion": _serializar_contexto_localizacion_historial(item.localizacion),
+            "estado_inicial": _serializar_estado_inicial_ciclo(item, movimientos),
+            "movimientos": [
+                _serializar_movimiento_historial_contextual(movimiento)
+                for movimiento in movimientos
+            ],
+            "observaciones": _serializar_observaciones_ciclo(item, movimientos),
+        })
+
+    # El contrato global sigue representando siempre el cargo abierto/ciclo actual.
+    ciclo_actual = ciclos[0]
+    return {
+        "cargo": ciclo_actual["cargo"],
+        "localizacion": ciclo_actual["localizacion"],
+        "movimientos": ciclo_actual["movimientos"],
+        "ciclos": ciclos,
+        "advertencia_continuidad": advertencia,
+    }
+
+
+def _obtener_historial_contextual_por_ciclos(cargo_id, localizacion_id, consultar_localizacion):
+    cargo_id = _normalizar_cargo_ids_historial([cargo_id])[0]
+    cadena, advertencia = _obtener_cadena_historica_cargo_pof(cargo_id)
+    if cadena[0].localizacion.id != localizacion_id:
+        raise ValidationError({
+            "cargo_id": ["El cargo indicado no pertenece a la localización solicitada."],
+        })
+
+    ciclos = []
+    historial_actual = {}
+    for indice, item in enumerate(cadena):
+        # La identidad sólo se resuelve dentro de la localización/cabecera del ciclo.
+        historial_ciclo = consultar_localizacion(item.localizacion.id)
+        if indice == 0:
+            historial_actual = historial_ciclo
+        cabecera, _ = _cabecera_ciclo_cargo(item)
+        ciclos.append({
+            **historial_ciclo,
+            "anio": cabecera.anio if cabecera else None,
+            "cargo_id": item.id,
+            "localizacion": _serializar_contexto_localizacion_historial(item.localizacion),
+        })
+
+    return {
+        **historial_actual,
+        "ciclos": ciclos,
+        "advertencia_continuidad": advertencia,
+    }
+
+
+def obtener_historial_zona_cargo_pof(localizacion_id, cargo_id):
+    """Consulta los snapshots originales de cada localización de la cadena."""
+    return _obtener_historial_contextual_por_ciclos(
+        cargo_id, localizacion_id, obtener_historial_zona_localizacion,
+    )
+
+
+def obtener_historial_localizacion_cargos_pof(localizacion_id, *, cargo_id=None):
     """
     Devuelve movimientos de todos los cargos de la identidad de la localizacion.
 
-    - Mantiene la cabecera/ciclo del cargo abierto.
+    - Con cargo_id, consulta cada ciclo de la cadena explícita del cargo abierto.
+    - Sin cargo_id, mantiene la consulta de una sola cabecera/localización.
     - Reunida usa CUEANEXO como identidad y agrupa sus distintos CUOF.
     - Proyecto Especial usa siempre CUOF, aunque conserve CUEANEXO de Padron.
     - Nunca mezcla la misma identidad existente en otra POF, proyecto o ciclo.
     """
+    if cargo_id is not None:
+        return _obtener_historial_contextual_por_ciclos(
+            cargo_id, localizacion_id, obtener_historial_localizacion_cargos_pof,
+        )
+
     localizacion = LocalizacionPof.objects.select_related(
         "reunida",
         "proyecto_especial",
@@ -1781,11 +2115,41 @@ def _identidad_zona_historial(localizacion):
     return None
 
 
+def _agregar_detalle_evento_historial(evento, secciones, *, diff=None, observacion=""):
+    """Expone el detalle de Zona/Anexo usando los datos del evento ya autorizado."""
+    evento["permite_detalle"] = True
+    evento["detalle_evento"] = {
+        "id": evento["id"],
+        "fecha": _valor_serializable(evento["fecha"]),
+        "usuario_movimiento": evento["usuario_movimiento"],
+        "cabecera_resumen": evento["cabecera_resumen"],
+        "tipo_movimiento_display": evento["tipo_movimiento_display"],
+        "es_evento_general": True,
+        "resumen": evento["detalle_resumen_visual"]["accion"],
+        "secciones": [
+            {
+                "titulo": titulo,
+                "campos": [
+                    [etiqueta, _valor_serializable(valor)]
+                    for etiqueta, valor in campos
+                ],
+            }
+            for titulo, campos in secciones
+        ],
+        "diff": diff or [],
+        "observacion": observacion,
+    }
+    return evento
+
+
 def _construir_evento_zona_historial(snapshot, anterior, nuevo):
     localizacion = snapshot.localizacion
     cueanexo = str(localizacion.cueanexo or "").strip()
     cuof = str(localizacion.cuof or "").strip()
     cue = cueanexo[:7] if cueanexo.isdigit() and len(cueanexo) == 9 else GUION_VACIO
+    observacion = str(
+        getattr(snapshot, "observacion_zona_educativa", "") or ""
+    ).strip()
 
     if not anterior.get("zona") and nuevo.get("zona"):
         accion = f"Se asignó la Zona Educativa {_descripcion_zona_historial(nuevo)}."
@@ -1810,8 +2174,10 @@ def _construir_evento_zona_historial(snapshot, anterior, nuevo):
             f"Puntos: {_valor_serializable(anterior.get('puntos'))} {FLECHA_CAMBIO} "
             f"{_valor_serializable(nuevo.get('puntos'))}"
         )
+    if observacion:
+        partes.append(f"Observación: {observacion}")
 
-    return {
+    evento = {
         "id": f"zona-{snapshot.id}",
         "fecha": snapshot.fecha_snapshot,
         "usuario_movimiento": _serializar_usuario_movimiento(snapshot.usuario),
@@ -1831,9 +2197,40 @@ def _construir_evento_zona_historial(snapshot, anterior, nuevo):
             "accion": accion,
             "partes": partes,
         },
-        "tiene_observacion_real": False,
-        "permite_detalle": False,
+        "tiene_observacion_real": bool(observacion),
     }
+
+    diff = [
+        {
+            "clave": campo,
+            "campo": etiqueta,
+            "anterior": _valor_serializable(anterior.get(campo)),
+            "nuevo": _valor_serializable(nuevo.get(campo)),
+        }
+        for campo, etiqueta in (
+            ("tipo", "Tipo de Zona"),
+            ("zona", "Zona Educativa"),
+            ("puntos", "Puntos Zona"),
+        )
+        if anterior.get(campo) != nuevo.get(campo)
+    ]
+    return _agregar_detalle_evento_historial(
+        evento,
+        [
+            ("Zona Educativa registrada", [
+                ("Tipo de Zona", nuevo.get("tipo")),
+                ("Zona Educativa", nuevo.get("zona")),
+                ("Puntos Zona", nuevo.get("puntos")),
+            ]),
+            ("Identidad del evento", [
+                ("CUE", cue),
+                ("CUEANEXO", cueanexo),
+                ("CUOF", cuof),
+            ]),
+        ],
+        diff=diff,
+        observacion=observacion,
+    )
 
 
 def _obtener_eventos_zona_historial(filtros):
@@ -1894,7 +2291,14 @@ def _obtener_eventos_zona_historial(filtros):
         anterior_por_localizacion[snapshot.localizacion_id] = actual
 
         if anterior is None:
-            continue
+            if not getattr(snapshot, "zona_educativa_evento", False):
+                continue
+            anterior = {
+                "tipo": "",
+                "zona": "",
+                "puntos": None,
+            }
+
         if _clave_asignacion_zona_historial(anterior) == _clave_asignacion_zona_historial(actual):
             continue
         if umbral is not None and snapshot.fecha_snapshot < umbral:
@@ -1947,12 +2351,12 @@ def _obtener_propietarios_anexo_contexto(filtros):
     if filtros.get("cuof"):
         localizaciones = localizaciones.filter(cuof__iexact=filtros["cuof"])
 
-    cues = set()
+    cueanexos = set()
     cuofs = set()
     for localizacion in localizaciones:
         cueanexo = str(localizacion.cueanexo or "").strip()
         if cueanexo.isdigit() and len(cueanexo) == 9:
-            cues.add(cueanexo[:7])
+            cueanexos.add(cueanexo)
             continue
 
         if localizacion.proyecto_especial_id:
@@ -1960,7 +2364,7 @@ def _obtener_propietarios_anexo_contexto(filtros):
             if cuof:
                 cuofs.add(cuof)
 
-    return cues, cuofs
+    return cueanexos, cuofs
 
 
 def _obtener_historial_anexo_queryset(filtros):
@@ -1979,19 +2383,19 @@ def _obtener_historial_anexo_queryset(filtros):
 
     propietarios_contexto = _obtener_propietarios_anexo_contexto(filtros)
     if propietarios_contexto is not None:
-        cues, cuofs = propietarios_contexto
+        cueanexos, cuofs = propietarios_contexto
         filtro_propietarios = Q()
-        if cues:
+        if cueanexos:
             filtro_propietarios |= Q(
-                asociacion__cue__in=sorted(cues),
+                asociacion__cueanexo__in=sorted(cueanexos),
                 asociacion__cuof="",
             )
         if cuofs:
             filtro_propietarios |= Q(
-                asociacion__cue="",
+                asociacion__cueanexo="",
                 asociacion__cuof__in=sorted(cuofs),
             )
-        if not cues and not cuofs:
+        if not cueanexos and not cuofs:
             return HistorialAsociacionAnexoPof.objects.none()
         queryset = queryset.filter(filtro_propietarios)
     if filtros.get("cuil"):
@@ -2004,9 +2408,15 @@ def _obtener_historial_anexo_queryset(filtros):
 
 def _construir_evento_anexo_historial(historial):
     asociacion = historial.asociacion
-    tipo_propietario = "CUE" if asociacion.cue else "CUOF"
-    propietario = asociacion.cue or asociacion.cuof
+    cueanexo = str(asociacion.cueanexo or "").strip()
+    tipo_propietario = "CUEANEXO" if cueanexo else "CUOF"
+    propietario = cueanexo or asociacion.cuof
     codigo = asociacion.codigo_catalogo.codigo
+    cue = (
+        cueanexo[:7]
+        if cueanexo.isdigit() and len(cueanexo) == 9
+        else GUION_VACIO
+    )
 
     acciones = {
         HistorialAsociacionAnexoPof.Accion.ASOCIAR: "Se asoció",
@@ -2015,14 +2425,14 @@ def _construir_evento_anexo_historial(historial):
     }
     verbo = acciones.get(historial.accion, "Se actualizó")
 
-    return {
+    evento = {
         "id": f"anexo-{historial.id}",
         "fecha": historial.fecha,
         "usuario_movimiento": _serializar_usuario_movimiento(historial.usuario),
         "cabecera_resumen": f"Global · {tipo_propietario} {propietario}",
         "localizacion_resumen": {
-            "cue": asociacion.cue or GUION_VACIO,
-            "cueanexo": GUION_VACIO,
+            "cue": cue,
+            "cueanexo": cueanexo or GUION_VACIO,
             "cuof": asociacion.cuof or GUION_VACIO,
         },
         "tipo_movimiento": TIPO_EVENTO_ANEXO_POF,
@@ -2039,8 +2449,25 @@ def _construir_evento_anexo_historial(historial):
             ],
         },
         "tiene_observacion_real": False,
-        "permite_detalle": False,
     }
+
+    return _agregar_detalle_evento_historial(
+        evento,
+        [
+            ("Asociación Anexo POF", [
+                ("Código Anexo POF", codigo),
+                ("Acción registrada", historial.get_accion_display()),
+                ("Origen", historial.get_origen_display()),
+                ("Tipo de propietario", tipo_propietario),
+                ("Propietario", propietario),
+            ]),
+            ("Identidad del evento", [
+                ("CUE", cue),
+                ("CUEANEXO", cueanexo),
+                ("CUOF", asociacion.cuof),
+            ]),
+        ],
+    )
 
 
 def _clave_orden_evento_historial(evento):
@@ -2140,6 +2567,11 @@ def construir_contexto_historial(request):
         "page_obj": page_obj,
         "paginator": paginator,
         "movimientos": eventos_pagina,
+        "detalles_eventos": {
+            evento["id"]: evento["detalle_evento"]
+            for evento in eventos_pagina
+            if evento.get("detalle_evento")
+        },
         "total_registros": total_registros,
         "total_movimientos_cargo": total_cargos,
         "total_eventos_zona": total_zona,

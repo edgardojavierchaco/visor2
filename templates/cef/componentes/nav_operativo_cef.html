@@ -106,7 +106,7 @@
 
 <nav class="navbar navbar-expand-xl navbar-dark cef-module-nav" aria-label="Navegación interna CEF">
     <div class="container-fluid">
-        <a class="navbar-brand" href="{% if cef_context and cef_context.solo_asistencia %}{{ cef_asistencia_url }}{% else %}{{ cef_inicio_url }}{% endif %}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">CEF</a>
+        <a class="navbar-brand" href="{% if solo_metricas %}{{ cef_metricas_url }}{% elif cef_context and cef_context.solo_asistencia %}{{ cef_asistencia_url }}{% else %}{{ cef_inicio_url }}{% endif %}{% if cef_context and cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">CEF</a>
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#cefDirectorNav" aria-controls="cefDirectorNav" aria-expanded="false" aria-label="Alternar navegación">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -115,6 +115,10 @@
                 {% if cef_context and cef_context.solo_asistencia %}
                     <li class="nav-item">
                         <a class="nav-link{% if active_menu == 'asistencia' %} active{% endif %}" href="{{ cef_asistencia_url }}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">Asistencia</a>
+                    </li>
+                {% elif solo_metricas %}
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ cef_metricas_url }}" data-cef-page-loading-link>Consultas</a>
                     </li>
                 {% else %}
                 <li class="nav-item">

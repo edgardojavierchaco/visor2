@@ -101,16 +101,17 @@
                              </div>
                             {% endif %}
                          </td>{% endif %}
-                        {% if gestionar_grupo_modo and vista_alumnos == 'historial' %}<td class="cef-act-cell text-end"><button type="button" class="btn btn-outline-secondary btn-sm" aria-controls="alumnoCursoHistorial{{ inscripcion.alumno_id }}" aria-expanded="false" data-cef-history-toggle="alumno-curso-{{ inscripcion.alumno_id }}"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i> Historial ({{ inscripcion.historial_inscripciones|length }})</button></td>{% endif %}
+                        {% if gestionar_grupo_modo and vista_alumnos == 'historial' %}<td class="cef-act-cell text-end"><button type="button" class="btn btn-outline-secondary btn-sm" aria-controls="alumnoCursoHistorial{{ inscripcion.alumno_id }}" aria-expanded="false" data-cef-history-toggle="alumno-curso-{{ inscripcion.alumno_id }}"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i> Historial · {% if inscripcion.historial_inscripciones|length == 1 %}1 inscripción{% else %}{{ inscripcion.historial_inscripciones|length }} inscripciones{% endif %}</button></td>{% endif %}
                     </tr>
                     {% if gestionar_grupo_modo and vista_alumnos == 'historial' %}
                         <tr id="alumnoCursoHistorial{{ inscripcion.alumno_id }}" class="cef-history-detail-row" data-cef-history-detail="alumno-curso-{{ inscripcion.alumno_id }}" hidden>
                             <td colspan="{% if not inscripciones_solo_lectura %}8{% else %}7{% endif %}" class="p-0">
                                 <div class="cef-history-detail-panel">
-                                    <div class="cef-history-detail-head"><strong><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Historial de inscripciones</strong><span>Movimientos registrados: {{ inscripcion.historial_inscripciones|length }}</span></div>
+                                    <div class="cef-history-detail-head"><strong><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Historial de inscripciones</strong><span>Inscripciones registradas: {{ inscripcion.historial_inscripciones|length }}</span></div>
                                     <div class="cef-table-wrap cef-history-detail-table-wrap"><table class="cef-dt cef-history-detail-table">
-                                    <thead><tr><th>Ciclo</th><th>Estado</th><th>Fecha de incorporación al grupo</th><th>Fecha de baja</th><th>Motivo</th><th>Observaciones</th></tr></thead>
+                                    <thead><tr><th>Inscripción</th><th>Ciclo</th><th>Estado</th><th>Fecha de incorporación al grupo</th><th>Fecha de baja</th><th>Motivo</th><th>Observaciones</th></tr></thead>
                                     <tbody>{% for periodo in inscripcion.historial_inscripciones %}<tr class="{% if periodo.estado != 'activo' %}cef-row-inactive{% endif %}">
+                                        <td><strong>N.º {{ periodo.numero_inscripcion }}</strong></td>
                                         <td><strong>{{ grupo.ciclo.anio }}</strong></td>
                                         <td><span class="badge text-bg-{% if periodo.estado == 'activo' %}success{% else %}secondary{% endif %}">{% if grupo.ciclo.cerrado and periodo.estado == 'activo' %}Activo al cierre{% else %}{{ periodo.get_estado_display }}{% endif %}</span></td>
                                         <td>{{ periodo.fecha_inscripcion|date:"d/m/Y" }}</td>
@@ -130,7 +131,7 @@
 {% else %}
     <div class="cef-empty-state">
         <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
-        {% if gestionar_grupo_modo and vista_alumnos == 'historial' %}No hay bajas registradas en este grupo.{% else %}Todavía no hay alumnos activos inscriptos en este grupo.{% endif %}
+        {% if gestionar_grupo_modo and vista_alumnos == 'historial' %}No hay inscripciones registradas en este grupo.{% else %}Todavía no hay alumnos activos inscriptos en este grupo.{% endif %}
     </div>
 {% endif %}
 

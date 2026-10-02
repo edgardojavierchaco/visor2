@@ -166,6 +166,14 @@
             <p>Consulta institucional desde Padrón, con filtros, columnas y exportación Excel.</p>
         </a>
 
+        {% if cef_context.puede_metricas %}
+            <a class="cef-home-card" href="{% url 'cef:metricas' %}">
+                <span class="cef-home-icon"><i class="fa-solid fa-chart-column"></i></span>
+                <h2>Consultas</h2>
+                <p>Consultar información del CEF con filtros, totales y exportación.</p>
+            </a>
+        {% endif %}
+
         <a class="cef-home-card" href="{% if cef_context.alumnos_url %}{{ cef_context.alumnos_url }}{% else %}{% url 'cef:alumnos' %}{% endif %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
             <span class="cef-home-icon"><i class="fa-solid fa-user-graduate"></i></span>
             <h2>Alumnos</h2>

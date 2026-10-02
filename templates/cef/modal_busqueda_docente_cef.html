@@ -32,23 +32,33 @@
         background: #fff;
         border: 1.5px solid #cbd5e1;
         border-radius: 8px;
+        box-sizing: border-box;
         display: flex;
         flex: 1 1 auto;
         gap: .5rem;
+        height: 46px;
         margin-bottom: 0;
+        min-height: 46px;
         min-width: 0;
-        min-height: 40px;
-        padding: .35rem .75rem;
+        padding: 0 .75rem;
     }
 
     .cef-docente-input-wrap input {
         background: transparent;
         border: none;
+        box-shadow: none !important;
+        box-sizing: border-box;
         color: #0f172a;
         flex: 1;
+        height: 100%;
         min-width: 0;
         outline: none;
-        padding: .2rem 0;
+        padding: 0;
+    }
+
+    .cef-docente-input-wrap input:focus {
+        box-shadow: none !important;
+        outline: none;
     }
 
     .cef-docente-input-wrap:focus-within {
@@ -59,10 +69,15 @@
     .cef-docente-search-btn {
         align-items: center;
         border-radius: 8px;
+        box-sizing: border-box;
         display: inline-flex;
         gap: .4rem;
+        height: 46px;
         justify-content: center;
-        min-height: 40px;
+        line-height: 1;
+        margin: 0;
+        min-height: 46px;
+        padding: 0 1rem;
         white-space: nowrap;
     }
 
@@ -194,7 +209,7 @@
                                 <td>
                                     {% if not modal_tiene_grupo %}
                                         {% if docente_en_banco %}
-                                            <span class="text-muted small">Ya está en el banco del CEF.</span>
+                                            <span class="text-muted small">Ya está en el banco de profesores del CEF.</span>
                                         {% elif modal_puede_agregar_banco %}
                                             <form method="post" action="{{ modal_action_url }}" style="display:contents" data-docente-modal-post-form>
                                                 {% csrf_token %}
@@ -202,11 +217,11 @@
                                                 {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
                                                 <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
                                                 <button class="btn btn-primary btn-sm" type="submit">
-                                                    <i class="fa-solid fa-user-check"></i> Agregar al banco del CEF
+                                                    <i class="fa-solid fa-user-check"></i> Agregar al banco de profesores del CEF
                                                 </button>
                                             </form>
                                         {% else %}
-                                            <span class="text-muted small">Seleccioná CUE-Anexo y ciclo para agregar al banco.</span>
+                                            <span class="text-muted small">Seleccioná CUE-Anexo y ciclo para agregarlo al banco de profesores del CEF.</span>
                                         {% endif %}
                                     {% endif %}
                                     {% if url_editar_profesor %}
@@ -436,7 +451,8 @@
 
         fetch(url, {
             headers: { "X-Requested-With": "XMLHttpRequest" },
-            credentials: "same-origin"
+            credentials: "same-origin",
+            cache: "no-store"
         })
             .then(function (response) {
                 if (!response.ok) throw new Error("No se pudo buscar.");

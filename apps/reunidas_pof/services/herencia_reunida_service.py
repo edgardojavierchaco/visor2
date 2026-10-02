@@ -110,7 +110,7 @@ def _cargar_localizaciones_origen(reunida_base):
     - Excluye movimientos, lotes históricos y snapshots no vigentes.
     """
     return list(
-        LocalizacionPof.objects.filter(reunida=reunida_base).prefetch_related(
+        LocalizacionPof.objects.filter(reunida=reunida_base).order_by("pk").prefetch_related(
             Prefetch(
                 "snapshots_padron",
                 queryset=SnapshotPadronLocalizacionPof.objects.filter(vigente=True),
@@ -118,7 +118,7 @@ def _cargar_localizaciones_origen(reunida_base):
             ),
             Prefetch(
                 "cargos",
-                queryset=CargoPof.objects.select_related("lote_carga"),
+                queryset=CargoPof.objects.select_related("lote_carga").order_by("pk"),
                 to_attr="cargos_herencia",
             ),
         )
@@ -137,6 +137,10 @@ def _validar_origen(reunida_base, localizaciones_origen):
     unidades_validas = set(CargoPof.UnidadCantidad.values)
 
     for localizacion in localizaciones_origen:
+        if localizacion.reunida_id != reunida_base.id:
+            raise ValidationError(
+                "La localización origen no corresponde a la POF base."
+            )
         if localizacion.proyecto_especial_id:
             raise ValidationError(
                 "La localización origen no puede pertenecer a un Proyecto Especial."
@@ -150,6 +154,10 @@ def _validar_origen(reunida_base, localizaciones_origen):
             )
 
         for cargo in localizacion.cargos_herencia:
+            if cargo.localizacion_id != localizacion.id:
+                raise ValidationError(
+                    "Un cargo origen no corresponde a su localización."
+                )
             if cargo.lote_carga.localizacion_id != localizacion.id:
                 raise ValidationError("Un cargo origen no corresponde a su localización.")
             if cargo.lote_carga.reunida_id != reunida_base.id:
@@ -347,7 +355,7 @@ def _copiar_localizaciones_destino(
     - Crea identidades, snapshot vigente y lote AFECTADO propios del destino.
     - Conserva todos los datos funcionales del cargo, incluidas sus ofertas.
     - Aplica la Zona/Puntos resuelta para el ciclo destino sin consultar catálogo.
-    - No copia IDs, fechas ni historial administrativo de la cabecera base.
+    - Guarda el cargo origen exacto sin copiar IDs, fechas ni movimientos anteriores.
     """
     asignaciones_zona_por_localizacion = (
         asignaciones_zona_por_localizacion or {}
@@ -388,6 +396,7 @@ def _copiar_localizaciones_destino(
             CargoPof.objects.create(
                 localizacion=localizacion_destino,
                 lote_carga=lote_destino,
+                cargo_origen=cargo_origen,
                 ceic=cargo_origen.ceic,
                 cargo=cargo_origen.cargo,
                 oferta=cargo_origen.oferta,
@@ -487,7 +496,7 @@ def _cargar_localizaciones_origen_proyecto(proyecto_base):
     return list(
         LocalizacionPof.objects.filter(
             proyecto_especial=proyecto_base
-        ).prefetch_related(
+        ).order_by("pk").prefetch_related(
             Prefetch(
                 "snapshots_padron",
                 queryset=SnapshotPadronLocalizacionPof.objects.filter(vigente=True),
@@ -495,7 +504,7 @@ def _cargar_localizaciones_origen_proyecto(proyecto_base):
             ),
             Prefetch(
                 "cargos",
-                queryset=CargoPof.objects.select_related("lote_carga"),
+                queryset=CargoPof.objects.select_related("lote_carga").order_by("pk"),
                 to_attr="cargos_herencia",
             ),
         )
@@ -524,6 +533,10 @@ def _validar_origen_proyecto(proyecto_base, localizaciones_origen):
             )
 
         for cargo in localizacion.cargos_herencia:
+            if cargo.localizacion_id != localizacion.id:
+                raise ValidationError(
+                    "Un cargo origen no corresponde a su localización."
+                )
             if cargo.lote_carga.localizacion_id != localizacion.id:
                 raise ValidationError(
                     "Un cargo origen no corresponde a su localización."

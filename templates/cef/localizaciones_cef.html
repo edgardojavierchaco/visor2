@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
 <link rel="stylesheet" href="{% static 'cef/cef_loading.css' %}?v=20260811-4">
+<link rel="stylesheet" href="{% static 'cef/cef_metricas.css' %}?v=20260923-8">
 <script>
 (function() {
     var sidebarState = sessionStorage.getItem('padron_sidebar_state');
@@ -201,8 +202,27 @@
     .filter-toggle-btn {
         min-width: 122px;
         min-height: 31px;
+        justify-content: flex-start !important;
         font-weight: 800 !important;
         font-size: var(--text-xs) !important;
+        transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
+    }
+
+    .filter-toggle-btn .toggle-chevron {
+        margin-left: auto;
+        color: #526174;
+        transition: color .16s ease;
+    }
+
+    .filter-toggle-btn.is-active {
+        background: #eff6ff !important;
+        border-color: #3b82f6 !important;
+        color: #0b3763 !important;
+        box-shadow: 0 1px 3px rgba(15,23,42,.06);
+    }
+
+    .filter-toggle-btn.is-active .toggle-chevron {
+        color: #1d5f9f;
     }
 
     .filter-clear-btn,
@@ -240,6 +260,59 @@
     .filter-dialog-footer .btn i {
         flex: 0 0 auto;
         line-height: 1;
+    }
+
+    /* Interacción común: clic limpio con mouse/touch y foco visible sólo para teclado. */
+    .padron-page-wrapper button,
+    .padron-page-wrapper .btn,
+    .padron-page-wrapper [role="button"],
+    .padron-page-wrapper .dropdown-item {
+        -webkit-tap-highlight-color: transparent;
+        transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+
+    .padron-page-wrapper button:focus:not(:focus-visible),
+    .padron-page-wrapper .btn:focus:not(:focus-visible),
+    .padron-page-wrapper [role="button"]:focus:not(:focus-visible),
+    .padron-page-wrapper .dropdown-item:focus:not(:focus-visible) {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    .padron-page-wrapper button:focus-visible,
+    .padron-page-wrapper .btn:focus-visible,
+    .padron-page-wrapper [role="button"]:focus-visible,
+    .padron-page-wrapper .dropdown-item:focus-visible {
+        outline: none !important;
+        box-shadow: 0 0 0 3px rgba(46,123,212,.18) !important;
+    }
+
+    .padron-page-wrapper button:focus-visible:not(:hover),
+    .padron-page-wrapper .btn:focus-visible:not(:hover),
+    .padron-page-wrapper [role="button"]:focus-visible:not(:hover) {
+        transform: none;
+    }
+
+    .padron-page-wrapper .form-control:focus,
+    .padron-page-wrapper .form-select:focus {
+        border-color: #2e7bd4;
+        box-shadow: 0 0 0 3px rgba(46,123,212,.16);
+        outline: none;
+    }
+
+    .padron-page-wrapper .cef-panel-option-search .form-control:focus {
+        border-color: transparent !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .padron-page-wrapper button,
+        .padron-page-wrapper .btn,
+        .padron-page-wrapper [role="button"],
+        .padron-page-wrapper .dropdown-item {
+            transition-duration: .01ms !important;
+        }
     }
 
     .filter-collapse-btn {
@@ -295,15 +368,21 @@
         height: 100%;
     }
 
+    /* Equivalente local de form-select/fw-bold de Bootstrap 5 usado por Padron. */
     #liveSearchSelect {
+        display: block;
         max-width: 140px;
         cursor: pointer;
+        border: 1px solid #9ca3af;
         border-left: none !important;
         border-right: none !important;
         border-radius: 0 !important;
         height: 100% !important;
         width: 100% !important;
+        padding-left: .75rem !important;
         padding-right: 1.75rem !important;
+        font-weight: 700;
+        line-height: 1.5;
         appearance: none;
         -webkit-appearance: none;
         background-image: none !important;
@@ -475,6 +554,10 @@
         overflow: hidden;
     }
 
+    .cef-selector-shell .select2-container--default .select2-selection--multiple:focus {
+        outline: none !important;
+    }
+
     .cef-selector-shell .select2-container--default.select2-container--focus .select2-selection--multiple {
         border-color: #3b82f6 !important;
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -519,6 +602,11 @@
         font-family: inherit !important;
         text-overflow: ellipsis;
         caret-color: transparent !important;
+    }
+
+    .cef-selector-shell .select2-search__field:focus {
+        outline: none !important;
+        box-shadow: none !important;
     }
 
     .cef-selector-shell .select2-search__field.empty-placeholder::placeholder {
@@ -1463,81 +1551,19 @@
         outline: none !important;
     }
 
-    .filter-btn-field {
-        font-size: var(--text-xs);
-        font-weight: 700;
-        padding: 0.38rem 0.55rem;
-        border: 1px solid #aec6e8;
-        border-radius: 0.4rem;
-        background: #fff;
-        color: var(--padron-primary);
-        cursor: pointer;
-        transition: none !important;
-        width: 100%;
-        text-align: center;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .filter-btn-field:hover {
-        background: var(--padron-primary);
-        color: #fff;
-        border-color: var(--padron-primary);
-    }
-
     #pnlFiltros,
     #pnlColumnas {
         display: none;
+        width: 100%;
+        min-width: 0;
+        margin-top: .5rem !important;
+        padding-top: .5rem;
+        border-top: 1px solid #dee2e6;
     }
 
     #pnlFiltros.is-open,
     #pnlColumnas.is-open {
         display: block;
-    }
-
-    #pnlColumnas .form-check {
-        display: grid !important;
-        grid-template-columns: 1.25rem minmax(0, 1fr) !important;
-        align-items: start !important;
-        column-gap: 0.55rem !important;
-        min-height: 36px !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0.48rem 0.58rem !important;
-        border: 1px solid #d8e2ef !important;
-        border-radius: 0.55rem !important;
-        background: #fff !important;
-        cursor: pointer !important;
-    }
-
-    #pnlColumnas .form-check:hover {
-        background: #f4f8ff !important;
-        border-color: #aec6e8 !important;
-        box-shadow: none !important;
-    }
-
-    #pnlColumnas .form-check-input {
-        float: none !important;
-        position: static !important;
-        width: 1.08rem !important;
-        height: 1.08rem !important;
-        margin: 0.12rem 0 0 0 !important;
-        cursor: pointer !important;
-    }
-
-    #pnlColumnas .form-check-label {
-        display: block !important;
-        width: 100% !important;
-        min-width: 0 !important;
-        margin: 0 !important;
-        color: #29435a !important;
-        font-size: var(--text-xs) !important;
-        font-weight: 700 !important;
-        line-height: 1.25 !important;
-        cursor: pointer !important;
-        user-select: none !important;
-        overflow-wrap: anywhere !important;
     }
 
     .results-bar {
@@ -2697,10 +2723,12 @@
     }
 
     .filter-card {
-        background: #fff;
-        border: 1px solid var(--c-slate-200);
-        border-radius: var(--r-lg);
-        box-shadow: var(--s-sm);
+        width: 100%;
+        min-width: 0;
+        background: #f5f8ff;
+        border: 1px solid #b7c7dd;
+        border-radius: .6rem;
+        box-shadow: none;
         margin-bottom: 1rem;
         padding: 1rem;
     }
@@ -2710,22 +2738,6 @@
         border-color: var(--c-blue-800) !important;
         box-shadow: var(--s-md) !important;
         color: #fff !important;
-    }
-
-    .filter-btn-field {
-        background: var(--c-slate-50);
-        border: 1px solid var(--c-slate-200);
-        border-radius: var(--r-sm);
-        color: var(--c-slate-700);
-        font-size: var(--text-xs);
-        font-weight: 700;
-        transition: all .14s ease !important;
-    }
-
-    .filter-btn-field:hover {
-        background: var(--c-blue-800);
-        border-color: var(--c-blue-800);
-        color: #fff;
     }
 
     .btn-primary,
@@ -3074,12 +3086,19 @@
     #headerActions #liveSearchContainer .form-control,
     #headerActions #liveSearchClear {
         background-color: #fff !important;
-        border-color: #ced4da !important;
+        border-color: #9ca3af !important;
+        color: #111827 !important;
+        font-size: .86rem !important;
+    }
+
+    #headerActions #liveSearchInput::placeholder {
+        color: #475569;
+        opacity: 1;
     }
 
     #headerActions #liveSearchContainer .input-group-text {
         border-right: none !important;
-        color: #334155 !important;
+        color: #374151 !important;
     }
 
     #headerActions #liveSearchClear {
@@ -3143,34 +3162,17 @@
         }
     }
 
-    .filter-btn-field {
-        background: #e8eef6;
-        border-color: #94a3b8;
-        color: #1e293b;
-    }
-
-    .filter-btn-field:hover,
-    .filter-btn-field:focus {
-        background: #1a4f8a;
-        border-color: #0f2d52;
-        color: #fff;
-        box-shadow: 0 2px 8px rgba(15,23,42,.16);
-    }
-
-    #pnlColumnas .form-check,
     .filter-dialog-check {
         background: #ffffff !important;
         border-color: #cbd5e1 !important;
         color: #1e293b !important;
     }
 
-    #pnlColumnas .form-check:hover,
     .filter-dialog-check:hover {
         background: #e8eef6 !important;
         border-color: #94a3b8 !important;
     }
 
-    #pnlColumnas .form-check-label,
     .filter-dialog-check span {
         color: #1e293b !important;
         font-weight: 700 !important;
@@ -3338,16 +3340,16 @@
                 <div id="appliedFiltersHidden"></div>
             </form>
 
-            <div class="filter-card p-3 mb-3">
+            <div class="filter-card cef-consultas-filter-card p-3 mb-3">
                     <div class="d-flex flex-wrap align-items-center gap-2 filter-toolbar">
                         <div class="filter-toolbar-main">
-                            <button type="button" id="btnToggleFiltros" class="btn btn-outline-primary filter-toggle-btn d-flex justify-content-between align-items-center gap-2">
+                            <button type="button" id="btnToggleFiltros" class="btn btn-outline-primary filter-toggle-btn d-flex align-items-center gap-2" aria-expanded="false" aria-controls="pnlFiltros">
                                 <span><i class="fa-solid fa-filter me-1"></i>Filtros</span>
-                                <i class="fa-solid fa-chevron-down toggle-chevron" style="font-size:0.75rem;"></i>
+                                <i class="fa-solid fa-chevron-down toggle-chevron" style="font-size:0.75rem;" aria-hidden="true"></i>
                             </button>
-                            <button type="button" id="btnToggleColumnas" class="btn btn-outline-secondary filter-toggle-btn d-flex justify-content-between align-items-center gap-2">
+                            <button type="button" id="btnToggleColumnas" class="btn btn-outline-secondary filter-toggle-btn d-flex align-items-center gap-2" aria-expanded="false" aria-controls="pnlColumnas">
                                 <span><i class="fa-solid fa-table-columns me-1"></i>Columnas</span>
-                                <i class="fa-solid fa-chevron-down toggle-chevron" style="font-size:0.75rem;"></i>
+                                <i class="fa-solid fa-chevron-down toggle-chevron" style="font-size:0.75rem;" aria-hidden="true"></i>
                             </button>
                         </div>
                         <div class="filter-toolbar-actions">
@@ -3563,20 +3565,37 @@
                         </form>
                     </section>
 
-                    <div id="pnlFiltros" class="mt-3">
-                        <div class="row g-2">
+                    <div id="pnlFiltros" class="cef-consultas-panel" aria-label="Filtros disponibles">
+                        <p class="cef-consultas-muted"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Haga clic en un campo para agregar un filtro:</p>
+                        <div class="cef-panel-option-search">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
+                                <input id="cefLocalBuscarFiltro" class="form-control" type="search" placeholder="Buscar filtro..." aria-label="Buscar filtro" autocomplete="off">
+                                <button id="cefLocalLimpiarBuscarFiltro" class="btn btn-outline-secondary" type="button" aria-label="Limpiar búsqueda de filtros"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                        <div id="cefLocalFiltrosGrid" class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2">
                             {% for column in columnas_config %}
-                                <div class="col-6 col-md-3 col-xl-2">
-                                    <button type="button" class="filter-btn-field" data-field="{{ column.key }}" data-label="{{ column.label }}">{{ column.label }}</button>
+                                <div class="col cef-local-panel-option" data-option-text="{{ column.label }}">
+                                    <button type="button" class="cef-filter-btn-field" data-field="{{ column.key }}" data-label="{{ column.label }}">{{ column.label }}</button>
                                 </div>
                             {% endfor %}
                         </div>
+                        <p id="cefLocalFiltrosVacios" class="cef-consultas-muted" hidden>No hay filtros que coincidan.</p>
                     </div>
 
-                    <div id="pnlColumnas" class="mt-3">
-                        <div class="row g-2">
+                    <div id="pnlColumnas" class="cef-consultas-panel" aria-label="Columnas disponibles">
+                        <p class="cef-consultas-muted"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Seleccione las columnas a mostrar:</p>
+                        <div class="cef-panel-option-search">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
+                                <input id="cefLocalBuscarColumna" class="form-control" type="search" placeholder="Buscar columna..." aria-label="Buscar columna" autocomplete="off">
+                                <button id="cefLocalLimpiarBuscarColumna" class="btn btn-outline-secondary" type="button" aria-label="Limpiar búsqueda de columnas"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                        <div id="cefLocalColumnasGrid" class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-1 cef-consultas-columns-grid">
                             {% for column in columnas_config %}
-                                <div class="col-6 col-md-3 col-xl-2">
+                                <div class="col cef-local-panel-option" data-option-text="{{ column.label }}">
                                     <div class="form-check">
                                         <input class="form-check-input toggle-col" type="checkbox" id="chk-{{ column.slug }}" data-column="col-{{ column.slug }}" {% if column.default %}checked{% endif %}>
                                         <label class="form-check-label" for="chk-{{ column.slug }}">{{ column.label }}</label>
@@ -3584,20 +3603,21 @@
                                 </div>
                             {% endfor %}
                         </div>
-                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 border-top pt-2">
-                            <div class="d-flex flex-wrap gap-2">
-                                <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" id="btnRestaurarCols">
-                                    <i class="fa-solid fa-check-double me-1"></i>Todas
+                        <div class="cef-consultas-columns-actions">
+                            <div class="cef-consultas-columns-buttons">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnRestaurarCols">
+                                    <i class="fa-solid fa-check-double" aria-hidden="true"></i> Todas
                                 </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm fw-bold" id="btnOcultarCols">
-                                    <i class="fa-solid fa-eye-slash me-1"></i>Ocultar Todas
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="btnOcultarCols">
+                                    <i class="fa-solid fa-eye-slash" aria-hidden="true"></i> Ocultar Todas
                                 </button>
-                                <button type="button" class="btn btn-outline-primary btn-sm fw-bold" id="btnPorDefectoCols">
-                                    <i class="fa-solid fa-clock-rotate-left me-1"></i>Por Defecto
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="btnPorDefectoCols">
+                                    <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Por Defecto
                                 </button>
                             </div>
-                            <span id="colCounterLabel" class="small text-muted fw-bold"></span>
+                            <span id="colCounterLabel" class="cef-consultas-muted" role="status"></span>
                         </div>
+                        <p id="cefLocalColumnasVacias" class="cef-consultas-muted" hidden>No hay columnas que coincidan.</p>
                     </div>
                 </div>
 
@@ -4342,7 +4362,8 @@
                 "Accept": "text/html",
                 "X-Requested-With": "XMLHttpRequest"
             },
-            signal: controller.signal
+            signal: controller.signal,
+            cache: "no-store"
         })
         .then(function(response) {
             if (!response.ok) {
@@ -5261,6 +5282,47 @@
         }
     }
 
+    function normalizePanelSearch(value) {
+        return String(value || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLocaleLowerCase("es")
+            .trim();
+    }
+
+    function filterLocalPanel(inputSelector, gridSelector, emptySelector) {
+        var input = qs(inputSelector);
+        var grid = qs(gridSelector);
+        var empty = qs(emptySelector);
+        var term = normalizePanelSearch(input ? input.value : "");
+        var visible = 0;
+
+        if (!grid) {
+            if (empty) empty.hidden = true;
+            return;
+        }
+
+        qsa(".cef-local-panel-option", grid).forEach(function(item) {
+            var text = normalizePanelSearch(item.dataset.optionText || item.textContent);
+            var show = !term || text.indexOf(term) !== -1;
+            item.hidden = !show;
+            if (show) visible += 1;
+        });
+
+        if (empty) {
+            empty.hidden = visible !== 0;
+        }
+    }
+
+    function clearLocalPanelSearch(inputSelector, gridSelector, emptySelector) {
+        var input = qs(inputSelector);
+        if (input) {
+            input.value = "";
+            input.focus();
+        }
+        filterLocalPanel(inputSelector, gridSelector, emptySelector);
+    }
+
     function applyColumnVisibility(columnClass, visible) {
         qsa("." + columnClass).forEach(function(cell) {
             cell.style.display = visible ? "" : "none";
@@ -5346,7 +5408,8 @@
             credentials: "same-origin",
             headers: {
                 "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            }
+            },
+            cache: "no-store"
         })
         .then(function(response) {
             if (!response.ok) {
@@ -5836,6 +5899,18 @@
         var columnCard = closest(target, "#pnlColumnas .form-check");
         var input;
 
+        if (closest(target, "#cefLocalLimpiarBuscarFiltro")) {
+            event.preventDefault();
+            clearLocalPanelSearch("#cefLocalBuscarFiltro", "#cefLocalFiltrosGrid", "#cefLocalFiltrosVacios");
+            return;
+        }
+
+        if (closest(target, "#cefLocalLimpiarBuscarColumna")) {
+            event.preventDefault();
+            clearLocalPanelSearch("#cefLocalBuscarColumna", "#cefLocalColumnasGrid", "#cefLocalColumnasVacias");
+            return;
+        }
+
         if (closest(target, "#btnExcelFiltros")) {
             event.__cefLocalizacionesHandled = true;
             event.preventDefault();
@@ -5947,10 +6022,10 @@
             return;
         }
 
-        if (closest(target, ".filter-btn-field")) {
+        if (closest(target, ".cef-filter-btn-field")) {
             event.__cefLocalizacionesHandled = true;
             event.preventDefault();
-            openFilterDialog(target.closest(".filter-btn-field").dataset.field, target.closest(".filter-btn-field").dataset.label || target.textContent.trim());
+            openFilterDialog(target.closest(".cef-filter-btn-field").dataset.field, target.closest(".cef-filter-btn-field").dataset.label || target.textContent.trim());
             return;
         }
 
@@ -6053,6 +6128,16 @@
     }, true);
 
     document.addEventListener("input", function(event) {
+        if (event.target.matches("#cefLocalBuscarFiltro")) {
+            filterLocalPanel("#cefLocalBuscarFiltro", "#cefLocalFiltrosGrid", "#cefLocalFiltrosVacios");
+            return;
+        }
+
+        if (event.target.matches("#cefLocalBuscarColumna")) {
+            filterLocalPanel("#cefLocalBuscarColumna", "#cefLocalColumnasGrid", "#cefLocalColumnasVacias");
+            return;
+        }
+
         if (!event.target.matches("#liveSearchInput")) {
             return;
         }
@@ -6399,9 +6484,9 @@
             return;
         }
 
-        if (target.closest(".filter-btn-field")) {
+        if (target.closest(".cef-filter-btn-field")) {
             event.preventDefault();
-            openFilterDialog(target.closest(".filter-btn-field"));
+            openFilterDialog(target.closest(".cef-filter-btn-field"));
             return;
         }
 

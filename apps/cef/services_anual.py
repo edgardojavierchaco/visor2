@@ -604,7 +604,7 @@ def prevalidar_generacion_anual(ciclo_origen):
                 (
                     f"El alumno {nombre} tiene una inscripción activa en "
                     f"{_rotulo_grupo(grupo)} pero no posee un período activo "
-                    f"en el banco del CEF {grupo.cueanexo} para el ciclo {ciclo_origen.anio}."
+                    f"en el banco de alumnos del CEF {grupo.cueanexo} para el ciclo {ciclo_origen.anio}."
                 ),
                 grupo.cueanexo,
             )
@@ -641,8 +641,6 @@ def prevalidar_generacion_anual(ciclo_origen):
             for inscripcion_b in relaciones[indice + 1:]:
                 grupo_b = grupos_por_id[inscripcion_b.grupo_id]
                 if grupo_a.pk == grupo_b.pk:
-                    continue
-                if grupo_a.actividad_id == grupo_b.actividad_id:
                     continue
                 dias_b = {
                     dia.dia_semana_id
@@ -722,7 +720,7 @@ def prevalidar_generacion_anual(ciclo_origen):
                 (
                     f"El profesor {nombre} está asignado activamente a "
                     f"{_rotulo_grupo(grupo)} pero no posee un período activo "
-                    f"en el banco del CEF {grupo.cueanexo} para el ciclo {ciclo_origen.anio}."
+                    f"en el banco de profesores del CEF {grupo.cueanexo} para el ciclo {ciclo_origen.anio}."
                 ),
                 grupo.cueanexo,
             )
@@ -751,8 +749,12 @@ def prevalidar_generacion_anual(ciclo_origen):
                 ),
                 grupo.cueanexo,
             )
+    roles_unicos = {
+        CefDocenteGrupo.Rol.TITULAR,
+        CefDocenteGrupo.Rol.INTERINO,
+    }
     for clave, coincidencias in asignaciones_por_rol.items():
-        if len(coincidencias) > 1:
+        if clave[1] in roles_unicos and len(coincidencias) > 1:
             invalidas_asignaciones |= {item.pk for item in coincidencias}
             grupo = grupos_por_id[clave[0]]
             rol = dict(CefDocenteGrupo.Rol.choices).get(clave[1], clave[1])

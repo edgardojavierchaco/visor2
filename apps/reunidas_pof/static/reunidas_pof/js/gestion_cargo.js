@@ -9,6 +9,7 @@
   }
 
   const detalleUrlBase = modal.dataset.detalleUrlBase || "";
+  const ofertasCatalogoUrlBase = modal.dataset.ofertasCatalogoUrlBase || "";
   const modificarUrlBase = modal.dataset.modificarUrlBase || "";
   const eliminarUrlBase = modal.dataset.eliminarUrlBase || "";
   const historialCargoUrlBase = modal.dataset.historialCargoUrlBase || "";
@@ -24,6 +25,7 @@
 
   if (
     !detalleUrlBase ||
+    !ofertasCatalogoUrlBase ||
     !modificarUrlBase ||
     !eliminarUrlBase ||
     !historialCargoUrlBase ||
@@ -80,6 +82,18 @@
   const estadoHistorialObservacion = document.getElementById("estadoHistorialObservacion");
   const resumenHistorialObservacion = document.getElementById("resumenHistorialObservacion");
   const contenidoHistorialObservacion = document.getElementById("contenidoHistorialObservacion");
+  const pestaniasObservacionInline = Array.from(
+    modal.querySelectorAll("[data-cargo-observation-mini-tab]"),
+  );
+  const panelesObservacionInline = Array.from(
+    modal.querySelectorAll("[data-cargo-observation-mini-panel]"),
+  );
+  const estadoHistorialObservacionInline = document.getElementById(
+    "estadoGestionObservacionHistorialInline",
+  );
+  const contenidoHistorialObservacionInline = document.getElementById(
+    "contenidoGestionObservacionHistorialInline",
+  );
   const btnGuardar = document.getElementById("btnGuardarCargo");
   const btnEliminar = document.getElementById("btnEliminarCargo");
   const modalEliminar = document.getElementById(
@@ -88,6 +102,7 @@
   const btnConfirmarEliminar = document.getElementById(
     "btnConfirmarEliminarCargo",
   );
+  const impactoEliminacionTexto = document.getElementById("impactoEliminacionCargo");
   const ceicBusqueda = document.getElementById("cargoGestionCeicBusqueda");
   const estadoPanel = document.getElementById("cargoGestionEstadoPanel");
   const btnEstadoToggle = document.getElementById("cargoGestionEstadoToggle");
@@ -108,6 +123,7 @@
   const zonaTipo = document.getElementById("cargoGestionZonaTipo");
   const zonaSelect = document.getElementById("cargoGestionZona");
   const puntosZona = document.getElementById("cargoGestionPuntosZona");
+  const observacionZona = document.getElementById("cargoGestionObservacionZona");
   const estadoAnexo = document.getElementById("estadoGestionAnexo");
   const anexoPropietarioTexto = document.getElementById("cargoGestionAnexoPropietario");
   const anexoSelector = document.getElementById("cargoGestionAnexoSelector");
@@ -131,17 +147,25 @@
     cargoGestionObservacion: "cargoGestionObservacion",
   };
   let cargoActual = null;
+  let eliminacionSecuencia = 0;
+  let cargoIdEliminacionConfirmable = null;
   let valoresOriginales = {};
   let enviando = false;
   let ultimoTextoCeic = "";
   let triggerActivo = null;
   let ofertasDisponibles = [];
   let requiereOfertas = false;
+  let ofertasCatalogoCargado = false;
+  let ofertasCatalogoCargando = false;
+  let ofertasSecuencia = 0;
   let advertenciaCantidadCeroVisible = false;
   let zonaActual = null;
   let zonaCatalogoSecuencia = 0;
   let zonaCatalogoCargando = false;
+  let zonaCatalogoTipoCargado = "";
   let zonaEdicionIniciada = false;
+  const zonaCatalogoCache = new Map();
+  const zonaCatalogoPromesas = new Map();
   let anexoPropietarioActual = null;
   let anexoCatalogo = [];
   let anexoAsociaciones = [];
@@ -152,6 +176,8 @@
   let anexoCreandoCodigo = false;
   let anexoCatalogoCargado = false;
   let anexoAsociacionesCargadas = false;
+  let anexoCatalogoCache = null;
+  let anexoCatalogoCachePromesa = null;
   let pestaniaActiva = "gestion";
   let historialActivo = "cargo";
   let filtroHistorialCargoActivo = "todos";
@@ -170,6 +196,8 @@
     observacion: false,
   };
   let historialSecuencia = 0;
+  let historialCargoPayload = null;
+  let observacionInlineActiva = "editor";
 
   function buildUrl(base, cargoId) {
     return base.replace("/0/", "/" + cargoId + "/");
@@ -262,13 +290,15 @@
     }
 
     const estadoZonaFormulario = obtenerEstadoZonaFormulario();
+    const observacion = String(observacionZona.value || "").trim();
     if (!estadoZonaFormulario.zona) {
-      return { tipo: "", zona: "" };
+      return { tipo: "", zona: "", observacion: observacion };
     }
 
     return {
       tipo: estadoZonaFormulario.tipo,
       zona: estadoZonaFormulario.zona,
+      observacion: observacion,
     };
   }
 
@@ -305,6 +335,7 @@
   function resetearZonaCargo() {
     zonaCatalogoSecuencia += 1;
     zonaCatalogoCargando = false;
+    zonaCatalogoTipoCargado = "";
     zonaEdicionIniciada = false;
     zonaActual = null;
     zonaTipo.value = "";
@@ -312,6 +343,7 @@
     zonaSelect.innerHTML = '<option value="">Seleccioná una zona</option>';
     zonaSelect.disabled = true;
     puntosZona.value = "";
+    observacionZona.value = "";
     api.clearStatus(estadoZona);
     actualizarBotonGuardarCargo();
   }
@@ -335,8 +367,8 @@
         };
       }
       return {
-        tipo: "CUE",
-        valor: cueanexo.slice(0, 7),
+        tipo: "CUEANEXO",
+        valor: cueanexo,
       };
     }
 
@@ -350,7 +382,7 @@
 
     return {
       error:
-        "No se pudo resolver CUE ni CUOF para administrar Código Anexo POF.",
+        "No se pudo resolver CUEANEXO ni CUOF para administrar Código Anexo POF.",
     };
   }
 
@@ -569,6 +601,32 @@
     btnAnexoCancelarCrear.disabled = anexoCreandoCodigo;
   }
 
+  async function obtenerCatalogoAnexoCache() {
+    if (Array.isArray(anexoCatalogoCache)) {
+      return anexoCatalogoCache;
+    }
+    if (!anexoCatalogoCachePromesa) {
+      const catalogoUrl = new URL(anexoCatalogoUrl, window.location.origin);
+      catalogoUrl.searchParams.set("incluir_inactivos", "1");
+      anexoCatalogoCachePromesa = api
+        .requestJsonRead(catalogoUrl.toString())
+        .then(function (respuesta) {
+          const codigos = Array.isArray(
+            respuesta.data && respuesta.data.codigos,
+          )
+            ? respuesta.data.codigos
+            : [];
+          anexoCatalogoCache = codigos;
+          return codigos;
+        })
+        .catch(function (error) {
+          anexoCatalogoCachePromesa = null;
+          throw error;
+        });
+    }
+    return anexoCatalogoCachePromesa;
+  }
+
   async function cargarAnexoCargo(cargo, mensajeExito) {
     const propietario = resolverPropietarioAnexoCargo(cargo);
     const secuencia = ++anexoSecuencia;
@@ -608,12 +666,9 @@
     asociacionesUrl.search = parametros.toString();
     asociacionesUrl.searchParams.set("incluir_inactivas", "1");
 
-    const catalogoUrl = new URL(anexoCatalogoUrl, window.location.origin);
-    catalogoUrl.searchParams.set("incluir_inactivos", "1");
-
     const resultados = await Promise.allSettled([
-      api.requestJsonRead(catalogoUrl.toString()),
-      api.requestJsonRead(asociacionesUrl.toString()),
+      obtenerCatalogoAnexoCache(),
+      api.requestJsonRead(asociacionesUrl.toString(), { cache: "no-store" }),
     ]);
 
     if (
@@ -628,11 +683,8 @@
     const resultadoAsociaciones = resultados[1];
 
     if (resultadoCatalogo.status === "fulfilled") {
-      const respuestaCatalogo = resultadoCatalogo.value;
-      anexoCatalogo = Array.isArray(
-        respuestaCatalogo.data && respuestaCatalogo.data.codigos,
-      )
-        ? respuestaCatalogo.data.codigos
+      anexoCatalogo = Array.isArray(resultadoCatalogo.value)
+        ? resultadoCatalogo.value
         : [];
       anexoCatalogoCargado = true;
     } else {
@@ -802,6 +854,8 @@
       } else {
         anexoCatalogo.push(creado);
       }
+      anexoCatalogoCache = anexoCatalogo.slice();
+      anexoCatalogoCachePromesa = Promise.resolve(anexoCatalogoCache);
 
       anexoSeleccionados.add(Number(creado.id));
       anexoCreandoCodigo = false;
@@ -821,6 +875,34 @@
       api.showStatus(estadoAnexo, "error", api.formatError(error));
       api.logError("crear codigo anexo pof cargo gestion", error);
     }
+  }
+
+  async function obtenerCatalogoZonaCache(tipoNormalizado) {
+    if (zonaCatalogoCache.has(tipoNormalizado)) {
+      return zonaCatalogoCache.get(tipoNormalizado);
+    }
+    if (zonaCatalogoPromesas.has(tipoNormalizado)) {
+      return zonaCatalogoPromesas.get(tipoNormalizado);
+    }
+
+    const url = new URL(zonaCatalogoUrl, window.location.origin);
+    url.searchParams.set("tipo", tipoNormalizado);
+    const promesa = api
+      .requestJsonRead(url.toString())
+      .then(function (data) {
+        const payload = data.data || {};
+        const zonas = Array.isArray(payload.zonas) ? payload.zonas : [];
+        zonaCatalogoCache.set(tipoNormalizado, zonas);
+        zonaCatalogoPromesas.delete(tipoNormalizado);
+        return zonas;
+      })
+      .catch(function (error) {
+        zonaCatalogoPromesas.delete(tipoNormalizado);
+        throw error;
+      });
+
+    zonaCatalogoPromesas.set(tipoNormalizado, promesa);
+    return promesa;
   }
 
   async function cargarCatalogoZona(tipo, zonaPreferida) {
@@ -855,17 +937,14 @@
     }
 
     try {
-      const url = new URL(zonaCatalogoUrl, window.location.origin);
-      url.searchParams.set("tipo", tipoNormalizado);
-      const data = await api.requestJson(url.toString());
+      const zonas = await obtenerCatalogoZonaCache(tipoNormalizado);
 
       if (secuencia !== zonaCatalogoSecuencia) {
         return;
       }
 
       zonaCatalogoCargando = false;
-      const payload = data.data || {};
-      const zonas = Array.isArray(payload.zonas) ? payload.zonas : [];
+      zonaCatalogoTipoCargado = tipoNormalizado;
       zonaSelect.innerHTML = '<option value="">Seleccioná una zona</option>';
 
       zonas.forEach(function (item) {
@@ -982,9 +1061,10 @@
     }
   }
 
-  async function aplicarZonaCargo(zona) {
+  function aplicarZonaCargo(zona) {
     zonaEdicionIniciada = false;
     zonaActual = zona || null;
+    zonaCatalogoTipoCargado = "";
     zonaTipo.disabled = enviando;
 
     if (!zonaAsignada(zonaActual)) {
@@ -1003,21 +1083,33 @@
 
     zonaTipo.value = String(zonaActual.tipo || "").trim().toUpperCase();
     puntosZona.value = String(zonaActual.puntos || "");
+    zonaSelect.innerHTML = '<option value="">Seleccioná una zona</option>';
+    const opcionVigente = document.createElement("option");
+    opcionVigente.value = String(zonaActual.zona || "");
+    opcionVigente.textContent = String(zonaActual.zona || "");
+    opcionVigente.dataset.puntos = String(zonaActual.puntos || "");
+    zonaSelect.appendChild(opcionVigente);
+    zonaSelect.value = String(zonaActual.zona || "");
+    zonaSelect.disabled = enviando;
     api.showStatus(
       estadoZona,
       "success",
       "Zona vigente: " + zonaActual.zona + " · " + zonaActual.puntos + " puntos."
     );
-    await cargarCatalogoZona(zonaTipo.value, zonaActual.zona);
     actualizarBotonGuardarCargo();
+
+    obtenerCatalogoZonaCache(zonaTipo.value).catch(function (error) {
+      api.logError("precargar catalogo zona cargo gestion", error);
+    });
   }
 
   function setEnviando(valor) {
     enviando = valor;
     btnEliminar.disabled = valor;
-    btnConfirmarEliminar.disabled = valor;
+    btnConfirmarEliminar.disabled = valor || !cargoIdEliminacionConfirmable;
     btnEstadoToggle.disabled = valor;
-    ofertasToggle.disabled = valor || !requiereOfertas;
+    ofertasToggle.disabled =
+      valor || !requiereOfertas || ofertasCatalogoCargando;
     ofertasOpciones
       .querySelectorAll('input[type="checkbox"]')
       .forEach(function (checkbox) {
@@ -1025,7 +1117,9 @@
       });
     zonaTipo.disabled = valor;
     zonaSelect.disabled =
-      valor || zonaCatalogoCargando || zonaSelect.options.length <= 1;
+      valor ||
+      zonaCatalogoCargando ||
+      (!zonaAsignada(zonaActual) && zonaSelect.options.length <= 1);
     renderizarAnexoCargo();
     actualizarBotonGuardarCargo();
   }
@@ -1123,6 +1217,138 @@
       ),
     );
     agregarResumenHistorial(resumenHistorialCargo, "Cargo", cargo.cargo, true);
+  }
+
+  function crearBloqueCicloHistorial(ciclo, mostrarTitulo, contenido) {
+    const bloque = document.createElement("section");
+    bloque.className = mostrarTitulo ? "pof-admin-history-item pof-observation-timeline-group" : "";
+    if (mostrarTitulo) {
+      const titulo = document.createElement("h3");
+      titulo.className = "pof-observation-timeline-group-title";
+      titulo.textContent = "POF " + valorHistorial(ciclo.anio);
+      bloque.appendChild(titulo);
+      const contexto = document.createElement("p");
+      contexto.className = "pof-admin-history-meta";
+      contexto.textContent = valorHistorial((ciclo.localizacion || {}).cabecera);
+      bloque.appendChild(contexto);
+    }
+    contenido.appendChild(bloque);
+    return bloque;
+  }
+
+  function renderizarEstadoInicialCiclo(ciclo, bloque, soloObservaciones) {
+    const inicial = ciclo.estado_inicial || {};
+    const titulo = document.createElement("p");
+    titulo.className = "pof-observation-timeline-group-title";
+    titulo.textContent = inicial.heredado ? "Estado inicial heredado" : "Estado inicial";
+    bloque.appendChild(titulo);
+    const resumen = document.createElement("div");
+    resumen.className = "pof-admin-history-summary";
+    agregarResumenHistorial(resumen, "Registro del ciclo", "#" + ciclo.cargo_id);
+    agregarResumenHistorial(resumen, "Creado", inicial.fecha);
+    (Array.isArray(inicial.campos) ? inicial.campos : []).forEach(function (campo) {
+      if (!soloObservaciones || campo.campo === "observacion") {
+        agregarResumenHistorial(resumen, campo.nombre, campo.valor, campo.campo === "cargo" || campo.campo === "observacion");
+      }
+    });
+    bloque.appendChild(resumen);
+    if (!Array.isArray(inicial.campos) || !inicial.campos.length) {
+      const aviso = document.createElement("p");
+      aviso.textContent = "No se conserva un snapshot inicial para este ciclo.";
+      bloque.appendChild(aviso);
+    }
+  }
+
+  function renderizarHistorialCargoPorCiclos(payload, soloObservaciones, opciones) {
+    const opts = opciones || {};
+    const contenido = opts.contenido || (
+      soloObservaciones ? contenidoHistorialObservacion : contenidoHistorialCargo
+    );
+    const estado = opts.estado || (
+      soloObservaciones ? estadoHistorialObservacion : estadoHistorialCargo
+    );
+    const resumen = soloObservaciones
+      ? (
+        Object.prototype.hasOwnProperty.call(opts, "resumen")
+          ? opts.resumen
+          : resumenHistorialObservacion
+      )
+      : null;
+
+    limpiarContenido(contenido);
+    api.clearStatus(estado);
+    const ciclos = Array.isArray(payload.ciclos) ? payload.ciclos : [];
+    if (!ciclos.length) {
+      if (soloObservaciones) {
+        renderizarHistorialObservacion(payload, resumen, contenido, estado);
+      } else {
+        renderizarMovimientosContextuales(payload, contenido, estado, false);
+      }
+      return;
+    }
+    if (soloObservaciones && resumen) {
+      limpiarContenido(resumen);
+      agregarResumenHistorial(resumen, "CEIC", (payload.cargo || {}).ceic);
+      agregarResumenHistorial(
+        resumen,
+        "Observación actual",
+        (payload.cargo || {}).observacion_actual,
+        true,
+      );
+    }
+
+    ciclos.forEach(function (ciclo) {
+      const bloque = crearBloqueCicloHistorial(ciclo, ciclos.length > 1, contenido);
+      if (ciclos.length > 1 || ciclo.cargo_origen_id || !ciclo.movimientos.length) {
+        renderizarEstadoInicialCiclo(ciclo, bloque, soloObservaciones);
+      }
+      const estadoCiclo = document.createElement("div");
+      estadoCiclo.className = "pof-status pof-hidden";
+      const contenidoCiclo = document.createElement("div");
+      bloque.appendChild(estadoCiclo);
+      bloque.appendChild(contenidoCiclo);
+      if (soloObservaciones) {
+        // El resumen global sigue representando el cargo abierto.
+        renderizarHistorialObservacion(
+          ciclo.observaciones || {},
+          null,
+          contenidoCiclo,
+          estadoCiclo,
+        );
+      } else {
+        renderizarMovimientosContextuales(ciclo, contenidoCiclo, estadoCiclo, false);
+      }
+    });
+    if (payload.advertencia_continuidad) {
+      api.showStatus(
+        estado,
+        "warning",
+        payload.advertencia_continuidad + " Se muestran sólo los ciclos verificables.",
+      );
+    }
+  }
+
+  function renderizarHistorialContextualPorCiclos(payload, contenido, estado, renderizarCiclo) {
+    limpiarContenido(contenido);
+    api.clearStatus(estado);
+    const ciclos = Array.isArray(payload.ciclos) ? payload.ciclos : [];
+    if (!ciclos.length) {
+      renderizarCiclo(payload, contenido, estado);
+      return;
+    }
+
+    ciclos.forEach(function (ciclo) {
+      const bloque = crearBloqueCicloHistorial(ciclo, ciclos.length > 1, contenido);
+      const estadoCiclo = document.createElement("div");
+      estadoCiclo.className = "pof-status pof-hidden";
+      const contenidoCiclo = document.createElement("div");
+      bloque.appendChild(estadoCiclo);
+      bloque.appendChild(contenidoCiclo);
+      renderizarCiclo(ciclo, contenidoCiclo, estadoCiclo);
+    });
+    if (payload.advertencia_continuidad) {
+      api.showStatus(estado, "warning", payload.advertencia_continuidad + " Se muestran sólo los ciclos verificables.");
+    }
   }
 
   function renderizarResumenHistorialLocalizacion(payload) {
@@ -1350,10 +1576,8 @@
     return zona.zona + (zona.puntos ? " · " + zona.puntos + " puntos" : "");
   }
 
-  function renderizarHistorialZona(payload) {
+  function renderizarResumenHistorialZona(payload) {
     limpiarContenido(resumenHistorialZona);
-    limpiarContenido(contenidoHistorialZona);
-    api.clearStatus(estadoHistorialZona);
 
     const identidad = payload.identidad || {};
     const vigente = payload.vigente || {};
@@ -1364,11 +1588,26 @@
     );
     agregarResumenHistorial(resumenHistorialZona, "Año", identidad.anio);
     agregarResumenHistorial(resumenHistorialZona, "Zona vigente", descripcionZona(vigente), true);
+  }
 
+  function renderizarHistorialZonaPorCiclos(payload) {
+    renderizarResumenHistorialZona(payload);
+    renderizarHistorialContextualPorCiclos(
+      payload, contenidoHistorialZona, estadoHistorialZona, renderizarHistorialZona,
+    );
+  }
+
+  function renderizarHistorialZona(
+    payload,
+    contenido = contenidoHistorialZona,
+    estado = estadoHistorialZona,
+  ) {
+    limpiarContenido(contenido);
+    api.clearStatus(estado);
     const eventos = Array.isArray(payload.eventos) ? payload.eventos : [];
     if (!eventos.length) {
       api.showStatus(
-        estadoHistorialZona,
+        estado,
         "info",
         "No se registraron cambios de Zona Educativa para esta localización.",
       );
@@ -1424,9 +1663,18 @@
       cambios.className = "pof-admin-history-detail pof-admin-zone-history-detail";
       renderizarCambiosZona(evento, cambios);
       item.appendChild(cambios);
+
+      const observacion = String(evento.observacion || "").trim();
+      if (observacion) {
+        const nota = document.createElement("div");
+        nota.className = "pof-admin-history-detail";
+        nota.textContent = "Observación: " + observacion;
+        item.appendChild(nota);
+      }
+
       lista.appendChild(item);
     });
-    contenidoHistorialZona.appendChild(lista);
+    contenido.appendChild(lista);
   }
 
   function usuarioAnexoVisible(usuario) {
@@ -1644,19 +1892,26 @@
     return entrada;
   }
 
-  function renderizarHistorialObservacion(payload) {
-    limpiarContenido(resumenHistorialObservacion);
-    limpiarContenido(contenidoHistorialObservacion);
-    api.clearStatus(estadoHistorialObservacion);
+  function renderizarHistorialObservacion(
+    payload,
+    resumen = resumenHistorialObservacion,
+    contenido = contenidoHistorialObservacion,
+    estado = estadoHistorialObservacion,
+  ) {
+    limpiarContenido(resumen);
+    limpiarContenido(contenido);
+    api.clearStatus(estado);
 
     const cargo = payload.cargo || {};
-    agregarResumenHistorial(resumenHistorialObservacion, "CEIC", cargo.ceic);
-    agregarResumenHistorial(
-      resumenHistorialObservacion,
-      "Observación actual",
-      cargo.observacion_actual,
-      true,
-    );
+    if (resumen) {
+      agregarResumenHistorial(resumen, "CEIC", cargo.ceic);
+      agregarResumenHistorial(
+        resumen,
+        "Observación actual",
+        cargo.observacion_actual,
+        true,
+      );
+    }
 
     const cargos = Array.isArray(payload.cargos) ? payload.cargos : [];
     const cargosConEventos = cargos.filter(function (item) {
@@ -1665,7 +1920,7 @@
 
     if (!cargosConEventos.length) {
       api.showStatus(
-        estadoHistorialObservacion,
+        estado,
         "info",
         "No hay historial de observación registrado para este cargo.",
       );
@@ -1688,23 +1943,65 @@
       const timeline = document.createElement("div");
       timeline.className = "pof-observation-timeline";
       const eventos = item.movimientos;
-      const indiceModificacionReciente = eventos.findIndex(function (evento) {
-        return evento.tipo_evento === "modificacion";
-      });
 
       eventos.forEach(function (evento, indice) {
         timeline.appendChild(
           crearEventoObservacionTimeline(
             evento,
             indice,
-            indice === indiceModificacionReciente,
+            false,
           ),
         );
       });
 
       grupo.appendChild(timeline);
-      contenidoHistorialObservacion.appendChild(grupo);
+      contenido.appendChild(grupo);
     });
+  }
+
+  function renderizarHistorialObservacionInline(payload) {
+    if (!contenidoHistorialObservacionInline || !estadoHistorialObservacionInline) {
+      return;
+    }
+    renderizarHistorialCargoPorCiclos(payload, true, {
+      resumen: null,
+      contenido: contenidoHistorialObservacionInline,
+      estado: estadoHistorialObservacionInline,
+    });
+  }
+
+  async function activarObservacionInline(nombre) {
+    const destino = nombre === "historial" ? "historial" : "editor";
+    observacionInlineActiva = destino;
+
+    pestaniasObservacionInline.forEach(function (boton) {
+      const activa = boton.dataset.cargoObservationMiniTab === destino;
+      boton.classList.toggle("pof-admin-observation-mini-tab-active", activa);
+      boton.setAttribute("aria-selected", activa ? "true" : "false");
+    });
+
+    panelesObservacionInline.forEach(function (panel) {
+      panel.classList.toggle(
+        "pof-hidden",
+        panel.dataset.cargoObservationMiniPanel !== destino,
+      );
+    });
+
+    if (destino !== "historial" || !cargoActual) {
+      return;
+    }
+
+    if (historialCargoPayload && historialCargado.cargo) {
+      renderizarHistorialObservacionInline(historialCargoPayload);
+      return;
+    }
+
+    api.showStatus(
+      estadoHistorialObservacionInline,
+      "warning",
+      "Cargando historial de observación...",
+    );
+    await cargarHistorialPestania("cargo");
   }
 
   function activarFiltroHistorialCargo(modo) {
@@ -1780,12 +2077,15 @@
       anexo: false,
       observacion: false,
     };
+    historialCargoPayload = null;
+    observacionInlineActiva = "editor";
     [
       estadoHistorialCargo,
       estadoHistorialLocalizacion,
       estadoHistorialZona,
       estadoHistorialAnexo,
       estadoHistorialObservacion,
+      estadoHistorialObservacionInline,
     ].forEach(function (elemento) {
       api.clearStatus(elemento);
     });
@@ -1800,7 +2100,20 @@
       contenidoHistorialAnexo,
       resumenHistorialObservacion,
       contenidoHistorialObservacion,
+      contenidoHistorialObservacionInline,
     ].forEach(limpiarContenido);
+
+    pestaniasObservacionInline.forEach(function (boton) {
+      const activa = boton.dataset.cargoObservationMiniTab === "editor";
+      boton.classList.toggle("pof-admin-observation-mini-tab-active", activa);
+      boton.setAttribute("aria-selected", activa ? "true" : "false");
+    });
+    panelesObservacionInline.forEach(function (panel) {
+      panel.classList.toggle(
+        "pof-hidden",
+        panel.dataset.cargoObservationMiniPanel !== "editor",
+      );
+    });
 
     historialActivo = "cargo";
     pestaniasHistorial.forEach(function (boton) {
@@ -1817,8 +2130,67 @@
     activarFiltroHistorialCargo("todos");
   }
 
+  function historialContextoVigente(cargoId, secuencia) {
+    return Boolean(
+      cargoActual &&
+      cargoActual.id === cargoId &&
+      historialSecuencia === secuencia
+    );
+  }
+
+  async function precargarHistorialesEnSegundoPlano(
+    cargoIdContexto,
+    secuenciaContexto,
+  ) {
+    const ordenPrecarga = ["cargo", "localizacion", "zona", "anexo"];
+
+    for (const nombre of ordenPrecarga) {
+      if (!historialContextoVigente(cargoIdContexto, secuenciaContexto)) {
+        return;
+      }
+      await cargarHistorialPestania(nombre);
+    }
+  }
+
+  function iniciarPrecargaHistorialesEnSegundoPlano() {
+    if (!cargoActual) {
+      return;
+    }
+
+    const cargoIdContexto = cargoActual.id;
+    const secuenciaContexto = historialSecuencia;
+
+    window.setTimeout(function () {
+      if (!historialContextoVigente(cargoIdContexto, secuenciaContexto)) {
+        return;
+      }
+      precargarHistorialesEnSegundoPlano(
+        cargoIdContexto,
+        secuenciaContexto,
+      ).catch(function (error) {
+        if (historialContextoVigente(cargoIdContexto, secuenciaContexto)) {
+          api.logError("precargar historiales cargo gestion", error);
+        }
+      });
+    }, 0);
+  }
+
   async function cargarHistorialPestania(nombre) {
     if (!cargoActual || historialCargado[nombre] || historialCargando[nombre]) {
+      return;
+    }
+
+    if (nombre === "observacion") {
+      if (historialCargado.cargo) {
+        historialCargado.observacion = true;
+        return;
+      }
+      api.showStatus(
+        estadoHistorialObservacion,
+        "warning",
+        "Cargando historial...",
+      );
+      await cargarHistorialPestania("cargo");
       return;
     }
 
@@ -1831,10 +2203,10 @@
       url = buildUrl(historialCargoUrlBase, cargoActual.id);
       estadoPanelHistorial = estadoHistorialCargo;
     } else if (nombre === "localizacion" && localizacionId) {
-      url = buildUrl(historialLocalizacionUrlBase, localizacionId);
+      url = buildCargoQueryUrl(buildUrl(historialLocalizacionUrlBase, localizacionId), cargoIdContexto);
       estadoPanelHistorial = estadoHistorialLocalizacion;
     } else if (nombre === "zona" && localizacionId) {
-      url = buildUrl(historialZonaUrlBase, localizacionId);
+      url = buildCargoQueryUrl(buildUrl(historialZonaUrlBase, localizacionId), cargoIdContexto);
       estadoPanelHistorial = estadoHistorialZona;
     } else if (nombre === "anexo") {
       estadoPanelHistorial = estadoHistorialAnexo;
@@ -1851,9 +2223,6 @@
       const historialUrl = new URL(anexoHistorialUrl, window.location.origin);
       historialUrl.search = parametros.toString();
       url = historialUrl.toString();
-    } else if (nombre === "observacion") {
-      url = buildCargoQueryUrl(historialObservacionUrl, cargoActual.id);
-      estadoPanelHistorial = estadoHistorialObservacion;
     }
 
     if (!url || !estadoPanelHistorial) {
@@ -1863,7 +2232,7 @@
     historialCargando[nombre] = true;
     api.showStatus(estadoPanelHistorial, "warning", "Cargando historial...");
     try {
-      const respuesta = await api.requestJsonRead(url);
+      const respuesta = await api.requestJsonRead(url, { cache: "no-store" });
       if (
         secuenciaContexto !== historialSecuencia ||
         !cargoActual ||
@@ -1873,32 +2242,34 @@
       }
       const payload = respuesta.data || {};
       if (nombre === "cargo") {
+        historialCargoPayload = payload;
         renderizarResumenHistorialCargo(payload);
-        renderizarMovimientosContextuales(
-          payload,
-          contenidoHistorialCargo,
-          estadoHistorialCargo,
-          false,
-        );
+        renderizarHistorialCargoPorCiclos(payload, false);
+        renderizarHistorialCargoPorCiclos(payload, true);
+        renderizarHistorialObservacionInline(payload);
+        historialCargado.observacion = true;
       } else if (nombre === "localizacion") {
         renderizarResumenHistorialLocalizacion(payload);
-        renderizarMovimientosContextuales(
-          payload,
-          contenidoHistorialLocalizacion,
-          estadoHistorialLocalizacion,
-          true,
+        renderizarHistorialContextualPorCiclos(
+          payload, contenidoHistorialLocalizacion, estadoHistorialLocalizacion,
+          function (ciclo, contenido, estado) {
+            renderizarMovimientosContextuales(ciclo, contenido, estado, true);
+          },
         );
       } else if (nombre === "zona") {
-        renderizarHistorialZona(payload);
+        renderizarHistorialZonaPorCiclos(payload);
       } else if (nombre === "anexo") {
         renderizarHistorialAnexo(payload);
-      } else if (nombre === "observacion") {
-        renderizarHistorialObservacion(payload);
       }
       historialCargado[nombre] = true;
     } catch (error) {
       if (secuenciaContexto === historialSecuencia) {
-        api.showStatus(estadoPanelHistorial, "error", api.formatError(error));
+        const mensajeError = api.formatError(error);
+        api.showStatus(estadoPanelHistorial, "error", mensajeError);
+        if (nombre === "cargo") {
+          api.showStatus(estadoHistorialObservacion, "error", mensajeError);
+          api.showStatus(estadoHistorialObservacionInline, "error", mensajeError);
+        }
         api.logError("cargar historial " + nombre, error);
       }
     } finally {
@@ -2128,6 +2499,8 @@
 
   function renderizarOfertasCargo(cargo) {
     requiereOfertas = Boolean(cargo.requiere_ofertas);
+    ofertasCatalogoCargado = Boolean(cargo.ofertas_catalogo_cargado);
+    ofertasCatalogoCargando = false;
     ofertasDisponibles = Array.isArray(cargo.ofertas_disponibles)
       ? cargo.ofertas_disponibles
       : [];
@@ -2213,6 +2586,82 @@
     actualizarResumenOfertas();
   }
 
+  async function cargarCatalogoOfertasCargo() {
+    if (
+      !cargoActual ||
+      !requiereOfertas ||
+      ofertasCatalogoCargado ||
+      ofertasCatalogoCargando
+    ) {
+      return ofertasCatalogoCargado;
+    }
+
+    const cargoId = Number(cargoActual.id);
+    const secuencia = ++ofertasSecuencia;
+    ofertasCatalogoCargando = true;
+    ofertasToggle.disabled = true;
+    ofertasOpciones.innerHTML =
+      '<div class="pof-admin-offers-empty">Cargando ofertas de padrón...</div>';
+
+    try {
+      const respuesta = await api.requestJsonRead(
+        buildUrl(ofertasCatalogoUrlBase, cargoId),
+        { cache: "no-store" },
+      );
+      if (
+        secuencia !== ofertasSecuencia ||
+        !cargoActual ||
+        Number(cargoActual.id) !== cargoId
+      ) {
+        return false;
+      }
+
+      const payload = respuesta.data || {};
+      cargoActual.oferta = payload.oferta || cargoActual.oferta || "";
+      cargoActual.ofertas_seleccionadas = Array.isArray(
+        payload.ofertas_seleccionadas,
+      )
+        ? payload.ofertas_seleccionadas
+        : [];
+      cargoActual.ofertas_disponibles = Array.isArray(
+        payload.ofertas_disponibles,
+      )
+        ? payload.ofertas_disponibles
+        : [];
+      cargoActual.requiere_ofertas = Boolean(payload.requiere_ofertas);
+      cargoActual.ofertas_catalogo_cargado = true;
+      renderizarOfertasCargo(cargoActual);
+      valoresOriginales.ofertas_seleccionadas = normalizarOfertasCargoModal(
+        obtenerOfertasSeleccionadas(),
+      );
+      marcarCamposModificados();
+      return true;
+    } catch (error) {
+      if (
+        secuencia === ofertasSecuencia &&
+        cargoActual &&
+        Number(cargoActual.id) === cargoId
+      ) {
+        ofertasCatalogoCargando = false;
+        ofertasCatalogoCargado = false;
+        ofertasOpciones.innerHTML =
+          '<div class="pof-admin-offers-empty">No se pudieron cargar las ofertas. Volvé a intentarlo.</div>';
+        api.logError("cargar catalogo ofertas cargo gestion", error);
+      }
+      return false;
+    } finally {
+      if (
+        secuencia === ofertasSecuencia &&
+        cargoActual &&
+        Number(cargoActual.id) === cargoId
+      ) {
+        ofertasCatalogoCargando = false;
+        ofertasToggle.disabled = enviando || !requiereOfertas;
+        actualizarBotonGuardarCargo();
+      }
+    }
+  }
+
   function normalizarEstadoCargoModal(estado) {
     return {
       cantidad: normalizarNumeroEnteroCargoModal(estado.cantidad),
@@ -2277,8 +2726,8 @@
         !hayCambios ||
         !ofertasValidas ||
         !zonaValida ||
+        ofertasCatalogoCargando ||
         zonaCatalogoCargando ||
-        anexoCargando ||
         anexoCreandoCodigo,
     );
   }
@@ -2363,6 +2812,7 @@
   }
 
   async function aplicarCargo(cargo) {
+    ofertasSecuencia += 1;
     cargoActual = cargo;
     document.getElementById("cargoGestionId").value = cargo.id;
     document.getElementById("cargoGestionCeic").value = cargo.ceic || "";
@@ -2400,14 +2850,16 @@
       localizacion.cuof || "-";
     document.getElementById("cargoGestionResumenEstablecimiento").textContent =
       localizacion.establecimiento || "-";
-    await Promise.all([
-      aplicarZonaCargo(cargo.zona_educativa || null),
-      cargarAnexoCargo(cargo),
-    ]);
+    aplicarZonaCargo(cargo.zona_educativa || null);
     renderizarOfertasCargo(cargo);
     actualizarEstadoVisual();
     guardarValoresOriginales();
     marcarCamposModificados();
+
+    cargarAnexoCargo(cargo).catch(function (error) {
+      api.logError("cargar anexo pof cargo gestion en segundo plano", error);
+    });
+    iniciarPrecargaHistorialesEnSegundoPlano();
   }
 
   function abrirModal() {
@@ -2417,17 +2869,21 @@
   }
 
   function cerrarModal() {
+    cerrarModalEliminar();
     const triggerAnterior = triggerActivo;
 
     modal.classList.add("pof-hidden");
     modal.setAttribute("aria-hidden", "true");
     document.body.classList.remove("pof-modal-open");
 
+    ofertasSecuencia += 1;
     cargoActual = null;
     valoresOriginales = {};
     triggerActivo = null;
     ofertasDisponibles = [];
     requiereOfertas = false;
+    ofertasCatalogoCargado = false;
+    ofertasCatalogoCargando = false;
     ofertasCampo.classList.add("pof-hidden");
     ofertasOpciones.innerHTML = "";
     cerrarOpcionesOfertas();
@@ -2445,18 +2901,64 @@
     }
   }
 
-  function abrirModalEliminar() {
+  async function abrirModalEliminar() {
+    if (!cargoActual || enviando) {
+      return;
+    }
+    const cargoId = String(cargoActual.id);
+    const secuencia = ++eliminacionSecuencia;
+    cargoIdEliminacionConfirmable = null;
+    btnConfirmarEliminar.disabled = true;
+    impactoEliminacionTexto.textContent = "Consultando el impacto real de la eliminación...";
     modalEliminar.classList.remove("pof-hidden");
     modalEliminar.setAttribute("aria-hidden", "false");
-    btnConfirmarEliminar.focus();
+    modalEliminar.querySelector("[data-eliminar-cancelar]").focus();
+
+    try {
+      const url = new URL(buildUrl(detalleUrlBase, cargoId), window.location.origin);
+      url.searchParams.set("impacto_eliminacion", "1");
+      const respuesta = await api.requestJsonRead(url.toString(), { cache: "no-store" });
+      if (
+        secuencia !== eliminacionSecuencia || !cargoActual ||
+        String(cargoActual.id) !== cargoId
+      ) {
+        return;
+      }
+      const impacto = (respuesta.data || {}).impacto_eliminacion;
+      if (
+        !impacto || String(impacto.cargo_id) !== cargoId ||
+        !Number.isInteger(impacto.cantidad_movimientos) || impacto.cantidad_movimientos < 0 ||
+        typeof impacto.puede_eliminar !== "boolean" ||
+        typeof impacto.mensaje !== "string" || !impacto.mensaje
+      ) {
+        throw new Error("No se pudo verificar el impacto de la eliminación.");
+      }
+      impactoEliminacionTexto.textContent = impacto.mensaje;
+      if (impacto.puede_eliminar) {
+        cargoIdEliminacionConfirmable = cargoId;
+        btnConfirmarEliminar.disabled = enviando;
+        if (!enviando) {
+          btnConfirmarEliminar.focus();
+        }
+      }
+    } catch (error) {
+      if (secuencia === eliminacionSecuencia && cargoActual && String(cargoActual.id) === cargoId) {
+        impactoEliminacionTexto.textContent = api.formatError(error);
+        api.logError("consultar impacto eliminación cargo", error);
+      }
+    }
   }
 
   function cerrarModalEliminar() {
+    eliminacionSecuencia += 1;
+    cargoIdEliminacionConfirmable = null;
+    btnConfirmarEliminar.disabled = true;
     modalEliminar.classList.add("pof-hidden");
     modalEliminar.setAttribute("aria-hidden", "true");
   }
 
   async function cargarCargo(cargoId) {
+    cerrarModalEliminar();
     reiniciarHistoriales();
     activarPestania("gestion");
     abrirModal();
@@ -2465,7 +2967,9 @@
     api.showStatus(estado, "warning", "Cargando detalle del cargo...");
 
     try {
-      const data = await api.requestJson(buildUrl(detalleUrlBase, cargoId));
+      const data = await api.requestJson(buildUrl(detalleUrlBase, cargoId), {
+        cache: "no-store",
+      });
       await aplicarCargo(data.data.cargo);
       api.clearStatus(estado);
       actualizarAdvertenciaCantidadCero();
@@ -2495,6 +2999,11 @@
       });
 
       const respuesta = data.data || {};
+
+      // Toda mutación puede cambiar Cargo, Zona o Anexo POF. Invalidamos los
+      // historiales ya cargados y cualquier respuesta tardía antes de aplicar
+      // el estado fresco devuelto por el servidor.
+      reiniciarHistoriales();
 
       if (respuesta.cargo) {
         await aplicarCargo(respuesta.cargo);
@@ -2581,6 +3090,17 @@
     });
   });
 
+  pestaniasObservacionInline.forEach(function (boton) {
+    boton.addEventListener("click", function () {
+      if (enviando) {
+        return;
+      }
+      void activarObservacionInline(
+        boton.dataset.cargoObservationMiniTab || "editor",
+      );
+    });
+  });
+
   document.querySelectorAll("[data-cargo-cerrar]").forEach(function (boton) {
     boton.addEventListener("click", function () {
       if (!enviando) {
@@ -2615,11 +3135,21 @@
     });
   });
 
-  ofertasToggle.addEventListener("click", function () {
-    if (enviando || !requiereOfertas) {
+  ofertasToggle.addEventListener("click", async function () {
+    if (enviando || !requiereOfertas || ofertasCatalogoCargando) {
       return;
     }
+
     const abrir = ofertasOpciones.classList.contains("pof-hidden");
+    if (abrir && !ofertasCatalogoCargado) {
+      const cargado = await cargarCatalogoOfertasCargo();
+      if (!cargado) {
+        ofertasOpciones.classList.remove("pof-hidden");
+        ofertasToggle.setAttribute("aria-expanded", "true");
+        return;
+      }
+    }
+
     ofertasOpciones.classList.toggle("pof-hidden", !abrir);
     ofertasToggle.setAttribute("aria-expanded", abrir ? "true" : "false");
   });
@@ -2647,8 +3177,27 @@
       return;
     }
     zonaEdicionIniciada = true;
+    zonaCatalogoTipoCargado = "";
     cargarCatalogoZona(this.value, "");
   });
+
+  function asegurarCatalogoZonaActual() {
+    if (
+      enviando ||
+      zonaCatalogoCargando ||
+      !zonaAsignada(zonaActual)
+    ) {
+      return;
+    }
+    const tipo = String(zonaTipo.value || "").trim().toUpperCase();
+    if (!tipo || zonaCatalogoTipoCargado === tipo) {
+      return;
+    }
+    cargarCatalogoZona(tipo, String(zonaActual.zona || ""));
+  }
+
+  zonaSelect.addEventListener("focus", asegurarCatalogoZonaActual);
+  zonaSelect.addEventListener("pointerdown", asegurarCatalogoZonaActual);
 
   zonaSelect.addEventListener("change", function () {
     zonaEdicionIniciada = true;
@@ -2715,7 +3264,6 @@
       !cargoActual ||
       enviando ||
       zonaCatalogoCargando ||
-      anexoCargando ||
       anexoCreandoCodigo ||
       !hayCambiosGestionModal()
     ) {
@@ -2827,7 +3375,10 @@
   });
 
   btnConfirmarEliminar.addEventListener("click", function () {
-    if (cargoActual && !enviando) {
+    if (
+      cargoActual && !enviando && !btnConfirmarEliminar.disabled &&
+      cargoIdEliminacionConfirmable === String(cargoActual.id)
+    ) {
       cerrarModalEliminar();
       ejecutarAccionCargo(
         buildUrl(eliminarUrlBase, cargoActual.id),

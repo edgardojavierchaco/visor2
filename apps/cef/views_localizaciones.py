@@ -5,7 +5,6 @@ import unicodedata
 from datetime import datetime
 from io import BytesIO
 
-from django.core.cache import cache
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import connections
 from django.http import HttpResponse
@@ -27,8 +26,6 @@ logger = logging.getLogger(__name__)
 
 PAGE_SIZE = 10
 PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
-CACHE_TTL_LOCALIZACIONES_CEF = 60 * 5
-CACHE_VERSION_LOCALIZACIONES_CEF = "v3_columnas_vista_20260520"
 
 # Columnas que se leen desde Padron y se exponen en tabla, filtros y Excel.
 COLUMNAS_LOCALIZACIONES_CEF = [
@@ -226,31 +223,13 @@ def _serialize_item(item):
     }
 
 
-def _cache_key_localizaciones_cef(request):
-    user_id = getattr(request.user, "pk", None) or "anon"
-    return f"cef:localizaciones:{CACHE_VERSION_LOCALIZACIONES_CEF}:user:{user_id}"
-
-
-def _get_items_base_cached(request):
-    """
-    Obtiene y serializa los CEF visibles una sola vez por usuario.
-
-    La pantalla filtra y ordena en memoria sobre esta lista cacheada para evitar
-    repetir consultas pesadas a Padron en cada cambio de filtros o paginacion.
-    """
+def _get_items_base(request):
+    """Obtiene en vivo y serializa los CEF visibles para esta solicitud."""
 
     global _GEO_FILTER_OPTIONS_CEF_CACHE
     started = time.perf_counter()
-    cache_key = _cache_key_localizaciones_cef(request)
     if request.GET.get("refresh") == "1":
-        cache.delete(cache_key)
         _GEO_FILTER_OPTIONS_CEF_CACHE = None
-
-    sentinel = object()
-    cached_items = cache.get(cache_key, sentinel)
-    if cached_items is not sentinel:
-        _log_perf("_get_items_base_cached hit", started)
-        return cached_items
 
     qs = _base_cef_queryset(request)
     try:
@@ -259,8 +238,7 @@ def _get_items_base_cached(request):
     except Exception:
         items = [_serialize_item(item) for item in _base_cef_queryset(request)]
 
-    cache.set(cache_key, items, CACHE_TTL_LOCALIZACIONES_CEF)
-    _log_perf("_get_items_base_cached miss", started)
+    _log_perf("_get_items_base live", started)
     return items
 
 
@@ -1052,7 +1030,7 @@ def visualizacion_localizaciones(request):
     view_started = time.perf_counter()
     formato = request.GET.get("formato")
 
-    base_items = _get_items_base_cached(request)
+    base_items = _get_items_base(request)
     cef_selector_options = _get_cef_selector_options(base_items)
     total_cefs_visibles = len(cef_selector_options)
 

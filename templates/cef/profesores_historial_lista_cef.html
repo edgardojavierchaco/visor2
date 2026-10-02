@@ -29,15 +29,16 @@
                             {% else %}<span class="text-muted small">No activo en el ciclo actual</span>{% endif %}
                         {% else %}<span class="text-muted small">Solo lectura</span>{% endif %}
                     </td>
-                    <td class="cef-act-cell text-end"><button type="button" class="btn btn-outline-secondary btn-sm" aria-controls="profesorHistorial{{ periodo.docente_cuil }}" aria-expanded="false" data-cef-history-toggle="profesor-{{ periodo.docente_cuil }}"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i> Historial ({{ periodo.historial_periodos|length }})</button></td>
+                    <td class="cef-act-cell text-end"><button type="button" class="btn btn-outline-secondary btn-sm" aria-controls="profesorHistorial{{ periodo.docente_cuil }}" aria-expanded="false" data-cef-history-toggle="profesor-{{ periodo.docente_cuil }}"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i> Historial · {{ periodo.historial_periodos|length }} período{{ periodo.historial_periodos|length|pluralize:"s" }}</button></td>
                 </tr>
                 <tr id="profesorHistorial{{ periodo.docente_cuil }}" class="cef-history-detail-row" data-cef-history-detail="profesor-{{ periodo.docente_cuil }}" hidden>
                     <td colspan="6" class="p-0">
                         <div class="cef-history-detail-panel">
                             <div class="cef-history-detail-head"><strong><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Historial del profesor en el CEF</strong><span>Períodos registrados: {{ periodo.historial_periodos|length }}</span></div>
                             <div class="cef-table-wrap cef-history-detail-table-wrap"><table class="cef-dt cef-history-detail-table">
-                            <thead><tr><th>Ciclo</th><th>Estado</th><th>Fecha de alta</th><th>Fecha de baja</th><th>Motivo</th><th>Observaciones</th><th>Asignaciones a grupos durante el período</th></tr></thead>
+                            <thead><tr><th>Período</th><th>Ciclo</th><th>Estado</th><th>Fecha de alta</th><th>Fecha de baja</th><th>Motivo</th><th>Observaciones</th><th>Asignaciones a grupos durante el período</th></tr></thead>
                             <tbody>{% for movimiento in periodo.historial_periodos %}<tr class="{% if movimiento.estado != 'activo' %}cef-row-inactive{% endif %}">
+                                <td><strong>N.º {{ movimiento.numero_periodo }}</strong></td>
                                 <td><strong>{{ movimiento.ciclo.anio }}</strong></td>
                                 <td><span class="badge text-bg-{% if movimiento.estado == 'activo' and not movimiento.ciclo.cerrado %}success{% else %}secondary{% endif %}">{% if movimiento.ciclo.cerrado and movimiento.estado == 'activo' %}Activo al cierre{% else %}{{ movimiento.get_estado_display }}{% endif %}</span></td>
                                 <td>{{ movimiento.fecha_alta|date:"d/m/Y" }}</td>
@@ -75,7 +76,7 @@
             {% endfor %}</tbody>
         </table></div>
     {% elif docentes_banco_tabla_pendiente %}<div class="cef-empty-state">Listado pendiente hasta crear la tabla correspondiente.</div>
-    {% elif cef_context.puede_consultar %}<div class="cef-empty-state">No hay movimientos históricos de profesores.</div>
+    {% elif cef_context.puede_consultar %}<div class="cef-empty-state">No hay profesores registrados en este CEF hasta el ciclo seleccionado.</div>
     {% else %}<div class="cef-empty-state">Seleccioná un CUE-Anexo para consultar historial.</div>{% endif %}
     <div class="cef-tfoot"><span class="cef-tfoot-count" data-cef-table-count>{{ docentes_historial_resumen|length }} personas</span><div class="cef-tfoot-pagination" data-cef-table-pagination></div></div>
 </div>

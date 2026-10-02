@@ -217,6 +217,12 @@ def construir_grupos_operativos_detalle(*, filas_normalizadas, detalle_politicas
             grupo_anexo["zona_educativa_tipo"] = fila_normalizada.get("zona_educativa_tipo", "")
             grupo_anexo["zona_educativa"] = fila_normalizada.get("zona_educativa", "")
             grupo_anexo["puntos_zona_educativa"] = fila_normalizada.get("puntos_zona_educativa")
+            grupo_anexo["tiene_modificacion_zona"] = bool(
+                fila_normalizada.get("tiene_modificacion_zona")
+            )
+            grupo_anexo["cargo_id_historial_zona"] = fila_normalizada.get(
+                "cargo_id_historial_zona"
+            )
             grupo_anexo["cantidad_cargos"] = 0
             grupo_anexo["cargos"] = []
             grupo_anexo["acciones_grupo"] = acciones_grupo_anexo
@@ -227,6 +233,12 @@ def construir_grupos_operativos_detalle(*, filas_normalizadas, detalle_politicas
                 grupo_cue["total_anexos"] += 1
 
         grupo_anexo = grupos_anexo_por_clave[clave_anexo]
+        if fila_normalizada.get("tiene_modificacion_zona"):
+            grupo_anexo["tiene_modificacion_zona"] = True
+            if fila_normalizada.get("cargo_id_historial_zona"):
+                grupo_anexo["cargo_id_historial_zona"] = fila_normalizada.get(
+                    "cargo_id_historial_zona"
+                )
         grupo_anexo["cargos"].append(
             _construir_cargo_expandible(fila_normalizada, cargo_descriptores, acciones_fila)
         )
