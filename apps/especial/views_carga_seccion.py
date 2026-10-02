@@ -197,6 +197,8 @@ def _url_modal_gestionar_alumno(
     return f"{base}?{urlencode(params)}"
 
 
+def _secciones_busqueda_tokens(valor):
+    """Normaliza el texto de búsqueda y lo separa en tokens consultables."""
     texto = unicodedata.normalize("NFD", str(valor or "")).casefold()
     texto = "".join(
         caracter
