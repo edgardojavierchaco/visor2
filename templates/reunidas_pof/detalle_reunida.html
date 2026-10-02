@@ -17,7 +17,7 @@
         </div>
         <div class="pof-view-header-copy">
             <h1>{{ cabecera_detalle_nombre|upper }} {{ reunida.anio }}{% if reunida.nivel %} &middot; {{ reunida.nivel }}{% endif %}</h1>
-            <p>{% if es_proyecto_especial %}Detalle operativo de cargos del Proyecto Especial por CUE/Anexo o CUOF, seg&uacute;n la identidad disponible.{% else %}Revisión operativa de cargos por CUEANEXO, agrupados visualmente por CUE y CUOF de la POF.{% endif %}</p>
+            <p>{% if es_proyecto_especial %}Detalle operativo de cargos del Proyecto Especial por CUEANEXO o CUOF, seg&uacute;n la identidad disponible.{% else %}Revisión operativa de cargos por CUEANEXO, agrupados visualmente por CUE y CUOF de la POF.{% endif %}</p>
         </div>
     </div>
 
@@ -201,10 +201,6 @@
                                 {% endif %}
                                 <span class="pof-cue-separator">&middot;</span>
                                 <span class="pof-cue-name">{{ grupo_proyecto.establecimiento|default:"Proyecto Especial" }}</span>
-                                <span class="pof-cue-info-placeholder" title="Códigos Anexo POF vigentes del propietario">
-                                    <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">label</span>
-                                    Anexo POF: {% if grupo_proyecto.codigos_anexo_pof %}{{ grupo_proyecto.codigos_anexo_pof|join:", " }}{% else %}—{% endif %}
-                                </span>
                                 {% if grupo_proyecto.tipo_identidad == "CUE" and grupo_proyecto.info_cue %}
                                     <button type="button"
                                             class="pof-cue-info-placeholder pof-cue-info-button"
@@ -247,10 +243,11 @@
                             <thead>
                                 <tr>
                                     {% if grupo_proyecto.tipo_identidad == "CUE" %}
-                                        <th>Anexo</th>
+                                        <th>CUEANEXO</th>
                                     {% else %}
                                         <th>CUOF</th>
                                     {% endif %}
+                                    <th>Anexo POF</th>
                                     <th>CUI</th>
                                     {% if grupo_proyecto.tipo_identidad == "CUE" %}
                                         <th>CUOF</th>
@@ -267,10 +264,11 @@
                                 {% for localizacion in grupo_proyecto.localizaciones %}
                                     <tr>
                                         {% if grupo_proyecto.tipo_identidad == "CUE" %}
-                                            <td>{{ localizacion.anexo|default:"—" }}</td>
+                                            <td>{{ localizacion.cueanexo|default:"—" }}</td>
                                         {% else %}
                                             <td>{{ localizacion.cuof|default:"—" }}</td>
                                         {% endif %}
+                                        <td>{% if localizacion.codigos_anexo_pof %}{{ localizacion.codigos_anexo_pof|join:", " }}{% else %}—{% endif %}</td>
                                         <td>{{ localizacion.cui|default_if_none:"" }}</td>
                                         {% if grupo_proyecto.tipo_identidad == "CUE" %}
                                             <td>{{ localizacion.cuof|default:"—" }}</td>
@@ -278,11 +276,23 @@
                                             <td>{{ localizacion.establecimiento|default:"—" }}</td>
                                         {% endif %}
                                         <td>
-                                            {% if localizacion.zona_educativa %}
-                                                {{ localizacion.zona_educativa_tipo|default:"" }} &middot; {{ localizacion.zona_educativa }}
-                                            {% else %}
-                                                —
-                                            {% endif %}
+                                            <span class="pof-quantity-cell">
+                                                {% if localizacion.zona_educativa %}
+                                                    {{ localizacion.zona_educativa_tipo|default:"" }} &middot; {{ localizacion.zona_educativa }}
+                                                {% else %}
+                                                    —
+                                                {% endif %}
+                                                {% if localizacion.tiene_modificacion_zona and localizacion.cargo_id_historial_zona %}
+                                                    <button type="button"
+                                                            class="pof-history-detail-btn pof-quantity-history-btn pof-material-history-btn"
+                                                            data-pof-zone-history
+                                                            data-localizacion-id="{{ localizacion.localizacion_id }}"
+                                                            data-cargo-id="{{ localizacion.cargo_id_historial_zona }}"
+                                                            data-zone-label="{% if localizacion.cueanexo %}CUEANEXO {{ localizacion.cueanexo }}{% else %}CUOF {{ localizacion.cuof }}{% endif %}"
+                                                            aria-label="Ver historial de Zona Educativa"
+                                                            title="Ver historial de Zona Educativa"><span class="pof-action-icon pof-history-detail-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">clock_loader_10</span></button>
+                                                {% endif %}
+                                            </span>
                                         </td>
                                         <td>{{ localizacion.puntos_zona_educativa|default_if_none:"—" }}</td>
                                         <td>{{ localizacion.cantidad_cargos|default:0 }}</td>
@@ -314,7 +324,7 @@
                                     <tr class="pof-hidden pof-detalle-grupo-row"
                                         data-detalle-grupo-row="true"
                                         hidden>
-                                        <td colspan="7">
+                                        <td colspan="8">
                                             <div id="detalle-proyecto-grupo-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
                                                  data-detalle-grupo-contenido="true"></div>
                                         </td>
@@ -580,10 +590,6 @@
                             <div class="pof-cue-title">
                                 <strong>CUE {{ grupo_cue.cue|default:"—" }}</strong>
                                 <span>{{ grupo_cue.establecimiento|default_if_none:""|default:"Sin establecimiento" }}</span>
-                                <span class="pof-cue-info-placeholder" title="Códigos Anexo POF vigentes del CUE">
-                                    <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">label</span>
-                                    Anexo POF: {% if grupo_cue.codigos_anexo_pof %}{{ grupo_cue.codigos_anexo_pof|join:", " }}{% else %}—{% endif %}
-                                </span>
                             </div>
 
                             <span class="pof-cue-info-placeholder" title="Acción prevista para una próxima etapa">
@@ -612,6 +618,7 @@
                                     <tr>
                                         <th>Anexo</th>
                                         <th>CUEANEXO</th>
+                                        <th>Anexo POF</th>
                                         <th>CUOF</th>
                                         <th>Zona Educativa</th>
                                         <th>Puntos Zona</th>
@@ -634,13 +641,26 @@
                                             <tr>
                                                 <td>{{ grupo_anexo.anexo|default:"—" }}</td>
                                                 <td>{{ grupo_anexo.cueanexo|default_if_none:""|default:"—" }}</td>
+                                                <td>{% if grupo_anexo.codigos_anexo_pof %}{{ grupo_anexo.codigos_anexo_pof|join:", " }}{% else %}—{% endif %}</td>
                                                 <td>{{ grupo_anexo.cuof|default_if_none:""|default:"—" }}</td>
                                                 <td>
-                                                    {% if grupo_anexo.zona_educativa %}
-                                                        {{ grupo_anexo.zona_educativa_tipo|default:"" }} &middot; {{ grupo_anexo.zona_educativa }}
-                                                    {% else %}
-                                                        —
-                                                    {% endif %}
+                                                    <span class="pof-quantity-cell">
+                                                        {% if grupo_anexo.zona_educativa %}
+                                                            {{ grupo_anexo.zona_educativa_tipo|default:"" }} &middot; {{ grupo_anexo.zona_educativa }}
+                                                        {% else %}
+                                                            —
+                                                        {% endif %}
+                                                        {% if forloop.first and grupo_anexo.tiene_modificacion_zona and grupo_anexo.cargo_id_historial_zona %}
+                                                            <button type="button"
+                                                                    class="pof-history-detail-btn pof-quantity-history-btn pof-material-history-btn"
+                                                                    data-pof-zone-history
+                                                                    data-localizacion-id="{{ grupo_anexo.localizacion_id }}"
+                                                                    data-cargo-id="{{ grupo_anexo.cargo_id_historial_zona }}"
+                                                                    data-zone-label="CUEANEXO {{ grupo_anexo.cueanexo }}"
+                                                                    aria-label="Ver historial de Zona Educativa"
+                                                                    title="Ver historial de Zona Educativa"><span class="pof-action-icon pof-history-detail-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">clock_loader_10</span></button>
+                                                        {% endif %}
+                                                    </span>
                                                 </td>
                                                 <td>{{ grupo_anexo.puntos_zona_educativa|default_if_none:"—" }}</td>
                                                 <td>{{ grupo_anexo.oferta_tipo|default_if_none:""|default:"—" }}</td>
@@ -710,10 +730,6 @@
                             <span class="pof-cue-code"><span class="pof-cue-code-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">apartment</span> CUE {{ grupo_cue.cue|default:"—" }}</span>
                             <span class="pof-cue-separator">&middot;</span>
                             <span class="pof-cue-name">{{ grupo_cue.establecimiento|default_if_none:""|default:"Sin establecimiento" }}</span>
-                            <span class="pof-cue-info-placeholder" title="Códigos Anexo POF vigentes del CUE">
-                                <span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">label</span>
-                                Anexo POF: {% if grupo_cue.codigos_anexo_pof %}{{ grupo_cue.codigos_anexo_pof|join:", " }}{% else %}—{% endif %}
-                            </span>
                             {% if grupo_cue.info_cue %}
                                 <button type="button"
                                         class="pof-cue-info-placeholder pof-cue-info-button"
@@ -751,6 +767,8 @@
                         <thead>
                             <tr>
                                 <th>Anexo</th>
+                                <th>CUEANEXO</th>
+                                <th>Anexo POF</th>
                                 <th>CUI</th>
                                 <th>CUOF</th>
                                 <th>Zona Educativa</th>
@@ -763,6 +781,8 @@
                             {% for grupo_anexo in grupo_cue.anexos %}
                                 <tr>
                                     <td>{{ grupo_anexo.anexo|default:"—" }}</td>
+                                    <td>{{ grupo_anexo.cueanexo|default_if_none:""|default:"—" }}</td>
+                                    <td>{% if grupo_anexo.codigos_anexo_pof %}{{ grupo_anexo.codigos_anexo_pof|join:", " }}{% else %}—{% endif %}</td>
                                     <td>{{ grupo_anexo.cui|default_if_none:""|default:"" }}</td>
                                     <td>{{ grupo_anexo.cuof|default_if_none:""|default:"—" }}</td>
                                     <td>
@@ -799,14 +819,14 @@
                                 <tr class="pof-hidden pof-detalle-grupo-row"
                                     data-detalle-grupo-row="true"
                                     hidden>
-                                    <td colspan="7">
+                                    <td colspan="9">
                                         <div id="detalle-grupo-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
                                              data-detalle-grupo-contenido="true"></div>
                                     </td>
                                 </tr>
                             {% empty %}
                                 <tr>
-                                    <td colspan="7" class="pof-grid-empty">No hay anexos cargados para este CUE.</td>
+                                    <td colspan="9" class="pof-grid-empty">No hay anexos cargados para este CUE.</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
@@ -912,6 +932,7 @@
     {% include "reunidas_pof/historial_cantidad_modal.html" %}
     {% include "reunidas_pof/historial_observacion_modal.html" %}
     {% include "reunidas_pof/historial_estado_modal.html" %}
+    {% include "reunidas_pof/zona_educativa_modales.html" %}
     {% include "reunidas_pof/gestion_cargo_modal.html" with gestion_cargo_success_mode="event" %}
 
 </div>
@@ -920,10 +941,11 @@
 
 {% block scripts %}
 <script src="{% static 'reunidas_pof/js/pof_api.js' %}?v=20260924-1"></script>
+<script src="{% static 'reunidas_pof/js/zona_educativa_detalle.js' %}?v=20261001-2"></script>
 <script src="{% static 'reunidas_pof/js/historial_cantidad.js' %}?v=20260924-1"></script>
-<script src="{% static 'reunidas_pof/js/historial_observacion.js' %}?v=20260924-1"></script>
+<script src="{% static 'reunidas_pof/js/historial_observacion.js' %}?v=20261002-1"></script>
 <script src="{% static 'reunidas_pof/js/historial_estado.js' %}?v=20260924-1"></script>
-<script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20260924-7"></script>
+<script src="{% static 'reunidas_pof/js/gestion_cargo.js' %}?v=20261002-2"></script>
 <script src="{% static 'reunidas_pof/js/panel-option-search.js' %}?v=20260829-1"></script>
     <script src="{% static 'reunidas_pof/js/detalle_reunida.js' %}?v=20260924-1"></script>
 {% endblock %}

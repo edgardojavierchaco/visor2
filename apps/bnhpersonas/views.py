@@ -1,3 +1,4 @@
+import logging
 import re
 
 from django.contrib import messages
@@ -8,10 +9,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from .domain.access import operator_required, person_scope, activity_scope, is_admin, is_regional
-from .domain.catalogs import activity_catalogs, available_levels, condiciones_actividad, curricular_catalogs
+from .domain.catalogs import activity_catalogs, available_levels, ceic_aplica, condiciones_actividad, curricular_catalogs
 from .forms import PersonaForm, ActividadDirectorForm, HorarioActividadForm, ConfirmacionForm, VincularPersonaForm
-from .models import Personas, RegistroActividades, HorarioActividad, Localidades, CodAreasTelefonos, TipoPersonal, validar_cuil
+from .models import Personas, RegistroActividades, HorarioActividad, Localidades, CodAreasTelefonos, TipoPersonal, SituacionServicio, validar_cuil
 from .services.rate_limit import user_rate_limit
+logger = logging.getLogger(__name__)
+
+
 from .services.crud import (
     Conflict,
     PossibleDuplicate,
@@ -56,6 +60,49 @@ def errors_to_form(form, exc, *, activity_form=None):
         target.add_error(None, message)
 
 
+
+def _validation_summary(form, *, title):
+    """
+    Registra y expone un resumen claro cuando un formulario no valida.
+
+    No sustituye los errores de campo de Django: agrega un error general para
+    que el usuario vea inmediatamente por qué no se ejecutó el guardado.
+    """
+    if not form or not form.errors:
+        return
+
+    logger.warning(
+        "BNH formulario inválido | %s | errors=%s",
+        title,
+        form.errors.as_json(),
+    )
+
+    labels = []
+    for field_name in form.errors:
+        if field_name == "__all__":
+            continue
+        field = form.fields.get(field_name)
+        label = (
+            getattr(field, "label", None)
+            or field_name.replace("_", " ").capitalize()
+        )
+        if label not in labels:
+            labels.append(str(label))
+
+    if labels:
+        form.add_error(
+            None,
+            "No se pudo guardar. Revise los siguientes campos: "
+            + ", ".join(labels)
+            + ".",
+        )
+    else:
+        form.add_error(
+            None,
+            "No se pudo guardar. Revise los datos informados en el formulario.",
+        )
+
+
 @operator_required
 @require_http_methods(["GET", "POST"])
 def carga_personal(request, pk=None):
@@ -65,6 +112,21 @@ def carga_personal(request, pk=None):
     if request.method == "POST":
         valid_person = form.is_valid()
         valid_activity = activity.is_valid() if activity else True
+
+        # Si el POST no valida, el guardado no se ejecuta.
+        # Dejamos un resumen visible y el detalle completo en el log de Django.
+        if not valid_person:
+            _validation_summary(
+                form,
+                title="Persona - Alta/edición",
+            )
+
+        if activity is not None and not valid_activity:
+            _validation_summary(
+                activity,
+                title="Actividad - Alta de personal y primer cargo",
+            )
+
         if valid_person and valid_activity:
             try:
                 if activity:
@@ -454,11 +516,23 @@ def filtrar_datos_actividad(request):
             tipo_personal=tipo_personal,
         )
 
+        aplica_ceic = ceic_aplica(
+            modalidad,
+            nivel,
+            tipo_personal=tipo_personal,
+        ) if modalidad and nivel else True
+
         return JsonResponse({
             "tipo_personal": tipo_personal,
             "modo": "DOCENTE",
             "niveles": list(niveles.values("c_nivel", "descrip_nivel")),
             "ceic": list(ceic.values("c_ceic", "c_niv", "descripcion")),
+            "ceic_aplica": aplica_ceic,
+            "ceic_motivo": (
+                "NO_CORRESPONDE"
+                if not aplica_ceic
+                else ""
+            ),
             "grado": [],
             "secciones": [],
             "dependencia_seccion": "circuito_curricular_independiente",
@@ -480,6 +554,17 @@ def filtrar_datos_curriculares(request):
         modalidad = integer_param(request, "modalidad_curricular")
         nivel = integer_param(request, "nivel_curricular")
         titulacion = integer_param(request, "titulacion")
+        raw_multi = request.GET.getlist("titulaciones")
+        if len(raw_multi) == 1 and "," in raw_multi[0]:
+            raw_multi = raw_multi[0].split(",")
+        titulaciones = []
+        for raw in raw_multi:
+            try:
+                value = int(raw)
+            except (TypeError, ValueError):
+                continue
+            if value not in titulaciones:
+                titulaciones.append(value)
         tipo_personal = integer_param(request, "tipo_personal")
 
         if tipo_personal and not TipoPersonal.objects.filter(
@@ -491,6 +576,7 @@ def filtrar_datos_curriculares(request):
             modalidad,
             nivel,
             titulacion,
+            titulaciones_seleccionadas=titulaciones,
             tipo_personal=tipo_personal,
         )
 
@@ -545,22 +631,44 @@ def filtrar_condiciones_actividad(request):
         ).exists():
             raise ValidationError("Tipo de personal inválido.")
 
+        if situacion_revista and not SituacionServicio.objects.filter(
+            cod_sitrev=situacion_revista
+        ).exists():
+            raise ValidationError("Situación de revista inválida.")
+
         qs = condiciones_actividad(
             tipo_personal,
             situacion_revista,
         )
 
+        condiciones = [
+            {
+                "id": obj.pk,
+                "c_nomen": obj.c_nomen,
+                "denominacion": obj.denominacion,
+                "encuadre": obj.encuadre,
+                "label": str(obj),
+            }
+            for obj in qs
+        ]
+
+        # No se amplía el catálogo cuando la combinación exacta no existe:
+        # una condición válida depende de Tipo de personal + Situación de revista.
+        # En cambio se devuelve un diagnóstico explícito para evitar un desplegable
+        # vacío sin explicación.
+        warning = ""
+        if tipo_personal and situacion_revista and not condiciones:
+            warning = (
+                "No hay condiciones de actividad configuradas para el Tipo de personal "
+                "y la Situación de revista seleccionados. Revise el catálogo "
+                "condicion_actividad_nombre."
+            )
+
         return JsonResponse({
-            "condiciones": [
-                {
-                    "id": obj.pk,
-                    "c_nomen": obj.c_nomen,
-                    "denominacion": obj.denominacion,
-                    "encuadre": obj.encuadre,
-                    "label": str(obj),
-                }
-                for obj in qs
-            ]
+            "condiciones": condiciones,
+            "warning": warning,
+            "tipo_personal": tipo_personal,
+            "sit_revista": situacion_revista,
         })
 
     except ValidationError as exc:

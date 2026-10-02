@@ -1,0 +1,336 @@
+{% extends 'bnh/base.html' %}
+
+{% block title %}Reporte de estado de carga · BNH Personal{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-page { padding-bottom: 3rem; }
+    .report-hero {
+        background: linear-gradient(135deg, #0b3c5d 0%, #145374 100%);
+        color: #fff;
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.08);
+    }
+    .report-hero .scope { opacity: .88; }
+    .kpi-card {
+        border: 0;
+        border-radius: .9rem;
+        box-shadow: 0 .25rem 1rem rgba(0,0,0,.06);
+        height: 100%;
+    }
+    .kpi-label { color: #6c757d; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+    .kpi-value { font-size: 1.65rem; font-weight: 700; line-height: 1.1; }
+    .badge-status { font-weight: 600; padding: .45rem .65rem; border-radius: 999px; }
+    .status-sin-carga { background: #dc3545; color: #fff; }
+    .status-en-proceso { background: #ffc107; color: #212529; }
+    .status-observado { background: #fd7e14; color: #fff; }
+    .status-validado { background: #198754; color: #fff; }
+    .table-report thead th {
+        white-space: nowrap;
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .025em;
+        color: #495057;
+        background: #f8f9fa;
+    }
+    .table-report td { vertical-align: middle; }
+    .regional-name { min-width: 180px; font-weight: 600; }
+    .progress { min-width: 95px; height: .55rem; }
+    .filters-card { border: 0; border-radius: .9rem; box-shadow: 0 .25rem 1rem rgba(0,0,0,.06); }
+    .section-card { border: 0; border-radius: .9rem; box-shadow: 0 .25rem 1rem rgba(0,0,0,.06); overflow: hidden; }
+    .print-only { display: none; }
+
+    @media print {
+        header, nav, .no-print, .pagination { display: none !important; }
+        body { background: #fff !important; }
+        .container-xl { max-width: 100% !important; }
+        .report-page { padding: 0 !important; }
+        .report-hero { color: #000; background: #fff; border: 1px solid #bbb; box-shadow: none; }
+        .kpi-card, .filters-card, .section-card { box-shadow: none; border: 1px solid #ddd; }
+        .filters-card { display: none !important; }
+        .print-only { display: block; }
+        .table-responsive { overflow: visible !important; }
+        table { font-size: 9pt; }
+        a { color: inherit !important; text-decoration: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xl report-page py-4">
+    <section class="report-hero d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+            <div class="small text-uppercase fw-semibold mb-1">BNH Personal Educativo</div>
+            <h1 class="h3 mb-1">Reporte de estado de carga por Regional Educativa</h1>
+            <p class="mb-0 scope">
+                Detalle institucional por CUEANEXO · {{ scope.label }}
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2 no-print">
+            <a class="btn btn-light btn-sm" href="{% url 'bnhpersonas:monitoring:dashboard' %}">
+                <i class="bi bi-bar-chart-line me-1"></i> Seguimiento
+            </a>
+            <button class="btn btn-outline-light btn-sm" type="button" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> Imprimir / PDF
+            </button>
+        </div>
+    </section>
+
+    <div class="print-only mb-3">
+        <strong>Filtros:</strong>
+        Regional: {{ query.region|default:'Todas' }} ·
+        Estado: {{ query.estado|default:'Todos' }} ·
+        Búsqueda: {{ query.q|default:'—' }}
+    </div>
+
+    <section class="card filters-card mb-4 no-print">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-lg-4">
+                    <label class="form-label" for="id_region">Regional Educativa</label>
+                    <select class="form-select" id="id_region" name="region">
+                        <option value="">Todas las regionales</option>
+                        {% for region in regiones %}
+                            <option value="{{ region }}" {% if query.region == region %}selected{% endif %}>{{ region }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-lg-3">
+                    <label class="form-label" for="id_estado">Estado de carga</label>
+                    <select class="form-select" id="id_estado" name="estado">
+                        <option value="">Todos los estados</option>
+                        {% for value, label in estados %}
+                            <option value="{{ value }}" {% if query.estado == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-lg-3">
+                    <label class="form-label" for="id_q">Buscar</label>
+                    <input
+                        type="search"
+                        class="form-control"
+                        id="id_q"
+                        name="q"
+                        value="{{ query.q|default:'' }}"
+                        placeholder="CUEANEXO, institución u oferta"
+                    >
+                </div>
+                <div class="col-lg-2 d-grid">
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-funnel me-1"></i> Aplicar
+                    </button>
+                </div>
+                <div class="col-12 d-flex flex-wrap gap-2">
+                    <a class="btn btn-outline-secondary btn-sm" href="{% url 'bnhpersonas:reportes:estado_carga_regional' %}">
+                        Limpiar filtros
+                    </a>
+                    <a class="btn btn-outline-success btn-sm" href="{% url 'bnhpersonas:reportes:exportar_resumen_regional' %}?{{ request.GET.urlencode }}">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> CSV resumen regional
+                    </a>
+                    <a class="btn btn-outline-success btn-sm" href="{% url 'bnhpersonas:reportes:exportar_detalle_cue' %}?{{ request.GET.urlencode }}">
+                        <i class="bi bi-file-earmark-spreadsheet me-1"></i> CSV detalle CUEANEXO
+                    </a>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="row g-3 mb-4">
+        <div class="col-6 col-lg-2">
+            <div class="card kpi-card"><div class="card-body">
+                <div class="kpi-label">CUEANEXO</div>
+                <div class="kpi-value">{{ summary.instituciones }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card kpi-card"><div class="card-body">
+                <div class="kpi-label">Con carga</div>
+                <div class="kpi-value text-primary">{{ summary.con_carga }}</div>
+                <div class="small text-muted">{{ summary.porcentaje_con_carga }}%</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card kpi-card"><div class="card-body">
+                <div class="kpi-label">Sin carga</div>
+                <div class="kpi-value text-danger">{{ summary.sin_carga }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card kpi-card"><div class="card-body">
+                <div class="kpi-label">Validados</div>
+                <div class="kpi-value text-success">{{ summary.validado }}</div>
+                <div class="small text-muted">{{ summary.porcentaje_validado }}%</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card kpi-card"><div class="card-body">
+                <div class="kpi-label">Personas</div>
+                <div class="kpi-value">{{ summary.personas }}</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card kpi-card"><div class="card-body">
+                <div class="kpi-label">Cargos</div>
+                <div class="kpi-value">{{ summary.cargos }}</div>
+            </div></div>
+        </div>
+    </section>
+
+    <section class="card section-card mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="h5 mb-0">Resumen por Regional Educativa</h2>
+                <div class="small text-muted">La cobertura de carga indica cuántos CUEANEXO poseen al menos un cargo registrado.</div>
+            </div>
+            <span class="badge text-bg-light">{{ regional_summary|length }} regionales</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-report mb-0">
+                <thead>
+                    <tr>
+                        <th>Regional</th>
+                        <th class="text-end">CUE</th>
+                        <th class="text-end">Con carga</th>
+                        <th class="text-end">Sin carga</th>
+                        <th class="text-end">En proceso</th>
+                        <th class="text-end">Observado</th>
+                        <th class="text-end">Validado</th>
+                        <th>Cobertura</th>
+                        <th class="text-end">Personas</th>
+                        <th class="text-end">Cargos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in regional_summary %}
+                        <tr>
+                            <td class="regional-name">
+                                <a href="?region={{ row.region|urlencode }}" class="text-decoration-none">{{ row.region }}</a>
+                            </td>
+                            <td class="text-end">{{ row.instituciones }}</td>
+                            <td class="text-end">{{ row.con_carga }}</td>
+                            <td class="text-end text-danger fw-semibold">{{ row.sin_carga }}</td>
+                            <td class="text-end">{{ row.en_proceso }}</td>
+                            <td class="text-end text-warning-emphasis">{{ row.observado }}</td>
+                            <td class="text-end text-success fw-semibold">{{ row.validado }}</td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="progress flex-grow-1" role="progressbar" aria-valuenow="{{ row.porcentaje_con_carga }}" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="progress-bar" style="width: {{ row.porcentaje_con_carga }}%"></div>
+                                    </div>
+                                    <span class="small fw-semibold">{{ row.porcentaje_con_carga }}%</span>
+                                </div>
+                            </td>
+                            <td class="text-end">{{ row.personas }}</td>
+                            <td class="text-end">{{ row.cargos }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="10" class="text-center text-muted py-4">No hay datos para los filtros seleccionados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card section-card">
+        <div class="card-header bg-white py-3 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
+            <div>
+                <h2 class="h5 mb-0">Detalle por CUEANEXO</h2>
+                <div class="small text-muted">{{ result_count }} instituciones encontradas.</div>
+            </div>
+            <div class="small text-muted">Ordenado por Regional, institución y CUEANEXO.</div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-report mb-0">
+                <thead>
+                    <tr>
+                        <th>Regional</th>
+                        <th>CUEANEXO</th>
+                        <th>Institución</th>
+                        <th>Oferta/s</th>
+                        <th>Estado</th>
+                        <th class="text-end">Personas</th>
+                        <th class="text-end">Cargos</th>
+                        <th class="text-end">Borradores</th>
+                        <th class="text-end">Observados</th>
+                        <th class="text-end">Validados</th>
+                        <th>Última actualización</th>
+                        <th class="no-print"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in page_obj %}
+                        <tr>
+                            <td>{{ row.region|default:'Sin región informada' }}</td>
+                            <td class="fw-semibold">{{ row.cueanexo }}</td>
+                            <td>{{ row.nom_est|default:'—' }}</td>
+                            <td>
+                                {% for oferta in row.ofertas %}
+                                    <span class="badge text-bg-light border mb-1">{{ oferta }}</span>
+                                {% empty %}—{% endfor %}
+                            </td>
+                            <td>
+                                {% if row.estado_carga == 'SIN_CARGA' %}
+                                    <span class="badge-status status-sin-carga">Sin carga</span>
+                                {% elif row.estado_carga == 'OBSERVADO' %}
+                                    <span class="badge-status status-observado">Con observaciones</span>
+                                {% elif row.estado_carga == 'VALIDADO' %}
+                                    <span class="badge-status status-validado">Validado</span>
+                                {% else %}
+                                    <span class="badge-status status-en-proceso">En proceso</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ row.personas }}</td>
+                            <td class="text-end">{{ row.cargos }}</td>
+                            <td class="text-end">{{ row.borradores }}</td>
+                            <td class="text-end">{{ row.observados }}</td>
+                            <td class="text-end">{{ row.validados }}</td>
+                            <td>
+                                {% if row.ultima_actualizacion %}
+                                    {{ row.ultima_actualizacion|date:'d/m/Y H:i' }}
+                                {% else %}
+                                    <span class="text-muted">Sin actividad</span>
+                                {% endif %}
+                            </td>
+                            <td class="no-print">
+                                <a
+                                    class="btn btn-outline-primary btn-sm"
+                                    href="{% url 'bnhpersonas:monitoring:institution_detail' row.cueanexo %}"
+                                    title="Ver detalle institucional"
+                                >
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="12" class="text-center text-muted py-5">No hay CUEANEXO para los filtros seleccionados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+            <div class="card-footer bg-white no-print">
+                <nav aria-label="Paginación del reporte">
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&region={{ query.region|urlencode }}&estado={{ query.estado|urlencode }}&q={{ query.q|urlencode }}">Anterior</a>
+                            </li>
+                        {% endif %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}&region={{ query.region|urlencode }}&estado={{ query.estado|urlencode }}&q={{ query.q|urlencode }}">Siguiente</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

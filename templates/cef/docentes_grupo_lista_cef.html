@@ -114,16 +114,17 @@
                              </div>
                             {% endif %}
                          </td>{% endif %}
-                        {% if gestionar_grupo_modo and vista_docentes == 'historial' %}<td class="cef-act-cell text-end"><button type="button" class="btn btn-outline-secondary btn-sm" aria-controls="profesorCursoHistorial{{ asignacion.docente_cuil }}" aria-expanded="false" data-cef-history-toggle="profesor-curso-{{ asignacion.docente_cuil }}"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i> Historial ({{ asignacion.historial_asignaciones|length }})</button></td>{% endif %}
+                        {% if gestionar_grupo_modo and vista_docentes == 'historial' %}<td class="cef-act-cell text-end"><button type="button" class="btn btn-outline-secondary btn-sm" aria-controls="profesorCursoHistorial{{ asignacion.docente_cuil }}" aria-expanded="false" data-cef-history-toggle="profesor-curso-{{ asignacion.docente_cuil }}"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i> Historial · {% if asignacion.historial_asignaciones|length == 1 %}1 asignación{% else %}{{ asignacion.historial_asignaciones|length }} asignaciones{% endif %}</button></td>{% endif %}
                     </tr>
                     {% if gestionar_grupo_modo and vista_docentes == 'historial' %}
                         <tr id="profesorCursoHistorial{{ asignacion.docente_cuil }}" class="cef-history-detail-row" data-cef-history-detail="profesor-curso-{{ asignacion.docente_cuil }}" hidden>
                             <td colspan="{% if not docentes_solo_lectura %}6{% else %}5{% endif %}" class="p-0">
                                 <div class="cef-history-detail-panel">
-                                    <div class="cef-history-detail-head"><strong><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Historial de asignaciones</strong><span>Movimientos registrados: {{ asignacion.historial_asignaciones|length }}</span></div>
+                                    <div class="cef-history-detail-head"><strong><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Historial de asignaciones</strong><span>Asignaciones registradas: {{ asignacion.historial_asignaciones|length }}</span></div>
                                     <div class="cef-table-wrap cef-history-detail-table-wrap"><table class="cef-dt cef-history-detail-table">
-                                    <thead><tr><th>Ciclo</th><th>Rol</th><th>Estado</th><th>Desde</th><th>Hasta</th><th>Motivo</th><th>Observaciones</th></tr></thead>
+                                    <thead><tr><th>Asignación</th><th>Ciclo</th><th>Rol</th><th>Estado</th><th>Desde</th><th>Hasta</th><th>Motivo</th><th>Observaciones</th></tr></thead>
                                     <tbody>{% for periodo in asignacion.historial_asignaciones %}<tr class="{% if periodo.estado != 'activo' %}cef-row-inactive{% endif %}">
+                                        <td><strong>N.º {{ periodo.numero_asignacion }}</strong></td>
                                         <td><strong>{{ grupo.ciclo.anio }}</strong></td>
                                         <td>{{ periodo.get_rol_display }}</td>
                                         <td><span class="badge text-bg-{% if periodo.estado == 'activo' %}success{% else %}secondary{% endif %}">{% if grupo.ciclo.cerrado and periodo.estado == 'activo' %}Activo al cierre{% else %}{{ periodo.get_estado_display }}{% endif %}</span></td>
@@ -144,7 +145,7 @@
 {% else %}
     <div class="cef-empty-state">
         <i class="fa-solid fa-user-slash" style="font-size:1.5rem;color:var(--text-faint)"></i>
-        {% if gestionar_grupo_modo and vista_docentes == 'historial' %}No hay bajas registradas en este grupo.{% else %}Todavía no hay profesores activos asignados a este grupo.{% endif %}
+        {% if gestionar_grupo_modo and vista_docentes == 'historial' %}No hay asignaciones registradas en este grupo.{% else %}Todavía no hay profesores activos asignados a este grupo.{% endif %}
     </div>
 {% endif %}
 

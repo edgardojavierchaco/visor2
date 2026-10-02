@@ -23,9 +23,11 @@ PADRON_DB_ALIAS = "default"
 ROLES_AUTORIZADOS_CEF = {
     "Administrador",
     "Director de Servicios Complementarios",
+    "Director",
     "profesorcef",
 }
 ROL_PROFESOR_CEF = "profesorcef"
+ROL_DIRECTOR_CEF = "Director"
 
 # ============================================================
 # MODELOS EXTERNOS / INTEGRACION
@@ -367,12 +369,15 @@ def obtener_permisos_usuario_cef(user):
     rol_normalizado = (rol or "").strip().casefold()
     roles_autorizados = {item.casefold() for item in ROLES_AUTORIZADOS_CEF}
     es_profesor_cef = rol_normalizado == ROL_PROFESOR_CEF.casefold()
+    es_director_cef = rol_normalizado == ROL_DIRECTOR_CEF.casefold()
     return {
         "rol": rol,
         "puede_ver": rol_normalizado in roles_autorizados,
         "es_admin": rol_normalizado == "administrador".casefold(),
         "es_profesor_cef": es_profesor_cef,
+        "es_director_cef": es_director_cef,
         "solo_asistencia": es_profesor_cef,
+        "solo_metricas": es_director_cef,
     }
 
 
@@ -447,6 +452,7 @@ def get_cefs_cargables_usuario(user, permisos=None):
                 rol__in=(
                     CefDocenteGrupo.Rol.TITULAR,
                     CefDocenteGrupo.Rol.SUPLENTE,
+                    CefDocenteGrupo.Rol.INTERINO,
                 ),
                 grupo__estado=CefGrupo.Estado.ACTIVO,
                 grupo__ciclo__activo=True,
@@ -1755,6 +1761,7 @@ class CefDocenteGrupo(CefAuditoriaMixin):
     class Rol(models.TextChoices):
         TITULAR = "titular", "Titular"
         SUPLENTE = "suplente", "Suplente"
+        INTERINO = "interino", "Interino"
 
     class Estado(models.TextChoices):
         ACTIVO = "activo", "Activo"
@@ -1801,9 +1808,14 @@ class CefDocenteGrupo(CefAuditoriaMixin):
                 name="uq_cef_doc_grp_cuil_act",
             ),
             models.UniqueConstraint(
-                fields=["grupo", "rol"],
-                condition=Q(estado="activo"),
-                name="uq_cef_doc_grp_rol_act",
+                fields=["grupo"],
+                condition=Q(estado="activo", rol="titular"),
+                name="uq_cef_doc_grp_tit_act",
+            ),
+            models.UniqueConstraint(
+                fields=["grupo"],
+                condition=Q(estado="activo", rol="interino"),
+                name="uq_cef_doc_grp_int_act",
             ),
             models.CheckConstraint(
                 condition=(
@@ -1912,14 +1924,18 @@ def validar_docente_grupo_activo(grupo, docente_cuil, rol, excluir_pk=None):
             raise ValidationError("Este profesor ya está activo en este grupo con otro rol.")
         raise ValidationError("Este profesor ya está activo en este grupo.")
 
-    rol_activo = activos.filter(rol=rol).first()
-    if rol_activo:
-        docente_nombre = rol_activo.docente_nombre_snapshot or "Profesor"
-        docente_cuil = rol_activo.docente_cuil or "-"
-        raise ValidationError(
-            f"El grupo ya tiene un {_rol_docente_grupo_texto(rol).lower()} activo: "
-            f"{docente_nombre} (CUIL {docente_cuil})."
-        )
+    if rol in {
+        CefDocenteGrupo.Rol.TITULAR,
+        CefDocenteGrupo.Rol.INTERINO,
+    }:
+        rol_activo = activos.filter(rol=rol).first()
+        if rol_activo:
+            docente_nombre = rol_activo.docente_nombre_snapshot or "Profesor"
+            docente_cuil = rol_activo.docente_cuil or "-"
+            raise ValidationError(
+                f"El grupo ya tiene un {_rol_docente_grupo_texto(rol).lower()} activo: "
+                f"{docente_nombre} (CUIL {docente_cuil})."
+            )
 
 
 def docentes_grupo_tiene_duplicados_activos(grupo):
@@ -1937,7 +1953,13 @@ def docentes_grupo_tiene_duplicados_activos(grupo):
         .exists()
     )
     rol_duplicado = (
-        activos.values("rol")
+        activos.filter(
+            rol__in=(
+                CefDocenteGrupo.Rol.TITULAR,
+                CefDocenteGrupo.Rol.INTERINO,
+            )
+        )
+        .values("rol")
         .annotate(total=models.Count("pk"))
         .filter(total__gt=1)
         .exists()

@@ -252,6 +252,12 @@ class ProyectoEspecialPofForm(forms.ModelForm):
         self.fields["proyecto_base_anterior"].queryset = ProyectosEspecialesPof.objects.exclude(
             pk=self.instance.pk
         ).order_by("-anio", "nombre")
+        self.identidad_bloqueada = bool(
+            self.instance.pk and self.instance.tiene_datos_operativos()
+        )
+        if self.identidad_bloqueada:
+            self.fields["anio"].disabled = True
+            self.fields["proyecto_base_anterior"].disabled = True
 
     def clean_anio(self):
         anio = self.cleaned_data.get("anio")
@@ -319,6 +325,7 @@ class GuardarCargaPofForm(forms.Form):
         required=False,
     )
     zona_educativa = forms.CharField(required=False, max_length=50)
+    observacion_zona_educativa = forms.CharField(required=False, max_length=500)
     observacion = forms.CharField(required=False)
 
     def clean(self):
@@ -339,18 +346,6 @@ class GuardarCargaPofForm(forms.Form):
                 "zona_educativa",
                 "Debe indicar tipo y Zona Educativa en conjunto.",
             )
-
-        if cabecera_tipo in {"REUNIDA", "PROYECTO_ESPECIAL"}:
-            if not zona_tipo:
-                self.add_error(
-                    "zona_educativa_tipo",
-                    "Debe indicar el tipo de Zona Educativa.",
-                )
-            if not zona:
-                self.add_error(
-                    "zona_educativa",
-                    "Debe seleccionar una Zona Educativa.",
-                )
 
         if cabecera_tipo == "REUNIDA":
             anio = cleaned_data.get("anio")
@@ -385,6 +380,9 @@ class GuardarCargaPofForm(forms.Form):
                 "El proyecto especial es obligatorio para Proyectos Especiales POF.",
             )
 
+        cleaned_data["observacion_zona_educativa"] = _texto(
+            cleaned_data.get("observacion_zona_educativa")
+        )
         cleaned_data["observacion"] = _texto(cleaned_data.get("observacion"))
         return cleaned_data
 
@@ -450,6 +448,48 @@ def validar_payload_guardar_carga(datos):
         if errores_cargos:
             errores["cargos"] = errores_cargos
 
+    anexo_pof_limpio = None
+    if "anexo_pof" in datos:
+        anexo_pof = datos.get("anexo_pof")
+        if not isinstance(anexo_pof, dict):
+            errores["anexo_pof"] = [
+                "La selección Anexo POF debe enviarse como un objeto."
+            ]
+        else:
+            catalogo_ids = anexo_pof.get("catalogo_ids")
+            if not isinstance(catalogo_ids, list):
+                errores["anexo_pof"] = [
+                    "La selección Anexo POF debe enviar una lista de códigos."
+                ]
+            else:
+                ids_limpios = []
+                ids_vistos = set()
+                for valor in catalogo_ids:
+                    if isinstance(valor, bool):
+                        errores["anexo_pof"] = [
+                            "Los identificadores de Anexo POF no son válidos."
+                        ]
+                        break
+                    try:
+                        catalogo_id = int(valor)
+                    except (TypeError, ValueError):
+                        errores["anexo_pof"] = [
+                            "Los identificadores de Anexo POF no son válidos."
+                        ]
+                        break
+                    if catalogo_id <= 0:
+                        errores["anexo_pof"] = [
+                            "Los identificadores de Anexo POF no son válidos."
+                        ]
+                        break
+                    if catalogo_id in ids_vistos:
+                        continue
+                    ids_vistos.add(catalogo_id)
+                    ids_limpios.append(catalogo_id)
+
+                if "anexo_pof" not in errores:
+                    anexo_pof_limpio = {"catalogo_ids": ids_limpios}
+
     if errores:
         return {"ok": False, "errores": errores}
 
@@ -468,20 +508,28 @@ def validar_payload_guardar_carga(datos):
         cueanexo,
     )
 
+    datos_limpios = {
+        "cabecera_tipo": cabecera_limpia["cabecera_tipo"],
+        "anio": cabecera_limpia.get("anio"),
+        "nivel": cabecera_limpia.get("nivel") or "",
+        "proyecto_especial_id": cabecera_limpia.get("proyecto_especial_id"),
+        "tipo_operacion": cabecera_limpia["tipo_operacion"],
+        "zona_educativa_tipo": cabecera_limpia.get("zona_educativa_tipo", ""),
+        "zona_educativa": cabecera_limpia.get("zona_educativa", ""),
+        "observacion_zona_educativa": cabecera_limpia.get(
+            "observacion_zona_educativa",
+            "",
+        ),
+        "observacion": cabecera_limpia.get("observacion", ""),
+        "padron": padron_limpio,
+        "cargos": cargos_limpios,
+    }
+    if anexo_pof_limpio is not None:
+        datos_limpios["anexo_pof"] = anexo_pof_limpio
+
     return {
         "ok": True,
-        "datos": {
-            "cabecera_tipo": cabecera_limpia["cabecera_tipo"],
-            "anio": cabecera_limpia.get("anio"),
-            "nivel": cabecera_limpia.get("nivel") or "",
-            "proyecto_especial_id": cabecera_limpia.get("proyecto_especial_id"),
-            "tipo_operacion": cabecera_limpia["tipo_operacion"],
-            "zona_educativa_tipo": cabecera_limpia.get("zona_educativa_tipo", ""),
-            "zona_educativa": cabecera_limpia.get("zona_educativa", ""),
-            "observacion": cabecera_limpia.get("observacion", ""),
-            "padron": padron_limpio,
-            "cargos": cargos_limpios,
-        },
+        "datos": datos_limpios,
     }
 
 

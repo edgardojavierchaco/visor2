@@ -11,6 +11,7 @@ from django.core.paginator import Paginator
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import connections
 from django.db.models import CharField, F, Func, Prefetch, Q, Subquery, Value
+from django.db.models.functions import Trim
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -176,7 +177,10 @@ def _padron_especial_queryset():
     """Filas de Padrón vinculadas a establecimientos de Educación Especial."""
     return (
         EspecialPadronOferta.objects.using(PADRON_DB_ALIAS)
-        .filter(acronimo__iexact="EEE")
+        .filter(
+            Q(acronimo__iexact="EEE")
+            | Q(oferta__istartswith="Especial -")
+        )
     )
 
 
@@ -842,8 +846,11 @@ def _buscar_directores(cuil, cueanexos_autorizados=None):
     """
     params = [cuil]
     if cueanexos_autorizados is not None:
-        sql += " AND cueanexo = ANY(%s)\n"
-        params.append(list(cueanexos_autorizados))
+        sql += (
+            " AND (CAST(cueanexo AS text) = ANY(%s) "
+            "OR CAST(padron_cueanexo AS text) = ANY(%s))\n"
+        )
+        params.extend([list(cueanexos_autorizados), list(cueanexos_autorizados)])
     sql += " ORDER BY cueanexo, nom_est, oferta LIMIT 50"
     try:
         with connections[PADRON_DB_ALIAS].cursor() as cursor:
@@ -876,8 +883,11 @@ def _datos_director(cuil, cueanexos_autorizados=None):
     """
     params = [cuil]
     if cueanexos_autorizados is not None:
-        sql += " AND cueanexo = ANY(%s)"
-        params.append(list(cueanexos_autorizados))
+        sql += (
+            " AND (CAST(cueanexo AS text) = ANY(%s) "
+            "OR CAST(padron_cueanexo AS text) = ANY(%s))"
+        )
+        params.extend([list(cueanexos_autorizados), list(cueanexos_autorizados)])
     sql += " ORDER BY cueanexo, nom_est, oferta"
     with connections[PADRON_DB_ALIAS].cursor() as cursor:
         cursor.execute(sql, params)
@@ -1029,19 +1039,24 @@ def _directores_queryset(filtros, cueanexos_autorizados=None):
                 Value("g"),
                 function="REGEXP_REPLACE",
                 output_field=CharField(),
-            )
+            ),
+            oferta_normalizada=Trim("oferta"),
         )
         .exclude(cuil_limpio__isnull=True)
         .exclude(cuil_limpio="")
     )
     if cueanexos_autorizados is not None:
-        queryset = queryset.filter(cueanexo__in=cueanexos_autorizados)
+        queryset = queryset.filter(
+            Q(cueanexo__in=cueanexos_autorizados)
+            | Q(padron_cueanexo__in=cueanexos_autorizados)
+        )
     if filtros["cuil"]:
         queryset = queryset.filter(cuil_limpio=filtros["cuil"])
     if filtros["cueanexo"]:
         queryset = queryset.filter(cueanexo__icontains=filtros["cueanexo"])
-    if filtros["oferta"]:
-        queryset = queryset.filter(oferta=filtros["oferta"])
+    oferta_filtro = (filtros["oferta"] or "").strip()
+    if oferta_filtro:
+        queryset = queryset.filter(oferta_normalizada=oferta_filtro)
     if filtros["establecimiento"]:
         queryset = queryset.filter(nom_est__icontains=filtros["establecimiento"])
     if filtros["localidad"]:
@@ -1090,7 +1105,10 @@ def _catalogos_filtros_directores(cueanexos_autorizados=None):
         .exclude(cuil_limpio="")
     )
     if cueanexos_autorizados is not None:
-        padron = padron.filter(cueanexo__in=cueanexos_autorizados)
+        padron = padron.filter(
+            Q(cueanexo__in=cueanexos_autorizados)
+            | Q(padron_cueanexo__in=cueanexos_autorizados)
+        )
     return {
         "cueanexos_directores_filtro": (
             padron.exclude(cueanexo__isnull=True)

@@ -58,9 +58,23 @@
                        readonly
                        data-pof-zone-change-points>
             </div>
+
+            <div class="pof-field pof-col-12">
+                <label for="pofZoneChangeObservation">Observación del cambio (opcional)</label>
+                <textarea id="pofZoneChangeObservation"
+                          class="pof-form-control"
+                          rows="2"
+                          maxlength="500"
+                          placeholder="Agregá una aclaración para este cambio de Zona Educativa..."
+                          data-pof-zone-change-observation></textarea>
+                <span class="pof-field-hint">La observación se guarda junto con este cambio de Zona Educativa.</span>
+            </div>
         </div>
 
         <div class="pof-modal-actions">
+            <button type="button"
+                    class="pof-btn pof-btn-light pof-hidden"
+                    data-pof-zone-change-remove>Quitar Zona</button>
             <button type="button"
                     class="pof-btn pof-btn-light"
                     data-pof-zone-change-close>Cancelar</button>

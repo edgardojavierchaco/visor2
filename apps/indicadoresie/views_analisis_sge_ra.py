@@ -1575,6 +1575,9 @@ COMPARATIVA_SGE_RA_MATERIALIZADAS = (
     'public.auditoria_sge_ra',
     'public.resumen_sge_ra',
     'public.trayectoria_alumnos_sge',
+    'public.personas_alumnos_sge',
+    'public.calificaciones_primaria_sge',
+    'public.calificaciones_secundaria_sge',
 )
 
 
@@ -1588,7 +1591,7 @@ def _comparativa_estado_base_job(job_id, started_at=None, requested_fecha=None):
         'status': 'queued',
         'job_id': str(job_id),
         'step': 0,
-        'total': 4,
+        'total': 7,
         'percent': 0,
         'current_view': '',
         'message': 'Actualización de Comparativa RA-SGE en cola.',
@@ -1696,8 +1699,8 @@ def _comparativa_reconciliar_estado_job(job_id, state):
 
         state.update({
             'status': 'success',
-            'step': 4,
-            'total': 4,
+            'step': 7,
+            'total': 7,
             'percent': 100,
             'current_view': '',
             'message': (
@@ -1787,26 +1790,27 @@ def _comparativa_mensaje_error_refresh(exc):
 
 
 def _monitorear_progreso_comparativa_sge_ra(job_id, backend_pid, stop_event):
-    # Trayectoria se refresca antes del procedimiento coordinado. De ese modo,
-    # cuando auditoria_sge_ra_estado publica OK ya finalizaron las cuatro etapas
-    # y la reconciliacion del polling puede tratar ese estado como terminal.
+    # Calificaciones, Trayectoria y Personas se refrescan antes del procedimiento
+    # coordinado. De ese modo, cuando auditoria_sge_ra_estado publica OK ya
+    # finalizaron las siete materializadas y la reconciliacion del polling puede
+    # tratar ese estado como terminal.
     etapas_por_lock = (
         (
             'auditoria_sge_ra',
-            2,
-            50,
+            5,
+            71,
             'Auditoría RA-SGE',
             'Actualizando auditoría RA-SGE...',
         ),
         (
             'resumen_sge_ra',
-            3,
-            75,
+            6,
+            86,
             'Resumen RA-SGE',
             'Actualizando resumen RA-SGE...',
         ),
     )
-    last_step = 1
+    last_step = 4
 
     close_old_connections()
     try:
@@ -1845,13 +1849,13 @@ def _monitorear_progreso_comparativa_sge_ra(job_id, backend_pid, stop_event):
                         job_id,
                         status='running',
                         step=step,
-                        total=4,
+                        total=7,
                         percent=percent,
                         current_view=label,
                         message=message,
                     )
                     last_step = step
-                    if step == 3:
+                    if step == 6:
                         return
 
                 if stop_event.wait(0.25):
@@ -1916,20 +1920,52 @@ def _ejecutar_refresh_comparativa_sge_ra_job(job_id, nueva_fecha):
 
             cursor.execute('SELECT pg_backend_pid();')
             refresh_backend_pid = cursor.fetchone()[0]
+
             _comparativa_actualizar_estado_job(
                 job_id,
                 status='running',
                 backend_pid=refresh_backend_pid,
                 step=0,
-                total=4,
+                total=7,
                 percent=0,
+                current_view='Calificaciones Primaria',
+                message='Actualizando calificaciones de Primaria...',
+            )
+            cursor.execute(
+                'REFRESH MATERIALIZED VIEW '
+                'public.calificaciones_primaria_sge;'
+            )
+            cursor.execute('ANALYZE public.calificaciones_primaria_sge;')
+
+            _comparativa_actualizar_estado_job(
+                job_id,
+                status='running',
+                step=1,
+                total=7,
+                percent=14,
+                current_view='Calificaciones Secundaria',
+                message='Actualizando calificaciones de Secundaria...',
+            )
+            cursor.execute(
+                'REFRESH MATERIALIZED VIEW '
+                'public.calificaciones_secundaria_sge;'
+            )
+            cursor.execute('ANALYZE public.calificaciones_secundaria_sge;')
+
+            _comparativa_actualizar_estado_job(
+                job_id,
+                status='running',
+                step=2,
+                total=7,
+                percent=29,
                 current_view='Trayectoria SGE',
                 message='Actualizando trayectoria de alumnos SGE...',
             )
 
-            # Trayectoria debe terminar antes del CALL coordinado. Así, el OK
-            # persistente de auditoria_sge_ra_estado sólo puede corresponder a
-            # un job cuya cuarta materializada ya se reconstruyó correctamente.
+            # Calificaciones, Trayectoria y Personas deben terminar antes del
+            # CALL coordinado. Así, el OK persistente de
+            # auditoria_sge_ra_estado sólo puede corresponder a un job cuyas
+            # siete materializadas ya se reconstruyeron correctamente.
             cursor.execute(
                 'REFRESH MATERIALIZED VIEW CONCURRENTLY '
                 'public.trayectoria_alumnos_sge;'
@@ -1939,9 +1975,24 @@ def _ejecutar_refresh_comparativa_sge_ra_job(job_id, nueva_fecha):
             _comparativa_actualizar_estado_job(
                 job_id,
                 status='running',
-                step=1,
-                total=4,
-                percent=25,
+                step=3,
+                total=7,
+                percent=43,
+                current_view='Personas alumnas SGE',
+                message='Actualizando personas alumnas SGE...',
+            )
+            cursor.execute(
+                'REFRESH MATERIALIZED VIEW '
+                'public.personas_alumnos_sge;'
+            )
+            cursor.execute('ANALYZE public.personas_alumnos_sge;')
+
+            _comparativa_actualizar_estado_job(
+                job_id,
+                status='running',
+                step=4,
+                total=7,
+                percent=57,
                 current_view='Análisis RA-SGE',
                 message='Actualizando análisis RA-SGE...',
             )
@@ -1953,9 +2004,10 @@ def _ejecutar_refresh_comparativa_sge_ra_job(job_id, nueva_fecha):
             )
             monitor_thread.start()
             try:
-                # A/B/F mantienen intacto su refresh coordinado V3.3. Como la
-                # trayectoria ya terminó, su estado persistente OK representa
-                # el éxito del proceso completo y es seguro para reconciliar.
+                # A/B/F mantienen intacto su refresh coordinado V3.3. Como las
+                # calificaciones, la trayectoria y las personas ya terminaron,
+                # su estado persistente OK representa el éxito del proceso
+                # completo y es seguro para reconciliar.
                 cursor.execute('CALL public.refrescar_auditoria_sge_ra();')
             finally:
                 monitor_stop.set()
@@ -1964,9 +2016,9 @@ def _ejecutar_refresh_comparativa_sge_ra_job(job_id, nueva_fecha):
             _comparativa_actualizar_estado_job(
                 job_id,
                 status='running',
-                step=3,
-                total=4,
-                percent=75,
+                step=6,
+                total=7,
+                percent=86,
                 current_view='Finalización',
                 message='Actualizando fecha de Comparativa...',
             )
@@ -1978,8 +2030,8 @@ def _ejecutar_refresh_comparativa_sge_ra_job(job_id, nueva_fecha):
             _comparativa_actualizar_estado_job(
                 job_id,
                 status='success',
-                step=4,
-                total=4,
+                step=7,
+                total=7,
                 percent=100,
                 current_view='',
                 message='Actualización completada correctamente.',

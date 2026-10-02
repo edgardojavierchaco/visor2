@@ -76,7 +76,7 @@
         </div>
     {% endif %}
     <div class="pof-grid-table-wrap pof-history-table-wrap"><table class="pof-grid-table"><thead><tr><th class="pof-grid-icon-cell">Acci&oacute;n</th><th>Fecha/Hora</th><th>Usuario</th><th>Cabecera</th><th>Localizaci&oacute;n</th><th>Evento</th><th>Detalle</th></tr></thead><tbody>
-        {% for movimiento in movimientos %}<tr><td class="pof-grid-icon-cell pof-history-detail-cell">{% if movimiento.permite_detalle %}<button type="button" class="pof-grid-icon-btn pof-history-detail-btn" title="Ver detalle del movimiento" aria-label="Ver detalle del movimiento" data-movimiento-id="{{ movimiento.id }}"><span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span></button>{% else %}<span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true" title="Evento auditado directamente">history</span>{% endif %}</td><td class="pof-grid-cell-center">{{ movimiento.fecha|date:"d/m/Y H:i" }}</td><td class="pof-grid-cell-center pof-history-location-cell"><div class="pof-location-row"><span class="pof-location-label">Nombre:</span> <span class="pof-location-value">{{ movimiento.usuario_movimiento.nombre }}</span></div><div class="pof-location-row"><span class="pof-location-label">CUIL:</span> <span class="pof-location-value">{{ movimiento.usuario_movimiento.cuil }}</span></div></td><td>{{ movimiento.cabecera_resumen }}</td><td class="pof-grid-cell-center pof-history-location-cell">{% if movimiento.localizacion_resumen.cue and movimiento.localizacion_resumen.cue != "—" %}<div class="pof-location-row"><span class="pof-location-label">CUE:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cue }}</span></div>{% endif %}<div class="pof-location-row"><span class="pof-location-label">CUEANEXO:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cueanexo }}</span></div><div class="pof-location-row"><span class="pof-location-label">CUOF:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cuof }}</span></div></td><td class="pof-grid-cell-center"><span class="pof-grid-badge pof-grid-badge-{{ movimiento.tipo_movimiento_clase }}">{{ movimiento.tipo_movimiento_display }}</span></td><td class="pof-history-detail-summary"><div class="pof-history-summary-card"><div class="pof-history-summary-action">{{ movimiento.detalle_resumen_visual.accion }}</div>{% if movimiento.detalle_resumen_visual.partes or movimiento.tiene_observacion_real %}<div class="pof-history-summary-facts">{% for parte in movimiento.detalle_resumen_visual.partes %}<span class="pof-history-summary-fact" style="--pof-history-fact-index: {{ forloop.counter0 }};">{{ parte }}</span>{% endfor %}{% if movimiento.tiene_observacion_real %}<span class="pof-history-note-indicator" title="Este movimiento tiene observaci&oacute;n">Obs.</span>{% endif %}</div>{% endif %}</div></td></tr>{% empty %}
+        {% for movimiento in movimientos %}<tr><td class="pof-grid-icon-cell pof-history-detail-cell">{% if movimiento.permite_detalle %}<button type="button" class="pof-grid-icon-btn pof-history-detail-btn" title="Ver detalle del movimiento" aria-label="Ver detalle del movimiento" data-movimiento-id="{{ movimiento.id }}"><span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true">search_check_2</span></button>{% else %}<span class="pof-action-icon pof-material-symbol material-symbols-outlined" aria-hidden="true" title="Evento auditado directamente">tab_recent</span>{% endif %}</td><td class="pof-grid-cell-center">{{ movimiento.fecha|date:"d/m/Y H:i" }}</td><td class="pof-grid-cell-center pof-history-location-cell"><div class="pof-location-row"><span class="pof-location-label">Nombre:</span> <span class="pof-location-value">{{ movimiento.usuario_movimiento.nombre }}</span></div><div class="pof-location-row"><span class="pof-location-label">CUIL:</span> <span class="pof-location-value">{{ movimiento.usuario_movimiento.cuil }}</span></div></td><td>{{ movimiento.cabecera_resumen }}</td><td class="pof-grid-cell-center pof-history-location-cell">{% if movimiento.localizacion_resumen.cue and movimiento.localizacion_resumen.cue != "—" %}<div class="pof-location-row"><span class="pof-location-label">CUE:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cue }}</span></div>{% endif %}<div class="pof-location-row"><span class="pof-location-label">CUEANEXO:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cueanexo }}</span></div><div class="pof-location-row"><span class="pof-location-label">CUOF:</span> <span class="pof-location-value">{{ movimiento.localizacion_resumen.cuof }}</span></div></td><td class="pof-grid-cell-center"><span class="pof-grid-badge pof-grid-badge-{{ movimiento.tipo_movimiento_clase }}">{{ movimiento.tipo_movimiento_display }}</span></td><td class="pof-history-detail-summary"><div class="pof-history-summary-card"><div class="pof-history-summary-action">{{ movimiento.detalle_resumen_visual.accion }}</div>{% if movimiento.detalle_resumen_visual.partes or movimiento.tiene_observacion_real %}<div class="pof-history-summary-facts">{% for parte in movimiento.detalle_resumen_visual.partes %}<span class="pof-history-summary-fact" style="--pof-history-fact-index: {{ forloop.counter0 }};">{{ parte }}</span>{% endfor %}{% if movimiento.tiene_observacion_real %}<span class="pof-history-note-indicator" title="Este movimiento tiene observaci&oacute;n">Obs.</span>{% endif %}</div>{% endif %}</div></td></tr>{% empty %}
         <tr><td colspan="7" class="pof-grid-empty">No hay eventos registrados todavía.</td></tr>{% endfor %}
     </tbody></table></div>
     {% if paginator.num_pages > 1 %}
@@ -84,6 +84,8 @@
             <nav class="pof-pagination" aria-label="Paginación de historial">{% if page_obj.has_previous %}<a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.previous_page_number }}#historialResultados">Anterior</a>{% else %}<span class="pof-page-btn pof-page-btn-disabled">Anterior</span>{% endif %}{% for page_number in page_range %}{% if page_number == page_obj.number %}<span class="pof-page-btn pof-page-btn-active">{{ page_number }}</span>{% elif page_number == '…' %}<span class="pof-page-ellipsis">…</span>{% else %}<a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_number }}#historialResultados">{{ page_number }}</a>{% endif %}{% endfor %}{% if page_obj.has_next %}<a class="pof-page-btn" href="{% if query_params_base %}?{{ query_params_base }}&amp;{% else %}?{% endif %}page={{ page_obj.next_page_number }}#historialResultados">Siguiente</a>{% else %}<span class="pof-page-btn pof-page-btn-disabled">Siguiente</span>{% endif %}</nav>
         </div>
     {% endif %}
+
+    {{ detalles_eventos|json_script:"historialDetallesEventosData" }}
 
     <div id="modalDetalleMovimiento" class="pof-modal-backdrop pof-hidden" aria-hidden="true">
         <div class="pof-modal pof-history-modal pof-history-movement-modal" role="dialog" aria-modal="true" aria-labelledby="modalDetalleMovimientoTitulo">
@@ -112,6 +114,10 @@
     const contenidoDetalleMovimiento = document.getElementById("contenidoDetalleMovimiento");
     const estadoDetalleMovimiento = document.getElementById("estadoDetalleMovimiento");
     const detalleMovimientoMeta = document.getElementById("detalleMovimientoMeta");
+    const tituloDetalleMovimiento = document.getElementById("modalDetalleMovimientoTitulo");
+    const detallesEventosData = document.getElementById("historialDetallesEventosData");
+    const detallesEventos = detallesEventosData ? JSON.parse(detallesEventosData.textContent) : {};
+    let detalleMovimientoSolicitud = 0;
     const cerrarDetalleMovimiento = document.querySelector("[data-cerrar-detalle-movimiento]");
     const detalleMovimientoUrlBase = "{% url 'reunidas_pof:detalle_movimiento_pof' 0 %}";
     const historialFiltrosForm = document.querySelector("[data-pof-filter-form]");
@@ -200,6 +206,7 @@
     }
 
     function cerrarModalDetalle() {
+        detalleMovimientoSolicitud += 1;
         modalDetalleMovimiento.classList.add("pof-hidden");
         modalDetalleMovimiento.setAttribute("aria-hidden", "true");
         limpiarNodo(contenidoDetalleMovimiento);
@@ -321,6 +328,10 @@
     function renderizarDetalleMovimiento(movimiento) {
         limpiarNodo(contenidoDetalleMovimiento);
         ocultarEstadoDetalle();
+        detalleMovimientoMeta.textContent = "";
+        tituloDetalleMovimiento.textContent = movimiento.es_evento_general
+            ? "DETALLE DEL EVENTO"
+            : "DETALLE DEL MOVIMIENTO";
         const usuarioMovimiento = movimiento.usuario_movimiento || {nombre: movimiento.usuario, cuil: "—"};
         detalleMovimientoMeta.appendChild(crearNodo("span", "pof-history-movement-type", valorDetalle(movimiento.tipo_movimiento_display)));
         [
@@ -334,6 +345,20 @@
             meta.appendChild(crearNodo("strong", "", valorDetalle(item[1])));
             detalleMovimientoMeta.appendChild(meta);
         });
+
+        if (movimiento.es_evento_general) {
+            agregarSeccion("Resumen del evento", [
+                ["Acción", movimiento.resumen, "pof-detail-item-wide"],
+            ]);
+            (movimiento.secciones || []).forEach(seccion => {
+                agregarSeccion(seccion.titulo, seccion.campos || []);
+            });
+            if (movimiento.diff && movimiento.diff.length) {
+                renderizarDiff(movimiento.diff);
+            }
+            renderizarObservaciones(movimiento);
+            return;
+        }
 
         const cargo = movimiento.cargo_actual || {};
         const localizacion = movimiento.localizacion || {};
@@ -384,18 +409,31 @@
     }
 
     async function cargarDetalleMovimiento(movimientoId) {
+        const solicitud = ++detalleMovimientoSolicitud;
+        tituloDetalleMovimiento.textContent = "DETALLE DEL MOVIMIENTO";
         abrirModalDetalle();
         limpiarNodo(contenidoDetalleMovimiento);
         detalleMovimientoMeta.textContent = "";
         mostrarEstadoDetalle("Cargando detalle...", "warn");
+
+        if (Object.prototype.hasOwnProperty.call(detallesEventos, movimientoId)) {
+            renderizarDetalleMovimiento(detallesEventos[movimientoId]);
+            return;
+        }
 
         const url = detalleMovimientoUrlBase.replace("/0/", `/${encodeURIComponent(movimientoId)}/`);
         try {
             const data = await window.pofApi.requestJsonRead(url, {
                 credentials: "same-origin",
             });
+            if (solicitud !== detalleMovimientoSolicitud) {
+                return;
+            }
             renderizarDetalleMovimiento(data.movimiento);
         } catch (error) {
+            if (solicitud !== detalleMovimientoSolicitud) {
+                return;
+            }
             limpiarNodo(contenidoDetalleMovimiento);
             detalleMovimientoMeta.textContent = "";
             mostrarEstadoDetalle(

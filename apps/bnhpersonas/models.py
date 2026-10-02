@@ -814,7 +814,12 @@ class RegistroActividades(AuditoriaModel):
     # Designación fue eliminada. Sólo queda Tipo de designación.
     t_designacion = models.ForeignKey('TipoDesigFunc', on_delete=models.PROTECT)
 
-    ceic = models.ForeignKey('NomencladorCeic', on_delete=models.PROTECT)
+    ceic = models.ForeignKey(
+        'NomencladorCeic',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+    )
 
     # ========================================================
     # CIRCUITO CURRICULAR (INDEPENDIENTE DEL CEIC)
@@ -852,6 +857,16 @@ class RegistroActividades(AuditoriaModel):
         related_name='+',
     )
 
+    TIPO_UBICACION_CHOICES = [
+        ('UNICA', 'Sección única'),
+        ('MULTIPLE', 'Sección múltiple'),
+    ]
+    tipo_ubicacion = models.CharField(
+        max_length=10,
+        choices=TIPO_UBICACION_CHOICES,
+        default='UNICA',
+    )
+    multiplan = models.BooleanField(default=False)
     grado_anio = models.ForeignKey('Grado_anio', on_delete=models.PROTECT, null=True, blank=True)
     
     turno=models.CharField(max_length=20, choices=[
@@ -1015,6 +1030,7 @@ class RegistroActividades(AuditoriaModel):
         from .domain.catalogs import (
             activity_catalogs,
             available_levels,
+            ceic_aplica,
             curricular_catalogs,
             titulacion_source,
             valid_titulacion,
@@ -1034,13 +1050,26 @@ class RegistroActividades(AuditoriaModel):
             if not available_levels(self.modalidad_id).filter(pk=self.niveles_id).exists():
                 errors["niveles"] = "El nivel no pertenece a la modalidad del cargo seleccionada."
 
+            aplica_ceic = ceic_aplica(
+                self.modalidad_id,
+                self.niveles_id,
+                tipo_personal=tipo_personal_codigo,
+            )
             ceic, _, _ = activity_catalogs(
                 self.modalidad_id,
                 self.niveles_id,
                 tipo_personal=tipo_personal_codigo,
             )
-            if self.ceic_id and not ceic.filter(pk=self.ceic_id).exists():
-                errors["ceic"] = "El Cargo / CEIC no corresponde a la modalidad y nivel del cargo."
+
+            if aplica_ceic:
+                if not self.ceic_id:
+                    errors["ceic"] = "Seleccione el Cargo / CEIC correspondiente."
+                elif not ceic.filter(pk=self.ceic_id).exists():
+                    errors["ceic"] = "El Cargo / CEIC no corresponde a la modalidad y nivel del cargo."
+            elif self.ceic_id:
+                errors["ceic"] = (
+                    "Para esta combinación Modalidad + Nivel, Cargo / CEIC no corresponde."
+                )
 
         # ----------------------------------------------------
         # CIRCUITO CURRICULAR NUEVO
@@ -1173,6 +1202,60 @@ class ActividadSede(models.Model):
 ################################
 # HORARIOS ACTIVIDAD
 ################################
+class RegistroActividadUbicacion(models.Model):
+    """Componentes curriculares de una actividad sin duplicar el cargo principal."""
+    actividad = models.ForeignKey(
+        RegistroActividades,
+        on_delete=models.CASCADE,
+        related_name="ubicaciones_curriculares",
+    )
+    grado_anio = models.ForeignKey('Grado_anio', on_delete=models.PROTECT)
+    seccion = models.ForeignKey('Secciones', on_delete=models.PROTECT)
+    turno = models.CharField(max_length=20, choices=RegistroActividades._meta.get_field('turno').choices)
+    orden = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        db_table = "registro_actividad_ubicacion"
+        ordering = ["orden", "pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["actividad", "grado_anio", "seccion", "turno"],
+                name="bnh_actividad_ubicacion_unica",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.grado_anio} - {self.seccion} - {self.turno}"
+
+
+class RegistroActividadTitulacion(models.Model):
+    """Titulaciones/planes que comparten una misma ubicación y espacio curricular."""
+    actividad = models.ForeignKey(
+        RegistroActividades,
+        on_delete=models.CASCADE,
+        related_name="titulaciones_curriculares",
+    )
+    titulacion = models.BigIntegerField(db_index=True)
+    titulacion_fuente = models.CharField(
+        max_length=12,
+        choices=RegistroActividades._meta.get_field('titulacion_fuente').choices,
+    )
+    orden = models.PositiveSmallIntegerField(default=1)
+
+    class Meta:
+        db_table = "registro_actividad_titulacion"
+        ordering = ["orden", "pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["actividad", "titulacion", "titulacion_fuente"],
+                name="bnh_actividad_titulacion_unica",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.titulacion_fuente}:{self.titulacion}"
+
+
 class HorarioActividad(models.Model):
     
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)

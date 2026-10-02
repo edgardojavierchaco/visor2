@@ -38,7 +38,7 @@ from .views_contexto import (
 
 URL_CARGA_PROFESOR = "/bnh/carga-personal/"
 MSG_BANCO_DOCENTES_PENDIENTE = (
-    "El banco de profesores CEF está pendiente de creación en base de datos."
+    "El banco de profesores del CEF todavía no está disponible."
 )
 
 
@@ -273,33 +273,36 @@ def _profesores_listado_context(cef_context, vista="actuales"):
             asignaciones_historicas = list(
                 _asignaciones_historicas_docentes(cef_context)
             )
+            docentes_activos_ciclo = list(
+                CefDocenteCef.objects.filter(
+                    cueanexo=cef_context["cueanexo"],
+                    ciclo=cef_context["ciclo"],
+                    estado=CefDocenteCef.Estado.ACTIVO,
+                ).select_related("ciclo")
+            )
         except (OperationalError, ProgrammingError):
             docentes_bajas_ciclo = []
             docentes_historial = []
             asignaciones_historicas = []
+            docentes_activos_ciclo = []
             docentes_banco_tabla_pendiente = True
         cuiles_historicos = {
             periodo.docente_cuil for periodo in docentes_historial
         } | {
             asignacion.docente_cuil for asignacion in asignaciones_historicas
         }
-        cuiles = cuiles_historicos | {
-            periodo.docente_cuil for periodo in docentes_bajas_ciclo
+        docentes_activos_actuales = {
+            periodo.docente_cuil: periodo for periodo in docentes_activos_ciclo
         }
-        docentes_activos_actuales = {}
+        cuiles = (
+            cuiles_historicos
+            | {periodo.docente_cuil for periodo in docentes_bajas_ciclo}
+            | set(docentes_activos_actuales)
+        )
         asignaciones_activas_por_docente = {}
         asignaciones_periodos_por_docente = {}
         grupos_disponibles = []
         if cuiles:
-            docentes_activos_actuales = {
-                periodo.docente_cuil: periodo
-                for periodo in CefDocenteCef.objects.filter(
-                    cueanexo=cef_context["cueanexo"],
-                    ciclo=cef_context["ciclo"],
-                    docente_cuil__in=cuiles,
-                    estado=CefDocenteCef.Estado.ACTIVO,
-                ).select_related("ciclo")
-            }
             try:
                 asignaciones_periodos = _asignaciones_periodos_docentes(
                     cef_context,
@@ -356,14 +359,21 @@ def _profesores_listado_context(cef_context, vista="actuales"):
                     periodo.pk,
                 ),
             )
-            periodo_resumen.historial_periodos = sorted(
+            periodos_cronologicos = sorted(
                 periodos,
                 key=lambda periodo: (
                     periodo.ciclo.anio,
                     periodo.fecha_alta,
                     periodo.pk,
                 ),
-                reverse=True,
+            )
+            for numero_periodo, movimiento in enumerate(
+                periodos_cronologicos,
+                start=1,
+            ):
+                movimiento.numero_periodo = numero_periodo
+            periodo_resumen.historial_periodos = list(
+                reversed(periodos_cronologicos)
             )
             _vincular_asignaciones_a_periodos(
                 periodo_resumen.historial_periodos,
@@ -958,12 +968,12 @@ def profesores(request):
                 if tabla_pendiente:
                     messages.error(request, MSG_BANCO_DOCENTES_PENDIENTE)
                 elif creado:
-                    messages.success(request, "Profesor agregado al banco del CEF.")
+                    messages.success(request, "Profesor agregado al banco de profesores del CEF.")
                     return redirect(_url_profesores(cef_context))
                 else:
                     messages.info(
                         request,
-                        "Ese profesor ya está activo en el banco de este CEF y ciclo.",
+                        "Ese profesor ya está activo en el banco de profesores de este CEF y ciclo.",
                     )
             except ValidationError as exc:
                 messages.error(request, "; ".join(exc.messages))

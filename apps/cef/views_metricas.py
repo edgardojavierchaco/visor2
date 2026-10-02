@@ -3,37 +3,97 @@
 import logging
 from io import BytesIO
 
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
+from .models import CefCiclo
 from .permisos import cef_metricas_required, get_permisos_cef_request
 from .services_metricas import (
     MetricasValidationError,
     construir_configuracion_metricas,
-    ejecutar_consulta_metricas,
 )
+
+from .services_consultas import configurar_consultas, ejecutar_consulta
 
 
 logger = logging.getLogger(__name__)
 
 
-def _contexto_pagina_metricas(request):
-    """Contexto global que deliberadamente no resuelve ni escribe contexto operativo."""
+def _alcance_metricas(request):
     permisos = get_permisos_cef_request(request)
+    if not permisos.get("solo_metricas"):
+        return permisos, None, None
+
+    cefs_permitidos = tuple(
+        dict.fromkeys(
+            str(valor or "").strip()
+            for valor in permisos.get("cueanexos_cargables", [])
+            if str(valor or "").strip()
+        )
+    )
+    ciclo_actual = (
+        CefCiclo.objects.filter(actual=True)
+        .order_by("-anio", "-pk")
+        .values_list("pk", flat=True)
+        .first()
+    )
+    ciclos_permitidos = (ciclo_actual,) if ciclo_actual is not None else ()
+    return permisos, cefs_permitidos, ciclos_permitidos
+
+
+def _parametros_metricas_autorizados(request):
+    permisos, cefs_permitidos, ciclos_permitidos = _alcance_metricas(request)
+    if not permisos.get("solo_metricas"):
+        return request.GET
+
+    if not cefs_permitidos:
+        raise PermissionDenied("No tenés CEF asociados para realizar consultas.")
+    if not ciclos_permitidos:
+        raise PermissionDenied("No hay un ciclo actual habilitado para Consultas CEF.")
+
+    cefs_solicitados = []
+    for valor in request.GET.getlist("cefs"):
+        limpio = str(valor or "").strip()
+        if limpio and limpio not in cefs_solicitados:
+            cefs_solicitados.append(limpio)
+
+    permitidos = set(cefs_permitidos)
+    if any(valor not in permitidos for valor in cefs_solicitados):
+        raise PermissionDenied("No tenés permisos para consultar uno o más CEF seleccionados.")
+
+    params = request.GET.copy()
+    params.setlist("cefs", cefs_solicitados or list(cefs_permitidos))
+    params.setlist("ciclos", [str(ciclos_permitidos[0])])
+    return params
+
+
+def _contexto_pagina_metricas(request):
+    """Configura Consultas según el alcance permitido para la persona usuaria."""
+    permisos, cefs_permitidos, ciclos_permitidos = _alcance_metricas(request)
+    config_kwargs = {}
+    if permisos.get("solo_metricas"):
+        config_kwargs = {
+            "cefs_permitidos": cefs_permitidos,
+            "ciclos_permitidos": ciclos_permitidos,
+        }
     return {
         "title": "Consultas CEF",
         "active_menu": "metricas",
         "es_admin_cef": permisos.get("es_admin", False),
         "puede_metricas": permisos.get("puede_metricas", False),
-        "metricas_config": construir_configuracion_metricas(),
+        "solo_metricas": permisos.get("solo_metricas", False),
+        "metricas_config": configurar_consultas(construir_configuracion_metricas(**config_kwargs)),
     }
 
 
+@never_cache
 @cef_metricas_required
 @require_GET
 def metricas(request):
@@ -44,11 +104,13 @@ def metricas(request):
     )
 
 
+@never_cache
 @cef_metricas_required
 @require_GET
 def metricas_consulta(request):
+    params = _parametros_metricas_autorizados(request)
     try:
-        resultado = ejecutar_consulta_metricas(request.GET, limite_detalle=500)
+        resultado = ejecutar_consulta(params, paginar=True)
     except MetricasValidationError as exc:
         return JsonResponse(
             {"ok": False, "message": str(exc)},
@@ -176,6 +238,7 @@ def _crear_excel_metricas(resultado):
     if isinstance(notas, str):
         notas = [notas]
     columnas, filas = _tabla_resultado(resultado)
+    total = resultado.get("total") or {}
 
     wb = Workbook()
     ws = wb.active
@@ -191,17 +254,38 @@ def _crear_excel_metricas(resultado):
     ws.row_dimensions[1].height = 24
 
     generado = timezone.localtime().strftime("%d/%m/%Y %H:%M")
+    total_texto = (
+        total.get("formatted", "—")
+        + (" " + total.get("unit", "") if total.get("unit") != "%" else "")
+    )
     metadatos = [
         ("Fecha de generación", generado),
-        ("Área", _consulta_valor(consulta, "area_label", "area_etiqueta", "area")),
-        ("Información", _consulta_valor(consulta, "indicator_label", "indicador_label", "indicador_etiqueta", "indicador")),
+        ("Categoría", _consulta_valor(consulta, "area_label", "area_etiqueta", "area")),
+        ("Consulta", _consulta_valor(consulta, "indicator_label", "indicador_label", "indicador_etiqueta", "indicador")),
         ("Ciclos", _consulta_valor(consulta, "cycle_labels", "ciclos_etiquetas", "ciclos")),
         ("CEF", _cefs_consulta_texto(consulta)),
         ("Filtros", _filtros_consulta_texto(consulta)),
-        ("Definición", definicion or "—"),
     ]
+    if resultado.get("mode") == "listados":
+        metadatos.extend([
+            ("Búsqueda", consulta.get("buscar") or "Sin búsqueda"),
+            ("Total del listado", total_texto),
+            ("Filas incluidas en este archivo", len(filas)),
+            ("Qué incluye el resultado", definicion or "—"),
+        ])
+    else:
+        metadatos.extend([
+            ("Resultados por", _consulta_valor(consulta, "agrupar_label")),
+        ])
+        comparacion = _consulta_valor(consulta, "comparar_label", vacio="")
+        if comparacion:
+            metadatos.append(("Comparación", comparacion))
+        metadatos.extend([
+            ("Total general", total_texto),
+            ("Qué incluye el resultado", definicion or "—"),
+        ])
     if notas:
-        metadatos.append(("Notas metodológicas", " ".join(str(nota) for nota in notas if nota)))
+        metadatos.append(("Cómo se calculó", " ".join(str(nota) for nota in notas if nota)))
 
     fila = 3
     for etiqueta, valor in metadatos:
@@ -245,16 +329,44 @@ def _crear_excel_metricas(resultado):
                 longitud = max(longitud, len(str(valor)))
         ws.column_dimensions[letra].width = min(max(longitud + 2, 12), 48)
 
+    if resultado.get("mode") == "listados" and resultado.get("entity") in {"alumnos", "profesores"}:
+        tabla = resultado["table"]
+        es_alumno = resultado["entity"] == "alumnos"
+        titulo_grupos = "Grupos de alumnos" if es_alumno else "Grupos de profesores"
+        titulo_banco = "Banco de alumnos del CEF" if es_alumno else "Banco de profesores del CEF"
+        etiqueta_persona = "Alumno" if es_alumno else "Profesor"
+        for clave, titulo, definiciones in (
+            ("relations", titulo_grupos, tabla["detail_columns"]),
+            ("bank", titulo_banco, tabla["bank_columns"]),
+        ):
+            detalle = wb.create_sheet(titulo)
+            detalle.append([etiqueta_persona, "Documento", "CUIL"] + [c["label"] for c in definiciones])
+            for persona in tabla["rows"]:
+                identidad = [persona.get(c, "") for c in ("persona", "documento", "cuil")]
+                for relacion in persona.get(clave, []):
+                    detalle.append([_valor_excel(v) for v in identidad + [
+                        relacion.get(c["key"], "") for c in definiciones
+                    ]])
+            for celda in detalle[1]:
+                celda.font = Font(bold=True, color="FFFFFF", size=9)
+                celda.fill = PatternFill("solid", fgColor="2F75B5")
+            detalle.freeze_panes = "A2"
+            detalle.auto_filter.ref = detalle.dimensions
+            for indice in range(1, detalle.max_column + 1):
+                detalle.column_dimensions[get_column_letter(indice)].width = 24
+
     output = BytesIO()
     wb.save(output)
     return output.getvalue()
 
 
+@never_cache
 @cef_metricas_required
 @require_GET
 def metricas_exportar(request):
+    params = _parametros_metricas_autorizados(request)
     try:
-        resultado = ejecutar_consulta_metricas(request.GET, limite_detalle=None)
+        resultado = ejecutar_consulta(params, paginar=False)
     except MetricasValidationError as exc:
         return HttpResponse(str(exc), status=400, content_type="text/plain; charset=utf-8")
     except Exception:

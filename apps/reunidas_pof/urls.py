@@ -69,6 +69,7 @@ urlpatterns = [
     path("reunidas/<int:reunida_id>/detalle/grupo-cargos/", views.detalle_reunida_grupo_cargos, name="detalle_reunida_grupo_cargos"),
     path("proyectos-especiales/<int:proyecto_especial_id>/detalle/localizaciones/<int:localizacion_id>/cargos/", views.detalle_proyecto_especial_localizacion_cargos, name="detalle_proyecto_especial_localizacion_cargos"),
     path("cargos/<int:cargo_id>/detalle/", views.detalle_cargo_pof, name="detalle_cargo_pof"),
+    path("cargos/<int:cargo_id>/ofertas/", views.catalogo_ofertas_cargo_pof, name="catalogo_ofertas_cargo_pof"),
     path("cargos/<int:cargo_id>/modificar/", views.modificar_cargo_pof_view, name="modificar_cargo_pof"),
     path("cargos/<int:cargo_id>/estado/", views.cambiar_estado_cargo_pof_view, name="cambiar_estado_cargo_pof"),
     path("cargos/<int:cargo_id>/eliminar/", views.eliminar_cargo_pof_view, name="eliminar_cargo_pof"),

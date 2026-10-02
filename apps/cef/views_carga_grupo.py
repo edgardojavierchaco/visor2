@@ -11,6 +11,7 @@ from django.views.decorators.http import require_GET
 
 from .forms import (
     CefBajaMotivoForm,
+    CefBusquedaAlumnoForm,
     CefDocenteGrupoForm,
     CefGrupoDiasForm,
     CefGrupoForm,
@@ -124,7 +125,10 @@ def _grupo_seguro(grupo_id, cef_context):
             ciclo=cef_context["ciclo"],
         )
         .select_related("ciclo", "actividad", "turno", "nivel", "rango_etario")
-        .prefetch_related("dias_funcionamiento__dia_semana"),
+        .prefetch_related(
+            "dias_funcionamiento__dia_semana",
+            "movimientos_estado",
+        ),
         pk=grupo_id,
     )
 
@@ -242,13 +246,6 @@ def _gestionar_fragment_context(
             ).append(inscripcion)
         inscripciones = []
         for alumno_id, periodos in inscripciones_por_alumno.items():
-            periodos_baja = [
-                periodo
-                for periodo in periodos
-                if periodo.estado == CefInscripcion.Estado.BAJA
-            ]
-            if not periodos_baja:
-                continue
             inscripcion_activa = next(
                 (
                     periodo
@@ -258,13 +255,20 @@ def _gestionar_fragment_context(
                 None,
             )
             inscripcion_resumen = inscripcion_activa or max(
-                periodos_baja,
-                key=lambda periodo: periodo.pk,
-            )
-            inscripcion_resumen.historial_inscripciones = sorted(
                 periodos,
                 key=lambda periodo: (periodo.fecha_inscripcion, periodo.pk),
-                reverse=True,
+            )
+            periodos_cronologicos = sorted(
+                periodos,
+                key=lambda periodo: (periodo.fecha_inscripcion, periodo.pk),
+            )
+            for numero_inscripcion, periodo in enumerate(
+                periodos_cronologicos,
+                start=1,
+            ):
+                periodo.numero_inscripcion = numero_inscripcion
+            inscripcion_resumen.historial_inscripciones = list(
+                reversed(periodos_cronologicos)
             )
             inscripcion_resumen.estado_actual_curso = (
                 CefInscripcion.Estado.ACTIVO
@@ -309,22 +313,22 @@ def _gestionar_fragment_context(
             docentes_por_cuil.setdefault(docente.docente_cuil, []).append(docente)
         docentes = []
         for docente_cuil, periodos in docentes_por_cuil.items():
-            periodos_baja = [
-                periodo
-                for periodo in periodos
-                if periodo.estado == CefDocenteGrupo.Estado.BAJA
-            ]
-            if not periodos_baja:
-                continue
             asignacion_activa = docente_activo_por_cuil.get(docente_cuil)
             docente_resumen = asignacion_activa or max(
-                periodos_baja,
-                key=lambda periodo: (periodo.fecha_desde, periodo.pk),
-            )
-            docente_resumen.historial_asignaciones = sorted(
                 periodos,
                 key=lambda periodo: (periodo.fecha_desde, periodo.pk),
-                reverse=True,
+            )
+            periodos_cronologicos = sorted(
+                periodos,
+                key=lambda periodo: (periodo.fecha_desde, periodo.pk),
+            )
+            for numero_asignacion, periodo in enumerate(
+                periodos_cronologicos,
+                start=1,
+            ):
+                periodo.numero_asignacion = numero_asignacion
+            docente_resumen.historial_asignaciones = list(
+                reversed(periodos_cronologicos)
             )
             docente_resumen.estado_actual_grupo = (
                 CefDocenteGrupo.Estado.ACTIVO
@@ -340,7 +344,10 @@ def _gestionar_fragment_context(
             docente_resumen.roles_reasignables = [
                 (rol_valor, rol_etiqueta)
                 for rol_valor, rol_etiqueta in CefDocenteGrupo.Rol.choices
-                if rol_valor not in roles_docentes_activos
+                if (
+                    rol_valor == CefDocenteGrupo.Rol.SUPLENTE
+                    or rol_valor not in roles_docentes_activos
+                )
             ]
             docente_resumen.puede_reasignar = (
                 asignacion_activa is None
@@ -409,9 +416,7 @@ def _gestionar_fragment_context(
         "docentes_permite_retorno": (
             not solo_lectura and vista_docentes == "historial"
         ),
-        "movimientos_estado": (
-            list(grupo.movimientos_estado.all()) if modo_historial else []
-        ),
+        "movimientos_estado": list(grupo.movimientos_estado.all()),
         "origen": origen,
         "gestionar_grupo_modo": True,
         "gestionar_grupo_url": _url_gestionar_grupo(
@@ -1242,6 +1247,11 @@ def gestionar_grupo(request, grupo_id):
                 not modo_historial
                 and request.GET.get("abrir_modal_alumno") == "1"
             ),
+            "busqueda_form": CefBusquedaAlumnoForm(),
+            "tipo_doc_buscado": "1",
+            "nro_doc_buscado": "",
+            "cuil_buscado": "",
+            "cuil_error": "",
             "modal_docente_abierto": (
                 not modo_historial
                 and request.GET.get("abrir_modal_docente") == "1"
@@ -1278,8 +1288,7 @@ def _guardar_grupo(form, dias_form, cef_context, user):
                 ).values_list("dia_semana_id", flat=True)
             )
             cambia_compatibilidad = (
-                grupo_actual.actividad_id != grupo.actividad_id
-                or grupo_actual.hora_inicio != grupo.hora_inicio
+                grupo_actual.hora_inicio != grupo.hora_inicio
                 or grupo_actual.hora_fin != grupo.hora_fin
                 or dias_actuales_ids != set(dias_ids)
             )
@@ -1307,7 +1316,6 @@ def _guardar_grupo(form, dias_form, cef_context, user):
                     )
                     validar_conflictos_horarios_edicion_grupo(
                         grupo_actual,
-                        actividad_id=grupo.actividad_id,
                         hora_inicio=grupo.hora_inicio,
                         hora_fin=grupo.hora_fin,
                         dias_ids=dias_ids,

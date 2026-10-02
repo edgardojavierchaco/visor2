@@ -7,12 +7,14 @@ from django.apps import apps
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.db.models import Q
 from django.db.utils import OperationalError, ProgrammingError
 from django.urls import NoReverseMatch, reverse
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_GET
 
 from .forms import CefBajaMotivoForm, CefBusquedaAlumnoForm
@@ -33,7 +35,7 @@ from .views_contexto import (
 
 
 MSG_BANCO_ALUMNOS_PENDIENTE = (
-    "El banco de alumnos CEF está pendiente de creación en base de datos."
+    "El banco de alumnos del CEF todavía no está disponible."
 )
 
 
@@ -49,8 +51,180 @@ def _alumno_model():
     return apps.get_model("bnhalumnos", "Alumno")
 
 
-def _buscar_alumno(cuil):
-    return _alumno_model().objects.filter(cuil=cuil).first()
+def _buscar_alumno_identidad(*, tipo_doc, nro_doc="", cuil=""):
+    """Resuelve una identidad fuerte sin depender exclusivamente del CUIL."""
+
+    alumno_model = _alumno_model()
+    por_documento = None
+    por_cuil = None
+
+    if tipo_doc and nro_doc:
+        coincidencias_documento = list(
+            alumno_model.objects.filter(
+                tipo_doc=tipo_doc,
+                nro_doc__iexact=nro_doc,
+            )
+            .order_by("pk")[:2]
+        )
+        if len(coincidencias_documento) > 1:
+            raise ValidationError(
+                "Hay más de un alumno con ese tipo y número de documento. "
+                "No se seleccionó ninguno automáticamente."
+            )
+        por_documento = coincidencias_documento[0] if coincidencias_documento else None
+
+    if cuil:
+        coincidencias_cuil = list(
+            alumno_model.objects.filter(cuil=cuil).order_by("pk")[:2]
+        )
+        if len(coincidencias_cuil) > 1:
+            raise ValidationError(
+                "Hay más de un alumno con ese CUIL. "
+                "No se seleccionó ninguno automáticamente."
+            )
+        por_cuil = coincidencias_cuil[0] if coincidencias_cuil else None
+
+    if por_documento and por_cuil and por_documento.pk != por_cuil.pk:
+        raise ValidationError(
+            "El documento y el CUIL informados corresponden a alumnos distintos."
+        )
+
+    return por_documento or por_cuil
+
+
+def _alumno_por_id(valor):
+    try:
+        alumno_id = int(valor or "")
+    except (TypeError, ValueError):
+        return None
+    return _alumno_model().objects.filter(pk=alumno_id).first()
+
+
+def _buscar_alumno_sin_documento(
+    *,
+    apellidos,
+    nombres,
+    tipo_doc,
+    fecha_nacimiento,
+    sexo,
+):
+    """Busca un alumno sin número documental por sus datos actuales exactos.
+
+    id_persona_jurisdiccional permanece inmutable en BNH y puede reflejar
+    datos históricos si luego se corrigieron nombre, fecha o sexo. Por eso la
+    recuperación operativa de CEF compara los campos actuales por separado,
+    con la misma normalización estable usada por BNH y sin hacer coincidencias
+    difusas ni elegir silenciosamente entre homónimos.
+    """
+
+    from apps.bnhalumnos.models import normalizar_componente_id_jurisdiccional
+
+    apellido_normalizado = normalizar_componente_id_jurisdiccional(apellidos)
+    nombre_normalizado = normalizar_componente_id_jurisdiccional(nombres)
+    sexo_id = getattr(sexo, "pk", sexo)
+
+    candidatos = (
+        _alumno_model().objects
+        .filter(
+            tipo_doc=tipo_doc,
+            fecha_nacimiento=fecha_nacimiento,
+            sexo_id=sexo_id,
+        )
+        .filter(Q(nro_doc__isnull=True) | Q(nro_doc=""))
+        .order_by("pk")
+    )
+
+    coincidencias = []
+    for candidato in candidatos:
+        if (
+            normalizar_componente_id_jurisdiccional(candidato.apellidos)
+            == apellido_normalizado
+            and normalizar_componente_id_jurisdiccional(candidato.nombres)
+            == nombre_normalizado
+        ):
+            coincidencias.append(candidato)
+            if len(coincidencias) > 1:
+                break
+
+    if len(coincidencias) > 1:
+        raise ValidationError(
+            "Se encontró más de un alumno cargado con esos datos. "
+            "Verifique la información antes de continuar; no se seleccionó ninguno automáticamente."
+        )
+
+    return coincidencias[0] if coincidencias else None
+
+
+def _resolver_alumno_o_sge(*, tipo_doc, nro_doc="", cuil=""):
+    """Busca primero en BNH y, si no existe, consulta la materializada SGE."""
+
+    alumno = _buscar_alumno_identidad(
+        tipo_doc=tipo_doc,
+        nro_doc=nro_doc,
+        cuil=cuil,
+    )
+    if alumno:
+        return alumno, None
+
+    # Reutiliza exactamente el resolver que usa Carga Alumno para no duplicar
+    # equivalencias ni reglas de identidad entre CEF y BNH.
+    from apps.bnhalumnos.views import (
+        SGEConsultaNoDisponible,
+        _resolver_persona_sge,
+    )
+
+    try:
+        persona_sge = _resolver_persona_sge(
+            cuil=cuil or None,
+            tipo_doc=tipo_doc,
+            nro_doc=nro_doc or None,
+        )
+    except SGEConsultaNoDisponible as exc:
+        raise ValidationError(str(exc)) from exc
+
+    if not persona_sge:
+        return None, None
+
+    id_persona_sge = persona_sge.get("id_persona_sge")
+    if id_persona_sge:
+        alumno_vinculado = (
+            _alumno_model().objects
+            .filter(id_persona_sge=id_persona_sge)
+            .first()
+        )
+        if alumno_vinculado:
+            return alumno_vinculado, None
+
+    return None, persona_sge
+
+
+def _persona_sge_row(persona_sge):
+    if not persona_sge:
+        return None
+
+    alumno_model = _alumno_model()
+
+    def catalogo_label(campo, pk):
+        if pk in (None, ""):
+            return ""
+        modelo = alumno_model._meta.get_field(campo).remote_field.model
+        item = modelo.objects.filter(pk=pk).first()
+        return str(item) if item else str(pk)
+
+    fecha_nac = persona_sge.get("fecha_nacimiento")
+    if isinstance(fecha_nac, str):
+        fecha_nac = parse_date(fecha_nac)
+
+    return {
+        "apellidos": persona_sge.get("apellidos") or "",
+        "nombres": persona_sge.get("nombres") or "",
+        "tipo_doc": catalogo_label("tipo_doc", persona_sge.get("tipo_doc")),
+        "nro_doc": persona_sge.get("nro_doc") or "",
+        "cuil": persona_sge.get("cuil") or "",
+        "fecha_nac": fecha_nac,
+        "sexo": catalogo_label("sexo", persona_sge.get("sexo")),
+        "lugar_nac": persona_sge.get("lugar_nacimiento") or "",
+    }
 
 
 def _texto(valor):
@@ -89,15 +263,46 @@ def _alumno_row(alumno):
     }
 
 
-def _url_carga_alumno(cuil, next_url, return_label="Volver a Alumnos"):
+def _url_carga_alumno(
+    next_url,
+    return_label="Volver a Alumnos",
+    *,
+    alumno=None,
+    tipo_doc="",
+    nro_doc="",
+    cuil="",
+    apellidos="",
+    nombres="",
+    fecha_nacimiento="",
+    sexo="",
+):
     try:
         base = reverse("bnhalumnos:carga_alumno")
     except NoReverseMatch:
         return ""
 
     params = {}
-    if cuil:
-        params["cuil"] = cuil
+    if alumno is not None:
+        params["alumno_id"] = alumno.pk
+    else:
+        if tipo_doc:
+            params["tipo_doc"] = getattr(tipo_doc, "pk", tipo_doc)
+        if nro_doc:
+            params["nro_doc"] = nro_doc
+        if cuil:
+            params["cuil"] = cuil
+        if apellidos:
+            params["apellidos"] = apellidos
+        if nombres:
+            params["nombres"] = nombres
+        if fecha_nacimiento:
+            params["fecha_nacimiento"] = (
+                fecha_nacimiento.isoformat()
+                if hasattr(fecha_nacimiento, "isoformat")
+                else fecha_nacimiento
+            )
+        if sexo:
+            params["sexo"] = getattr(sexo, "pk", sexo)
     if next_url:
         params["next"] = next_url
     if return_label:
@@ -105,15 +310,44 @@ def _url_carga_alumno(cuil, next_url, return_label="Volver a Alumnos"):
     return f"{base}?{urlencode(params)}" if params else base
 
 
-def _url_modal_alumnos(cef_context, cuil=""):
+def _url_modal_alumnos(
+    cef_context,
+    *,
+    alumno_id="",
+    tipo_doc="",
+    nro_doc="",
+    cuil="",
+    apellidos="",
+    nombres="",
+    fecha_nacimiento="",
+    sexo="",
+):
     params = {}
     if cef_context.get("cueanexo"):
         params["cueanexo"] = cef_context["cueanexo"]
     if cef_context.get("ciclo"):
         params["ciclo"] = cef_context["ciclo"].pk
     params["abrir_modal_alumno"] = "1"
+    if alumno_id:
+        params["alumno_id"] = getattr(alumno_id, "pk", alumno_id)
+    if tipo_doc:
+        params["tipo_doc"] = getattr(tipo_doc, "pk", tipo_doc)
+    if nro_doc:
+        params["nro_doc"] = nro_doc
     if cuil:
         params["cuil"] = cuil
+    if apellidos:
+        params["apellidos"] = apellidos
+    if nombres:
+        params["nombres"] = nombres
+    if fecha_nacimiento:
+        params["fecha_nacimiento"] = (
+            fecha_nacimiento.isoformat()
+            if hasattr(fecha_nacimiento, "isoformat")
+            else fecha_nacimiento
+        )
+    if sexo:
+        params["sexo"] = getattr(sexo, "pk", sexo)
     return f"{reverse('cef:alumnos')}?{urlencode(params)}"
 
 
@@ -167,7 +401,7 @@ def _inscribir_alumno_grupo_desde_banco(request, cef_context):
         .first()
     )
     if not alumno_banco:
-        messages.error(request, "El alumno no está activo en el banco de este CEF y ciclo.")
+        messages.error(request, "El alumno no está activo en el banco de alumnos de este CEF y ciclo.")
         return
 
     grupo = CefGrupo.objects.filter(
@@ -448,33 +682,36 @@ def _alumnos_listado_context(cef_context, vista="actuales"):
             inscripciones_historicas = list(
                 _inscripciones_historicas_alumnos(cef_context)
             )
+            alumnos_activos_ciclo = list(
+                CefAlumnoCef.objects.filter(
+                    cueanexo=cef_context["cueanexo"],
+                    ciclo=cef_context["ciclo"],
+                    estado=CefAlumnoCef.Estado.ACTIVO,
+                ).select_related("alumno", "ciclo")
+            )
         except (OperationalError, ProgrammingError):
             alumnos_bajas_ciclo = []
             alumnos_historial = []
             inscripciones_historicas = []
+            alumnos_activos_ciclo = []
             alumnos_banco_tabla_pendiente = True
         alumnos_historicos_ids = {
             periodo.alumno_id for periodo in alumnos_historial
         } | {
             inscripcion.alumno_id for inscripcion in inscripciones_historicas
         }
-        alumnos_ids = alumnos_historicos_ids | {
-            periodo.alumno_id for periodo in alumnos_bajas_ciclo
+        alumnos_activos_actuales = {
+            periodo.alumno_id: periodo for periodo in alumnos_activos_ciclo
         }
-        alumnos_activos_actuales = {}
+        alumnos_ids = (
+            alumnos_historicos_ids
+            | {periodo.alumno_id for periodo in alumnos_bajas_ciclo}
+            | set(alumnos_activos_actuales)
+        )
         inscripciones_activas_por_alumno = {}
         inscripciones_periodos_por_alumno = {}
         grupos_disponibles = []
         if alumnos_ids:
-            alumnos_activos_actuales = {
-                periodo.alumno_id: periodo
-                for periodo in CefAlumnoCef.objects.filter(
-                    cueanexo=cef_context["cueanexo"],
-                    ciclo=cef_context["ciclo"],
-                    alumno_id__in=alumnos_ids,
-                    estado=CefAlumnoCef.Estado.ACTIVO,
-                ).select_related("alumno", "ciclo")
-            }
             try:
                 inscripciones_periodos = _inscripciones_periodos_alumnos(
                     cef_context,
@@ -528,14 +765,21 @@ def _alumnos_listado_context(cef_context, vista="actuales"):
                     periodo.pk,
                 ),
             )
-            periodo_resumen.historial_periodos = sorted(
+            periodos_cronologicos = sorted(
                 periodos,
                 key=lambda periodo: (
                     periodo.ciclo.anio,
                     periodo.fecha_alta,
                     periodo.pk,
                 ),
-                reverse=True,
+            )
+            for numero_periodo, movimiento in enumerate(
+                periodos_cronologicos,
+                start=1,
+            ):
+                movimiento.numero_periodo = numero_periodo
+            periodo_resumen.historial_periodos = list(
+                reversed(periodos_cronologicos)
             )
             _vincular_inscripciones_a_periodos(
                 periodo_resumen.historial_periodos,
@@ -630,8 +874,8 @@ def _alumnos_listado_context(cef_context, vista="actuales"):
             getattr(item.alumno, "fecha_nacimiento", None)
         )
         item.url_editar_alumno = _url_carga_alumno(
-            item.alumno_cuil_snapshot or getattr(item.alumno, "cuil", ""),
             url_alumnos,
+            alumno=item.alumno,
         )
 
     return {
@@ -766,8 +1010,17 @@ def alumnos(request):
         request.GET.get("vista") or request.POST.get("vista")
     )
     alumno = None
+    persona_sge = None
+    tipo_doc_buscado = "1"
+    nro_doc_buscado = ""
     cuil_buscado = ""
+    apellidos_buscados = ""
+    nombres_buscados = ""
+    fecha_nacimiento_buscada = ""
+    sexo_buscado = ""
     cuil_error = ""
+    busqueda_sin_identidad = False
+    busqueda_sin_documento_realizada = False
     alumno_en_banco = False
     abrir_modal = request.GET.get("abrir_modal_alumno") == "1"
     baja_modal_alumno = None
@@ -856,16 +1109,68 @@ def alumnos(request):
 
         busqueda_form = CefBusquedaAlumnoForm(request.POST)
         abrir_modal = True
+        tipo_doc_buscado = request.POST.get("tipo_doc") or "1"
+        nro_doc_buscado = (request.POST.get("nro_doc") or "").strip().upper()
+        cuil_buscado = _solo_digitos(request.POST.get("cuil"))
 
-        if busqueda_form.is_valid():
+        alumno_id_post = request.POST.get("alumno_id")
+        if alumno_id_post:
+            alumno = _alumno_por_id(alumno_id_post)
+            if not alumno:
+                cuil_error = "El alumno seleccionado ya no existe o no es válido."
+        elif busqueda_form.is_valid():
+            tipo_doc = busqueda_form.cleaned_data["tipo_doc_obj"]
+            tipo_doc_buscado = str(tipo_doc.pk)
+            nro_doc_buscado = busqueda_form.cleaned_data["nro_doc"]
             cuil_buscado = busqueda_form.cleaned_data["cuil"]
-            alumno = _buscar_alumno(cuil_buscado)
+            busqueda_sin_identidad = busqueda_form.cleaned_data.get(
+                "busqueda_sin_identidad",
+                False,
+            )
+            if busqueda_sin_identidad:
+                apellidos_buscados = busqueda_form.cleaned_data["apellidos"]
+                nombres_buscados = busqueda_form.cleaned_data["nombres"]
+                fecha_nacimiento_buscada = busqueda_form.cleaned_data["fecha_nacimiento"]
+                sexo_buscado = busqueda_form.cleaned_data["sexo"]
+                try:
+                    alumno = _buscar_alumno_sin_documento(
+                        apellidos=apellidos_buscados,
+                        nombres=nombres_buscados,
+                        tipo_doc=tipo_doc,
+                        fecha_nacimiento=fecha_nacimiento_buscada,
+                        sexo=sexo_buscado,
+                    )
+                    busqueda_sin_documento_realizada = True
+                except ValidationError as exc:
+                    cuil_error = "; ".join(exc.messages)
+            else:
+                try:
+                    alumno, persona_sge = _resolver_alumno_o_sge(
+                        tipo_doc=tipo_doc,
+                        nro_doc=nro_doc_buscado,
+                        cuil=cuil_buscado,
+                    )
+                except ValidationError as exc:
+                    cuil_error = "; ".join(exc.messages)
         else:
-            cuil_buscado = _solo_digitos(request.POST.get("cuil"))
             cuil_error = _errores_form(busqueda_form)
 
         if not alumno:
-            messages.error(request, "Primero buscá un alumno existente por CUIL.")
+            if busqueda_sin_identidad and not cuil_error:
+                messages.info(
+                    request,
+                    "No se encontró un alumno ya cargado con esos datos.",
+                )
+            elif persona_sge and not cuil_error:
+                messages.info(
+                    request,
+                    "Alumno encontrado. Complete los datos faltantes antes de incorporarlo a CEF.",
+                )
+            else:
+                messages.error(
+                    request,
+                    cuil_error or "Primero buscá y seleccioná un alumno existente.",
+                )
         elif not cef_context["puede_operar"]:
             messages.error(
                 request,
@@ -890,12 +1195,12 @@ def alumnos(request):
                 if tabla_pendiente:
                     messages.error(request, MSG_BANCO_ALUMNOS_PENDIENTE)
                 elif creado:
-                    messages.success(request, "Alumno agregado al banco del CEF.")
+                    messages.success(request, "Alumno agregado al banco de alumnos del CEF.")
                     return redirect(_url_alumnos(cef_context))
                 else:
                     messages.info(
                         request,
-                        "Ese alumno ya está activo en el banco de este CEF y ciclo.",
+                        "Ese alumno ya está activo en el banco de alumnos de este CEF y ciclo.",
                     )
             except (IntegrityError, ValidationError):
                 messages.error(
@@ -903,15 +1208,67 @@ def alumnos(request):
                     "No se pudo agregar el alumno al banco. Verificá que no exista ya activo para este CEF y ciclo.",
                 )
     else:
-        busqueda_form = CefBusquedaAlumnoForm(
-            request.GET if request.GET.get("cuil") else None
+        busqueda_solicitada = bool(
+            request.GET.get("alumno_id")
+            or request.GET.get("tipo_doc")
+            or request.GET.get("nro_doc")
+            or request.GET.get("cuil")
+            or request.GET.get("apellidos")
+            or request.GET.get("nombres")
+            or request.GET.get("fecha_nacimiento")
+            or request.GET.get("sexo")
         )
+        busqueda_form = CefBusquedaAlumnoForm(
+            request.GET if busqueda_solicitada else None
+        )
+        tipo_doc_buscado = request.GET.get("tipo_doc") or "1"
+        nro_doc_buscado = (request.GET.get("nro_doc") or "").strip().upper()
+        cuil_buscado = _solo_digitos(request.GET.get("cuil"))
+        apellidos_buscados = (request.GET.get("apellidos") or "").strip()
+        nombres_buscados = (request.GET.get("nombres") or "").strip()
+        fecha_nacimiento_buscada = (request.GET.get("fecha_nacimiento") or "").strip()
+        sexo_buscado = (request.GET.get("sexo") or "").strip()
 
-        if busqueda_form.is_valid():
+        alumno_id_get = request.GET.get("alumno_id")
+        if alumno_id_get:
+            alumno = _alumno_por_id(alumno_id_get)
+            if not alumno:
+                cuil_error = "El alumno seleccionado ya no existe o no es válido."
+        elif busqueda_solicitada and busqueda_form.is_valid():
+            tipo_doc = busqueda_form.cleaned_data["tipo_doc_obj"]
+            tipo_doc_buscado = str(tipo_doc.pk)
+            nro_doc_buscado = busqueda_form.cleaned_data["nro_doc"]
             cuil_buscado = busqueda_form.cleaned_data["cuil"]
-            alumno = _buscar_alumno(cuil_buscado)
-        elif request.GET.get("cuil"):
-            cuil_buscado = _solo_digitos(request.GET.get("cuil"))
+            busqueda_sin_identidad = busqueda_form.cleaned_data.get(
+                "busqueda_sin_identidad",
+                False,
+            )
+            if busqueda_sin_identidad:
+                apellidos_buscados = busqueda_form.cleaned_data["apellidos"]
+                nombres_buscados = busqueda_form.cleaned_data["nombres"]
+                fecha_nacimiento_buscada = busqueda_form.cleaned_data["fecha_nacimiento"]
+                sexo_buscado = busqueda_form.cleaned_data["sexo"]
+                try:
+                    alumno = _buscar_alumno_sin_documento(
+                        apellidos=apellidos_buscados,
+                        nombres=nombres_buscados,
+                        tipo_doc=tipo_doc,
+                        fecha_nacimiento=fecha_nacimiento_buscada,
+                        sexo=sexo_buscado,
+                    )
+                    busqueda_sin_documento_realizada = True
+                except ValidationError as exc:
+                    cuil_error = "; ".join(exc.messages)
+            else:
+                try:
+                    alumno, persona_sge = _resolver_alumno_o_sge(
+                        tipo_doc=tipo_doc,
+                        nro_doc=nro_doc_buscado,
+                        cuil=cuil_buscado,
+                    )
+                except ValidationError as exc:
+                    cuil_error = "; ".join(exc.messages)
+        elif busqueda_solicitada:
             cuil_error = _errores_form(busqueda_form)
 
         if request.GET.get("abrir_modal_baja") == "1":
@@ -920,7 +1277,17 @@ def alumnos(request):
                 request.GET.get("alumno_banco_id"),
             )
 
-    next_url = _url_modal_alumnos(cef_context, cuil_buscado)
+    next_url = _url_modal_alumnos(
+        cef_context,
+        alumno_id=alumno.pk if alumno else "",
+        tipo_doc=tipo_doc_buscado,
+        nro_doc=nro_doc_buscado,
+        cuil=cuil_buscado,
+        apellidos=apellidos_buscados,
+        nombres=nombres_buscados,
+        fecha_nacimiento=fecha_nacimiento_buscada,
+        sexo=sexo_buscado,
+    )
     url_alumnos = _url_alumnos(cef_context)
     if alumno and not alumno_en_banco:
         try:
@@ -932,12 +1299,34 @@ def alumnos(request):
         {
             "busqueda_form": busqueda_form,
             "alumno": alumno,
-            "alumno_row": _alumno_row(alumno),
+            "alumno_row": _alumno_row(alumno) or _persona_sge_row(persona_sge),
+            "alumno_desde_sge": bool(persona_sge and not alumno),
             "alumno_en_banco": alumno_en_banco,
+            "tipo_doc_buscado": tipo_doc_buscado,
+            "nro_doc_buscado": nro_doc_buscado,
             "cuil_buscado": cuil_buscado,
+            "apellidos_buscados": apellidos_buscados,
+            "nombres_buscados": nombres_buscados,
+            "fecha_nacimiento_buscada": fecha_nacimiento_buscada,
+            "sexo_buscado": sexo_buscado,
             "cuil_error": cuil_error,
-            "url_carga_alumno": _url_carga_alumno(cuil_buscado, next_url),
-            "url_editar_alumno": _url_carga_alumno(cuil_buscado, next_url),
+            "busqueda_sin_identidad": busqueda_sin_identidad,
+            "busqueda_sin_documento_realizada": busqueda_sin_documento_realizada,
+            "url_carga_alumno": _url_carga_alumno(
+                next_url,
+                tipo_doc=tipo_doc_buscado,
+                nro_doc=nro_doc_buscado,
+                cuil=cuil_buscado,
+                apellidos=apellidos_buscados,
+                nombres=nombres_buscados,
+                fecha_nacimiento=fecha_nacimiento_buscada,
+                sexo=sexo_buscado,
+            ),
+            "url_editar_alumno": (
+                _url_carga_alumno(next_url, alumno=alumno)
+                if alumno
+                else ""
+            ),
             "modal_alumno_abierto": abrir_modal,
             "modal_action_url": _url_modal_alumnos(cef_context),
             "modal_tiene_grupo": False,

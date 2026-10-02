@@ -2,7 +2,7 @@
 "use strict";
 
 (() => {
-    const VERSION = "20260927.1";
+    const VERSION = "20261002.3";
     const jq = () => window.jQuery;
     const hasSelect2 = () => Boolean(jq() && jq().fn && jq().fn.select2);
 
@@ -131,7 +131,10 @@
             form.dataset.bnhVersion = VERSION;
 
             const field = name => form.querySelector(
-                `[name="${name}"], [name="actividad-${name}"], [name="persona-${name}"]`
+                `[name="${name}"], ` +
+                `[name="actividad-${name}"], ` +
+                `[name="persona-${name}"], ` +
+                `[name$="-${name}"]`
             );
             const value = name => field(name)?.value || "";
             const personalTypeCode = () => Number(value("tipo_personal") || 0);
@@ -512,6 +515,7 @@
             let curricularPending = false;
             let localityPending = false;
             let conditionPending = false;
+            let ceicNoAplica = false;
 
             const status = document.createElement("div");
             status.className = "alert alert-info mt-3";
@@ -543,8 +547,11 @@
                 const curricularFields = [
                     "modalidad_curricular",
                     "nivel_curricular",
+                    "multiplan",
                     "titulacion",
+                    "titulaciones_multiplan",
                     "espacio_curricular",
+                    "tipo_ubicacion",
                     "grado_anio",
                     "secciones"
                 ];
@@ -571,7 +578,7 @@
                 setDisabled("niveles", !value("modalidad") || cargoPending);
                 setDisabled(
                     "ceic",
-                    cargoPending || (!nonTeaching() && !value("niveles"))
+                    ceicNoAplica || cargoPending || (!nonTeaching() && !value("niveles"))
                 );
 
                 // Circuito curricular
@@ -597,6 +604,43 @@
                     "secciones",
                     hideCurricular || curricularPending || !value("nivel_curricular")
                 );
+                setDisabled("tipo_ubicacion", hideCurricular || curricularPending || !value("nivel_curricular"));
+                setDisabled("multiplan", hideCurricular || curricularPending || !value("nivel_curricular"));
+                setDisabled("titulaciones_multiplan", hideCurricular || curricularPending || !value("nivel_curricular") || !isMultiplan());
+
+                const multi = isMultiplan();
+                setVisible("titulacion", !hideCurricular && !multi);
+                setVisible("titulaciones_multiplan", !hideCurricular && multi);
+                const isMultipleLocation = value("tipo_ubicacion") === "MULTIPLE";
+                const extraBox = form.querySelector("[data-ubicaciones-extra]");
+                if (extraBox) extraBox.hidden = hideCurricular || !isMultipleLocation;
+                // En sección múltiple la ubicación se edita desde la grilla repetible.
+                // Los campos históricos permanecen activos pero ocultos y se sincronizan
+                // con la primera fila para mantener compatibilidad e id_puesto.
+                ["grado_anio", "secciones"].forEach(name => {
+                    const input = field(name);
+                    if (!input) return;
+                    const wrapper = input.closest("[data-field]");
+                    if (wrapper) wrapper.hidden = hideCurricular || isMultipleLocation;
+                });
+
+                // TURNO:
+                // - NO DOCENTE: siempre visible y habilitado.
+                // - DOCENTE, sección única: visible.
+                // - DOCENTE, sección múltiple: se edita en la grilla repetible.
+                const turnoInput = field("turno");
+                if (turnoInput) {
+                    const turnoWrapper = turnoInput.closest("[data-field]");
+                    if (turnoWrapper) {
+                        turnoWrapper.hidden = !hideCurricular && isMultipleLocation;
+                    }
+                }
+
+                setDisabled(
+                    "turno",
+                    !hideCurricular
+                    && (curricularPending || !value("nivel_curricular"))
+                );
 
                 setDisabled(
                     "cond_actividad",
@@ -605,6 +649,164 @@
 
                 setDisabled("localidad", !value("provincia") || localityPending);
             }
+
+            function isMultiplan() {
+                const el = field("multiplan");
+                if (!el) return false;
+                if (el.type === "checkbox") return el.checked;
+                return ["1", "true", "True", "on"].includes(String(el.value));
+            }
+
+            function selectedMultiplanTitles() {
+                const el = field("titulaciones_multiplan");
+                if (!el) return [];
+                return Array.from(el.selectedOptions || []).map(o => o.value).filter(Boolean);
+            }
+
+            function turnOptions(selected = "") {
+                const source = field("turno");
+                if (!source) return "";
+                return Array.from(source.options).map(opt =>
+                    `<option value="${opt.value}" ${String(opt.value) === String(selected) ? "selected" : ""}>${opt.textContent}</option>`
+                ).join("");
+            }
+
+            function catalogOptions(name, selected = "") {
+                const source = field(name);
+                if (!source) return "";
+                return Array.from(source.options).filter(o => o.value).map(opt =>
+                    `<option value="${opt.value}" ${String(opt.value) === String(selected) ? "selected" : ""}>${opt.textContent}</option>`
+                ).join("");
+            }
+
+            function getMultipleLocationRows() {
+                return Array.from(form.querySelectorAll("[data-ubicacion-row]")).map(row => ({
+                    grado: row.querySelector("[data-u-grado]")?.value || "",
+                    seccion: row.querySelector("[data-u-seccion]")?.value || "",
+                    turno: row.querySelector("[data-u-turno]")?.value || ""
+                }));
+            }
+
+            function getCompleteMultipleLocations() {
+                return getMultipleLocationRows().filter(x => x.grado && x.seccion && x.turno);
+            }
+
+            function syncPrimaryLocationFromFirstRow() {
+                if (value("tipo_ubicacion") !== "MULTIPLE") return;
+                const first = getMultipleLocationRows()[0];
+                if (!first) return;
+                if (field("grado_anio")) field("grado_anio").value = first.grado || "";
+                if (field("secciones")) field("secciones").value = first.seccion || "";
+                if (field("turno")) field("turno").value = first.turno || "";
+            }
+
+            function syncLocations() {
+                const hidden = field("ubicaciones_json");
+                if (!hidden) return;
+                let items = [];
+
+                if (value("tipo_ubicacion") === "MULTIPLE") {
+                    syncPrimaryLocationFromFirstRow();
+                    items = getCompleteMultipleLocations();
+                } else {
+                    const primary = {
+                        grado: value("grado_anio"),
+                        seccion: value("secciones"),
+                        turno: value("turno")
+                    };
+                    if (primary.grado && primary.seccion && primary.turno) items.push(primary);
+                }
+                hidden.value = JSON.stringify(items);
+            }
+
+            function addLocationRow(data = {}) {
+                const list = form.querySelector("[data-ubicaciones-list]");
+                if (!list) return;
+                const row = document.createElement("div");
+                row.className = "row g-2 align-items-end mb-2 p-2 border rounded bg-white";
+                row.setAttribute("data-ubicacion-row", "1");
+                row.innerHTML = `
+                    <div class="col-md-4"><label class="form-label small">Grado / Año</label><select class="form-select" data-u-grado><option value="">Seleccione</option>${catalogOptions("grado_anio", data.grado)}</select></div>
+                    <div class="col-md-3"><label class="form-label small">Sección</label><select class="form-select" data-u-seccion><option value="">Seleccione</option>${catalogOptions("secciones", data.seccion)}</select></div>
+                    <div class="col-md-4"><label class="form-label small">Turno</label><select class="form-select" data-u-turno>${turnOptions(data.turno)}</select></div>
+                    <div class="col-md-1"><button type="button" class="btn btn-outline-danger w-100" data-remove-ubicacion aria-label="Quitar ubicación">×</button></div>`;
+                list.appendChild(row);
+
+                row.querySelector("[data-remove-ubicacion]")?.addEventListener("click", () => {
+                    const rows = form.querySelectorAll("[data-ubicacion-row]");
+                    if (value("tipo_ubicacion") === "MULTIPLE" && rows.length <= 2) {
+                        message("Una sección múltiple debe conservar al menos dos componentes.");
+                        return;
+                    }
+                    row.remove();
+                    syncLocations();
+                });
+                row.querySelectorAll("select").forEach(el => el.addEventListener("change", () => {
+                    message("");
+                    syncLocations();
+                }));
+            }
+
+            function ensureMultipleLocationRows() {
+                if (value("tipo_ubicacion") !== "MULTIPLE") return;
+                const list = form.querySelector("[data-ubicaciones-list]");
+                if (!list) return;
+                const existing = list.querySelectorAll("[data-ubicacion-row]");
+                if (existing.length) return;
+
+                addLocationRow({
+                    grado: value("grado_anio"),
+                    seccion: value("secciones"),
+                    turno: value("turno")
+                });
+                // Se crea una segunda fila vacía para dejar explícito que una sección
+                // múltiple requiere al menos dos componentes.
+                addLocationRow();
+                syncLocations();
+            }
+
+            function rebuildExtraLocationOptions() {
+                if (value("tipo_ubicacion") !== "MULTIPLE") return;
+                const saved = getMultipleLocationRows();
+                const list = form.querySelector("[data-ubicaciones-list]");
+                if (list) list.innerHTML = "";
+                if (saved.length) saved.forEach(addLocationRow);
+                else ensureMultipleLocationRows();
+                syncLocations();
+            }
+
+            function restoreLocations() {
+                const hidden = field("ubicaciones_json");
+                let items = [];
+                if (hidden?.value) {
+                    try {
+                        const parsed = JSON.parse(hidden.value);
+                        if (Array.isArray(parsed)) items = parsed;
+                    } catch (_) {}
+                }
+
+                if (value("tipo_ubicacion") === "MULTIPLE") {
+                    const list = form.querySelector("[data-ubicaciones-list]");
+                    if (list) list.innerHTML = "";
+                    if (items.length) items.forEach(addLocationRow);
+                    else ensureMultipleLocationRows();
+                    syncLocations();
+                    return;
+                }
+
+                if (items.length) {
+                    const first = items[0];
+                    if (first.grado) field("grado_anio").value = String(first.grado);
+                    if (first.seccion) field("secciones").value = String(first.seccion);
+                    if (first.turno) field("turno").value = String(first.turno);
+                }
+                syncLocations();
+            }
+
+            form.querySelector("[data-add-ubicacion]")?.addEventListener("click", () => {
+                addLocationRow();
+                syncLocations();
+            });
 
             // ============================================================
             // CIRCUITO CARGO / CEIC (LEGACY)
@@ -653,21 +855,33 @@
                     if (id !== cargoRequestId) return;
 
                     if (nonTeaching()) {
+                        ceicNoAplica = false;
                         // Modalidad/nivel legacy siguen funcionando, pero NO determinan el CEIC.
                         if (value("modalidad")) {
                             fillOptions(field("niveles"), data.niveles, "c_nivel", "descrip_nivel", selected.nivel);
                         }
-                        // Regla histórica: CEIC 1023-1025.
+                        // Regla jurisdiccional: CEIC 1023-1025.
                         fillOptions(field("ceic"), data.ceic, "c_ceic", "descripcion", selected.ceic);
                     } else {
                         if (value("modalidad")) {
                             fillOptions(field("niveles"), data.niveles, "c_nivel", "descrip_nivel", selected.nivel);
                         }
                         if (selected.nivel || value("niveles")) {
-                            fillOptions(field("ceic"), data.ceic, "c_ceic", "descripcion", selected.ceic);
+                            ceicNoAplica = data.ceic_aplica === false;
+                            if (ceicNoAplica) {
+                                fillOptions(field("ceic"), [], "c_ceic", "descripcion", "", "NO CORRESPONDE");
+                            } else {
+                                fillOptions(field("ceic"), data.ceic, "c_ceic", "descripcion", selected.ceic);
+                            }
+                        } else {
+                            ceicNoAplica = false;
                         }
                     }
-                    message("");
+                    message(
+                        ceicNoAplica
+                            ? "Para esta combinación Modalidad + Nivel, Cargo / CEIC no corresponde."
+                            : ""
+                    );
                 } catch (error) {
                     if (id === cargoRequestId && error.name !== "AbortError") message(error.message);
                 } finally {
@@ -696,20 +910,21 @@
                 const selected = {
                     nivel: value("nivel_curricular"),
                     titulacion: value("titulacion"),
+                    titulaciones: selectedMultiplanTitles(),
                     espacio: value("espacio_curricular"),
                     grado: value("grado_anio"),
                     seccion: value("secciones")
                 };
 
                 if (source === "modalidad_curricular") {
-                    ["nivel_curricular", "titulacion", "espacio_curricular", "grado_anio", "secciones"].forEach(clear);
+                    ["nivel_curricular", "titulacion", "titulaciones_multiplan", "espacio_curricular", "grado_anio", "secciones"].forEach(clear);
                     selected.nivel = "";
                     selected.titulacion = "";
                     selected.espacio = "";
                     selected.grado = "";
                     selected.seccion = "";
                 } else if (source === "nivel_curricular") {
-                    ["titulacion", "espacio_curricular", "grado_anio", "secciones"].forEach(clear);
+                    ["titulacion", "titulaciones_multiplan", "espacio_curricular", "grado_anio", "secciones"].forEach(clear);
                     selected.titulacion = "";
                     selected.espacio = "";
                     selected.grado = "";
@@ -736,6 +951,7 @@
                     url.searchParams.set("modalidad_curricular", value("modalidad_curricular"));
                     url.searchParams.set("nivel_curricular", selected.nivel);
                     url.searchParams.set("titulacion", selected.titulacion);
+                    if (isMultiplan()) url.searchParams.set("titulaciones", selected.titulaciones.join(","));
 
                     const data = await getJson(url, current);
                     if (id !== curricularRequestId) return;
@@ -757,6 +973,18 @@
                         selected.titulacion,
                         "Seleccione titulación"
                     );
+                    const multiSelect = field("titulaciones_multiplan");
+                    if (multiSelect) {
+                        const selectedSet = new Set(selected.titulaciones.map(String));
+                        multiSelect.innerHTML = "";
+                        data.titulaciones.forEach(item => {
+                            const opt = document.createElement("option");
+                            opt.value = String(item.id_titulacion);
+                            opt.textContent = item.descripcion;
+                            opt.selected = selectedSet.has(opt.value);
+                            multiSelect.appendChild(opt);
+                        });
+                    }
 
                     const sourceField = field("titulacion_fuente");
                     if (sourceField) sourceField.value = data.fuente_titulacion || "";
@@ -786,6 +1014,7 @@
                         "Seleccione sección"
                     );
 
+                    rebuildExtraLocationOptions();
                     message("");
                 } catch (error) {
                     if (id === curricularRequestId && error.name !== "AbortError") message(error.message);
@@ -800,16 +1029,37 @@
             // ============================================================
             // CONDICIÓN DE ACTIVIDAD
             // ============================================================
-            async function loadConditions() {
+            async function loadConditions({ force = false } = {}) {
+                const conditionField = field("cond_actividad");
+
+                /*
+                 * Después de un POST inválido Django vuelve a renderizar el
+                 * formulario con la condición ya seleccionada y con su queryset
+                 * correcto. En ese caso NO debemos vaciarla ni iniciar otra
+                 * petición AJAX, porque puede tapar el verdadero error del POST
+                 * con el mensaje "Cargando condiciones de actividad…".
+                 */
+                if (
+                    !force
+                    && conditionField
+                    && value("cond_actividad")
+                    && conditionField.options
+                    && conditionField.options.length > 1
+                ) {
+                    conditionPending = false;
+                    enable();
+                    return;
+                }
+
                 conditionController?.abort();
                 const current = new AbortController();
                 conditionController = current;
 
                 const selected = value("cond_actividad");
-                clear("cond_actividad");
 
                 if (!value("tipo_personal") || !value("sit_revista")) {
                     conditionPending = false;
+                    clear("cond_actividad");
                     enable();
                     return;
                 }
@@ -820,34 +1070,59 @@
 
                 try {
                     if (!form.dataset.conditionsUrl) {
-                        throw new Error("Falta data-conditions-url.");
+                        throw new Error(
+                            "No está configurado el catálogo de condiciones de actividad."
+                        );
                     }
 
                     const url = new URL(
                         form.dataset.conditionsUrl,
                         window.location.origin
                     );
-                    url.searchParams.set("tipo_personal", value("tipo_personal"));
-                    url.searchParams.set("sit_revista", value("sit_revista"));
+                    url.searchParams.set(
+                        "tipo_personal",
+                        value("tipo_personal")
+                    );
+                    url.searchParams.set(
+                        "sit_revista",
+                        value("sit_revista")
+                    );
 
                     const data = await getJson(url, current);
                     if (conditionController !== current) return;
 
+                    const condiciones = Array.isArray(data.condiciones)
+                        ? data.condiciones
+                        : [];
+
                     fillOptions(
-                        field("cond_actividad"),
-                        data.condiciones || [],
+                        conditionField,
+                        condiciones,
                         "id",
                         "label",
                         selected,
-                        "Seleccione condición de actividad"
+                        condiciones.length
+                            ? "Seleccione condición de actividad"
+                            : "Sin condiciones disponibles"
                     );
-                    message("");
+
+                    if (!condiciones.length) {
+                        message(
+                            data.warning
+                            || "No existen condiciones de actividad para la combinación seleccionada."
+                        );
+                    } else {
+                        message("");
+                    }
                 } catch (error) {
                     if (
                         conditionController === current
                         && error.name !== "AbortError"
                     ) {
-                        message(error.message);
+                        message(
+                            "No se pudieron cargar las condiciones de actividad. "
+                            + error.message
+                        );
                     }
                 } finally {
                     if (conditionController === current) {
@@ -904,6 +1179,9 @@
                     "modalidad_curricular",
                     "nivel_curricular",
                     "titulacion",
+                    "tipo_ubicacion",
+                    "multiplan",
+                    "titulaciones_multiplan",
                     "provincia"
                 ];
                 const name = names.find(key => field(key) === target);
@@ -924,17 +1202,49 @@
                         updateCategoryUI();
                         loadCargoCatalogs("tipo_personal");
                         loadCurricularCatalogs("tipo_personal");
-                        loadConditions();
+                        loadConditions({ force: true });
                         return;
                     }
                     if (currentName === "sit_revista") {
-                        loadConditions();
+                        loadConditions({ force: true });
                         return;
                     }
                     if (currentName === "modalidad" || currentName === "niveles") {
                         loadCargoCatalogs(currentName);
                         return;
                     }
+
+                    // Sección única / múltiple: solo cambia la interfaz.
+                    // No recargar catálogos curriculares.
+                    if (currentName === "tipo_ubicacion") {
+                        const isMultipleLocation = value("tipo_ubicacion") === "MULTIPLE";
+                        const extraBox = form.querySelector("[data-ubicaciones-extra]");
+                        if (extraBox) extraBox.hidden = !isMultipleLocation;
+
+                        ["grado_anio", "secciones", "turno"].forEach(name => {
+                            const input = field(name);
+                            const wrapper = input?.closest("[data-field]");
+                            if (wrapper) wrapper.hidden = isMultipleLocation;
+                        });
+
+                        if (isMultipleLocation) {
+                            ensureMultipleLocationRows();
+                        } else {
+                            const list = form.querySelector("[data-ubicaciones-list]");
+                            if (list) list.innerHTML = "";
+                        }
+
+                        enable();
+                        syncLocations();
+                        return;
+                    }
+
+                    // Estos dos campos tienen listeners específicos que recargan
+                    // únicamente lo necesario para Multiplan.
+                    if (currentName === "multiplan" || currentName === "titulaciones_multiplan") {
+                        return;
+                    }
+
                     loadCurricularCatalogs(currentName);
                 });
             }
@@ -999,8 +1309,68 @@
             enable();
 
             if (value("modalidad") || nonTeaching()) loadCargoCatalogs("inicio");
+            field("multiplan")?.addEventListener("change", () => {
+                const multi = isMultiplan();
+                if (multi && value("titulacion")) {
+                    const multiSelect = field("titulaciones_multiplan");
+                    Array.from(multiSelect?.options || []).forEach(o => { o.selected = o.value === value("titulacion"); });
+                }
+                clear("espacio_curricular");
+                enable();
+                loadCurricularCatalogs("multiplan");
+            });
+            field("titulaciones_multiplan")?.addEventListener("change", () => {
+                const ids = selectedMultiplanTitles();
+                if (ids.length) field("titulacion").value = ids[0];
+                clear("espacio_curricular");
+                loadCurricularCatalogs("titulaciones_multiplan");
+            });
+            field("tipo_ubicacion")?.addEventListener("change", () => {
+                const isMultipleLocation = value("tipo_ubicacion") === "MULTIPLE";
+
+                // Actualización inmediata de la interfaz. No depende de AJAX ni de
+                // la recarga de catálogos curriculares.
+                const extraBox = form.querySelector("[data-ubicaciones-extra]");
+                if (extraBox) extraBox.hidden = !isMultipleLocation;
+
+                ["grado_anio", "secciones"].forEach(name => {
+                    const input = field(name);
+                    const wrapper = input?.closest("[data-field]");
+                    if (wrapper) wrapper.hidden = isMultipleLocation;
+                });
+
+                const turnoInput = field("turno");
+                const turnoWrapper = turnoInput?.closest("[data-field]");
+                if (turnoWrapper) {
+                    turnoWrapper.hidden = !nonTeaching() && isMultipleLocation;
+                }
+
+                if (isMultipleLocation) {
+                    ensureMultipleLocationRows();
+                } else {
+                    const list = form.querySelector("[data-ubicaciones-list]");
+                    if (list) list.innerHTML = "";
+                }
+
+                enable();
+                syncLocations();
+            });
+            ["grado_anio", "secciones", "turno"].forEach(name => field(name)?.addEventListener("change", syncLocations));
+            form.addEventListener("submit", () => {
+                const ids = selectedMultiplanTitles();
+                if (isMultiplan() && ids.length) field("titulacion").value = ids[0];
+                syncLocations();
+            });
+
             if (!nonTeaching() && value("modalidad_curricular")) loadCurricularCatalogs("inicio");
-            if (value("tipo_personal") && value("sit_revista")) loadConditions();
+            setTimeout(() => { restoreLocations(); enable(); }, 0);
+            if (
+                value("tipo_personal")
+                && value("sit_revista")
+                && !value("cond_actividad")
+            ) {
+                loadConditions();
+            }
         });
 
         document.querySelectorAll("form").forEach(form => {

@@ -3,7 +3,6 @@
 import re
 from urllib.parse import urlencode
 
-from django.apps import apps
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -11,12 +10,13 @@ from django.db.utils import OperationalError, ProgrammingError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
-from django.urls import NoReverseMatch, reverse
+from django.urls import reverse
 
 from .forms import CefBajaMotivoForm, CefBusquedaAlumnoForm, CefInscripcionForm
 from .models import CefGrupo, CefInscripcion
 from .permisos import cef_required
 from .services import (
+    ConflictoHorarioInscripcionError,
     asegurar_alumno_banco_activo,
     crear_inscripcion_activa,
     dar_baja_inscripcion,
@@ -24,7 +24,15 @@ from .services import (
     validar_ciclo_escribible,
     validar_fecha_inscripcion_grupo,
 )
-from .views_alumnos import MSG_BANCO_ALUMNOS_PENDIENTE, _calcular_edad
+from .views_alumnos import (
+    MSG_BANCO_ALUMNOS_PENDIENTE,
+    _alumno_por_id,
+    _buscar_alumno_sin_documento,
+    _calcular_edad,
+    _persona_sge_row,
+    _resolver_alumno_o_sge,
+    _url_carga_alumno as _url_carga_alumno_base,
+)
 from .views_contexto import (
     contexto_base,
     normalizar_vista_cef,
@@ -52,10 +60,6 @@ def _is_ajax(request):
     return request.headers.get("x-requested-with") == "XMLHttpRequest"
 
 
-def _alumno_model():
-    return apps.get_model("bnhalumnos", "Alumno")
-
-
 def _grupo_seguro(grupo_id, cef_context):
     return get_object_or_404(
         CefGrupo.objects.filter(
@@ -74,6 +78,15 @@ def _dias_texto(grupo):
     )
 
 
+def _dias_horario_texto(dias):
+    dias = [str(dia).strip() for dia in dias if str(dia).strip()]
+    if not dias:
+        return "día sin informar"
+    if len(dias) == 1:
+        return dias[0]
+    return f"{', '.join(dias[:-1])} y {dias[-1]}"
+
+
 def _inscripciones_grupo(grupo):
     inscripciones = list(
         CefInscripcion.objects.filter(grupo=grupo)
@@ -85,10 +98,6 @@ def _inscripciones_grupo(grupo):
             getattr(inscripcion.alumno, "fecha_nacimiento", None)
         )
     return inscripciones
-
-
-def _buscar_alumno(cuil):
-    return _alumno_model().objects.filter(cuil=cuil).first()
 
 
 def _texto(valor):
@@ -116,20 +125,31 @@ def _alumno_row(alumno):
     }
 
 
-def _url_carga_alumno(cuil, next_url, return_label="Volver al grupo"):
-    try:
-        base = reverse("bnhalumnos:carga_alumno")
-    except NoReverseMatch:
-        return ""
-
-    params = {}
-    if cuil:
-        params["cuil"] = cuil
-    if next_url:
-        params["next"] = next_url
-    if return_label:
-        params["return_label"] = return_label
-    return f"{base}?{urlencode(params)}" if params else base
+def _url_carga_alumno(
+    next_url,
+    return_label="Volver al grupo",
+    *,
+    alumno=None,
+    tipo_doc="",
+    nro_doc="",
+    cuil="",
+    apellidos="",
+    nombres="",
+    fecha_nacimiento="",
+    sexo="",
+):
+    return _url_carga_alumno_base(
+        next_url,
+        return_label,
+        alumno=alumno,
+        tipo_doc=tipo_doc,
+        nro_doc=nro_doc,
+        cuil=cuil,
+        apellidos=apellidos,
+        nombres=nombres,
+        fecha_nacimiento=fecha_nacimiento,
+        sexo=sexo,
+    )
 
 
 def _url_modal_grupo(
@@ -139,6 +159,13 @@ def _url_modal_grupo(
     origen="cursos",
     destino="",
     *,
+    alumno_id="",
+    tipo_doc="",
+    nro_doc="",
+    apellidos="",
+    nombres="",
+    fecha_nacimiento="",
+    sexo="",
     vista_alumnos="actuales",
     vista_docentes="actuales",
 ):
@@ -157,8 +184,26 @@ def _url_modal_grupo(
         params["vista_alumnos"] = normalizar_vista_cef(vista_alumnos)
         params["vista_docentes"] = normalizar_vista_cef(vista_docentes)
     params["abrir_modal_alumno"] = "1"
+    if alumno_id:
+        params["alumno_id"] = getattr(alumno_id, "pk", alumno_id)
+    if tipo_doc:
+        params["tipo_doc"] = getattr(tipo_doc, "pk", tipo_doc)
+    if nro_doc:
+        params["nro_doc"] = nro_doc
     if cuil:
         params["cuil"] = cuil
+    if apellidos:
+        params["apellidos"] = apellidos
+    if nombres:
+        params["nombres"] = nombres
+    if fecha_nacimiento:
+        params["fecha_nacimiento"] = (
+            fecha_nacimiento.isoformat()
+            if hasattr(fecha_nacimiento, "isoformat")
+            else fecha_nacimiento
+        )
+    if sexo:
+        params["sexo"] = getattr(sexo, "pk", sexo)
     return f"{reverse('cef:inscripcion_grupo', kwargs={'grupo_id': grupo.pk})}?{urlencode(params)}"
 
 
@@ -192,9 +237,74 @@ def _url_gestionar_grupo(
     params["vista_alumnos"] = normalizar_vista_cef(vista_alumnos)
     params["vista_docentes"] = normalizar_vista_cef(vista_docentes)
     querystring = urlencode(params)
-    url = reverse("cef:gestionar_grupo", kwargs={"grupo_id": grupo.pk})
+    grupo_id = getattr(grupo, "pk", grupo)
+    url = reverse("cef:gestionar_grupo", kwargs={"grupo_id": grupo_id})
     url = f"{url}?{querystring}" if querystring else url
     return f"{url}#{ancla}" if ancla else url
+
+
+def _presentar_conflicto_horario(
+    exc,
+    grupo_destino,
+    cef_context,
+    origen,
+    *,
+    vista_alumnos,
+    vista_docentes,
+):
+    conflictos = []
+    alumno_nombre = ""
+    for conflicto in exc.conflictos:
+        if not alumno_nombre:
+            alumno_nombre = ", ".join(
+                parte
+                for parte in (
+                    conflicto["alumno_apellidos"].strip(),
+                    conflicto["alumno_nombres"].strip(),
+                )
+                if parte
+            )
+            if not alumno_nombre:
+                alumno_nombre = f"Alumno ID {conflicto['alumno_id']}"
+
+        numero = conflicto["numero"]
+        conflictos.append(
+            {
+                "actividad": conflicto["actividad"],
+                "numero": numero if numero not in (None, "") else "-",
+                "dias": _dias_horario_texto(conflicto["dias"]),
+                "hora_inicio": conflicto["hora_inicio"].strftime("%H:%M"),
+                "hora_fin": conflicto["hora_fin"].strftime("%H:%M"),
+                "url": _url_gestionar_grupo(
+                    conflicto["grupo_id"],
+                    cef_context,
+                    origen,
+                    "alumnos-curso",
+                    vista_alumnos=vista_alumnos,
+                    vista_docentes=vista_docentes,
+                ),
+            }
+        )
+
+    numero_destino = grupo_destino.numero
+    return {
+        "alumno_nombre": alumno_nombre,
+        "grupo_destino": {
+            "actividad": grupo_destino.actividad,
+            "numero": (
+                numero_destino
+                if numero_destino not in (None, "")
+                else "-"
+            ),
+            "dias": _dias_horario_texto(
+                item.dia_semana
+                for item in grupo_destino.dias_funcionamiento.all()
+            ),
+            "hora_inicio": grupo_destino.hora_inicio.strftime("%H:%M"),
+            "hora_fin": grupo_destino.hora_fin.strftime("%H:%M"),
+        },
+        "conflictos": conflictos,
+    }
 
 
 def _errores_form(form):
@@ -370,12 +480,22 @@ def inscripcion_grupo(request, grupo_id):
         }
     )
     alumno = None
+    persona_sge = None
     inscripcion_abierta = None
+    tipo_doc_buscado = "1"
+    nro_doc_buscado = ""
     cuil_buscado = ""
+    apellidos_buscados = ""
+    nombres_buscados = ""
+    fecha_nacimiento_buscada = ""
+    sexo_buscado = ""
     cuil_error = ""
+    busqueda_sin_identidad = False
+    busqueda_sin_documento_realizada = False
     abrir_modal = request.GET.get("abrir_modal_alumno") == "1"
     ajax_ok = False
     ajax_message = ""
+    conflicto_horario = None
 
     if request.method == "POST" and request.POST.get("accion") in {"baja_alumno", "alta_alumno"}:
         if request.POST.get("accion") == "alta_alumno":
@@ -406,6 +526,9 @@ def inscripcion_grupo(request, grupo_id):
     if request.method == "POST":
         busqueda_form = CefBusquedaAlumnoForm(request.POST)
         abrir_modal = True
+        tipo_doc_buscado = request.POST.get("tipo_doc") or "1"
+        nro_doc_buscado = (request.POST.get("nro_doc") or "").strip().upper()
+        cuil_buscado = _solo_digitos(request.POST.get("cuil"))
         fecha_inscripcion = None
         fecha_inscripcion_error = ""
         try:
@@ -416,17 +539,64 @@ def inscripcion_grupo(request, grupo_id):
         except ValidationError as exc:
             fecha_inscripcion_error = "; ".join(exc.messages)
 
-        if busqueda_form.is_valid():
+        alumno_id_post = request.POST.get("alumno_id")
+        if alumno_id_post:
+            alumno = _alumno_por_id(alumno_id_post)
+            if not alumno:
+                cuil_error = "El alumno seleccionado ya no existe o no es válido."
+        elif busqueda_form.is_valid():
+            tipo_doc = busqueda_form.cleaned_data["tipo_doc_obj"]
+            tipo_doc_buscado = str(tipo_doc.pk)
+            nro_doc_buscado = busqueda_form.cleaned_data["nro_doc"]
             cuil_buscado = busqueda_form.cleaned_data["cuil"]
-            alumno = _buscar_alumno(cuil_buscado)
+            busqueda_sin_identidad = busqueda_form.cleaned_data.get(
+                "busqueda_sin_identidad",
+                False,
+            )
+            if busqueda_sin_identidad:
+                apellidos_buscados = busqueda_form.cleaned_data["apellidos"]
+                nombres_buscados = busqueda_form.cleaned_data["nombres"]
+                fecha_nacimiento_buscada = busqueda_form.cleaned_data["fecha_nacimiento"]
+                sexo_buscado = busqueda_form.cleaned_data["sexo"]
+                try:
+                    alumno = _buscar_alumno_sin_documento(
+                        apellidos=apellidos_buscados,
+                        nombres=nombres_buscados,
+                        tipo_doc=tipo_doc,
+                        fecha_nacimiento=fecha_nacimiento_buscada,
+                        sexo=sexo_buscado,
+                    )
+                    busqueda_sin_documento_realizada = True
+                except ValidationError as exc:
+                    cuil_error = "; ".join(exc.messages)
+            else:
+                try:
+                    alumno, persona_sge = _resolver_alumno_o_sge(
+                        tipo_doc=tipo_doc,
+                        nro_doc=nro_doc_buscado,
+                        cuil=cuil_buscado,
+                    )
+                except ValidationError as exc:
+                    cuil_error = "; ".join(exc.messages)
         else:
-            cuil_buscado = _solo_digitos(request.POST.get("cuil"))
             cuil_error = _errores_form(busqueda_form)
 
         if not alumno:
-            ajax_message = "Primero buscá un alumno existente por CUIL."
-            if not _is_ajax(request):
-                messages.error(request, ajax_message)
+            if busqueda_sin_identidad and not cuil_error:
+                ajax_message = "No se encontró un alumno ya cargado con esos datos."
+                if not _is_ajax(request):
+                    messages.info(request, ajax_message)
+            elif persona_sge and not cuil_error:
+                ajax_message = (
+                    "Alumno encontrado. Complete los datos faltantes "
+                    "antes de poder inscribirlo en CEF."
+                )
+                if not _is_ajax(request):
+                    messages.info(request, ajax_message)
+            else:
+                ajax_message = cuil_error or "Primero buscá y seleccioná un alumno existente."
+                if not _is_ajax(request):
+                    messages.error(request, ajax_message)
         elif fecha_inscripcion_error:
             ajax_message = fecha_inscripcion_error
             if not _is_ajax(request):
@@ -457,7 +627,7 @@ def inscripcion_grupo(request, grupo_id):
                     if not _is_ajax(request):
                         messages.warning(
                             request,
-                            "No se pudo actualizar el banco de alumnos CEF, pero se continuará con la inscripción al grupo.",
+                            "No se pudo actualizar el banco de alumnos del CEF, pero se continuará con la inscripción al grupo.",
                         )
 
                 try:
@@ -482,6 +652,16 @@ def inscripcion_grupo(request, grupo_id):
                             if destino_gestionar
                             else inscripcion_grupo_url
                         )
+                except ConflictoHorarioInscripcionError as exc:
+                    ajax_message = "; ".join(exc.messages)
+                    conflicto_horario = _presentar_conflicto_horario(
+                        exc,
+                        grupo,
+                        cef_context,
+                        origen,
+                        vista_alumnos=vista_alumnos,
+                        vista_docentes=vista_docentes,
+                    )
                 except ValidationError as exc:
                     ajax_message = "; ".join(exc.messages)
                     if not _is_ajax(request):
@@ -491,21 +671,74 @@ def inscripcion_grupo(request, grupo_id):
                     if not _is_ajax(request):
                         messages.error(request, ajax_message)
     else:
-        busqueda_form = CefBusquedaAlumnoForm(
-            request.GET if request.GET.get("cuil") else None
+        busqueda_solicitada = bool(
+            request.GET.get("alumno_id")
+            or request.GET.get("tipo_doc")
+            or request.GET.get("nro_doc")
+            or request.GET.get("cuil")
+            or request.GET.get("apellidos")
+            or request.GET.get("nombres")
+            or request.GET.get("fecha_nacimiento")
+            or request.GET.get("sexo")
         )
+        busqueda_form = CefBusquedaAlumnoForm(
+            request.GET if busqueda_solicitada else None
+        )
+        tipo_doc_buscado = request.GET.get("tipo_doc") or "1"
+        nro_doc_buscado = (request.GET.get("nro_doc") or "").strip().upper()
+        cuil_buscado = _solo_digitos(request.GET.get("cuil"))
+        apellidos_buscados = (request.GET.get("apellidos") or "").strip()
+        nombres_buscados = (request.GET.get("nombres") or "").strip()
+        fecha_nacimiento_buscada = (request.GET.get("fecha_nacimiento") or "").strip()
+        sexo_buscado = (request.GET.get("sexo") or "").strip()
 
-        if busqueda_form.is_valid():
+        alumno_id_get = request.GET.get("alumno_id")
+        if alumno_id_get:
+            alumno = _alumno_por_id(alumno_id_get)
+            if not alumno:
+                cuil_error = "El alumno seleccionado ya no existe o no es válido."
+        elif busqueda_solicitada and busqueda_form.is_valid():
+            tipo_doc = busqueda_form.cleaned_data["tipo_doc_obj"]
+            tipo_doc_buscado = str(tipo_doc.pk)
+            nro_doc_buscado = busqueda_form.cleaned_data["nro_doc"]
             cuil_buscado = busqueda_form.cleaned_data["cuil"]
-            alumno = _buscar_alumno(cuil_buscado)
-            if alumno:
-                inscripcion_abierta = CefInscripcion.objects.filter(
-                    grupo=grupo,
-                    alumno=alumno,
-                    estado__in=ESTADOS_INSCRIPCION_ABIERTA,
-                ).first()
-        elif request.GET.get("cuil"):
-            cuil_buscado = _solo_digitos(request.GET.get("cuil"))
+            busqueda_sin_identidad = busqueda_form.cleaned_data.get(
+                "busqueda_sin_identidad",
+                False,
+            )
+            if busqueda_sin_identidad:
+                apellidos_buscados = busqueda_form.cleaned_data["apellidos"]
+                nombres_buscados = busqueda_form.cleaned_data["nombres"]
+                fecha_nacimiento_buscada = busqueda_form.cleaned_data["fecha_nacimiento"]
+                sexo_buscado = busqueda_form.cleaned_data["sexo"]
+                try:
+                    alumno = _buscar_alumno_sin_documento(
+                        apellidos=apellidos_buscados,
+                        nombres=nombres_buscados,
+                        tipo_doc=tipo_doc,
+                        fecha_nacimiento=fecha_nacimiento_buscada,
+                        sexo=sexo_buscado,
+                    )
+                    busqueda_sin_documento_realizada = True
+                except ValidationError as exc:
+                    cuil_error = "; ".join(exc.messages)
+            else:
+                try:
+                    alumno, persona_sge = _resolver_alumno_o_sge(
+                        tipo_doc=tipo_doc,
+                        nro_doc=nro_doc_buscado,
+                        cuil=cuil_buscado,
+                    )
+                except ValidationError as exc:
+                    cuil_error = "; ".join(exc.messages)
+
+        if alumno:
+            inscripcion_abierta = CefInscripcion.objects.filter(
+                grupo=grupo,
+                alumno=alumno,
+                estado__in=ESTADOS_INSCRIPCION_ABIERTA,
+            ).first()
+        elif busqueda_solicitada and not alumno_id_get and not busqueda_form.is_valid():
             cuil_error = _errores_form(busqueda_form)
 
     next_url = _url_modal_grupo(
@@ -514,6 +747,13 @@ def inscripcion_grupo(request, grupo_id):
         cuil_buscado,
         origen,
         "gestionar" if destino_gestionar else "",
+        alumno_id=alumno.pk if alumno else "",
+        tipo_doc=tipo_doc_buscado,
+        nro_doc=nro_doc_buscado,
+        apellidos=apellidos_buscados,
+        nombres=nombres_buscados,
+        fecha_nacimiento=fecha_nacimiento_buscada,
+        sexo=sexo_buscado,
         vista_alumnos=vista_alumnos,
         vista_docentes=vista_docentes,
     )
@@ -524,12 +764,34 @@ def inscripcion_grupo(request, grupo_id):
             "inscripciones": _inscripciones_grupo(grupo),
             "busqueda_form": busqueda_form,
             "alumno": alumno,
-            "alumno_row": _alumno_row(alumno),
+            "alumno_row": _alumno_row(alumno) or _persona_sge_row(persona_sge),
+            "alumno_desde_sge": bool(persona_sge and not alumno),
+            "tipo_doc_buscado": tipo_doc_buscado,
+            "nro_doc_buscado": nro_doc_buscado,
             "cuil_buscado": cuil_buscado,
+            "apellidos_buscados": apellidos_buscados,
+            "nombres_buscados": nombres_buscados,
+            "fecha_nacimiento_buscada": fecha_nacimiento_buscada,
+            "sexo_buscado": sexo_buscado,
             "cuil_error": cuil_error,
+            "busqueda_sin_identidad": busqueda_sin_identidad,
+            "busqueda_sin_documento_realizada": busqueda_sin_documento_realizada,
             "inscripcion_abierta": inscripcion_abierta,
-            "url_carga_alumno": _url_carga_alumno(cuil_buscado, next_url),
-            "url_editar_alumno": _url_carga_alumno(cuil_buscado, next_url),
+            "url_carga_alumno": _url_carga_alumno(
+                next_url,
+                tipo_doc=tipo_doc_buscado,
+                nro_doc=nro_doc_buscado,
+                cuil=cuil_buscado,
+                apellidos=apellidos_buscados,
+                nombres=nombres_buscados,
+                fecha_nacimiento=fecha_nacimiento_buscada,
+                sexo=sexo_buscado,
+            ),
+            "url_editar_alumno": (
+                _url_carga_alumno(next_url, alumno=alumno)
+                if alumno
+                else ""
+            ),
             "modal_alumno_abierto": abrir_modal,
             "modal_action_url": _url_modal_grupo(
                 grupo,
@@ -547,6 +809,7 @@ def inscripcion_grupo(request, grupo_id):
             ),
             "modal_feedback": ajax_message,
             "modal_feedback_level": "success" if ajax_ok else "error",
+            "modal_conflicto_horario": conflicto_horario,
         }
     )
     if request.method == "POST" and _is_ajax(request):
@@ -564,7 +827,7 @@ def inscripcion_grupo(request, grupo_id):
                 context,
             )
         return _ajax_inscripcion_response(request, context, ajax_ok, ajax_message)
-    if request.method == "POST" and destino_gestionar:
+    if request.method == "POST" and destino_gestionar and not conflicto_horario:
         return redirect(gestionar_grupo_url)
     return render(request, "cef/inscripcion_grupo_cef.html", context)
 

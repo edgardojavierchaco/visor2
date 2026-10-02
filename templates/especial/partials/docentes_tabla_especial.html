@@ -11,7 +11,7 @@
                     <th>Estado en banco de especial</th>
                     <th>Fecha alta</th>
                     <th class="docentes-secciones-header">Secciones asignadas</th>
-                    <th>Acciones</th>
+                    {% if especial_context.puede_operar %}<th>Acciones</th>{% endif %}
                 </tr>
             </thead>
             <tbody>
@@ -101,8 +101,8 @@
 
                                 {% if docente_banco.url_editar_docente %}
                                     <li>
-                                    <a class="dropdown-item cef-secciones-action is-outline" title="Editar datos del profesor" href="{{ docente_banco.url_editar_docente }}" target="_blank" rel="noopener">
-                                        <i class="fa-solid fa-pen-to-square"></i> Editar datos
+                                    <a class="dropdown-item cef-secciones-action is-outline" title="Ver ficha del profesor" href="{{ docente_banco.url_editar_docente }}" target="_blank" rel="noopener">
+                                        <i class="fa-solid fa-id-card"></i> Ver ficha
                                     </a>
                                     </li>
                                 {% endif %}

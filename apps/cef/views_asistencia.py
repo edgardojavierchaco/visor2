@@ -65,6 +65,7 @@ def _grupos_asistencia_queryset(request, cef_context):
             docentes__rol__in=(
                 CefDocenteGrupo.Rol.TITULAR,
                 CefDocenteGrupo.Rol.SUPLENTE,
+                CefDocenteGrupo.Rol.INTERINO,
             ),
         )
 

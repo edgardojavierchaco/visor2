@@ -102,6 +102,7 @@
         let body = opciones.body;
 
         headers.set("X-Requested-With", "XMLHttpRequest");
+        headers.set("Accept", "application/json");
 
         if (["POST", "PUT", "PATCH", "DELETE"].includes(metodo)) {
             headers.set("X-CSRFToken", getCsrfToken());
@@ -204,6 +205,50 @@
         }
 
         return data;
+    }
+
+    function esErrorLecturaReintentable(error) {
+        if (
+            error &&
+            error.original &&
+            error.original.name === "AbortError"
+        ) {
+            return false;
+        }
+
+        const status = Number(error && error.status || 0);
+        return Boolean(
+            error &&
+            (
+                error.tipo === "respuesta_invalida" ||
+                status === 0 ||
+                [500, 502, 503, 504].includes(status)
+            )
+        );
+    }
+
+    async function requestJsonRead(url, options) {
+        const opciones = {
+            ...(options || {}),
+            method: "GET"
+        };
+
+        try {
+            return await requestJson(url, opciones);
+        } catch (error) {
+            if (
+                (opciones.signal && opciones.signal.aborted) ||
+                !esErrorLecturaReintentable(error)
+            ) {
+                throw error;
+            }
+
+            await new Promise(function (resolve) {
+                window.setTimeout(resolve, 250);
+            });
+
+            return requestJson(url, opciones);
+        }
     }
 
     function etiquetaCampo(campo) {
@@ -636,6 +681,7 @@
     window.pofApi = {
         getCsrfToken: getCsrfToken,
         requestJson: requestJson,
+        requestJsonRead: requestJsonRead,
         formatError: formatError,
         showStatus: showStatus,
         clearStatus: clearStatus,

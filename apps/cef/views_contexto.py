@@ -21,8 +21,6 @@ from .performance import perf_phase
 
 SELECTOR_CEF_CACHE_VERSION = "v2"
 SELECTOR_CEF_CACHE_TTL = 300
-ESTABLECIMIENTO_CEF_CACHE_VERSION = "v1"
-ESTABLECIMIENTO_CEF_CACHE_TTL = 900
 CICLOS_CEF_CACHE_KEY = "cef:ciclos:activos:v2"
 CICLOS_CEF_CACHE_TTL = 3600
 SESSION_CEF_CUEANEXO_KEY = "cef_cueanexo_actual"
@@ -73,13 +71,6 @@ def _selector_cef_cache_key(user):
         return ""
 
     return f"cef:selector:{SELECTOR_CEF_CACHE_VERSION}:user:{user_id}"
-
-
-def _establecimiento_cef_cache_key(cueanexo):
-    return (
-        f"cef:establecimiento:{ESTABLECIMIENTO_CEF_CACHE_VERSION}:"
-        f"cueanexo:{cueanexo}"
-    )
 
 
 def _establecimiento_desde_fila(fila):
@@ -217,29 +208,18 @@ def _obtener_establecimiento_cef(request, cueanexo):
 
     establecimientos = getattr(request, "_cef_establecimientos_contexto", {})
     establecimiento = establecimientos.get(cueanexo)
-    cache_key = _establecimiento_cef_cache_key(cueanexo)
-    debe_cachear = establecimiento is not None
 
     if establecimiento is None:
-        sentinel = object()
-        establecimiento = cache.get(cache_key, sentinel)
-        if establecimiento is sentinel:
-            fila = (
-                get_cefs_base_queryset()
-                .filter(cueanexo=cueanexo)
-                .order_by("cueanexo", "nom_est")
-                .values(*ESTABLECIMIENTO_CEF_FIELDS)
-                .first()
-            )
-            establecimiento = _establecimiento_desde_fila(fila) if fila else None
-            debe_cachear = establecimiento is not None
+        fila = (
+            get_cefs_base_queryset()
+            .filter(cueanexo=cueanexo)
+            .order_by("cueanexo", "nom_est")
+            .values(*ESTABLECIMIENTO_CEF_FIELDS)
+            .first()
+        )
+        establecimiento = _establecimiento_desde_fila(fila) if fila else None
 
-    if establecimiento is not None:
-        if debe_cachear:
-            cache.set(cache_key, establecimiento, ESTABLECIMIENTO_CEF_CACHE_TTL)
-        return SimpleNamespace(**establecimiento)
-
-    return None
+    return SimpleNamespace(**establecimiento) if establecimiento is not None else None
 
 
 def invalidar_cache_ciclos_cef():

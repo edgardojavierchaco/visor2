@@ -1,0 +1,27 @@
+{% comment %} RESUMEN EJECUTIVO {% endcomment %}
+<section class="executive-summary mb-4" aria-label="Resumen ejecutivo">
+  <div class="executive-heading mb-3">
+    <div>
+      <span class="executive-eyebrow">RESUMEN EJECUTIVO</span>
+      <h2 class="executive-title mb-1">Estado general de registración</h2>
+      <p class="executive-subtitle mb-0">Indicadores consolidados del universo institucional bajo su ámbito de acceso.</p>
+    </div>
+    {% if kpis.ultima_actualizacion %}
+    <div class="executive-update">
+      <i class="bi bi-clock-history"></i>
+      <span>Última actualización <strong>{{ kpis.ultima_actualizacion|date:"d/m/Y H:i" }}</strong></span>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="row g-3">
+    {% include "bnh/monitoreo/_kpi_card.html" with cls="primary" icon="bi-buildings-fill" pill="ALCANCE" value=kpis.instituciones|default:0 title="Unidades alcanzadas" text="Establecimientos comprendidos en el ámbito autorizado." foot_icon="bi-shield-check" foot="Universo autorizado" %}
+    {% include "bnh/monitoreo/_kpi_card.html" with cls="success" icon="bi-check2-circle" pill="COBERTURA" value=kpis.instituciones_con_carga|default:0 title="Instituciones con carga" text="Unidades con al menos una actividad registrada." foot_icon="bi-graph-up-arrow" foot="Avance de registración" percent=kpis.cobertura|default:0 %}
+    {% include "bnh/monitoreo/_kpi_card.html" with cls="warning" icon="bi-exclamation-triangle-fill" pill="SEGUIMIENTO" value=kpis.instituciones_sin_carga|default:0 title="Instituciones sin carga" text="Unidades sin actividades registradas al momento." foot_icon="bi-bell" foot="Requieren intervención" %}
+    {% include "bnh/monitoreo/_kpi_card.html" with cls="info" icon="bi-people-fill" pill="NOMINAL" value=kpis.personas_unicas|default:0 title="Personas únicas" text="Personas nominales sin duplicación por múltiples cargos." foot_icon="bi-person-check" foot="Base nominal consolidada" %}
+    {% include "bnh/monitoreo/_kpi_card.html" with cls="neutral" icon="bi-person-vcard-fill" pill="ACTIVIDAD" value=kpis.cargos|default:0 title="Cargos / actividades" text="Asignaciones registradas del personal educativo." foot_icon="bi-diagram-3" foot="Asignaciones registradas" %}
+    {% include "bnh/monitoreo/_kpi_card.html" with cls="pending" icon="bi-hourglass-split" pill="PENDIENTE" value=kpis.borradores|default:0 title="Registros pendientes" text="Actividades en borrador que todavía requieren cierre." foot_icon="bi-pencil-square" foot="En proceso de carga" %}
+    {% include "bnh/monitoreo/_kpi_card.html" with cls="danger" icon="bi-exclamation-octagon-fill" pill="ALERTA" value=kpis.observados|default:0 title="Registros observados" text="Casos que requieren revisión o regularización." foot_icon="bi-flag-fill" foot="Atención prioritaria" %}
+    {% include "bnh/monitoreo/_kpi_card.html" with cls="validated" icon="bi-patch-check-fill" pill="VALIDACIÓN" value=kpis.validados|default:0 title="Registros validados" text="Actividades revisadas y conformadas en el circuito." foot_icon="bi-check-all" foot="Información conformada" %}
+  </div>
+</section>

@@ -41,9 +41,15 @@ from .services.alumnos import (
     inscribir_alumno_en_seccion,
     ultima_matricula_compartida,
 )
+from .services.alumnos_identidad import (
+    _alumno_por_id,
+    _buscar_alumno_sin_documento,
+    _persona_sge_row,
+    _resolver_alumno_o_sge,
+    _url_carga_alumno as _url_carga_alumno_base,
+)
 from .views_inscripcion_seccion import (
     _alumno_row,
-    _buscar_alumno,
     _completar_contexto_desde_seccion,
     crear_inscripcion_activa,
     dar_alta_inscripcion_seccion,
@@ -149,7 +155,48 @@ def _url_secciones(
     return f"{url}?{querystring}" if querystring else url
 
 
-def _secciones_busqueda_tokens(valor):
+def _url_modal_gestionar_alumno(
+    seccion,
+    especial_context,
+    *,
+    alumno_id="",
+    tipo_doc="",
+    nro_doc="",
+    cuil="",
+    apellidos="",
+    nombres="",
+    fecha_nacimiento="",
+    sexo="",
+):
+    params = {"abrir_modal_alumno": "1"}
+    if especial_context.get("cueanexo"):
+        params["cueanexo"] = especial_context["cueanexo"]
+    if especial_context.get("ciclo"):
+        params["ciclo"] = especial_context["ciclo"].pk
+    if alumno_id:
+        params["alumno_id"] = getattr(alumno_id, "pk", alumno_id)
+    if tipo_doc:
+        params["tipo_doc"] = getattr(tipo_doc, "pk", tipo_doc)
+    if nro_doc:
+        params["nro_doc"] = nro_doc
+    if cuil:
+        params["cuil"] = cuil
+    if apellidos:
+        params["apellidos"] = apellidos
+    if nombres:
+        params["nombres"] = nombres
+    if fecha_nacimiento:
+        params["fecha_nacimiento"] = (
+            fecha_nacimiento.isoformat()
+            if hasattr(fecha_nacimiento, "isoformat")
+            else fecha_nacimiento
+        )
+    if sexo:
+        params["sexo"] = getattr(sexo, "pk", sexo)
+    base = reverse("especial:gestionar_seccion", kwargs={"seccion_id": seccion.pk})
+    return f"{base}?{urlencode(params)}"
+
+
     texto = unicodedata.normalize("NFD", str(valor or "")).casefold()
     texto = "".join(
         caracter
@@ -352,13 +399,73 @@ def _secciones_historial_paginado(especial_context, queryset, pagina):
 
 def _preparar_modales_gestionar(request, seccion, especial_context):
     """Prepara búsqueda y formularios para los modales dentro de la sección."""
-    cuil_buscado = _solo_digitos(request.GET.get("cuil", ""))
-    cuil_alumno = cuil_buscado if request.GET.get("abrir_modal_alumno") == "1" else ""
-    alumno = _buscar_alumno(cuil_alumno) if cuil_alumno else None
-    alumno_form = EspecialBusquedaAlumnoForm(
-        {"cuil": cuil_alumno} if cuil_alumno else None
+    abrir_alumno = request.GET.get("abrir_modal_alumno") == "1"
+    abrir_docente = request.GET.get("abrir_modal_docente") == "1"
+    alumno = None
+    persona_sge = None
+    tipo_doc_buscado = request.GET.get("tipo_doc") or "1"
+    nro_doc_buscado = (request.GET.get("nro_doc") or "").strip().upper()
+    cuil_buscado = _solo_digitos(request.GET.get("cuil"))
+    apellidos_buscados = (request.GET.get("apellidos") or "").strip()
+    nombres_buscados = (request.GET.get("nombres") or "").strip()
+    fecha_nacimiento_buscada = (request.GET.get("fecha_nacimiento") or "").strip()
+    sexo_buscado = (request.GET.get("sexo") or "").strip()
+    alumno_error = ""
+    busqueda_sin_identidad = False
+    busqueda_sin_documento_realizada = False
+    busqueda_solicitada = abrir_alumno and bool(
+        request.GET.get("alumno_id")
+        or request.GET.get("tipo_doc")
+        or request.GET.get("nro_doc")
+        or request.GET.get("cuil")
+        or request.GET.get("apellidos")
+        or request.GET.get("nombres")
+        or request.GET.get("fecha_nacimiento")
+        or request.GET.get("sexo")
     )
-    alumno_error = _errores_form(alumno_form) if cuil_alumno and not alumno_form.is_valid() else ""
+    alumno_form = EspecialBusquedaAlumnoForm(
+        request.GET if busqueda_solicitada else None
+    )
+
+    if abrir_alumno and request.GET.get("alumno_id"):
+        alumno = _alumno_por_id(request.GET.get("alumno_id"))
+        if not alumno:
+            alumno_error = "El alumno seleccionado ya no existe o no es válido."
+    elif abrir_alumno and busqueda_solicitada and alumno_form.is_valid():
+        tipo_doc = alumno_form.cleaned_data["tipo_doc_obj"]
+        tipo_doc_buscado = str(tipo_doc.pk)
+        nro_doc_buscado = alumno_form.cleaned_data["nro_doc"]
+        cuil_buscado = alumno_form.cleaned_data["cuil"]
+        if alumno_form.cleaned_data.get("busqueda_sin_identidad"):
+            busqueda_sin_identidad = True
+            apellidos_buscados = alumno_form.cleaned_data["apellidos"]
+            nombres_buscados = alumno_form.cleaned_data["nombres"]
+            fecha_nacimiento_buscada = alumno_form.cleaned_data["fecha_nacimiento"]
+            sexo_obj = alumno_form.cleaned_data["sexo"]
+            sexo_buscado = str(sexo_obj.pk)
+            try:
+                alumno = _buscar_alumno_sin_documento(
+                    apellidos=apellidos_buscados,
+                    nombres=nombres_buscados,
+                    tipo_doc=tipo_doc,
+                    fecha_nacimiento=fecha_nacimiento_buscada,
+                    sexo=sexo_obj,
+                )
+                busqueda_sin_documento_realizada = True
+            except ValidationError as exc:
+                alumno_error = "; ".join(exc.messages)
+        else:
+            try:
+                alumno, persona_sge = _resolver_alumno_o_sge(
+                    tipo_doc=tipo_doc,
+                    nro_doc=nro_doc_buscado,
+                    cuil=cuil_buscado,
+                )
+            except ValidationError as exc:
+                alumno_error = "; ".join(exc.messages)
+    elif abrir_alumno and busqueda_solicitada:
+        alumno_error = _errores_form(alumno_form)
+
     alumno_en_banco = bool(
         alumno
         and EspecialAlumnoBanco.objects.filter(
@@ -383,7 +490,7 @@ def _preparar_modales_gestionar(request, seccion, especial_context):
         else None
     )
 
-    cuil_docente = cuil_buscado if request.GET.get("abrir_modal_docente") == "1" else ""
+    cuil_docente = _solo_digitos(request.GET.get("cuil")) if abrir_docente else ""
     docente = _buscar_docente(cuil_docente) if cuil_docente else None
     docente_form = EspecialDocenteSeccionForm()
     docente_error = ""
@@ -417,24 +524,67 @@ def _preparar_modales_gestionar(request, seccion, especial_context):
         especial_context,
         seccion_id=seccion.pk,
     )
+    next_url = _url_modal_gestionar_alumno(
+        seccion,
+        especial_context,
+        alumno_id=alumno.pk if alumno else "",
+        tipo_doc=tipo_doc_buscado,
+        nro_doc=nro_doc_buscado,
+        cuil=cuil_buscado,
+        apellidos=apellidos_buscados,
+        nombres=nombres_buscados,
+        fecha_nacimiento=fecha_nacimiento_buscada,
+        sexo=sexo_buscado,
+    )
     return {
-        "modal_alumno_abierto": request.GET.get("abrir_modal_alumno") == "1",
-        "modal_docente_abierto": request.GET.get("abrir_modal_docente") == "1",
+        "modal_alumno_abierto": abrir_alumno,
+        "modal_docente_abierto": abrir_docente,
         "modal_action_url": gestionar_url,
         "modal_volver_url": gestionar_url,
-        "cuil_buscado": cuil_buscado,
-        "cuil_error": docente_error if cuil_docente else alumno_error,
+        "busqueda_form": alumno_form,
+        "tipo_doc_buscado": tipo_doc_buscado,
+        "nro_doc_buscado": nro_doc_buscado,
+        "cuil_buscado": cuil_docente if abrir_docente else cuil_buscado,
+        "apellidos_buscados": apellidos_buscados,
+        "nombres_buscados": nombres_buscados,
+        "fecha_nacimiento_buscada": fecha_nacimiento_buscada,
+        "sexo_buscado": sexo_buscado,
+        "cuil_error": docente_error if abrir_docente else alumno_error,
+        "busqueda_sin_identidad": busqueda_sin_identidad,
+        "busqueda_sin_documento_realizada": busqueda_sin_documento_realizada,
         "alumno": alumno,
-        "alumno_row": _alumno_row(alumno),
+        "alumno_row": _alumno_row(alumno) or _persona_sge_row(persona_sge),
+        "alumno_desde_sge": bool(persona_sge and not alumno),
         "alumno_en_banco": alumno_en_banco,
         "alumno_en_seccion": alumno_en_seccion,
         "matricula_compartida_habilitada": es_integracion,
         "matricula_compartida_busqueda_url": reverse(
             "especial:buscar_cueanexos_matricula_compartida"
         ) + f"?seccion_id={seccion.pk}",
+        "matricula_compartida_cueanexo": "",
         "seccion_es_oferta_integracion": es_integracion,
         "ultima_matricula_compartida": ultima_matricula,
         "modal_tiene_seccion": True,
+        "url_carga_alumno": _url_carga_alumno_base(
+            next_url,
+            return_label="Volver a la sección",
+            tipo_doc=tipo_doc_buscado,
+            nro_doc=nro_doc_buscado,
+            cuil=cuil_buscado,
+            apellidos=apellidos_buscados,
+            nombres=nombres_buscados,
+            fecha_nacimiento=fecha_nacimiento_buscada,
+            sexo=sexo_buscado,
+        ),
+        "url_editar_alumno": (
+            _url_carga_alumno_base(
+                next_url,
+                return_label="Volver a la sección",
+                alumno=alumno,
+            )
+            if alumno
+            else ""
+        ),
         "docente": docente,
         "docente_row": _docente_row(docente),
         "docente_en_banco": docente_en_banco,
@@ -445,7 +595,6 @@ def _preparar_modales_gestionar(request, seccion, especial_context):
         "url_editar_docente": "",
         "url_carga_profesor": "",
     }
-
 
 
 def _secciones_queryset(especial_context):
@@ -615,6 +764,13 @@ def carga_seccion_form(request, seccion_id=None):
             request,
             "El ciclo seleccionado está cerrado y sólo puede consultarse.",
         )
+        return redirect(request.get_full_path())
+
+    if request.method == "POST" and not especial_context.get("puede_operar"):
+        message = "Tu rol sólo permite consultar esta sección; no puede realizar operaciones."
+        if _is_ajax(request):
+            return JsonResponse({"error": message}, status=403)
+        messages.error(request, message)
         return redirect(request.get_full_path())
 
     if not especial_context["puede_operar"]:
@@ -919,6 +1075,17 @@ def _alta_docente_nuevo_gestionar(request, seccion):
     cuil = request.POST.get("cuil")
     if not cuil:
         return False, "CUIL del docente no proporcionado."
+
+    asignacion = DocenteSeccion(
+        docente_cuil=cuil,
+    )
+    form = EspecialDocenteSeccionForm(request.POST, instance=asignacion)
+    if not form.is_valid():
+        return False, _errores_form(form)
+
+    # Validamos el formulario antes de consultar la asignación existente:
+    # además de evitar una consulta innecesaria, esto permite devolver los
+    # errores de entrada sin exigir una sección completamente materializada.
     asignacion_existente = (
         DocenteSeccion.objects
         .filter(seccion=seccion, docente_cuil=cuil)
@@ -930,35 +1097,27 @@ def _alta_docente_nuevo_gestionar(request, seccion):
 
     # Una baja es un período histórico cerrado. La nueva alta debe crear
     # otra fila para conservar las fechas del período anterior.
-    asignacion = DocenteSeccion(
-        seccion=seccion,
-        docente_cuil=cuil,
+    asignacion = form.save(commit=False)
+    asignacion.seccion = seccion
+    asignacion.docente_banco = (
+        EspecialDocenteBanco.objects.filter(
+            cueanexo=seccion.cueanexo,
+            ciclo=seccion.ciclo,
+            docente_cuil=cuil,
+            estado=EspecialDocenteBanco.Estado.ACTIVO,
+        ).order_by("-pk").first()
     )
-    form = EspecialDocenteSeccionForm(request.POST, instance=asignacion)
-    if form.is_valid():
-        asignacion = form.save(commit=False)
-        asignacion.seccion = seccion
-        asignacion.docente_banco = (
-            EspecialDocenteBanco.objects.filter(
-                cueanexo=seccion.cueanexo,
-                ciclo=seccion.ciclo,
-                docente_cuil=cuil,
-                estado=EspecialDocenteBanco.Estado.ACTIVO,
-            ).order_by("-pk").first()
-        )
-        if not asignacion.pk:
-            asignacion.creado_por = request.user
-        asignacion.actualizado_por = request.user
-        try:
-            with transaction.atomic():
-                asignacion.save()
-            return True, "Profesor asignado a la sección correctamente."
-        except ValidationError as exc:
-            return False, "; ".join(exc.messages)
-        except IntegrityError:
-            return False, "No se pudo asignar el profesor porque ya existe una asignación compatible."
-    else:
-        return False, _errores_form(form)
+    if not asignacion.pk:
+        asignacion.creado_por = request.user
+    asignacion.actualizado_por = request.user
+    try:
+        with transaction.atomic():
+            asignacion.save()
+        return True, "Profesor asignado a la sección correctamente."
+    except ValidationError as exc:
+        return False, "; ".join(exc.messages)
+    except IntegrityError:
+        return False, "No se pudo asignar el profesor porque ya existe una asignación compatible."
 
 
 @especial_required
@@ -973,6 +1132,13 @@ def gestionar_seccion(request, seccion_id):
             request,
             "El ciclo seleccionado está cerrado y sólo puede consultarse.",
         )
+        return redirect(request.get_full_path())
+
+    if request.method == "POST" and not especial_context.get("puede_operar"):
+        message = "Tu rol sólo permite consultar esta sección; no puede realizar operaciones."
+        if _is_ajax(request):
+            return JsonResponse({"error": message}, status=403)
+        messages.error(request, message)
         return redirect(request.get_full_path())
 
     seccion = _seccion_segura(seccion_id, especial_context)
@@ -1034,21 +1200,20 @@ def gestionar_seccion(request, seccion_id):
                     message,
                 )
         elif accion == "inscribir_alumno":
-            cuil = _solo_digitos(request.POST.get("cuil"))
+            alumno = _alumno_por_id(request.POST.get("alumno_id"))
             cueanexo_asociado_recibido = str(
                 request.POST.get("cueanexo_matricula_compartida") or ""
             ).strip()
-            alumno = _buscar_alumno(cuil)
             if not alumno:
-                ok, message = False, "No se encontró el alumno indicado."
+                ok, message = False, "El alumno seleccionado ya no existe o no es válido."
             else:
                 logger.info(
                     "Inscripción Especial desde gestión recibida: seccion_id=%s "
-                    "cue_especial=%s ciclo_id=%s cuil=%s cue_asociado=%s",
+                    "cue_especial=%s ciclo_id=%s alumno_id=%s cue_asociado=%s",
                     seccion.pk,
                     seccion.cueanexo,
                     seccion.ciclo_id,
-                    cuil,
+                    alumno.pk,
                     normalizar_cueanexo(cueanexo_asociado_recibido)
                     or cueanexo_asociado_recibido,
                 )
@@ -1069,9 +1234,9 @@ def gestionar_seccion(request, seccion_id):
                     ok, message = False, "; ".join(exc.messages)
                     logger.warning(
                         "Inscripción Especial desde gestión rechazada: seccion_id=%s "
-                        "cuil=%s cue_asociado=%s motivo=%s",
+                        "alumno_id=%s cue_asociado=%s motivo=%s",
                         seccion.pk,
-                        cuil,
+                        alumno.pk,
                         normalizar_cueanexo(cueanexo_asociado_recibido)
                         or cueanexo_asociado_recibido,
                         message,
@@ -1080,9 +1245,9 @@ def gestionar_seccion(request, seccion_id):
                     ok, message = False, "No se pudo crear la inscripción."
                     logger.exception(
                         "Inscripción Especial desde gestión rechazada por integridad: "
-                        "seccion_id=%s cuil=%s cue_asociado=%s",
+                        "seccion_id=%s alumno_id=%s cue_asociado=%s",
                         seccion.pk,
-                        cuil,
+                        alumno.pk,
                         normalizar_cueanexo(cueanexo_asociado_recibido)
                         or cueanexo_asociado_recibido,
                     )
@@ -1093,9 +1258,9 @@ def gestionar_seccion(request, seccion_id):
                     )
                     logger.exception(
                         "Inscripción Especial desde gestión con error de base: "
-                        "seccion_id=%s cuil=%s cue_asociado=%s",
+                        "seccion_id=%s alumno_id=%s cue_asociado=%s",
                         seccion.pk,
-                        cuil,
+                        alumno.pk,
                         normalizar_cueanexo(cueanexo_asociado_recibido)
                         or cueanexo_asociado_recibido,
                     )
@@ -1103,9 +1268,9 @@ def gestionar_seccion(request, seccion_id):
                     ok, message = False, "No se pudo completar la inscripción por un error de base de datos."
                     logger.exception(
                         "Inscripción Especial desde gestión con error de base no clasificado: "
-                        "seccion_id=%s cuil=%s cue_asociado=%s",
+                        "seccion_id=%s alumno_id=%s cue_asociado=%s",
                         seccion.pk,
-                        cuil,
+                        alumno.pk,
                         normalizar_cueanexo(cueanexo_asociado_recibido)
                         or cueanexo_asociado_recibido,
                     )
@@ -1113,9 +1278,9 @@ def gestionar_seccion(request, seccion_id):
                     ok, message = False, "No se pudo completar la inscripción. Revisá los datos e intentá nuevamente."
                     logger.exception(
                         "Inscripción Especial desde gestión con error no controlado: "
-                        "seccion_id=%s cuil=%s cue_asociado=%s",
+                        "seccion_id=%s alumno_id=%s cue_asociado=%s",
                         seccion.pk,
-                        cuil,
+                        alumno.pk,
                         normalizar_cueanexo(cueanexo_asociado_recibido)
                         or cueanexo_asociado_recibido,
                     )

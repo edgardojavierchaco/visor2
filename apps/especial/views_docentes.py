@@ -19,7 +19,7 @@ from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.shortcuts import get_object_or_404 # Asegúrate de tener este import
-from apps.bnhpersonas.models import Personas
+from apps.bnhpersonas.models import Personas, RegistroActividades
 from .forms import EspecialBajaDocenteForm, EspecialDocenteSeccionForm
 
 from .forms import EspecialBusquedaDocenteForm
@@ -547,11 +547,11 @@ def _url_carga_docente(
 
 
 def _url_edicion_docente(cuil, next_url=None, return_label="Volver a Especial"):
-    """Devuelve la edición de BNH para una persona ya existente.
+    """Devuelve la ficha de BNH para una persona ya existente.
 
     Especial sólo persiste el CUIL del docente; BNH requiere el ID de su
-    registro para cargar la instancia en el formulario. La consulta es de
-    lectura y la vista de BNH vuelve a aplicar su propio alcance de permisos.
+    registro para abrir la ficha. La consulta es de lectura y la vista de BNH
+    vuelve a aplicar su propio alcance de permisos.
     """
     cuil_normalizado = _solo_digitos(cuil)
     persona_id = (
@@ -566,10 +566,26 @@ def _url_edicion_docente(cuil, next_url=None, return_label="Volver a Especial"):
             params["next"] = next_url
         if return_label:
             params["return_label"] = return_label
-        url = reverse("bnhpersonas:carga_personal_edit", args=[persona_id])
+        url = reverse("bnhpersonas:personas_detail", args=[persona_id])
         return f"{url}?{urlencode(params)}" if params else url
 
-    return _url_carga_docente(cuil, next_url, return_label)
+    return ""
+
+
+def _url_vinculacion_docente(cuil):
+    """URL de BNH para crear el primer cargo de una persona existente."""
+    return f"{reverse('bnhpersonas:vincular_persona')}?{urlencode({'cuil': _solo_digitos(cuil)})}"
+
+
+def _docente_tiene_cargo(cuil):
+    """Indica si el docente posee al menos una actividad no eliminada en BNH."""
+    cuil_normalizado = _solo_digitos(cuil)
+    if len(cuil_normalizado) != 11:
+        return False
+    return RegistroActividades.objects.filter(
+        persona__cuil=cuil_normalizado,
+        eliminado=False,
+    ).exists()
 
 
 def _url_modal_docentes(especial_context, cuil=""):
@@ -607,6 +623,20 @@ def agregar_docente_banco_desde_bnh(request):
         return JsonResponse(
             {"ok": False, "error": "El docente no existe todavía en BNH."},
             status=404,
+        )
+
+    if not _docente_tiene_cargo(cuil):
+        return JsonResponse(
+            {
+                "ok": False,
+                "requiere_vinculacion": True,
+                "redirect_url": _url_vinculacion_docente(cuil),
+                "error": (
+                    "El docente existe en BNH, pero no tiene cargos. "
+                    "Primero debe vincularse mediante un nuevo cargo."
+                ),
+            },
+            status=409,
         )
 
     try:
@@ -1158,6 +1188,8 @@ def docentes(request):
                 request,
                 "Seleccioná un CUE-Anexo y un ciclo lectivo para agregar docentes al banco.",
             )
+        elif not _docente_tiene_cargo(cuil_buscado):
+            return redirect(_url_vinculacion_docente(cuil_buscado))
         else:
             try:
                 banco, creado, tabla_pendiente = _asegurar_docente_banco(
@@ -1193,6 +1225,9 @@ def docentes(request):
             cuil_error = _errores_form(busqueda_form)
 
     next_url = _url_modal_docentes(especial_context, cuil_buscado)
+    docente_tiene_cargo = (
+        bool(docente) and _docente_tiene_cargo(cuil_buscado)
+    )
     url_carga_docente = _url_carga_docente(cuil_buscado, next_url)
     url_carga_profesor = _url_carga_docente(
         cuil_buscado,
@@ -1200,6 +1235,11 @@ def docentes(request):
         "Volver a Docentes Especial",
         alta_banco_especial=True,
         especial_context=especial_context,
+    )
+    url_ficha_docente = _url_edicion_docente(
+        cuil_buscado,
+        next_url,
+        "Volver a Docentes Especial",
     )
     docentes_banco_tabla_pendiente = False
     page_obj = Paginator([], DOCENTES_POR_PAGINA).get_page(1)
@@ -1337,6 +1377,7 @@ def docentes(request):
             "busqueda_form": busqueda_form,
             "docente": docente,
             "docente_row": _docente_row(docente),
+            "docente_tiene_cargo": docente_tiene_cargo,
             "docentes": docentes,
             "docentes_actuales_url": docentes_actuales_url,
             "docentes_todos_url": docentes_todos_url,
@@ -1358,7 +1399,7 @@ def docentes(request):
             "cuil_error": cuil_error,
             "url_carga_docente": url_carga_docente,
             "url_carga_profesor": url_carga_profesor,
-            "url_editar_docente": url_carga_docente,
+            "url_editar_docente": url_ficha_docente,
             "modal_docente_abierto": abrir_modal,
             "abrir_modal_asignaciones": abrir_modal_asignaciones,
             "modal_asignaciones_docente_id": modal_asignaciones_docente_id,
