@@ -1,7 +1,7 @@
 {% extends 'biblioteca/layout.html' %}
 {% load static %}
 {% block head %}
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260923-dtr-control-1">
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20261005-delete-modal-motion-2">
     <link rel="stylesheet" href="{% static 'lib/datatables-1.10.20/css/dataTables.bootstrap4.min.css' %}"/>
     <link rel="stylesheet"
           href="{% static 'lib/datatables-1.10.20/plugins/responsive-2.2.3/css/responsive.bootstrap4.min.css' %}"/>
@@ -12,7 +12,7 @@
     <script>
         window.bibliotecaPeriodoActivoId = '{{ periodo_activo_id|escapejs }}';
     </script>
-    <script src="{% static 'biblioteca/js/crud-list.js' %}?v=20260923-actions-stable-2"></script>
+    <script src="{% static 'biblioteca/js/crud-list.js' %}?v=20261005-delete-modal-reusable-1"></script>
 
     {% block head_list %}
 
@@ -146,42 +146,94 @@
     {% csrf_token %}
 </form>
 
+<div class="d-none"
+     aria-hidden="true"
+     data-biblioteca-delete-config
+     data-section-name="{% block delete_section_name %}esta sección{% endblock %}"
+     data-section-icon="{% block delete_section_icon %}table_rows{% endblock %}"
+     data-primary-fields="{% block delete_primary_fields %}{% endblock %}"
+     data-primary-separator="{% block delete_primary_separator %} · {% endblock %}">
+    {% block delete_section_fields %}
+        <span data-biblioteca-delete-field="id" data-label="Registro"></span>
+    {% endblock %}
+</div>
+
 <div class="modal fade biblioteca-crud-delete-modal"
      id="bibliotecaEliminarRegistroModal"
      tabindex="-1"
      role="dialog"
      aria-labelledby="bibliotecaEliminarRegistroTitulo"
-     aria-describedby="bibliotecaEliminarRegistroDescripcion"
+     aria-describedby="bibliotecaEliminarRegistroDescripcion bibliotecaEliminarRegistroAdvertencia"
      aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
+            <div class="biblioteca-crud-delete-modal__accent" aria-hidden="true"></div>
+
             <div class="modal-header">
-                <h2 class="modal-title h5" id="bibliotecaEliminarRegistroTitulo">
-                    <span class="biblioteca-symbol" aria-hidden="true">delete</span>
-                    Eliminar registro
-                </h2>
+                <div class="biblioteca-crud-delete-modal__heading">
+                    <span class="biblioteca-crud-delete-modal__danger-icon" aria-hidden="true">
+                        <span class="biblioteca-symbol">delete</span>
+                    </span>
+                    <div>
+                        <h2 class="modal-title h5" id="bibliotecaEliminarRegistroTitulo">
+                            Eliminar registro
+                        </h2>
+                        <p class="biblioteca-crud-delete-modal__subtitle"
+                           id="bibliotecaEliminarRegistroDescripcion">
+                            Revisá el registro seleccionado antes de confirmar la eliminación.
+                        </p>
+                    </div>
+                </div>
+
                 <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
-                    <span aria-hidden="true">&times;</span>
+                    <span class="biblioteca-symbol" aria-hidden="true">close</span>
                 </button>
             </div>
+
             <form data-biblioteca-delete-form>
                 <div class="modal-body">
-                    <p class="biblioteca-crud-delete-modal__record">
-                        Registro <strong data-biblioteca-delete-record>seleccionado</strong>
-                    </p>
+                    <section class="biblioteca-crud-delete-modal__record-card"
+                             aria-label="Datos del registro seleccionado">
+                        <div class="biblioteca-crud-delete-modal__record-head">
+                            <span class="biblioteca-crud-delete-modal__record-icon"
+                                  aria-hidden="true">
+                                <span class="biblioteca-symbol biblioteca-symbol--filled"
+                                      data-biblioteca-delete-icon>table_rows</span>
+                            </span>
+                            <div>
+                                <span class="biblioteca-crud-delete-modal__record-eyebrow">
+                                    Registro seleccionado
+                                </span>
+                                <h3 class="biblioteca-crud-delete-modal__record-title"
+                                    data-biblioteca-delete-primary>
+                                    Registro
+                                </h3>
+                            </div>
+                        </div>
+
+                        <div class="biblioteca-crud-delete-modal__record-grid"
+                             data-biblioteca-delete-fields></div>
+                    </section>
+
                     <div class="biblioteca-crud-delete-modal__warning"
-                         id="bibliotecaEliminarRegistroDescripcion">
-                        <span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">warning</span>
+                         id="bibliotecaEliminarRegistroAdvertencia">
+                        <span class="biblioteca-crud-delete-modal__warning-icon" aria-hidden="true">
+                            <span class="biblioteca-symbol biblioteca-symbol--filled">warning</span>
+                        </span>
                         <div>
-                            <p>Este registro se eliminará de la sección actual.</p>
-                            <strong>Esta acción no se puede deshacer.</strong>
+                            <strong>Esta acción es permanente</strong>
+                            <p data-biblioteca-delete-warning>
+                                El registro se eliminará de la sección actual y no se puede deshacer.
+                            </p>
                         </div>
                     </div>
+
                     <div class="alert alert-danger biblioteca-crud-delete-modal__error"
                          role="alert"
                          hidden
                          data-biblioteca-delete-error></div>
                 </div>
+
                 <div class="modal-footer">
                     <button type="button"
                             class="btn btn-light"

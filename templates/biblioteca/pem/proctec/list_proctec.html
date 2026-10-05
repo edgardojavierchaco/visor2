@@ -1,6 +1,15 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
+{% block delete_section_name %}Procesos técnicos{% endblock %}
+{% block delete_section_icon %}settings_suggest{% endblock %}
+{% block delete_primary_fields %}material,procesos{% endblock %}
+{% block delete_section_fields %}
+    <span data-biblioteca-delete-field="material" data-label="Material"></span>
+    <span data-biblioteca-delete-field="procesos" data-label="Proceso"></span>
+    <span data-biblioteca-delete-field="total" data-label="Total" data-full="true"></span>
+{% endblock %}
+
 {% block section_header %}
     {% include 'biblioteca/includes/crud_section_header.html' with material_icon='settings_suggest' %}
 {% endblock %}

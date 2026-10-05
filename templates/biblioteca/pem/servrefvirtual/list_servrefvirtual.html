@@ -1,6 +1,16 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
+{% block delete_section_name %}Referencia virtual{% endblock %}
+{% block delete_section_icon %}language{% endblock %}
+{% block delete_primary_fields %}servicio{% endblock %}
+{% block delete_section_fields %}
+    <span data-biblioteca-delete-field="servicio" data-label="Servicio"></span>
+    <span data-biblioteca-delete-field="turnos" data-label="Turno"></span>
+    <span data-biblioteca-delete-field="varones" data-label="Varones"></span>
+    <span data-biblioteca-delete-field="total" data-label="Total"></span>
+{% endblock %}
+
 {% block section_header %}
     {% include 'biblioteca/includes/crud_section_header.html' with material_icon='language' %}
 {% endblock %}

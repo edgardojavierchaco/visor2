@@ -1,6 +1,16 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
+{% block delete_section_name %}Asistencia{% endblock %}
+{% block delete_section_icon %}groups{% endblock %}
+{% block delete_primary_fields %}nivel,usuario{% endblock %}
+{% block delete_section_fields %}
+    <span data-biblioteca-delete-field="nivel" data-label="Nivel"></span>
+    <span data-biblioteca-delete-field="usuario" data-label="Usuario"></span>
+    <span data-biblioteca-delete-field="varones" data-label="Varones"></span>
+    <span data-biblioteca-delete-field="total" data-label="Total"></span>
+{% endblock %}
+
 {% block section_header %}
     {% include 'biblioteca/includes/crud_section_header.html' with material_icon='groups' %}
 {% endblock %}

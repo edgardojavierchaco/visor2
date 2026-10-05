@@ -1,6 +1,17 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
+{% block delete_section_name %}Instituciones{% endblock %}
+{% block delete_section_icon %}apartment{% endblock %}
+{% block delete_primary_fields %}escuela{% endblock %}
+{% block delete_section_fields %}
+    <span data-biblioteca-delete-field="escuela" data-label="Institución" data-full="true"></span>
+    <span data-biblioteca-delete-field="matricula" data-label="Matrícula"></span>
+    <span data-biblioteca-delete-field="docentes" data-label="Docentes"></span>
+    <span data-biblioteca-delete-field="matricdisc" data-label="Matrícula con discapacidad"></span>
+    <span data-biblioteca-delete-field="etnia" data-label="Etnia"></span>
+{% endblock %}
+
 {% block section_header %}
     {% include 'biblioteca/includes/crud_section_header.html' with material_icon='apartment' %}
 {% endblock %}

@@ -1,6 +1,17 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
+{% block delete_section_name %}Personal bibliotecario{% endblock %}
+{% block delete_section_icon %}person{% endblock %}
+{% block delete_primary_fields %}nombres,apellidos{% endblock %}
+{% block delete_primary_separator %} {% endblock %}
+{% block delete_section_fields %}
+    <span data-biblioteca-delete-field="nombres" data-label="Nombre"></span>
+    <span data-biblioteca-delete-field="apellidos" data-label="Apellido"></span>
+    <span data-biblioteca-delete-field="cuil" data-label="CUIL"></span>
+    <span data-biblioteca-delete-field="cargo" data-label="Cargo"></span>
+{% endblock %}
+
 {% block list_main_class %}biblioteca-personal-list{% endblock %}
 {% block create_icon %}person_add{% endblock %}
 

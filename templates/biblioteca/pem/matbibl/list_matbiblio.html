@@ -1,6 +1,16 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
+{% block delete_section_name %}Material bibliográfico{% endblock %}
+{% block delete_section_icon %}menu_book{% endblock %}
+{% block delete_primary_fields %}t_material{% endblock %}
+{% block delete_section_fields %}
+    <span data-biblioteca-delete-field="servicio" data-label="Servicio"></span>
+    <span data-biblioteca-delete-field="turnos" data-label="Turno"></span>
+    <span data-biblioteca-delete-field="t_material" data-label="Material"></span>
+    <span data-biblioteca-delete-field="cantidad" data-label="Cantidad"></span>
+{% endblock %}
+
 {% block section_header %}
     {% include 'biblioteca/includes/crud_section_header.html' with material_icon='menu_book' %}
 {% endblock %}

@@ -1,6 +1,15 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
+{% block delete_section_name %}Informe pedagógico{% endblock %}
+{% block delete_section_icon %}school{% endblock %}
+{% block delete_primary_fields %}servicio{% endblock %}
+{% block delete_section_fields %}
+    <span data-biblioteca-delete-field="servicio" data-label="Servicio" data-full="true"></span>
+    <span data-biblioteca-delete-field="varones" data-label="Varones"></span>
+    <span data-biblioteca-delete-field="total" data-label="Total"></span>
+{% endblock %}
+
 {% block section_header %}
     {% include 'biblioteca/includes/crud_section_header.html' with material_icon='school' %}
 {% endblock %}
