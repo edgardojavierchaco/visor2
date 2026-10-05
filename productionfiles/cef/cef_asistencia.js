@@ -72,7 +72,8 @@
                 "X-Cef-Asistencia-Fragment": "workspace",
                 "X-Requested-With": "XMLHttpRequest"
             },
-            signal: currentRequest.signal
+            signal: currentRequest.signal,
+            cache: "no-store"
         })
             .then(function (response) {
                 if (!response.ok || response.headers.get("X-Cef-Asistencia-Fragment") !== "workspace") {
@@ -104,19 +105,6 @@
         return url.toString();
     }
 
-    function submitDateForm(dateForm) {
-        if (typeof dateForm.requestSubmit === "function") {
-            dateForm.requestSubmit();
-        } else if (dateForm.reportValidity() && confirmNavigation()) {
-            loadDate(formUrl(dateForm));
-        }
-    }
-
-    function hasCompleteDateValue(dateInput) {
-        return /^\d{4}-\d{2}-\d{2}$/.test(dateInput.value)
-            && !dateInput.validity.badInput;
-    }
-
     function showTab(name, moveFocus) {
         var target = workspace();
         if (!target) return;
@@ -141,11 +129,42 @@
             return Boolean(select.value);
         }).length;
         var pending = selects.length - selected;
+        var form = target.querySelector("[data-cef-asistencia-guardado]");
+        var validationAttempted = Boolean(
+            form && form.dataset.cefAsistenciaValidationAttempted === "true"
+        );
         progress.classList.toggle("is-complete", pending === 0);
+        progress.classList.toggle("has-missing", validationAttempted && pending > 0);
         progress.textContent = pending === 0
             ? "Todo listo para guardar."
             : "Falta seleccionar " + pending + " alumno" + (pending === 1 ? "." : "s.");
     }
+
+    function syncMissingAttendance(select, force) {
+        if (!select) return;
+        var missing = !select.value && force;
+        select.classList.toggle("cef-asistencia-select-missing", missing);
+        select.setAttribute("aria-invalid", missing ? "true" : "false");
+        var cell = select.closest("td");
+        if (cell) cell.classList.toggle("cef-asistencia-missing", missing);
+    }
+
+    function validateMissingAttendances(form) {
+        if (!form) return;
+        form.dataset.cefAsistenciaValidationAttempted = "true";
+        form.querySelectorAll("select[name^='asistencia_']").forEach(function (select) {
+            syncMissingAttendance(select, !select.value);
+        });
+        updateProgress(workspace());
+    }
+
+    document.addEventListener("invalid", function (event) {
+        if (!event.target.matches("[data-cef-asistencia-guardado] select[name^='asistencia_']")) {
+            return;
+        }
+        var form = event.target.form;
+        validateMissingAttendances(form);
+    }, true);
 
     document.addEventListener("submit", function (event) {
         var dateForm = event.target.closest("[data-cef-asistencia-fecha]");
@@ -163,35 +182,17 @@
     });
 
     document.addEventListener("change", function (event) {
-        if (event.target.matches("[data-cef-asistencia-fecha] input[name='fecha']")) {
-            var dateInput = event.target;
-            var dateForm = event.target.form;
-            var expectedYear = dateForm.dataset.cefAsistenciaAnio;
-            if (!hasCompleteDateValue(dateInput)) return;
-            if (dateInput === document.activeElement
-                && dateInput.value.slice(0, 4) !== expectedYear) return;
-            submitDateForm(dateForm);
-            return;
-        }
         if (event.target.matches("[data-cef-asistencia-guardado] select[name^='asistencia_']")) {
             var target = workspace();
+            var form = event.target.form;
+            var validationAttempted = Boolean(
+                form && form.dataset.cefAsistenciaValidationAttempted === "true"
+            );
+            syncMissingAttendance(event.target, validationAttempted);
             if (target) target.dataset.cefAsistenciaDirty = "true";
             updateProgress(target);
         }
     });
-
-    document.addEventListener("blur", function (event) {
-        if (!event.target.matches("[data-cef-asistencia-fecha] input[name='fecha']")) {
-            return;
-        }
-        var dateInput = event.target;
-        var dateForm = dateInput.form;
-        if (!hasCompleteDateValue(dateInput)
-            || dateInput.value.slice(0, 4) === dateForm.dataset.cefAsistenciaAnio) {
-            return;
-        }
-        submitDateForm(dateForm);
-    }, true);
 
     document.addEventListener("keydown", function (event) {
         var tab = event.target.closest("[data-cef-asistencia-tab]");
@@ -245,21 +246,6 @@
                     ? "Ocultar historial de modificaciones"
                     : "Ver historial de modificaciones";
             }
-            return;
-        }
-
-        var markButton = event.target.closest("[data-cef-marcar-presentes]");
-        if (markButton) {
-            var target = workspace();
-            var form = target
-                ? target.querySelector("[data-cef-asistencia-guardado]")
-                : markButton.closest("form");
-            if (!form) return;
-            form.querySelectorAll("select[name^='asistencia_']").forEach(function (select) {
-                select.value = "presente";
-                select.dispatchEvent(new Event("change", { bubbles: true }));
-            });
-            if (target) target.dataset.cefAsistenciaDirty = "true";
             return;
         }
 

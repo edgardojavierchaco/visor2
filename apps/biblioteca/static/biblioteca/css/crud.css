@@ -1986,6 +1986,175 @@
     overflow-wrap: anywhere;
 }
 
+.biblioteca-personal__activity-groups {
+    display: grid;
+    gap: 1rem;
+}
+
+.biblioteca-personal__activity-group {
+    min-width: 0;
+}
+
+.biblioteca-personal__activity-group-head {
+    align-items: center;
+    display: flex;
+    gap: .75rem;
+    justify-content: space-between;
+    margin-bottom: .5rem;
+}
+
+.biblioteca-personal__activity-group-head h5 {
+    color: var(--biblioteca-text);
+    font-size: .8125rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.biblioteca-personal__activity-group-head span {
+    color: var(--biblioteca-muted);
+    font-size: .6875rem;
+    text-align: right;
+}
+
+.biblioteca-personal__activity-list {
+    display: grid;
+    gap: .625rem;
+}
+
+.biblioteca-personal .biblioteca-personal__block .biblioteca-personal__activity-option {
+    align-items: center;
+    background: var(--biblioteca-surface);
+    border: 1px solid var(--biblioteca-border);
+    border-radius: var(--biblioteca-radius-md);
+    display: grid;
+    font-size: inherit;
+    gap: .75rem;
+    grid-template-columns: auto 2.25rem minmax(0, 1fr) auto;
+    margin: 0;
+    min-width: 0;
+    padding: .75rem .875rem;
+}
+
+.biblioteca-personal .biblioteca-personal__activity-option.is-available {
+    cursor: pointer;
+}
+
+.biblioteca-personal .biblioteca-personal__activity-option.is-available:hover,
+.biblioteca-personal .biblioteca-personal__activity-option.is-available:focus-within {
+    background: var(--biblioteca-primary-soft);
+    border-color: var(--biblioteca-primary-border);
+}
+
+.biblioteca-personal .biblioteca-personal__activity-option.is-selected {
+    background: var(--biblioteca-primary-soft);
+    border-color: var(--biblioteca-primary);
+    box-shadow: 0 0 0 .125rem color-mix(in srgb, var(--biblioteca-primary) 12%, transparent);
+}
+
+.biblioteca-personal .biblioteca-personal__activity-option.is-pending {
+    background: var(--biblioteca-surface-soft);
+    color: var(--biblioteca-muted);
+    cursor: not-allowed;
+}
+
+.biblioteca-personal__activity-radio {
+    accent-color: var(--biblioteca-primary);
+    height: 1rem;
+    margin: 0;
+    width: 1rem;
+}
+
+.biblioteca-personal__activity-icon {
+    align-items: center;
+    background: var(--biblioteca-surface-soft);
+    border: 1px solid var(--biblioteca-border);
+    border-radius: var(--biblioteca-radius-sm);
+    color: var(--biblioteca-muted);
+    display: inline-flex;
+    height: 2.25rem;
+    justify-content: center;
+    transition:
+        background-color 140ms ease,
+        border-color 140ms ease,
+        color 140ms ease,
+        box-shadow 140ms ease,
+        transform 140ms ease;
+    width: 2.25rem;
+}
+
+.biblioteca-personal .biblioteca-personal__activity-option.is-available:hover .biblioteca-personal__activity-icon,
+.biblioteca-personal .biblioteca-personal__activity-option.is-available:focus-within .biblioteca-personal__activity-icon {
+    background: var(--biblioteca-primary);
+    border-color: var(--biblioteca-primary);
+    box-shadow: 0 4px 12px rgba(89, 102, 232, .20);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.biblioteca-personal .biblioteca-personal__activity-option.is-selected .biblioteca-personal__activity-icon {
+    background: var(--biblioteca-primary);
+    border-color: var(--biblioteca-primary);
+    box-shadow: 0 4px 12px rgba(89, 102, 232, .20);
+    color: #ffffff;
+    transform: none;
+}
+
+.biblioteca-personal__activity-option.is-pending .biblioteca-personal__activity-icon {
+    background: var(--biblioteca-surface);
+    border-color: var(--biblioteca-border);
+    color: var(--biblioteca-muted);
+}
+
+.biblioteca-personal__activity-icon .biblioteca-symbol {
+    font-size: 1.2rem;
+}
+
+.biblioteca-personal__activity-copy {
+    min-width: 0;
+}
+
+.biblioteca-personal__activity-copy strong {
+    color: var(--biblioteca-text);
+    display: block;
+    font-size: .8125rem;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.biblioteca-personal__activity-copy small {
+    color: var(--biblioteca-text-secondary);
+    display: block;
+    font-size: .6875rem;
+    line-height: 1.35;
+    margin-top: .1875rem;
+    overflow-wrap: anywhere;
+}
+
+.biblioteca-personal__activity-option.is-pending .biblioteca-personal__activity-copy strong,
+.biblioteca-personal__activity-option.is-pending .biblioteca-personal__activity-copy small {
+    color: var(--biblioteca-muted);
+}
+
+.biblioteca-personal__activity-status {
+    border-radius: 999px;
+    font-size: .625rem;
+    font-weight: 800;
+    line-height: 1.2;
+    padding: .3125rem .5rem;
+    white-space: nowrap;
+}
+
+.biblioteca-personal__activity-status.is-available {
+    background: var(--biblioteca-success-background);
+    color: var(--biblioteca-success-text);
+}
+
+.biblioteca-personal__activity-status.is-pending {
+    background: var(--biblioteca-warning-background);
+    color: var(--biblioteca-warning-text);
+}
+
 .biblioteca-personal__manual-grid {
     display: grid;
     gap: .875rem;
@@ -2104,6 +2273,40 @@
     .biblioteca-personal__bnh-action .btn {
         grid-column: 1 / -1;
         width: 100%;
+    }
+
+    .biblioteca-personal__activity-group-head {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: .125rem;
+    }
+
+    .biblioteca-personal__activity-group-head span {
+        text-align: left;
+    }
+
+    .biblioteca-personal .biblioteca-personal__activity-option {
+        grid-template-areas:
+            "radio icon copy"
+            ". . status";
+        grid-template-columns: auto 2.25rem minmax(0, 1fr);
+    }
+
+    .biblioteca-personal__activity-radio {
+        grid-area: radio;
+    }
+
+    .biblioteca-personal__activity-icon {
+        grid-area: icon;
+    }
+
+    .biblioteca-personal__activity-copy {
+        grid-area: copy;
+    }
+
+    .biblioteca-personal__activity-status {
+        grid-area: status;
+        justify-self: start;
     }
 
     .biblioteca-personal__footer-note {
