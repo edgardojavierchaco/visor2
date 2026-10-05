@@ -11,44 +11,81 @@ class DispositivoConfirmadoMiddleware:
     Impide que una sesión autenticada navegue por el sistema desde un
     dispositivo que todavía no fue confirmado por correo.
 
-    Es una segunda barrera de seguridad: además de no crear la sesión en
-    LoginFormView hasta confirmar el dispositivo, invalida sesiones antiguas
-    que pudieran haber sido creadas por versiones anteriores del login.
+    Excepciones:
+    - Login
+    - Logout
+    - Confirmación de dispositivo
+    - Verificación pública de constancias BNH mediante QR
     """
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
+
+        # ============================================================
+        # RUTAS PÚBLICAS / EXENTAS
+        # ============================================================
+
+        login_url = reverse("logueo:login")
+        logout_url = reverse("logueo:logout")
+
+        rutas_exentas = {
+            login_url,
+            logout_url,
+        }
+
+        # Confirmación por correo del dispositivo.
+        confirmar_prefix = (
+            login_url.rstrip("/")
+            + "/confirmar-dispositivo/"
+        )
+
+        # ============================================================
+        # BNH - VERIFICACIÓN PÚBLICA DE CONSTANCIAS
+        # ============================================================
+        #
+        # La URL real queda montada bajo /bnh/ porque las URLs de
+        # bnhpersonas se incluyen allí desde config.urls.
+        #
+        # No requiere autenticación ni dispositivo confirmado.
+        #
+        verificar_constancia_prefix = (
+            "/bnh/constancias/verificar/"
+        )
+
+        ruta_publica = (
+            request.path in rutas_exentas
+            or request.path.startswith(confirmar_prefix)
+            or request.path.startswith(
+                verificar_constancia_prefix
+            )
+        )
+
+        if ruta_publica:
+            return self.get_response(request)
+
+        # ============================================================
+        # CONTROL DE DISPOSITIVO
+        # ============================================================
+
         if request.user.is_authenticated:
-            login_url = reverse('logueo:login')
-            logout_url = reverse('logueo:logout')
 
-            # Estas rutas deben poder ejecutarse sin que el middleware genere
-            # un bucle de redirecciones.
-            rutas_exentas = {
-                login_url,
-                logout_url,
-            }
+            fingerprint = generar_fingerprint(request)
 
-            # La confirmación por token debe ser accesible desde el correo.
-            confirmar_prefix = login_url.rstrip('/') + '/confirmar-dispositivo/'
-
-            if (
-                request.path not in rutas_exentas
-                and not request.path.startswith(confirmar_prefix)
-            ):
-                fingerprint = generar_fingerprint(request)
-
-                confirmado = DispositivoUsuario.objects.filter(
+            confirmado = (
+                DispositivoUsuario.objects
+                .filter(
                     usuario=request.user,
                     fingerprint=fingerprint,
                     confirmado=True,
                     bloqueado=False,
-                ).exists()
+                )
+                .exists()
+            )
 
-                if not confirmado:
-                    logout(request)
-                    return redirect(login_url)
+            if not confirmado:
+                logout(request)
+                return redirect(login_url)
 
         return self.get_response(request)
