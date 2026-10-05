@@ -1,3 +1,4 @@
+from apps.usuarios.services.user_context import get_user_rol
 from apps.evaluaciones_educativas.models.diagnostico_2026 import Establecimientos2026, EvaluacionDiagnostica2026, Año2026
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -20,6 +21,78 @@ from apps.consultasge.models import CapaUnicaOfertas
 from django.core.exceptions import PermissionDenied
 
 
+
+OFERTA_SUPERVISOR = 'Secundaria Completa req. 7 años'
+
+
+def _es_supervisor(usuario):
+    return (
+        getattr(usuario, 'nivelacceso_id', None) == 'Supervisor'
+        or get_user_rol(usuario) == 'Supervisor'
+    )
+
+
+def _escuelas_del_supervisor(username, oferta):
+    """Cruza asignaciones activas con el padrón por región, CUE y oferta.
+
+    El ámbito y sector provienen de la misma fila autorizada del padrón.
+    No basta con autorizar el CUE: puede contener otras ofertas educativas.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT TRIM(v.cueanexo::text), v.nom_est,
+                   TRIM(v.region_loc), TRIM(v.ambito), TRIM(v.sector)
+            FROM supervisores.supervisor_registro_supervisor AS s
+            JOIN supervisores.supervisor_registro_supervisor_regional AS sr
+              ON sr.supervisor_id = s.id AND sr.activo = TRUE
+            JOIN supervisores.supervisor_registro_supervisor_regional_oferta AS o
+              ON o.supervisor_regional_id = sr.id AND o.activo = TRUE
+            JOIN region AS r ON r.id = sr.region_id
+            JOIN public.v_capa_unica_ofertas_ant AS v
+              ON TRIM(v.cueanexo::text) = TRIM(o.cueanexo::text)
+             AND LOWER(TRIM(v.oferta)) = LOWER(TRIM(o.oferta))
+             AND LOWER(TRIM(v.region_loc)) = LOWER(TRIM(r.nombre))
+            WHERE s.cuil = %s AND s.activo = TRUE
+              AND v.oferta ILIKE %s
+            ORDER BY 1, 2, 3, 4, 5
+            """,
+            [str(username), '%' + oferta + '%'],
+        )
+        return [
+            dict(zip(('cueanexo', 'escuela', 'region', 'ambito', 'sector'), fila))
+            for fila in cursor.fetchall()
+        ]
+
+
+def _filtrar_escuelas_supervisor(escuelas, sector=None, ambito=None, region=None):
+    filtros = {'sector': sector, 'ambito': ambito, 'region': region}
+    return [
+        escuela for escuela in escuelas
+        if all(
+            not valor or str(valor).strip().upper() == 'TODOS'
+            or str(escuela.get(campo) or '').strip().casefold()
+            == str(valor).strip().casefold()
+            for campo, valor in filtros.items()
+        )
+    ]
+
+
+def _opciones_filtro_supervisor(escuelas, campo):
+    return ['TODOS'] + sorted({
+        str(escuela.get(campo) or '').strip()
+        for escuela in escuelas if escuela.get(campo)
+    })
+
+
+def _validar_cue_supervisor(usuario, cueanexo, oferta):
+    if not _es_supervisor(usuario):
+        return
+    cues = {escuela['cueanexo'] for escuela in _escuelas_del_supervisor(usuario.username, oferta)}
+    if str(cueanexo).strip() not in cues:
+        raise PermissionDenied('No tienes acceso a los registros de este establecimiento.')
+
+
 def _cueanexos_del_regional(username):
 	"""Devuelve los CUE de las regiones activas asignadas al usuario."""
 	with connection.cursor() as cursor:
@@ -38,7 +111,12 @@ def _cueanexos_del_regional(username):
 
 
 def _validar_cue_del_regional(usuario, cueanexo):
-	if usuario.nivelacceso_id != 'Regional':
+	if _es_supervisor(usuario):
+		_validar_cue_supervisor(
+			usuario, cueanexo, OFERTA_SUPERVISOR
+		)
+		return
+	if usuario.nivelacceso_id != 'Regional' or get_user_rol(usuario) == 'Evaluacion':
 		return
 
 	if str(cueanexo) not in _cueanexos_del_regional(usuario.username):
@@ -1802,10 +1880,12 @@ def analisis_evaluacion(request):
     name = usuario.username
     cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
     
-    lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
-    rol_usuario = usuario.nivelacceso_id
+    lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse']
+    rol_usuario = 'Supervisor' if _es_supervisor(usuario) else usuario.nivelacceso_id
+    if rol_usuario != 'Supervisor' and get_user_rol(usuario) == 'Evaluacion':
+        rol_usuario = 'Evaluacion'
 
-    if rol_usuario not in lista_usuarios_jerarquicos:
+    if rol_usuario != 'Supervisor' and rol_usuario not in lista_usuarios_jerarquicos:
         has_oferta = CapaUnicaOfertas.objects.filter(
             resploc_cuitcuil=cuil_con_caracter, 
             oferta__icontains='Secundaria Completa req. 7 años'
@@ -1821,7 +1901,16 @@ def analisis_evaluacion(request):
 
     user_cueanexos = []
 
-    if rol_usuario in lista_usuarios_jerarquicos:
+    escuelas_supervisor = []
+    if rol_usuario == 'Supervisor':
+        escuelas_supervisor = _escuelas_del_supervisor(
+            name, OFERTA_SUPERVISOR
+        )
+        escuelas_filtradas = _filtrar_escuelas_supervisor(
+            escuelas_supervisor, filtro_sector, filtro_ambito, filtro_region
+        )
+        user_cueanexos = sorted({e['cueanexo'] for e in escuelas_filtradas})
+    elif rol_usuario in lista_usuarios_jerarquicos:
         filtros_establecimiento = Q()
         if filtro_sector and filtro_sector != 'TODOS':
             filtros_establecimiento &= Q(sector=filtro_sector)
@@ -1842,6 +1931,8 @@ def analisis_evaluacion(request):
         user_cueanexos = [str(c) for c in user_cueanexos_raw]
 
     selected_cue = request.GET.get('cueanexo')
+    if rol_usuario == 'Supervisor' and selected_cue and selected_cue != 'TODOS' and selected_cue not in user_cueanexos:
+        raise PermissionDenied('No tienes acceso a los registros de este establecimiento.')
     if not selected_cue and user_cueanexos:
         selected_cue = str(user_cueanexos[0])
 
@@ -1902,7 +1993,10 @@ def analisis_evaluacion(request):
 
     anio_nombre_sel = filtro_anio
     if filtro_anio and filtro_anio.isdigit():
-        seccion_ref = Seccion2026.objects.filter(año_id=int(filtro_anio)).select_related('año').first()
+        secciones_ref = Seccion2026.objects.filter(año_id=int(filtro_anio))
+        if rol_usuario == 'Supervisor':
+            secciones_ref = secciones_ref.filter(año__cueanexo__in=cues_permitidos_int)
+        seccion_ref = secciones_ref.select_related('año').first()
         if seccion_ref:
             anio_nombre_sel = seccion_ref.año.nombre_año
 
@@ -2122,9 +2216,9 @@ def analisis_evaluacion(request):
         'sector_sel': filtro_sector or 'TODOS',
         'ambito_sel': filtro_ambito or 'TODOS',
         'region_sel': filtro_region or 'TODOS',
-        'sectores_opciones': SECTORES_CHOICES,
-        'ambitos_opciones': AMBITOS_CHOICES,
-        'regiones_opciones': REGIONES_CHOICES,
+        'sectores_opciones': (_opciones_filtro_supervisor(escuelas_supervisor, 'sector') if rol_usuario == 'Supervisor' else SECTORES_CHOICES),
+        'ambitos_opciones': (_opciones_filtro_supervisor(escuelas_supervisor, 'ambito') if rol_usuario == 'Supervisor' else AMBITOS_CHOICES),
+        'regiones_opciones': (_opciones_filtro_supervisor(escuelas_supervisor, 'region') if rol_usuario == 'Supervisor' else REGIONES_CHOICES),
         'presentes_indigena': presentes_indigena,
         'presentes_discapacidad': presentes_discapacidad,
         'presentes_ambas': presentes_ambas,
@@ -2157,10 +2251,12 @@ def progreso_alumnos(request):
     name = usuario.username
     cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
 
-    lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
-    rol_usuario = usuario.nivelacceso_id
+    lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse']
+    rol_usuario = 'Supervisor' if _es_supervisor(usuario) else usuario.nivelacceso_id
+    if rol_usuario != 'Supervisor' and get_user_rol(usuario) == 'Evaluacion':
+        rol_usuario = 'Evaluacion'
 
-    if rol_usuario not in lista_usuarios_jerarquicos:
+    if rol_usuario != 'Supervisor' and rol_usuario not in lista_usuarios_jerarquicos:
         has_oferta = CapaUnicaOfertas.objects.filter(
             resploc_cuitcuil=cuil_con_caracter,
             oferta__icontains='Secundaria Completa req. 7 años'
@@ -2382,12 +2478,14 @@ def descargar_examen_individual(request, materia):
     usuario = request.user
     name = usuario.username
     cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
-    lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
-    rol_usuario = usuario.nivelacceso_id
+    lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse']
+    rol_usuario = 'Supervisor' if _es_supervisor(usuario) else usuario.nivelacceso_id
+    if rol_usuario != 'Supervisor' and get_user_rol(usuario) == 'Evaluacion':
+        rol_usuario = 'Evaluacion'
 
     
     # ── 1. SEGURIDAD Y PERMISOS ───────────────────────────────────────────────
-    if rol_usuario not in lista_usuarios_jerarquicos:
+    if rol_usuario != 'Supervisor' and rol_usuario not in lista_usuarios_jerarquicos:
         has_oferta = CapaUnicaOfertas.objects.filter(
             resploc_cuitcuil=cuil_con_caracter, 
             oferta__icontains='Secundaria Completa req. 7 años'
@@ -2403,7 +2501,7 @@ def descargar_examen_individual(request, materia):
 
     _validar_cue_del_regional(usuario, selected_cue)
 
-    if rol_usuario not in lista_usuarios_jerarquicos:
+    if rol_usuario != 'Supervisor' and rol_usuario not in lista_usuarios_jerarquicos:
         user_cueanexos_raw = utilidades.obtener_cueanexos(usuario.username)
         user_cueanexos = [str(c) for c in user_cueanexos_raw]
         if selected_cue not in user_cueanexos:
@@ -2533,11 +2631,13 @@ def descargar_reporte_listado(request, materia):
     usuario = request.user
     name = usuario.username
     cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
-    lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Ministro', 'Subse']
-    rol_usuario = usuario.nivelacceso_id  
+    lista_usuarios_jerarquicos = ['Regional', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse']
+    rol_usuario = 'Supervisor' if _es_supervisor(usuario) else usuario.nivelacceso_id
+    if rol_usuario != 'Supervisor' and get_user_rol(usuario) == 'Evaluacion':
+        rol_usuario = 'Evaluacion'
     
     # ── 1. SEGURIDAD Y PERMISOS ───────────────────────────────────────────────
-    if rol_usuario not in lista_usuarios_jerarquicos:
+    if rol_usuario != 'Supervisor' and rol_usuario not in lista_usuarios_jerarquicos:
         has_oferta = CapaUnicaOfertas.objects.filter(
             resploc_cuitcuil=cuil_con_caracter, 
             oferta__icontains='Secundaria Completa req. 7 años'
