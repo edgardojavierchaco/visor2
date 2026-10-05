@@ -139,6 +139,65 @@ def check_version(obj, value):
         )
 
 
+def _activity_form_data_from_instance(obj):
+    """
+    Reconstruye los datos de ActividadDirectorForm a partir de una actividad
+    ya persistida.
+
+    ActividadDirectorForm contiene campos auxiliares que NO son campos de
+    RegistroActividades (titulaciones_multiplan y ubicaciones_json). Para
+    validar un cargo existente no se puede llamar _meta.get_field() sobre esos
+    nombres: se reconstruyen desde las tablas detalle correspondientes.
+    """
+    from ..forms import ActividadDirectorForm
+
+    model_fields = {
+        field.name: field
+        for field in obj._meta.concrete_fields
+    }
+
+    data = {}
+    for name in ActividadDirectorForm.Meta.fields:
+        field = model_fields.get(name)
+        if field is None:
+            continue
+        data[name] = getattr(obj, field.attname, None)
+
+    # Multiplan: recuperar las titulaciones persistidas en la tabla detalle.
+    titles = list(
+        obj.titulaciones_curriculares
+        .order_by("orden", "pk")
+        .values_list("titulacion", flat=True)
+    )
+    if not titles and obj.titulacion:
+        titles = [obj.titulacion]
+    data["titulaciones_multiplan"] = [str(value) for value in titles]
+
+    # Sección múltiple / ubicación única: recuperar las ubicaciones persistidas.
+    locations = list(
+        obj.ubicaciones_curriculares
+        .order_by("orden", "pk")
+        .values("grado_anio_id", "seccion_id", "turno")
+    )
+    if not locations and obj.grado_anio_id and obj.secciones_id:
+        locations = [{
+            "grado_anio_id": obj.grado_anio_id,
+            "seccion_id": obj.secciones_id,
+            "turno": obj.turno,
+        }]
+
+    data["ubicaciones_json"] = json.dumps([
+        {
+            "grado": row["grado_anio_id"],
+            "seccion": row["seccion_id"],
+            "turno": row["turno"],
+        }
+        for row in locations
+    ], ensure_ascii=False)
+
+    return data
+
+
 def _identity_values_from_form(form):
     data = form.cleaned_data
     sexo = data.get("sexo")
@@ -533,10 +592,10 @@ def change_activity(user, pk, action, version, reason):
             raise ValidationError("Complete CUIL y DNI antes de validar.")
         from ..forms import ActividadDirectorForm
 
-        data = {
-            f: getattr(obj, obj._meta.get_field(f).attname)
-            for f in ActividadDirectorForm.Meta.fields
-        }
+        # ActividadDirectorForm incluye campos auxiliares que no pertenecen
+        # directamente al modelo (multiplan y ubicaciones JSON). Se reconstruye
+        # el formulario desde la actividad y sus tablas detalle.
+        data = _activity_form_data_from_instance(obj)
         validation = ActividadDirectorForm(data, instance=obj, user=user)
         if not validation.is_valid():
             raise ValidationError(

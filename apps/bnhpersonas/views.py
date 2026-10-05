@@ -214,7 +214,17 @@ def accion_actividad(request, pk, accion):
             changed = change_activity(request.user, pk, actions[accion], form.cleaned_data["version"], form.cleaned_data["motivo"])
             messages.success(request, "Operación registrada correctamente.")
             return redirect("bnhpersonas:personas_detail", pk=changed.persona_id)
-        except (ValidationError, OperationalError) as exc:
+        except (ValidationError, IntegrityError, OperationalError) as exc:
+            if isinstance(exc, ValidationError):
+                logger.warning(
+                    "BNH validación rechazada | pk=%s | accion=%s | error=%s",
+                    pk, accion, exc,
+                )
+            else:
+                logger.exception(
+                    "BNH acción actividad fallida | pk=%s | accion=%s | user=%s",
+                    pk, accion, getattr(request.user, "pk", None),
+                )
             errors_to_form(form, exc)
     return render(request, "bnh/personas/confirm.html", {"form": form, "title": f"{accion.capitalize()} cargo", "obj": obj, "persona": obj.persona})
 
@@ -229,7 +239,7 @@ def eliminar_persona(request, pk):
             archive_person(request.user, pk, form.cleaned_data["version"], form.cleaned_data["motivo"])
             messages.success(request, "Ficha personal archivada; se conserva su historial.")
             return redirect("bnhpersonas:personas_list")
-        except (ValidationError, OperationalError) as exc:
+        except (ValidationError, IntegrityError, OperationalError) as exc:
             errors_to_form(form, exc)
     return render(request, "bnh/personas/confirm.html", {"form": form, "persona": obj, "title": "Archivar ficha personal", "archive": True})
 
@@ -258,7 +268,7 @@ def eliminar_horario(request, pk):
     try:
         activity = delete_schedule(request.user, pk, form.cleaned_data["version"], form.cleaned_data["motivo"])
         return redirect("bnhpersonas:editar_actividad", pk=activity.pk)
-    except (ValidationError, OperationalError) as exc:
+    except (ValidationError, IntegrityError, OperationalError) as exc:
         return JsonResponse({"ok": False, "errors": getattr(exc, "messages", [str(exc)])}, status=409)
 
 
