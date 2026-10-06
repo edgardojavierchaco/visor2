@@ -1,0 +1,66 @@
+{% comment %}
+  Autocompletado por CUIL para los formularios de tabulador y aplicador.
+  Si el CUIL ya está cargado como aplicador o tabulador, completa apellido,
+  nombre, correo y celular (siguen siendo editables).
+
+  Uso: {% include 'fluidez_octubre_2026/_autocompletar_cuil.html' with prefijo='id_' formulario='aplicador' %}
+  `prefijo` es el prefijo de los ids de los inputs (id_cuil, id_apellido...).
+  `formulario` ('aplicador' o 'tabulador'): si la persona ya está cargada en
+  esa misma tabla, se avisa en vez de autocompletar.
+
+  La leyenda se ubica junto al campo CUIL desde JS, para no tener que
+  modificar el HTML del formulario que lo incluye.
+{% endcomment %}
+<script>
+(function () {
+  var prefijo = '{{ prefijo|default:"id_"|escapejs }}';
+  var formulario = '{{ formulario|escapejs }}';
+  var campo = function (nombre) { return document.getElementById(prefijo + nombre); };
+  var cuil = campo('cuil');
+  if (!cuil) return;
+
+  var leyenda = document.createElement('div');
+  leyenda.style.cssText = 'font-size:0.8rem;color:#1e40af;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;margin-bottom:10px;';
+  leyenda.textContent = 'ℹ️ Si la persona ya fue cargada como tabulador o aplicador, ingresá solo el CUIL: los demás datos se completan automáticamente.';
+
+  var aviso = document.createElement('div');
+  aviso.style.cssText = 'font-size:0.8rem;color:#15803d;margin-top:6px;';
+  aviso.hidden = true;
+
+  var grupo = cuil.closest('.field-group') || cuil.parentElement;
+  grupo.parentElement.insertBefore(leyenda, grupo);
+  cuil.insertAdjacentElement('afterend', aviso);
+
+  var ultimo = '';
+  cuil.addEventListener('input', async function () {
+    var valor = cuil.value.replace(/\D/g, '');
+    if (valor.length !== 11) { ultimo = ''; aviso.hidden = true; return; }
+    if (valor === ultimo) return;
+    ultimo = valor;
+    try {
+      var resp = await fetch('{% url "evaluaciones_educativas:fluidez_octubre_2026:buscar_persona_cuil" %}?cuil=' + valor);
+      var datos = await resp.json();
+      // Si el CUIL cambió mientras se buscaba, esta respuesta ya no aplica.
+      if (cuil.value.replace(/\D/g, '') !== valor) return;
+      if (!datos.ok || !datos.encontrado) { aviso.hidden = true; return; }
+      var yaCargado = (formulario === 'aplicador' && datos.es_aplicador) ||
+                      (formulario === 'tabulador' && datos.es_tabulador);
+      if (yaCargado) {
+        aviso.style.color = '#b45309';
+        aviso.textContent = '⚠ Esta persona ya está cargada como ' + formulario + '.';
+        aviso.hidden = false;
+        return;
+      }
+      aviso.style.color = '#15803d';
+      ['apellido', 'nombre', 'correo', 'celular'].forEach(function (f) {
+        var input = campo(f);
+        if (input && datos[f]) input.value = datos[f];
+      });
+      aviso.textContent = '✓ Datos tomados de ' + datos.origen + '. Revisalos antes de guardar.';
+      aviso.hidden = false;
+    } catch (e) {
+      // Si la búsqueda falla, los datos se cargan a mano.
+    }
+  });
+})();
+</script>

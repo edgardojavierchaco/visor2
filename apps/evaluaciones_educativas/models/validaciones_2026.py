@@ -345,6 +345,16 @@ class ValAplicador(ValPersona):
 	
 class ValVeedor(ValPersona):	
 	establecimiento = models.ForeignKey(ValEstablecimiento, on_delete=models.CASCADE, related_name='veedores')
-	
+	# El segundo veedor de un establecimiento (con 2 o más secciones) es el
+	# asistente de veedor. Lo define la vista al crearlo, no el front.
+	asistente_veedor = models.BooleanField(default=False)
+
 	class Meta:
 		db_table = '"validaciones_2026"."veedores"'
+		constraints = [
+			# Como máximo un veedor y un asistente por establecimiento.
+			models.UniqueConstraint(
+				fields=['establecimiento', 'asistente_veedor'],
+				name='un_veedor_y_un_asistente_por_establecimiento',
+			),
+		]

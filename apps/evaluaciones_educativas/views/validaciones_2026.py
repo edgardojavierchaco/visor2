@@ -62,6 +62,11 @@ def _max_veedores(cant_secciones):
     return MAX_VEEDORES_AMPLIADO if cant_secciones >= 2 else MAX_VEEDORES_BASE
 
 
+def _rol_veedor(veedor):
+    """Nombre del rol para los mensajes: 'Veedor' o 'Asistente de veedor'."""
+    return 'Asistente de veedor' if veedor.asistente_veedor else 'Veedor'
+
+
 def _error_cuil_duplicado(cuil_persona, excluir_pk=None):
     """
     Un CUIL solo puede estar una vez entre veedores y aplicadores: quien es
@@ -89,7 +94,8 @@ def _error_cuil_duplicado(cuil_persona, excluir_pk=None):
     quien = f'{existente.apellido}, {existente.nombre}'
     if hasattr(existente, 'valveedor'):
         escuela = existente.valveedor.establecimiento
-        donde = f'como veedor en {escuela.escuela} ({escuela.cueanexo})'
+        rol = _rol_veedor(existente.valveedor).lower()
+        donde = f'como {rol} en {escuela.escuela} ({escuela.cueanexo})'
     elif hasattr(existente, 'valaplicador'):
         seccion = existente.valaplicador.seccion
         escuela = seccion.grado.establecimiento
@@ -978,6 +984,12 @@ def lista_establecimientos_personas(request, region):
         .values_list('establecimiento')
         .annotate(total=Count('pk'))
     )
+    asistentes_por_est = dict(
+        ValVeedor.objects
+        .filter(establecimiento__region=region, asistente_veedor=True)
+        .values_list('establecimiento')
+        .annotate(total=Count('pk'))
+    )
     aplicadores_por_est = dict(
         ValAplicador.objects
         .filter(seccion__grado__establecimiento__region=region)
@@ -996,6 +1008,10 @@ def lista_establecimientos_personas(request, region):
 
     for est in establecimientos_list:
         est.cant_veedores = veedores_por_est.get(est.cueanexo, 0)
+        # cant_veedores incluye al asistente (cuenta para el cupo);
+        # cant_principales es solo el veedor, sin el asistente.
+        est.cant_asistentes = asistentes_por_est.get(est.cueanexo, 0)
+        est.cant_principales = est.cant_veedores - est.cant_asistentes
         est.cant_aplicadores = aplicadores_por_est.get(est.cueanexo, 0)
         est.cant_personas = est.cant_veedores + est.cant_aplicadores
         est.cant_secciones = secciones_por_est.get(est.cueanexo, 0)
@@ -1082,8 +1098,9 @@ def listar_personas_establecimiento(request, cueanexo):
             'codigo_area': v.codigo_area,
             'numero_telefono': v.numero_telefono,
             'tipo': 'veedor',
+            'asistente_veedor': v.asistente_veedor,
         }
-        for v in veedores
+        for v in veedores.order_by('asistente_veedor', 'pk')
     ]
 
     data_aplicadores = [
@@ -1120,55 +1137,77 @@ def crear_veedor(request, cueanexo):
     if not est:
         return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
 
-    # Cupo de veedores: 1 por establecimiento, o 2 si tiene 2 o más secciones.
-    # Para cambiar uno ya cargado hay que eliminarlo primero.
-    cant_secciones = _cant_secciones(est)
-    cupo = _max_veedores(cant_secciones)
-    asignados = ValVeedor.objects.filter(establecimiento=est).count()
-    if asignados >= cupo:
-        if cupo == 1:
-            detalle = (
-                f'Admite un solo veedor porque tiene {cant_secciones} '
-                f'{"sección" if cant_secciones == 1 else "secciones"}.'
-            )
-        else:
-            detalle = f'Admite hasta {cupo} veedores y ya tiene {asignados}.'
-        return JsonResponse({
-            'ok': False,
-            'error': (
-                f'Este establecimiento ya alcanzó el máximo de veedores. '
-                f'{detalle} Para cambiarlos, primero eliminá alguno.'
-            ),
-        }, status=400)
-
     form = ValVeedorForm(request.POST)
     if not form.is_valid():
         return JsonResponse({'ok': False, 'error': form.errores_legibles()}, status=400)
-    # CUIL único entre veedores y aplicadores
     cd = form.cleaned_data
+    asistente = cd['rol'] == ValVeedorForm.ROL_ASISTENTE
+
+    # Un veedor por establecimiento, y un asistente solo si tiene 2 o más
+    # secciones y ya tiene veedor. El veedor no se elimina (solo se edita),
+    # así nunca queda un asistente sin veedor.
+    tiene_veedor = ValVeedor.objects.filter(establecimiento=est, asistente_veedor=False).exists()
+    if asistente:
+        cant_secciones = _cant_secciones(est)
+        if _max_veedores(cant_secciones) < MAX_VEEDORES_AMPLIADO:
+            return JsonResponse({
+                'ok': False,
+                'error': (
+                    f'Este establecimiento no admite asistente de veedor porque tiene '
+                    f'{cant_secciones} {"sección" if cant_secciones == 1 else "secciones"}. '
+                    f'Requiere 2 o más.'
+                ),
+            }, status=400)
+        if not tiene_veedor:
+            return JsonResponse({
+                'ok': False,
+                'error': 'Primero cargá el veedor del establecimiento.',
+            }, status=400)
+        if ValVeedor.objects.filter(establecimiento=est, asistente_veedor=True).exists():
+            return JsonResponse({
+                'ok': False,
+                'error': 'Este establecimiento ya tiene asistente de veedor. Para cambiarlo, editá sus datos o eliminalo desde "Modificar Aplicador y Veedor".',
+            }, status=400)
+    elif tiene_veedor:
+        return JsonResponse({
+            'ok': False,
+            'error': 'Este establecimiento ya tiene veedor. Para cambiarlo, editá sus datos desde "Modificar Aplicador y Veedor".',
+        }, status=400)
+
+    # CUIL único entre veedores y aplicadores
     error_cuil = _error_cuil_duplicado(cd['cuil'])
     if error_cuil:
         return JsonResponse({'ok': False, 'error': error_cuil}, status=400)
 
     try:
-        veedor = ValVeedor.objects.create(
-            nombre=cd['nombre'],
-            apellido=cd['apellido'],
-            cuil=cd['cuil'],
-            correo=cd['correo'],
-            codigo_area=cd['codigo_area'],
-            numero_telefono=cd['numero_telefono'],
-            establecimiento=est,
-        )
+        with transaction.atomic(using=ValVeedor.objects.db):
+            veedor = ValVeedor.objects.create(
+                nombre=cd['nombre'],
+                apellido=cd['apellido'],
+                cuil=cd['cuil'],
+                correo=cd['correo'],
+                codigo_area=cd['codigo_area'],
+                numero_telefono=cd['numero_telefono'],
+                establecimiento=est,
+                asistente_veedor=asistente,
+            )
     except IntegrityError:
-        return JsonResponse({'ok': False, 'error': ERROR_CUIL_CONCURRENTE}, status=400)
+        # Choque con el unique del CUIL o con el de un veedor/asistente por
+        # establecimiento (dos altas simultáneas en la misma escuela).
+        if ValPersona.objects.filter(cuil=cd['cuil']).exists():
+            return JsonResponse({'ok': False, 'error': ERROR_CUIL_CONCURRENTE}, status=400)
+        return JsonResponse({
+            'ok': False,
+            'error': 'Se cargó otro veedor en este establecimiento al mismo tiempo. Actualizá la página.',
+        }, status=400)
 
     return JsonResponse({
         'ok': True,
         'id': veedor.pk,
         'nombre': veedor.nombre,
         'apellido': veedor.apellido,
-        'mensaje': f'Veedor {veedor.apellido}, {veedor.nombre} creado correctamente.',
+        'asistente_veedor': veedor.asistente_veedor,
+        'mensaje': f'{_rol_veedor(veedor)} {veedor.apellido}, {veedor.nombre} creado correctamente.',
     })
 
 
@@ -1211,7 +1250,7 @@ def editar_veedor(request, veedor_id):
 
     return JsonResponse({
         'ok': True,
-        'mensaje': f'Veedor {veedor.apellido}, {veedor.nombre} actualizado.',
+        'mensaje': f'{_rol_veedor(veedor)} {veedor.apellido}, {veedor.nombre} actualizado.',
     })
 
 
@@ -1231,12 +1270,21 @@ def eliminar_veedor(request, veedor_id):
     if not est:
         return JsonResponse({'ok': False, 'error': 'Sin acceso.'}, status=403)
 
+    # El veedor no se elimina, solo se edita: si se borrara, el asistente
+    # quedaría sin veedor. El asistente sí, porque es opcional.
+    if not veedor.asistente_veedor:
+        return JsonResponse({
+            'ok': False,
+            'error': 'El veedor no se puede eliminar. Para cambiarlo, editá sus datos.',
+        }, status=400)
+
     nombre_completo = f'{veedor.apellido}, {veedor.nombre}'
+    rol = _rol_veedor(veedor)
     veedor.delete()
 
     return JsonResponse({
         'ok': True,
-        'mensaje': f'Veedor {nombre_completo} eliminado.',
+        'mensaje': f'{rol} {nombre_completo} eliminado.',
     })
 
 

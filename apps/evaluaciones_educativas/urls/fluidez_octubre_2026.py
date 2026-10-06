@@ -25,4 +25,12 @@ urlpatterns = [
     path('tabuladores/cargar/', fluidez_octubre_2026.carga_tabulador,     name='carga_tabulador'),
     path('tabuladores/<str:cuil_tabulador>/asignar/', fluidez_octubre_2026.asignacion_tabulador, name='asignacion_tabulador'),
     path('tabuladores/<str:cuil_tabulador>/eliminar/', fluidez_octubre_2026.eliminar_tabulador, name='eliminar_tabulador'),
+
+    # Aplicadores
+    path('aplicadores/',                     fluidez_octubre_2026.gestion_aplicadores, name='gestion_aplicadores'),
+    path('aplicadores/cargar/',              fluidez_octubre_2026.carga_aplicador,     name='carga_aplicador'),
+    path('aplicadores/buscar_cuil/',         fluidez_octubre_2026.buscar_persona_cuil, name='buscar_persona_cuil'),
+    path('aplicadores/<str:cuil_aplicador>/editar/',   fluidez_octubre_2026.carga_aplicador,      name='editar_aplicador'),
+    path('aplicadores/<str:cuil_aplicador>/asignar/',  fluidez_octubre_2026.asignacion_aplicador, name='asignacion_aplicador'),
+    path('aplicadores/<str:cuil_aplicador>/eliminar/', fluidez_octubre_2026.eliminar_aplicador,   name='eliminar_aplicador'),
 ]

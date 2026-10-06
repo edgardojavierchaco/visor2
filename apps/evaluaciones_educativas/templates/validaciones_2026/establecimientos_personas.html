@@ -149,6 +149,7 @@
         letter-spacing: 0.3px;
       }
       .badge-veedores  { background: #ede9fe; color: #5b21b6; }
+      .badge-asistentes { background: #fae8ff; color: #86198f; }
       .badge-aplicadores { background: #ccfbf1; color: #115e59; }
       .badge-sin-personas { background: #fef3c7; color: #92400e; }
       .cupo-veedores { font-size: 0.72rem; color: #6b7280; margin-bottom: 0.5rem; }
@@ -192,7 +193,8 @@
       .modal-title { font-weight: 700; font-size: 1rem; }
 
       /* Opciones de rol */
-      .rol-options { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; }
+      .rol-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 8px; }
+      @media (max-width: 576px) { .rol-options { grid-template-columns: 1fr; } }
       .rol-btn {
         border: 2px solid var(--gray-200); border-radius: 14px; padding: 24px 16px;
         cursor: pointer; transition: all 0.25s; text-align: center; background: #fff;
@@ -201,6 +203,10 @@
       .rol-btn:hover { transform: scale(1.03); }
       .rol-btn.veedor:hover  { border-color: var(--purple); background: #f5f3ff; }
       .rol-btn.aplicador:hover { border-color: var(--teal); background: #f0fdfa; }
+      .rol-btn.asistente:hover { border-color: #a21caf; background: #fdf4ff; }
+      /* Rol sin lugar disponible: se ve, pero no se puede elegir */
+      .rol-btn.deshabilitado { opacity: 0.5; cursor: not-allowed; background: var(--gray-100); }
+      .rol-btn.deshabilitado:hover { transform: none; border-color: var(--gray-200); background: var(--gray-100); }
       .rol-icon { font-size: 2.2rem; }
       .rol-title { font-weight: 700; font-size: 0.95rem; }
       .rol-sub   { font-size: 0.73rem; color: var(--gray-600); }
@@ -248,6 +254,7 @@
         text-transform: uppercase; letter-spacing: 0.5px;
       }
       .tipo-veedor { background: #ede9fe; color: #5b21b6; }
+      .tipo-asistente { background: #fae8ff; color: #86198f; }
       .tipo-aplicador { background: #ccfbf1; color: #115e59; }
       .persona-actions { display: flex; gap: 6px; }
       .persona-actions button {
@@ -377,6 +384,11 @@
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
+          <div class="stat-value" style="color:#86198f;" id="statAsistentes">0</div>
+          <div class="stat-label">Asistentes de veedor</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
           <div class="stat-value" style="color:var(--teal);" id="statAplicadores">0</div>
           <div class="stat-label">Aplicadores</div>
         </div>
@@ -398,6 +410,7 @@
              id="card-{{ est.cueanexo }}"
              data-search="{{ est.escuela|lower }} {{ est.cueanexo }}"
              data-veedores="{{ est.cant_veedores }}"
+             data-asistentes="{{ est.cant_asistentes }}"
              data-max-veedores="{{ est.max_veedores }}"
              data-secciones="{{ est.cant_secciones }}"
              data-aplicadores="{{ est.cant_aplicadores }}">
@@ -419,8 +432,11 @@
 
             <!-- Badges personas -->
             <div class="d-flex flex-wrap gap-2 mb-2" id="badges-{{ est.cueanexo }}">
-              {% if est.cant_veedores > 0 %}
-                <span class="badge-personas badge-veedores"><i class="bi bi-eye-fill me-1"></i>{{ est.cant_veedores }} veedor{{ est.cant_veedores|pluralize:"es" }}</span>
+              {% if est.cant_principales > 0 %}
+                <span class="badge-personas badge-veedores"><i class="bi bi-eye-fill me-1"></i>{{ est.cant_principales }} veedor{{ est.cant_principales|pluralize:"es" }}</span>
+              {% endif %}
+              {% if est.cant_asistentes > 0 %}
+                <span class="badge-personas badge-asistentes"><i class="bi bi-person-badge-fill me-1"></i>{{ est.cant_asistentes }} asistente{{ est.cant_asistentes|pluralize }} de veedor</span>
               {% endif %}
               {% if est.cant_aplicadores > 0 %}
                 <span class="badge-personas badge-aplicadores"><i class="bi bi-person-check-fill me-1"></i>{{ est.cant_aplicadores }} aplicador{{ est.cant_aplicadores|pluralize:"es" }}</span>
@@ -429,11 +445,13 @@
                 <span class="badge-personas badge-sin-personas"><i class="bi bi-clock me-1"></i>Sin personas asignadas</span>
               {% endif %}
             </div>
-            <!-- Cupo de veedores: 1, o 2 si el establecimiento tiene 2 o más secciones -->
+            <!-- Cupo: 1 veedor, más 1 asistente de veedor si tiene 2 o más secciones.
+                 actualizarCardPersonas() repinta este mismo markup. -->
             <div class="cupo-veedores {% if est.cant_veedores >= est.max_veedores %}completo{% endif %}"
                  id="cupo-{{ est.cueanexo }}"
-                 title="Un establecimiento admite 1 veedor, o 2 si tiene 2 o más secciones.">
-              <i class="bi bi-eye me-1"></i>Veedores: <strong>{{ est.cant_veedores }} de {{ est.max_veedores }}</strong>
+                 title="Un establecimiento admite 1 veedor, y además 1 asistente de veedor si tiene 2 o más secciones.">
+              <i class="bi bi-eye me-1"></i>Veedor: <strong>{{ est.cant_principales }} de 1</strong>
+              {% if est.max_veedores > 1 %} · Asistente: <strong>{{ est.cant_asistentes }} de 1</strong>{% endif %}
               <span class="cupo-motivo">· {{ est.cant_secciones }} secci{{ est.cant_secciones|pluralize:"ón,ones" }}</span>
             </div>
             <!-- Cupo de aplicadores: uno por sección -->
@@ -478,7 +496,7 @@
          MODAL 1: Seleccionar Rol (Veedor o Aplicador)
     ================================================================ -->
     <div class="modal fade" id="modalSeleccionRol" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
           <div class="modal-header mh-personas">
             <h5 class="modal-title">
@@ -491,11 +509,17 @@
               ¿Qué tipo de persona querés cargar?
             </p>
             <div class="rol-options">
-              <div class="rol-btn veedor" onclick="abrirFormVeedor()">
+              <div class="rol-btn veedor" id="rolBtnVeedor" onclick="abrirFormVeedor(false)">
                 <div class="rol-icon">📄</div>
                 <div class="rol-title" style="color:var(--purple);">Veedor</div>
                 <div class="rol-sub">Asignado al establecimiento</div>
                 <div class="rol-sub fw-bold" id="rolVeedorCupo" style="color:var(--purple);"></div>
+              </div>
+              <div class="rol-btn asistente" id="rolBtnAsistente" onclick="abrirFormVeedor(true)">
+                <div class="rol-icon">📝</div>
+                <div class="rol-title" style="color:#86198f;">Asistente de veedor</div>
+                <div class="rol-sub">Acompaña al veedor</div>
+                <div class="rol-sub fw-bold" id="rolAsistenteCupo" style="color:#86198f;"></div>
               </div>
               <div class="rol-btn aplicador" onclick="abrirSeleccionSeccion()">
                 <div class="rol-icon">📋</div>
@@ -518,7 +542,7 @@
         <div class="modal-content">
           <div class="modal-header mh-veedor">
             <h5 class="modal-title">
-              <i class="bi bi-eye-fill me-2"></i>Cargar Veedor — <span id="veedorEscuelaNombre"></span>
+              <i class="bi bi-eye-fill me-2"></i>Cargar <span id="veedorRolTitulo">Veedor</span> — <span id="veedorEscuelaNombre"></span>
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
@@ -558,7 +582,7 @@
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
             <button type="button" class="btn fw-bold text-white" id="btnGuardarVeedor"
                     style="background:linear-gradient(135deg,#7c3aed,var(--purple));" onclick="guardarVeedor()">
-              <i class="bi bi-save me-1"></i>Guardar veedor
+              <i class="bi bi-save me-1"></i>Guardar <span id="veedorRolBoton">veedor</span>
             </button>
           </div>
         </div>
@@ -809,6 +833,7 @@
       let seccionSeleccionadaLabel = '';
       let eliminarId = null;
       let eliminarTipo = null;
+      let rolVeedorActual = 'veedor';  // 'veedor' | 'asistente', lo fija abrirFormVeedor()
 
       // ── MODALES ──────────────────────────────────────────────────────
       const modalSeleccionRolBS = new bootstrap.Modal(document.getElementById('modalSeleccionRol'));
@@ -830,13 +855,42 @@
 
       // ── STATS GLOBALES ────────────────────────────────────────────────
       function actualizarStats() {
-        let totalV = 0, totalA = 0;
+        let totalV = 0, totalAs = 0, totalA = 0;
         document.querySelectorAll('.est-card').forEach(card => {
-          totalV += parseInt(card.dataset.veedores || 0);
+          const v = estadoVeedores(card);
+          totalV += v.principales;
+          totalAs += v.asistentes;
           totalA += parseInt(card.dataset.aplicadores || 0);
         });
         document.getElementById('statVeedores').textContent = totalV;
+        document.getElementById('statAsistentes').textContent = totalAs;
         document.getElementById('statAplicadores').textContent = totalA;
+      }
+
+      // Veedores de una tarjeta. data-veedores incluye al asistente.
+      // motivoVeedor / motivoAsistente explican por qué ese rol no se puede
+      // cargar (null = disponible). Son las mismas reglas que valida
+      // crear_veedor en el backend.
+      function estadoVeedores(card) {
+        const total = parseInt(card.dataset.veedores || 0);
+        const asistentes = parseInt(card.dataset.asistentes || 0);
+        const principales = total - asistentes;
+        const cupo = parseInt(card.dataset.maxVeedores || 1);
+        const secciones = parseInt(card.dataset.secciones || 0);
+
+        let motivoVeedor = null;
+        if (principales > 0) {
+          motivoVeedor = 'Este establecimiento ya tiene veedor. Para cambiarlo, editá sus datos desde "Modificar Aplicador y Veedor".';
+        }
+        let motivoAsistente = null;
+        if (cupo < 2) {
+          motivoAsistente = 'El asistente de veedor requiere 2 o más secciones, y este establecimiento tiene ' + secciones + (secciones === 1 ? ' sección.' : ' secciones.');
+        } else if (principales === 0) {
+          motivoAsistente = 'Primero cargá el veedor del establecimiento.';
+        } else if (asistentes > 0) {
+          motivoAsistente = 'Este establecimiento ya tiene asistente de veedor. Para cambiarlo, editá sus datos o eliminalo desde "Modificar Aplicador y Veedor".';
+        }
+        return { total, asistentes, principales, cupo, secciones, motivoVeedor, motivoAsistente };
       }
       actualizarStats();
 
@@ -897,14 +951,18 @@
         nombreEscuelaActual = nombre;
         document.getElementById('rolEscuelaNombre').textContent = nombre;
 
-        // Cupo de veedores del establecimiento elegido, tomado de su tarjeta.
+        // Veedor y Asistente de veedor: cada botón se deshabilita cuando su
+        // lugar no está disponible (el motivo sale al hacer clic).
         const card = document.getElementById('card-' + cueanexo);
-        const cupoEl = document.getElementById('rolVeedorCupo');
-        if (card && cupoEl) {
-          const asignados = parseInt(card.dataset.veedores || 0);
-          const cupo = parseInt(card.dataset.maxVeedores || 1);
-          const secciones = parseInt(card.dataset.secciones || 0);
-          cupoEl.textContent = asignados + ' de ' + cupo + ' (' + secciones + (secciones === 1 ? ' sección)' : ' secciones)');
+        if (card) {
+          const v = estadoVeedores(card);
+          document.getElementById('rolBtnVeedor').classList.toggle('deshabilitado', !!v.motivoVeedor);
+          document.getElementById('rolBtnAsistente').classList.toggle('deshabilitado', !!v.motivoAsistente);
+          document.getElementById('rolVeedorCupo').textContent = v.principales + ' de 1';
+          let textoAsistente = v.asistentes + ' de 1';
+          if (v.cupo < 2) textoAsistente = 'Requiere 2 o más secciones';
+          else if (v.principales === 0) textoAsistente = 'Primero cargá el veedor';
+          document.getElementById('rolAsistenteCupo').textContent = textoAsistente;
         }
         const cupoAplEl = document.getElementById('rolAplicadorCupo');
         if (card && cupoAplEl) {
@@ -913,29 +971,21 @@
         modalSeleccionRolBS.show();
       }
 
-      function abrirFormVeedor() {
-        // Cupo de veedores: 1 por establecimiento, o 2 si tiene 2 o más
-        // secciones. Si ya está cubierto, hay que eliminar uno antes.
+      function abrirFormVeedor(esAsistente) {
         const card = document.getElementById('card-' + cueActual);
         if (card) {
-          const asignados = parseInt(card.dataset.veedores || 0);
-          const cupo = parseInt(card.dataset.maxVeedores || 1);
-          const secciones = parseInt(card.dataset.secciones || 0);
-          if (asignados >= cupo) {
-            modalSeleccionRolBS.hide();
-            const detalle = cupo === 1
-              ? 'Admite un solo veedor porque tiene ' + secciones + (secciones === 1 ? ' sección.' : ' secciones.')
-              : 'Admite hasta ' + cupo + ' veedores y ya tiene ' + asignados + '.';
-            showToast(
-              'Este establecimiento ya alcanzó el máximo de veedores. ' + detalle +
-              ' Para cambiarlos, eliminá alguno desde "Modificar Aplicador y Veedor".',
-              'warning'
-            );
+          const v = estadoVeedores(card);
+          const motivo = esAsistente ? v.motivoAsistente : v.motivoVeedor;
+          if (motivo) {
+            showToast(motivo, 'warning');
             return;
           }
         }
 
+        rolVeedorActual = esAsistente ? 'asistente' : 'veedor';
         modalSeleccionRolBS.hide();
+        document.getElementById('veedorRolTitulo').textContent = esAsistente ? 'Asistente de Veedor' : 'Veedor';
+        document.getElementById('veedorRolBoton').textContent = esAsistente ? 'asistente' : 'veedor';
         document.getElementById('veedorEscuelaNombre').textContent = nombreEscuelaActual;
         document.getElementById('id_veedor-nombre').value = '';
         document.getElementById('id_veedor-apellido').value = '';
@@ -971,6 +1021,7 @@
         body.append('veedor-correo', correo);
         body.append('veedor-codigo_area', codigoArea);
         body.append('veedor-numero_telefono', numTel);
+        body.append('veedor-rol', rolVeedorActual);
         body.append('csrfmiddlewaretoken', getCsrf());
 
         try {
@@ -1135,9 +1186,15 @@
           return;
         }
         let html = '';
-        if (veedores.length > 0) {
-          html += '<h6 class="fw-bold mb-3" style="color:var(--purple);font-size:0.85rem;"><i class="bi bi-eye-fill me-1"></i>Veedores</h6>';
-          veedores.forEach(v => { html += renderPersonaRow(v); });
+        const principales = veedores.filter(v => !v.asistente_veedor);
+        const asistentes = veedores.filter(v => v.asistente_veedor);
+        if (principales.length > 0) {
+          html += '<h6 class="fw-bold mb-3" style="color:var(--purple);font-size:0.85rem;"><i class="bi bi-eye-fill me-1"></i>Veedor</h6>';
+          principales.forEach(v => { html += renderPersonaRow(v); });
+        }
+        if (asistentes.length > 0) {
+          html += '<h6 class="fw-bold mb-3 mt-3" style="color:#86198f;font-size:0.85rem;"><i class="bi bi-person-badge-fill me-1"></i>Asistente de veedor</h6>';
+          asistentes.forEach(v => { html += renderPersonaRow(v); });
         }
         if (aplicadores.length > 0) {
           html += '<h6 class="fw-bold mb-3 mt-3" style="color:var(--teal);font-size:0.85rem;"><i class="bi bi-person-check-fill me-1"></i>Aplicadores</h6>';
@@ -1147,8 +1204,11 @@
       }
 
       function renderPersonaRow(persona) {
-        const tipoClass = persona.tipo === 'veedor' ? 'tipo-veedor' : 'tipo-aplicador';
-        const tipoLabel = persona.tipo === 'veedor' ? 'Veedor' : 'Aplicador';
+        const tipoClass = persona.tipo === 'veedor'
+          ? (persona.asistente_veedor ? 'tipo-asistente' : 'tipo-veedor')
+          : 'tipo-aplicador';
+        const tipoLabel = etiquetaRol(persona);
+        const esVeedorPrincipal = persona.tipo === 'veedor' && !persona.asistente_veedor;
         const telDisplay = persona.codigo_area ? '(' + persona.codigo_area + ') ' + persona.numero_telefono : (persona.numero_telefono || '');
         const secInfo = persona.seccion_label ? '<br><span style="font-size:0.7rem;color:var(--teal);">📋 ' + persona.seccion_label + '</span>' : '';
         const sN = (persona.nombre || '').replace(/'/g, "\\'");
@@ -1161,16 +1221,23 @@
             '<div class="persona-detalle">CUIL: ' + persona.cuil + ' · ' + persona.correo + ' · Tel: ' + telDisplay + secInfo + '</div>' +
           '</div>' +
           '<div class="persona-actions">' +
-            '<button class="btn-edit-persona" onclick="abrirEditar(\'' + persona.tipo + '\', ' + persona.id + ', \'' + sN + '\', \'' + sA + '\', \'' + persona.cuil + '\', \'' + sC + '\', \'' + (persona.codigo_area || '') + '\', \'' + (persona.numero_telefono || '') + '\')">' +
+            '<button class="btn-edit-persona" onclick="abrirEditar(\'' + persona.tipo + '\', ' + persona.id + ', \'' + sN + '\', \'' + sA + '\', \'' + persona.cuil + '\', \'' + sC + '\', \'' + (persona.codigo_area || '') + '\', \'' + (persona.numero_telefono || '') + '\', \'' + tipoLabel + '\')">' +
               '<i class="bi bi-pencil-fill"></i>Editar</button>' +
+            // El veedor no se elimina, solo se edita (crear/eliminar_veedor lo validan)
+            (esVeedorPrincipal ? '' :
             '<button class="btn-del-persona" onclick="abrirEliminar(\'' + persona.tipo + '\', ' + persona.id + ', \'' + sA + ', ' + sN + '\')">' +
-              '<i class="bi bi-trash3-fill"></i>Eliminar</button>' +
+              '<i class="bi bi-trash3-fill"></i>Eliminar</button>') +
           '</div></div>';
       }
 
-      function abrirEditar(tipo, id, nombre, apellido, cuil, correo, codigoArea, numTel) {
+      function etiquetaRol(persona) {
+        if (persona.tipo !== 'veedor') return 'Aplicador';
+        return persona.asistente_veedor ? 'Asistente de veedor' : 'Veedor';
+      }
+
+      function abrirEditar(tipo, id, nombre, apellido, cuil, correo, codigoArea, numTel, etiqueta) {
         modalListaPersonasBS.hide();
-        document.getElementById('editarTipoLabel').textContent = tipo === 'veedor' ? 'Veedor' : 'Aplicador';
+        document.getElementById('editarTipoLabel').textContent = etiqueta;
         document.getElementById('editId').value = id;
         document.getElementById('editTipo').value = tipo;
         document.getElementById('id_editar-nombre').value = nombre;
@@ -1287,14 +1354,20 @@
           if (data.ok) {
             const card = document.getElementById('card-' + cueanexo);
             const cantV = data.veedores.length;
+            const cantAs = data.veedores.filter(v => v.asistente_veedor).length;
+            const cantP = cantV - cantAs;
             const cantA = data.aplicadores.length;
             card.dataset.veedores = cantV;
+            card.dataset.asistentes = cantAs;
             card.dataset.aplicadores = cantA;
 
             const badgesDiv = document.getElementById('badges-' + cueanexo);
             let html = '';
-            if (cantV > 0) {
-              html += '<span class="badge-personas badge-veedores"><i class="bi bi-eye-fill me-1"></i>' + cantV + ' veedor' + (cantV > 1 ? 'es' : '') + '</span>';
+            if (cantP > 0) {
+              html += '<span class="badge-personas badge-veedores"><i class="bi bi-eye-fill me-1"></i>' + cantP + ' veedor' + (cantP > 1 ? 'es' : '') + '</span>';
+            }
+            if (cantAs > 0) {
+              html += '<span class="badge-personas badge-asistentes"><i class="bi bi-person-badge-fill me-1"></i>' + cantAs + ' asistente' + (cantAs > 1 ? 's' : '') + ' de veedor</span>';
             }
             if (cantA > 0) {
               html += '<span class="badge-personas badge-aplicadores"><i class="bi bi-person-check-fill me-1"></i>' + cantA + ' aplicador' + (cantA > 1 ? 'es' : '') + '</span>';
@@ -1305,13 +1378,17 @@
             badgesDiv.innerHTML = html;
 
             // Refresca la línea de cupo: cambia al cargar o eliminar un veedor.
+            // Mismo markup que arma el template para la línea de cupo.
             const cupo = parseInt(card.dataset.maxVeedores || 1);
+            const secciones = parseInt(card.dataset.secciones || 0);
             const cupoDiv = document.getElementById('cupo-' + cueanexo);
             if (cupoDiv) {
-              cupoDiv.querySelector('strong').textContent = cantV + ' de ' + cupo;
+              cupoDiv.innerHTML =
+                '<i class="bi bi-eye me-1"></i>Veedor: <strong>' + cantP + ' de 1</strong>' +
+                (cupo > 1 ? ' · Asistente: <strong>' + cantAs + ' de 1</strong>' : '') +
+                ' <span class="cupo-motivo">· ' + secciones + (secciones === 1 ? ' sección' : ' secciones') + '</span>';
               cupoDiv.classList.toggle('completo', cantV >= cupo);
             }
-            const secciones = parseInt(card.dataset.secciones || 0);
             const cupoApl = document.getElementById('cupo-aplicadores-' + cueanexo);
             if (cupoApl) {
               cupoApl.querySelector('strong').textContent = cantA + ' de ' + secciones;
