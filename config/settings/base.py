@@ -210,6 +210,15 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 #MEDIA_ROOT = ROOT_DIR / 'apps/media'
 
+# ===============================
+# BNH - URL PÚBLICA PARA QR
+# ===============================
+
+BNH_PUBLIC_BASE_URL = os.environ.get(
+    "BNH_PUBLIC_BASE_URL",
+    ""
+).rstrip("/")
+
 # Configuración de tiempo y formato
 LANGUAGE_CODE = 'es-ar'
 TIME_ZONE = 'America/Argentina/Buenos_Aires'

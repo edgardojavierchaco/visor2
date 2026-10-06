@@ -1,6 +1,7 @@
 import csv
 
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Q, Count
 from django.http import (
     Http404,
@@ -9,12 +10,15 @@ from django.http import (
 )
 from django.shortcuts import (
     get_object_or_404,
+    redirect,
     render,
 )
 from django.utils import timezone
+from django.conf import settings
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 
 from .domain.access import (
     activity_scope,
@@ -33,6 +37,7 @@ from .models import (
     TipoPersonal,
     Personas,
     RegistroActividades,
+    ConstanciaServicio,
 )
 
 
@@ -714,157 +719,185 @@ class PersonaDetailView(View):
 
 @operator_required
 @require_GET
-def constancia_servicio_pdf(
-    request,
-    persona_id,
-    cueanexo,
-):
-
-    cue = str(
-        cueanexo
-        or ""
-    ).strip()
+def constancia_servicio_pdf(request, persona_id, cueanexo):
+    """Emite una constancia nueva y genera un QR de verificación pública."""
+    cue = str(cueanexo or '').strip()
 
     person = get_object_or_404(
-        person_scope(
-            request.user
-        )
-        .select_related(
-            "sexo",
-            "provincia",
-            "localidad",
-            "codigo_area",
+        person_scope(request.user).select_related(
+            'sexo', 'provincia', 'localidad', 'codigo_area'
         ),
         pk=persona_id,
     )
 
     actividades = list(
-        activity_scope(
-            request.user
-        )
-        .filter(
-            persona=
-                person,
-
-            cueanexo=
-                cue,
-        )
+        activity_scope(request.user)
+        .filter(persona=person, cueanexo=cue)
         .select_related(
-            "tipo_personal",
-            "cond_actividad",
-            "ceic",
-            "sit_revista",
-            "t_designacion",
-            "modalidad",
-            "niveles",
-            "modalidad_curricular",
-            "nivel_curricular",
-            "espacio_curricular",
-            "espacios",
-            "grado_anio",
-            "secciones",
+            'tipo_personal', 'cond_actividad', 'ceic', 'sit_revista',
+            't_designacion', 'modalidad', 'niveles', 'modalidad_curricular',
+            'nivel_curricular', 'espacio_curricular', 'espacios',
+            'grado_anio', 'secciones',
         )
-        .order_by(
-            "f_desde",
-            "ceic_id",
-            "pk",
-        )
+        .order_by('f_desde', 'ceic_id', 'pk')
     )
 
     if not actividades:
-
         raise Http404(
-            (
-                "No existen servicios accesibles "
-                "para esta persona en la institución indicada."
-            )
+            'No existen servicios accesibles para esta persona en la institución indicada.'
         )
 
     nom_est = (
-        scoped_offers(
-            request.user
-        )
-        .filter(
-            cueanexo_str=
-                cue
-        )
-        .exclude(
-            nom_est__isnull=True
-        )
-        .exclude(
-            nom_est=""
-        )
-        .order_by(
-            "nom_est"
-        )
-        .values_list(
-            "nom_est",
-            flat=True,
-        )
+        scoped_offers(request.user)
+        .filter(cueanexo_str=cue)
+        .exclude(nom_est__isnull=True)
+        .exclude(nom_est='')
+        .order_by('nom_est')
+        .values_list('nom_est', flat=True)
         .first()
-
-        or
-
-        "Establecimiento educativo"
+        or 'Establecimiento educativo'
     )
 
-    from .services.constancia_servicio import (
-        generar_constancia_servicio_pdf,
+    from .services.constancia_servicio import generar_constancia_servicio_pdf
+    from .services.constancia_verificacion import (
+        crear_constancia_servicio,
+        registrar_hash_pdf,
     )
 
-    pdf = generar_constancia_servicio_pdf(
-        persona=
-            person,
-
-        cueanexo=
-            cue,
-
-        nom_est=
-            nom_est,
-
-        actividades=
-            actividades,
-
-        fecha_emision=
-            timezone.localdate(),
-    )
-
-    cuil = (
-        str(
-            person.cuil
-            or "sin_cuil"
+    # La creación y el PDF forman una única emisión lógica. Si el PDF falla,
+    # la transacción no deja una constancia huérfana.
+    with transaction.atomic():
+        constancia = crear_constancia_servicio(
+            usuario=request.user,
+            persona=person,
+            cueanexo=cue,
+            nom_est=nom_est,
+            actividades=actividades,
         )
-        .replace(
-            "-",
-            "",
+
+        verify_path = reverse(
+            'bnhpersonas:verificar_constancia',
+            kwargs={'token': constancia.token},
         )
-    )
+        public_base = str(getattr(settings, 'BNH_PUBLIC_BASE_URL', '') or '').rstrip('/')
+        verification_url = (
+            f'{public_base}{verify_path}'
+            if public_base
+            else request.build_absolute_uri(verify_path)
+        )
 
-    filename = (
-        f"constancia_servicio_"
-        f"{cuil}_"
-        f"{cue}.pdf"
-    )
+        pdf = generar_constancia_servicio_pdf(
+            persona=person,
+            cueanexo=cue,
+            nom_est=nom_est,
+            actividades=actividades,
+            fecha_emision=timezone.localtime(constancia.fecha_emision).date(),
+            numero_constancia=constancia.numero,
+            verification_url=verification_url,
+            hash_contenido=constancia.hash_contenido,
+        )
+        registrar_hash_pdf(constancia.pk, pdf)
 
-    response = HttpResponse(
-        pdf,
-        content_type=
-            "application/pdf",
-    )
+    cuil = str(person.cuil or 'sin_cuil').replace('-', '')
+    filename = f'constancia_servicio_{cuil}_{cue}.pdf'
 
-    response[
-        "Content-Disposition"
-    ] = (
-        f'inline; filename="{filename}"'
-    )
-
-    response[
-        "Cache-Control"
-    ] = (
-        "private, no-store"
-    )
-
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
+    response['Cache-Control'] = 'private, no-store'
+    response['X-Constancia-Numero'] = constancia.numero
     return response
+
+
+@require_GET
+def verificar_constancia(request, token):
+    """Consulta pública. No requiere sesión y no expone el CUIL completo."""
+    from .services.constancia_verificacion import (
+        mascara_cuil,
+        verificar_integridad_constancia,
+    )
+
+    constancia = get_object_or_404(
+        ConstanciaServicio.objects.select_related('persona'),
+        token=token,
+    )
+    integridad_ok = verificar_integridad_constancia(constancia)
+    snap = constancia.snapshot or {}
+    persona = snap.get('persona') or {}
+    institucion = snap.get('institucion') or {}
+    servicios = snap.get('servicios') or []
+
+    can_anular = False
+    if request.user.is_authenticated:
+        try:
+            can_anular = is_admin(request.user) or scoped_offers(request.user).filter(
+                cueanexo_str=constancia.cueanexo
+            ).exists()
+        except Exception:
+            can_anular = False
+
+    response = render(
+        request,
+        'bnh/personas/verificar_constancia.html',
+        {
+            'constancia': constancia,
+            'integridad_ok': integridad_ok,
+            'valida': (
+                integridad_ok
+                and constancia.estado == ConstanciaServicio.ESTADO_VIGENTE
+            ),
+            'persona_snapshot': persona,
+            'institucion_snapshot': institucion,
+            'servicios_snapshot': servicios,
+            'cuil_mascarado': mascara_cuil(persona.get('cuil')),
+            'can_anular': can_anular,
+        },
+    )
+    response['Cache-Control'] = 'no-store, max-age=0'
+    response['Pragma'] = 'no-cache'
+    response['X-Robots-Tag'] = 'noindex, nofollow, noarchive'
+    return response
+
+
+@operator_required
+@require_POST
+def anular_constancia(request, token):
+    from .services.constancia_verificacion import anular_constancia as service_anular
+
+    constancia = get_object_or_404(ConstanciaServicio, token=token)
+    autorizado = is_admin(request.user) or scoped_offers(request.user).filter(
+        cueanexo_str=constancia.cueanexo
+    ).exists()
+    if not autorizado:
+        raise Http404
+
+    motivo = str(request.POST.get('motivo') or '').strip()
+    try:
+        service_anular(
+            usuario=request.user,
+            constancia_id=constancia.pk,
+            motivo=motivo,
+        )
+    except ValueError as exc:
+        response = render(
+            request,
+            'bnh/personas/verificar_constancia.html',
+            {
+                'constancia': constancia,
+                'integridad_ok': True,
+                'valida': constancia.estado == ConstanciaServicio.ESTADO_VIGENTE,
+                'persona_snapshot': (constancia.snapshot or {}).get('persona') or {},
+                'institucion_snapshot': (constancia.snapshot or {}).get('institucion') or {},
+                'servicios_snapshot': (constancia.snapshot or {}).get('servicios') or [],
+                'cuil_mascarado': 'Dato protegido',
+                'can_anular': True,
+                'error_anulacion': str(exc),
+            },
+            status=400,
+        )
+        response['Cache-Control'] = 'no-store'
+        return response
+
+    return redirect('bnhpersonas:verificar_constancia', token=token)
 
 
 # ============================================================
