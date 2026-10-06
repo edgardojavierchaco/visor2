@@ -12,6 +12,8 @@ from .views_list import (
     PersonaDetailView,
     PersonasListView,
     constancia_servicio_pdf,
+    verificar_constancia,
+    anular_constancia,
     exportar_personal,
 )
 
@@ -20,6 +22,20 @@ app_name = "bnhpersonas"
 
 
 urlpatterns = [
+
+    # Verificación pública por QR. No requiere autenticación.
+    path(
+        "constancias/verificar/<uuid:token>/",
+        verificar_constancia,
+        name="verificar_constancia",
+    ),
+
+    # Anulación protegida para operadores con alcance sobre el CUEANEXO.
+    path(
+        "constancias/<uuid:token>/anular/",
+        anular_constancia,
+        name="anular_constancia",
+    ),
 
     path(
         "",

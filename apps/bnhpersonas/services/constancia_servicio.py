@@ -452,15 +452,21 @@ def _qr_image(
     size_mm=38,
 ):
 
-    contenido = json.dumps(
-        payload,
-        ensure_ascii=False,
-        separators=(
-            ",",
-            ":",
-        ),
-        sort_keys=True,
-    )
+    # Para constancias verificables el QR contiene únicamente una URL pública
+    # con token aleatorio. Se conserva compatibilidad con el payload JSON
+    # histórico por si esta función se reutiliza desde otro lugar.
+    if isinstance(payload, str):
+        contenido = payload
+    else:
+        contenido = json.dumps(
+            payload,
+            ensure_ascii=False,
+            separators=(
+                ",",
+                ":",
+            ),
+            sort_keys=True,
+        )
 
 
     qr = qrcode.QRCode(
@@ -524,6 +530,9 @@ def generar_constancia_servicio_pdf(
     nom_est,
     actividades,
     fecha_emision,
+    numero_constancia=None,
+    verification_url=None,
+    hash_contenido=None,
 ):
 
     actividades = list(
@@ -935,8 +944,13 @@ def generar_constancia_servicio_pdf(
 
             Paragraph(
                 (
-                    "<b>Fecha de emisión:</b> "
-                    f"{_html(_fecha(fecha_emision))}"
+                    (
+                        f"<b>N.º:</b> {_html(numero_constancia)}<br/>"
+                        if numero_constancia
+                        else ""
+                    )
+                    + "<b>Fecha de emisión:</b> "
+                    + f"{_html(_fecha(fecha_emision))}"
                 ),
                 style_body_small,
             ),
@@ -1818,53 +1832,49 @@ def generar_constancia_servicio_pdf(
     # QR
     # ========================================================
 
-    payload = construir_payload_qr(
+    if verification_url:
+        payload = verification_url
+        qr = _qr_image(verification_url)
 
-        cueanexo=
-            cueanexo,
-
-        nom_est=
-            nom_est,
-
-        persona=
-            persona,
-    )
-
-
-    qr = _qr_image(
-        payload
-    )
-
-
-    qr_text = Paragraph(
-
-        (
-            "<b>Datos incluidos en el código QR</b>"
-            "<br/>"
-
-            f"CUEANEXO: "
-            f"{_html(payload['cueanexo'])}"
-            "<br/>"
-
-            f"Establecimiento: "
-            f"{_html(payload['nom_est'])}"
-            "<br/>"
-
-            f"CUIL: "
-            f"{_html(payload['cuil'])}"
-            "<br/>"
-
-            f"Nombre: "
-            f"{_html(payload['nombre'])}"
-            "<br/>"
-
-            f"Apellido: "
-            f"{_html(payload['apellido'])}"
-        ),
-
-        style_body_small,
-    )
-
+        qr_text = Paragraph(
+            (
+                "<b>Verificación de autenticidad</b>"
+                "<br/>"
+                "Escaneá el código QR con un celular para consultar "
+                "el registro oficial de esta constancia."
+                "<br/><br/>"
+                + (
+                    f"<b>Constancia:</b> {_html(numero_constancia)}<br/>"
+                    if numero_constancia
+                    else ""
+                )
+                + (
+                    f"<b>Huella:</b> {_html(hash_contenido[:12])}…"
+                    if hash_contenido
+                    else ""
+                )
+            ),
+            style_body_small,
+        )
+    else:
+        # Compatibilidad con constancias históricas generadas sin URL pública.
+        payload = construir_payload_qr(
+            cueanexo=cueanexo,
+            nom_est=nom_est,
+            persona=persona,
+        )
+        qr = _qr_image(payload)
+        qr_text = Paragraph(
+            (
+                "<b>Datos incluidos en el código QR</b><br/>"
+                f"CUEANEXO: {_html(payload['cueanexo'])}<br/>"
+                f"Establecimiento: {_html(payload['nom_est'])}<br/>"
+                f"CUIL: {_html(payload['cuil'])}<br/>"
+                f"Nombre: {_html(payload['nombre'])}<br/>"
+                f"Apellido: {_html(payload['apellido'])}"
+            ),
+            style_body_small,
+        )
 
     qr_block = Table(
 

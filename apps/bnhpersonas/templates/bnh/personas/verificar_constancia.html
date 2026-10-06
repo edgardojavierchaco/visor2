@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex,nofollow,noarchive">
+    <title>Verificación de constancia BNH</title>
+    <style>
+        :root{--navy:#123f59;--blue:#1e7197;--bg:#f3f6f8;--line:#d7e1e7;--ok:#176b45;--bad:#a33131;--warn:#a06a18;}
+        *{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:#1f2d36}
+        .top{background:var(--navy);color:#fff;padding:18px 20px}.top-inner{max-width:920px;margin:auto;display:flex;justify-content:space-between;gap:20px;align-items:center}
+        .brand{font-size:19px;font-weight:700}.sub{font-size:13px;opacity:.9;margin-top:3px}
+        main{max-width:920px;margin:28px auto;padding:0 16px 40px}.card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 4px 18px rgba(20,50,65,.08);padding:24px;margin-bottom:18px}
+        .status{border-radius:10px;padding:17px 18px;font-weight:700;font-size:18px;margin-bottom:20px}.ok{background:#eaf7f0;color:var(--ok);border:1px solid #b8dec9}.bad{background:#fff0f0;color:var(--bad);border:1px solid #efbcbc}.warn{background:#fff8e9;color:var(--warn);border:1px solid #ead49f}
+        h1{font-size:25px;color:var(--navy);margin:0 0 6px} h2{font-size:17px;color:var(--navy);margin:22px 0 10px;border-bottom:1px solid var(--line);padding-bottom:7px}
+        .meta{color:#607485;font-size:14px}.grid{display:grid;grid-template-columns:200px 1fr;gap:8px 16px;font-size:15px}.label{color:#607485}.value{font-weight:600;overflow-wrap:anywhere}
+        .table-wrap{overflow:auto} table{width:100%;border-collapse:collapse;font-size:13px} th,td{padding:9px 8px;border:1px solid var(--line);vertical-align:top} th{background:#eef5f9;color:var(--navy);text-align:left}
+        .foot{font-size:12px;color:#607485;line-height:1.45}.hash{font-family:monospace;word-break:break-all;font-size:12px}
+        form{margin-top:16px;border-top:1px solid var(--line);padding-top:16px} textarea{width:100%;min-height:80px;padding:10px;border:1px solid #b8c8d1;border-radius:8px} button{margin-top:10px;background:var(--bad);color:#fff;border:0;border-radius:7px;padding:10px 16px;font-weight:700;cursor:pointer}
+        .error{color:var(--bad);font-weight:700;margin:8px 0}.pill{display:inline-block;padding:3px 8px;border-radius:999px;background:#eef5f9;color:var(--navy);font-size:12px;font-weight:700}
+        @media(max-width:620px){.grid{grid-template-columns:1fr;gap:2px}.label{margin-top:9px}.top-inner{display:block}.card{padding:18px}h1{font-size:22px}}
+    </style>
+</head>
+<body>
+<header class="top"><div class="top-inner"><div><div class="brand">CHACO · Estadísticas Educativas</div><div class="sub">BNH Personal Educativo</div></div><div>Verificación de autenticidad</div></div></header>
+<main>
+    <section class="card">
+        {% if valida %}
+            <div class="status ok">✓ CONSTANCIA VÁLIDA</div>
+        {% elif constancia.estado == 'ANULADA' %}
+            <div class="status bad">✕ CONSTANCIA ANULADA</div>
+        {% elif not integridad_ok %}
+            <div class="status bad">✕ CONSTANCIA CON INCONSISTENCIA DE INTEGRIDAD</div>
+        {% else %}
+            <div class="status warn">CONSTANCIA NO VIGENTE</div>
+        {% endif %}
+
+        <h1>{{ constancia.numero }}</h1>
+        <div class="meta">Registro oficial de emisión de BNH Personal Educativo</div>
+
+        <h2>Datos de emisión</h2>
+        <div class="grid">
+            <div class="label">Fecha y hora</div><div class="value">{{ constancia.fecha_emision|date:"d/m/Y H:i" }}</div>
+            <div class="label">Estado</div><div class="value"><span class="pill">{{ constancia.get_estado_display|upper }}</span></div>
+            {% if constancia.fecha_anulacion %}<div class="label">Fecha de anulación</div><div class="value">{{ constancia.fecha_anulacion|date:"d/m/Y H:i" }}</div>{% endif %}
+            {% if constancia.motivo_anulacion %}<div class="label">Motivo de anulación</div><div class="value">{{ constancia.motivo_anulacion }}</div>{% endif %}
+        </div>
+
+        <h2>Persona e institución</h2>
+        <div class="grid">
+            <div class="label">Apellido y nombre</div><div class="value">{{ persona_snapshot.apellido }}, {{ persona_snapshot.nombre }}</div>
+            <div class="label">CUIL</div><div class="value">{{ cuil_mascarado }}</div>
+            <div class="label">CUEANEXO</div><div class="value">{{ institucion_snapshot.cueanexo }}</div>
+            <div class="label">Institución</div><div class="value">{{ institucion_snapshot.nombre }}</div>
+        </div>
+
+        <h2>Servicios incluidos al momento de emisión</h2>
+        <div class="table-wrap">
+        <table>
+            <thead><tr><th>#</th><th>Cargo / CEIC</th><th>Tipo</th><th>Situación</th><th>Turno</th><th>Carga</th><th>Desde</th><th>Hasta</th></tr></thead>
+            <tbody>
+            {% for s in servicios_snapshot %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ s.cargo_ceic }}</td>
+                    <td>{{ s.tipo_personal }}</td>
+                    <td>{{ s.situacion_revista }}</td>
+                    <td>{{ s.turno|default:"—" }}</td>
+                    <td>{{ s.carga_horaria|default:"—" }}</td>
+                    <td>{{ s.fecha_inicio|default:"—" }}</td>
+                    <td>{{ s.fecha_fin|default:"—" }}</td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="8">No hay servicios en el snapshot.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+
+        <h2>Integridad</h2>
+        {% if integridad_ok %}
+            <p class="foot">La huella digital del contenido coincide con el registro almacenado al momento de la emisión.</p>
+        {% else %}
+            <p class="foot"><strong>La huella digital no coincide.</strong> La constancia no debe considerarse válida.</p>
+        {% endif %}
+        <div class="hash">SHA-256: {{ constancia.hash_contenido }}</div>
+
+        {% if can_anular and constancia.estado == 'VIGENTE' %}
+        <form method="post" action="{% url 'bnhpersonas:anular_constancia' constancia.token %}">
+            {% csrf_token %}
+            <h2>Anulación administrativa</h2>
+            {% if error_anulacion %}<div class="error">{{ error_anulacion }}</div>{% endif %}
+            <label for="motivo">Motivo de anulación</label>
+            <textarea id="motivo" name="motivo" required minlength="5" maxlength="1000"></textarea>
+            <button type="submit" onclick="return confirm('¿Confirma la anulación de esta constancia?');">Anular constancia</button>
+        </form>
+        {% endif %}
+    </section>
+    <p class="foot">Esta pantalla verifica el registro de la constancia en BNH Personal Educativo. El código QR contiene únicamente el enlace de verificación; no contiene el CUIL ni otros datos personales en texto plano.</p>
+</main>
+</body>
+</html>

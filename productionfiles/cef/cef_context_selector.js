@@ -46,10 +46,14 @@
     }
 
     function searchThreshold(select) {
-        return select.dataset.cefSelectSearch === "always" ? 0 : Infinity;
+        if (select.dataset.cefSelectSearch === "always") return 0;
+        var explicit = Number(select.dataset.cefSelectSearchThreshold);
+        if (Number.isFinite(explicit)) return explicit;
+        return Infinity;
     }
 
     function dropdownParent(select) {
+        if (select.dataset.cefSelectDropdownParent === "body") return null;
         return select.closest(".modal, .cef-docente-overlay, .cef-overlay")
             || select.closest("[role='dialog'][aria-modal='true']");
     }
@@ -67,7 +71,9 @@
         var size = visualViewportSize();
         var maxWidth = Math.max(0, size.width - 24);
         var maxHeight = Math.max(96, Math.min(320, size.height - 144));
-        var $dropdown = window.jQuery(".cef-select2-dropdown").last();
+        var $dropdown = window.jQuery(
+            ".cef-select2-dropdown, .cef-bnh-select2-dropdown"
+        ).last();
         $dropdown.css("max-width", maxWidth + "px");
         $dropdown.find(".select2-results__options").css("max-height", maxHeight + "px");
     }
@@ -81,7 +87,9 @@
         var parent = dropdownParent(select);
         var config = {
             width: "100%",
-            dropdownCssClass: "cef-select2-dropdown",
+            dropdownCssClass: select.dataset.cefSelectStyle === "bnh"
+                ? "cef-bnh-select2-dropdown"
+                : "cef-select2-dropdown",
             minimumResultsForSearch: searchThreshold(select),
             language: {
                 searching: function () { return "Buscando..."; },
@@ -93,6 +101,10 @@
         $select.select2(config);
         $select.on("select2:open.cefSelect", function () {
             window.setTimeout(constrainOpenDropdown, 0);
+        });
+        $select.on("select2:select.cefSelect select2:clear.cefSelect", function () {
+            if (select.dataset.cefSelectNativeChange !== "true") return;
+            select.dispatchEvent(new Event("change", { bubbles: true }));
         });
     }
 

@@ -888,3 +888,99 @@
         margin-top: 1.25rem;
         padding-top: .9rem;
     }
+/* Identidad documental de alumnos Especial. */
+.cef-modal-search-form {
+    align-items: end;
+    display: grid;
+    gap: .75rem;
+    grid-template-columns: minmax(210px, .8fr) minmax(240px, 1.4fr) minmax(210px, 1fr) auto;
+}
+.cef-modal-special-search {
+    background: #fff;
+    border: 1px solid #dbe5f0;
+    border-radius: 10px;
+    display: grid;
+    gap: .75rem;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: .8rem;
+}
+.cef-modal-special-search[hidden] { display: none; }
+.cef-modal-special-note {
+    color: #64748b;
+    font-size: .78rem;
+    font-weight: 600;
+    grid-column: 1 / -1;
+    line-height: 1.35;
+    margin: 0;
+}
+.cef-modal-search-field {
+    display: flex;
+    flex-direction: column;
+    gap: .32rem;
+    margin: 0;
+    min-width: 0;
+}
+.cef-modal-search-field-label {
+    color: #475569;
+    font-size: .76rem;
+    font-weight: 700;
+}
+.cef-modal-search-action { align-self: end; }
+.cef-modal-search-field .cef-modal-input-wrap {
+    width: 100%;
+}
+.cef-modal-input-wrap input,
+.cef-modal-input-wrap select {
+    background: transparent;
+    border: 0;
+    box-shadow: none !important;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+}
+.cef-modal-input-wrap select { height: 100%; }
+.cef-modal-search-help {
+    color: #64748b;
+    font-size: .8125rem;
+    font-style: italic;
+    margin: .75rem 0 0;
+}
+.cef-modal-footer {
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.25rem;
+    padding-top: .9rem;
+}
+.cef-modal-volver {
+    align-items: center;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    color: #475569;
+    display: inline-flex;
+    font-size: .875rem;
+    font-weight: 600;
+    gap: .38rem;
+    padding: .4rem .9rem;
+    text-decoration: none;
+}
+.cef-modal-table {
+    min-width: 820px;
+}
+.cef-modal-table th,
+.cef-modal-table td {
+    text-align: left;
+}
+.cef-modal-table tbody tr:nth-child(even) { background: #f8fafc; }
+@media (max-width: 900px) {
+    .cef-modal-search-form { grid-template-columns: 1fr 1fr; }
+    .cef-modal-search-action { grid-column: 1 / -1; }
+    .cef-modal-special-search { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+    .cef-modal-search-form,
+    .cef-modal-special-search { grid-template-columns: 1fr; }
+    .cef-modal-search-action { grid-column: auto; }
+    .cef-modal-special-note { grid-column: auto; }
+}

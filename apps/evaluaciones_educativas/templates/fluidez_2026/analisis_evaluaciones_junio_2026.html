@@ -241,7 +241,7 @@
     <aside class="sidebar">
         <h2>Reportes</h2>
 
-        {% if rol == 'Funcionario' %}
+        {% if rol == 'Funcionario' or rol == 'Evaluacion' %}
         <h3>Ubicación y Gestión</h3>
         <div class="sidebar-form-container">
             <form method="POST" id="form-director-nivel">
@@ -254,7 +254,7 @@
                 {{ form_director_nivel.region }}
             </form>
         </div>
-        {% elif rol == 'Regional' %}
+        {% elif rol == 'Regional' or rol == 'Supervisor' %}
         <h3>Sector y Ámbito</h3>
         <div class="sidebar-form-container">
             <form method="POST" id="form-director-regional">
@@ -263,6 +263,10 @@
                 {{ form_director_regional.sector }}
                 <label>Ámbito</label>
                 {{ form_director_regional.ambito }}
+                {% if rol == 'Supervisor' %}
+                <label>Región</label>
+                {{ form_director_regional.region }}
+                {% endif %}
             </form>
         </div>
         {% endif %}
@@ -276,7 +280,7 @@
                 <input type="hidden" name="ambito"
                     value="{% if form_director_nivel %}{{ form_director_nivel.ambito.value|default:'' }}{% elif form_director_regional %}{{ form_director_regional.ambito.value|default:'' }}{% endif %}">
                 <input type="hidden" name="region"
-                    value="{% if form_director_nivel %}{{ form_director_nivel.region.value|default:'' }}{% else %}{{ region_seleccionada|default:'' }}{% endif %}">
+                    value="{% if form_director_nivel %}{{ form_director_nivel.region.value|default:'' }}{% elif rol == 'Supervisor' %}{{ form_director_regional.region.value|default:'TODOS' }}{% elif rol == 'Supervisor' %}{{ form_director_regional.region.value|default:'TODOS' }}{% else %}{{ region_seleccionada|default:'' }}{% endif %}">
 
                 {{ form_cueanexo.cueanexo_seleccionado }}
             </form>
@@ -293,7 +297,7 @@
                 <input type="hidden" name="ambito"
                     value="{% if form_director_nivel %}{{ form_director_nivel.ambito.value|default:'' }}{% elif form_director_regional %}{{ form_director_regional.ambito.value|default:'' }}{% endif %}">
                 <input type="hidden" name="region"
-                    value="{% if form_director_nivel %}{{ form_director_nivel.region.value|default:'' }}{% else %}{{ region_seleccionada|default:'' }}{% endif %}">
+                    value="{% if form_director_nivel %}{{ form_director_nivel.region.value|default:'' }}{% elif rol == 'Supervisor' %}{{ form_director_regional.region.value|default:'TODOS' }}{% else %}{{ region_seleccionada|default:'' }}{% endif %}">
 
                 {{ form_condicion.condicion_seleccion }}
             </form>
@@ -312,7 +316,7 @@
                 <input type="hidden" name="ambito"
                     value="{% if form_director_nivel %}{{ form_director_nivel.ambito.value|default:'' }}{% elif form_director_regional %}{{ form_director_regional.ambito.value|default:'' }}{% endif %}">
                 <input type="hidden" name="region"
-                    value="{% if form_director_nivel %}{{ form_director_nivel.region.value|default:'' }}{% else %}{{ region_seleccionada|default:'' }}{% endif %}">
+                    value="{% if form_director_nivel %}{{ form_director_nivel.region.value|default:'' }}{% elif rol == 'Supervisor' %}{{ form_director_regional.region.value|default:'TODOS' }}{% else %}{{ region_seleccionada|default:'' }}{% endif %}">
 
                 {{ form_grado.grado_seleccion }}
             </form>
@@ -334,7 +338,7 @@
                 <input type="hidden" name="ambito"
                     value="{% if form_director_nivel %}{{ form_director_nivel.ambito.value|default:'' }}{% elif form_director_regional %}{{ form_director_regional.ambito.value|default:'' }}{% endif %}">
                 <input type="hidden" name="region"
-                    value="{% if form_director_nivel %}{{ form_director_nivel.region.value|default:'' }}{% else %}{{ region_seleccionada|default:'' }}{% endif %}">
+                    value="{% if form_director_nivel %}{{ form_director_nivel.region.value|default:'' }}{% elif rol == 'Supervisor' %}{{ form_director_regional.region.value|default:'TODOS' }}{% else %}{{ region_seleccionada|default:'' }}{% endif %}">
 
                 <label>Sección y Turno:</label>
                 <select name="{{ form_seccion.seleccion.name }}" id="{{ form_seccion.seleccion.id_for_label }}">

@@ -251,14 +251,14 @@
         const tipo = String(propietarioTipo.value || "").trim().toUpperCase();
         let valor = String(propietarioValor.value || "").trim();
 
-        if (tipo === "CUE") {
+        if (tipo === "CUEANEXO") {
             valor = valor.replace(/\D+/g, "");
             propietarioValor.value = valor;
-            if (valor.length !== 7) {
-                throw new Error("El CUE debe tener exactamente 7 dígitos.");
+            if (valor.length !== 9) {
+                throw new Error("El CUEANEXO debe tener exactamente 9 dígitos.");
             }
         } else if (!valor) {
-            throw new Error("Ingresá el CUOF del Proyecto Especial sin CUE.");
+            throw new Error("Ingresá el CUOF del Proyecto Especial sin CUEANEXO.");
         }
 
         return { tipo: tipo, valor: valor };
@@ -361,13 +361,13 @@
     }
 
     function actualizarTipoPropietario() {
-        const esCue = propietarioTipo.value === "CUE";
-        propietarioLabel.textContent = esCue ? "CUE" : "CUOF";
+        const esCueanexo = propietarioTipo.value === "CUEANEXO";
+        propietarioLabel.textContent = esCueanexo ? "CUEANEXO" : "CUOF";
         propietarioValor.value = "";
-        propietarioValor.maxLength = esCue ? 7 : 100;
-        propietarioValor.inputMode = esCue ? "numeric" : "text";
-        propietarioValor.placeholder = esCue ? "7 dígitos" : "CUOF";
-        cuofNote.classList.toggle("pof-hidden", esCue);
+        propietarioValor.maxLength = esCueanexo ? 9 : 100;
+        propietarioValor.inputMode = esCueanexo ? "numeric" : "text";
+        propietarioValor.placeholder = esCueanexo ? "9 dígitos" : "CUOF";
+        cuofNote.classList.toggle("pof-hidden", esCueanexo);
         propietarioActual = null;
         asociacionesActuales = [];
         ownerPanel.classList.add("pof-hidden");
@@ -485,8 +485,8 @@
     propietarioTipo.addEventListener("change", actualizarTipoPropietario);
 
     propietarioValor.addEventListener("input", function () {
-        if (propietarioTipo.value === "CUE") {
-            propietarioValor.value = propietarioValor.value.replace(/\D+/g, "").slice(0, 7);
+        if (propietarioTipo.value === "CUEANEXO") {
+            propietarioValor.value = propietarioValor.value.replace(/\D+/g, "").slice(0, 9);
         }
     });
 
