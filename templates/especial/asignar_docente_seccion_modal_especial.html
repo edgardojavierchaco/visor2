@@ -18,9 +18,32 @@
 
             <div class="mb-3" data-cef-cargos-feedback></div>
 
+            <div class="alert alert-success mb-3">
+                <i class="fa-solid fa-circle-check me-1"></i>
+                El docente tiene cargos de modalidad Especial en este CUE-Anexo. Elegí el cargo para asignarlo.
+            </div>
+
+            <div class="table-responsive mb-3" data-cef-cargos-table hidden>
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Cargo en el CUE-Anexo</th>
+                            <th>CEIC</th>
+                            <th>Situación de revista</th>
+                            <th>Turno</th>
+                        </tr>
+                    </thead>
+                    <tbody data-cef-cargos-table-body></tbody>
+                </table>
+            </div>
+
             {% if asignacion_modal_feedback %}
                 <div class="alert alert-success mb-3">{{ asignacion_modal_feedback }}</div>
             {% endif %}
+
+            <div class="cef-edit-panel mb-3">
+                <h3><i class="fa-solid fa-user-check"></i> Agregar al banco y asociar a la sección</h3>
+            </div>
 
             <form method="post" action="{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" novalidate data-especial-asignar-seccion-form data-cef-asignar-grupo-form>
                 {% csrf_token %}
@@ -32,26 +55,6 @@
 
                 {% if asignacion_modal_error %}
                     <div class="alert alert-danger mb-3">{{ asignacion_modal_error }}</div>
-                {% endif %}
-
-                {% if docente_cargos_comparados %}
-                    {% for item in docente_cargos_comparados %}
-                        <div class="alert {% if item.estado == 'coincide' %}alert-success{% else %}alert-warning{% endif %} mb-2">
-                            {% if item.estado == 'coincide' %}
-                                <i class="fa-solid fa-circle-check me-1"></i> Cargo coincidente con oferta y turno.
-                            {% elif item.estado == 'oferta_coincide_turno_difiere' %}
-                                <i class="fa-solid fa-triangle-exclamation me-1"></i> Oferta coincidente, pero turno diferente.
-                            {% else %}
-                                <i class="fa-solid fa-triangle-exclamation me-1"></i> Cargo del CUE-Anexo correspondiente a otra oferta.
-                            {% endif %}
-                        </div>
-                    {% endfor %}
-                    {% if docente_requiere_confirmacion %}<div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" name="confirmar_cargo" value="1" id="confirmarCargoAsignacion">
-                        <label class="form-check-label" for="confirmarCargoAsignacion">
-                            Confirmo asignar el cargo aunque presente diferencias con la sección.
-                        </label>
-                    </div>{% endif %}
                 {% endif %}
 
                 {% if docente_grupo_form.non_field_errors %}
@@ -75,7 +78,7 @@
                         <i class="fa-solid fa-xmark"></i> Cancelar
                     </button>
                     <button class="btn btn-primary" type="submit">
-                        <i class="fa-solid fa-user-check"></i> Asociar docente
+                        <i class="fa-solid fa-user-check"></i> Agregar al banco y asociar a la sección
                     </button>
                 </div>
             </form>

@@ -36,8 +36,6 @@ from .permisos import especial_required
 from .services.docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
 from .services.cargos_docentes import (
     cargos_especiales_docente,
-    comparar_cargo_con_seccion,
-    comparar_cargos_con_seccion,
     rol_desde_situacion_revista,
     texto_cargo,
 )
@@ -113,6 +111,37 @@ def _docente_row(docente):
         "dni": docente.dni or "",
         "estado": docente.estado or "",
     }
+
+
+def _buscar_docente_en_contexto(cuil, especial_context):
+    """Busca primero el banco local y luego BNH para ambos modales."""
+    cuil = _solo_digitos(cuil)
+    banco = (
+        EspecialDocenteBanco.objects
+        .filter(
+            docente_cuil=cuil,
+            cueanexo=especial_context.get("cueanexo"),
+            ciclo=especial_context.get("ciclo"),
+            estado=EspecialDocenteBanco.Estado.ACTIVO,
+        )
+        .order_by("-pk")
+        .first()
+    )
+    if banco:
+        docente = _buscar_docente(cuil)
+        if docente:
+            return docente
+        nombre = str(banco.docente_nombre_snapshot or "").strip()
+        apellido, _, nombre_propio = nombre.partition(",")
+        return SimpleNamespace(
+            cuil=banco.docente_cuil,
+            apellido=apellido.strip(),
+            nombre=nombre_propio.strip(),
+            nombre_completo=nombre,
+            dni=banco.docente_dni_snapshot or "",
+            estado=banco.docente_estado_bnh_snapshot or "ACTIVO",
+        )
+    return _buscar_docente(cuil)
 
 
 def _docentes_vista_param(request):
@@ -582,8 +611,6 @@ def _url_edicion_docente(
     vuelve a aplicar su propio alcance de permisos.
     """
     cuil_normalizado = _solo_digitos(cuil)
-    if cueanexo and not _docente_tiene_cargo_en_cue(cuil_normalizado, cueanexo):
-        return ""
     persona_id = (
         Personas.objects
         .filter(cuil=cuil_normalizado, archivada=False)
@@ -672,17 +699,20 @@ def cargos_docente_seccion(request):
         ciclo=especial_context.get("ciclo"),
     )
     cargos = list(cargos_especiales_docente(cuil, seccion.cueanexo))
-    comparaciones = comparar_cargos_con_seccion(cargos, seccion)
     return JsonResponse({
         "ok": True,
         "cargos": [
             {
                 "id": cargo.pk,
                 "label": texto_cargo(cargo),
-                "estado": item["estado"],
-                "rol": rol_desde_situacion_revista(cargo) if item["estado"] == "coincide" else "",
+                "estado": "disponible",
+                "rol": rol_desde_situacion_revista(cargo) or "",
+                "nivel_curricular": getattr(getattr(cargo, "nivel_curricular", None), "descripcion", "") or "",
+                "ceic": getattr(getattr(cargo, "ceic", None), "descripcion", "") or "",
+                "situacion_revista": getattr(getattr(cargo, "sit_revista", None), "descrip_sitrev", "") or "",
+                "turno": cargo.turno or "",
             }
-            for cargo, item in zip(cargos, comparaciones)
+            for cargo in cargos
         ],
     })
 
@@ -1193,6 +1223,33 @@ def docentes(request):
                 creado_por=request.user,
                 actualizado_por=request.user,
             )
+            docente_bnh = _buscar_docente(cuil)
+            if not docente_bnh:
+                message = "El docente no existe en BNH Personas."
+                if _is_ajax(request):
+                    return JsonResponse({"error": message}, status=404)
+                messages.error(request, message)
+                return redirect(url_docentes)
+            try:
+                banco, _, tabla_pendiente = _asegurar_docente_banco(
+                    docente_bnh,
+                    especial_context,
+                    request.user,
+                )
+            except (IntegrityError, ValidationError) as exc:
+                message = "; ".join(getattr(exc, "messages", [str(exc)]))
+                if _is_ajax(request):
+                    return JsonResponse({"error": message}, status=409)
+                messages.error(request, message)
+                return redirect(url_docentes)
+            if tabla_pendiente or banco is None:
+                message = MSG_BANCO_DOCENTES_PENDIENTE if tabla_pendiente else "No se pudo asociar el docente al banco de este CUE-Anexo."
+                if _is_ajax(request):
+                    return JsonResponse({"error": message}, status=503 if tabla_pendiente else 409)
+                messages.error(request, message)
+                return redirect(url_docentes)
+            asignacion.docente_cuil = cuil
+            asignacion.docente_banco = banco
             form_data = request.POST.copy()
             for campo_extra in ['cuil', 'seccion_id', 'accion', 'cueanexo_contexto', 'ciclo_contexto']:
                 if campo_extra in form_data:
@@ -1206,33 +1263,7 @@ def docentes(request):
             
             if form.is_valid():
                 cargo = form.cleaned_data.get("cargo_relacionado")
-                comparacion = comparar_cargo_con_seccion(cargo, seccion)
-                if (
-                    comparacion
-                    and comparacion["estado"] != "coincide"
-                    and request.POST.get("confirmar_cargo") != "1"
-                ):
-                    form.add_error(
-                        "cargo_relacionado",
-                        "El cargo no coincide completamente con la sección. Confirmá la asignación para continuar.",
-                    )
-                    if _is_ajax(request):
-                        return JsonResponse({"modal_html": render_to_string(
-                            "especial/asignar_docente_seccion_modal_especial.html",
-                            {
-                                "docente_grupo_form": form,
-                                "asignacion_docente_cuil": cuil,
-                                "asignacion_grupo_seleccionado": seccion,
-                                "especial_context": especial_context,
-                                "docente_cargos_comparados": comparar_cargos_con_seccion(
-                                    list(cargos_especiales_docente(cuil, seccion.cueanexo)), seccion
-                                ),
-                            },
-                            request=request,
-                        )})
-                    messages.error(request, "Confirmá la asignación del cargo aunque no coincida completamente con la sección.")
-                    return redirect(url_docentes)
-                rol_cargo = rol_desde_situacion_revista(cargo) if comparacion and comparacion["estado"] == "coincide" else None
+                rol_cargo = rol_desde_situacion_revista(cargo)
                 try:
                     if asignacion_historica:
                         asignacion = dar_alta_docente_seccion(
@@ -1249,14 +1280,7 @@ def docentes(request):
                         asignacion.cargo_relacionado = form.cleaned_data.get("cargo_relacionado")
                         if rol_cargo:
                             asignacion.rol = rol_cargo
-                        asignacion.docente_banco = (
-                            EspecialDocenteBanco.objects.filter(
-                                cueanexo=seccion.cueanexo,
-                                ciclo=seccion.ciclo,
-                                docente_cuil=cuil,
-                                estado=EspecialDocenteBanco.Estado.ACTIVO,
-                            ).order_by("-pk").first()
-                        )
+                        asignacion.docente_banco = banco
                         asignacion.creado_por = request.user
                         asignacion.actualizado_por = request.user
                         asignacion.save()
@@ -1329,16 +1353,8 @@ def docentes(request):
                         "asignacion_docente_cuil": cuil,
                         "asignacion_grupo_seleccionado": seccion,
                         "especial_context": especial_context,
-                        "docente_cargos_comparados": comparar_cargos_con_seccion(
-                            list(cargos_especiales_docente(cuil, seccion.cueanexo)),
-                            seccion,
-                        ),
-                        "docente_requiere_confirmacion": any(
-                            item["estado"] != "coincide"
-                            for item in comparar_cargos_con_seccion(
-                                list(cargos_especiales_docente(cuil, seccion.cueanexo)), seccion
-                            )
-                        ),
+                        "docente_cargos_comparados": [],
+                        "docente_requiere_confirmacion": False,
                     }
                     modal_html = render_to_string(
                         "especial/asignar_docente_seccion_modal_especial.html",
@@ -1360,7 +1376,7 @@ def docentes(request):
 
         if busqueda_form.is_valid():
             cuil_buscado = busqueda_form.cleaned_data["cuil"]
-            docente = _buscar_docente(cuil_buscado)
+            docente = _buscar_docente_en_contexto(cuil_buscado, especial_context)
         else:
             cuil_buscado = _solo_digitos(request.POST.get("cuil"))
             cuil_error = _errores_form(busqueda_form)
@@ -1415,7 +1431,7 @@ def docentes(request):
         )
         if busqueda_form.is_valid():
             cuil_buscado = busqueda_form.cleaned_data["cuil"]
-            docente = _buscar_docente(cuil_buscado)
+            docente = _buscar_docente_en_contexto(cuil_buscado, especial_context)
         elif request.GET.get("cuil"):
             cuil_buscado = _solo_digitos(request.GET.get("cuil"))
             cuil_error = _errores_form(busqueda_form)

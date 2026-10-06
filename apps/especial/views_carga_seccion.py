@@ -40,8 +40,6 @@ from .views_contexto import contexto_base, redirect_con_contexto, render_especia
 from .services.docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
 from .services.cargos_docentes import (
     cargos_especiales_docente,
-    comparar_cargo_con_seccion,
-    comparar_cargos_con_seccion,
     rol_desde_situacion_revista,
 )
 from apps.bnhpersonas.models import Personas
@@ -63,7 +61,7 @@ from .views_inscripcion_seccion import (
     dar_alta_inscripcion_seccion,
     dar_baja_inscripcion_seccion,
 )
-from .views_docentes import _buscar_docente, _docente_row
+from .views_docentes import _buscar_docente_en_contexto, _docente_row
 
 
 logger = logging.getLogger(__name__)
@@ -501,7 +499,11 @@ def _preparar_modales_gestionar(request, seccion, especial_context):
     )
 
     cuil_docente = _solo_digitos(request.GET.get("cuil")) if abrir_docente else ""
-    docente = _buscar_docente(cuil_docente) if cuil_docente else None
+    docente = (
+        _buscar_docente_en_contexto(cuil_docente, especial_context)
+        if cuil_docente
+        else None
+    )
     docente_form = EspecialDocenteSeccionForm(
         cargos_queryset=cargos_especiales_docente(cuil_docente, seccion.cueanexo)
         if cuil_docente
@@ -509,10 +511,6 @@ def _preparar_modales_gestionar(request, seccion, especial_context):
     )
     docente_cargos = list(cargos_especiales_docente(cuil_docente, seccion.cueanexo)) if cuil_docente else []
     docente_tiene_cargo_en_cue = bool(docente_cargos)
-    docente_requiere_confirmacion = any(
-        item["estado"] != "coincide"
-        for item in comparar_cargos_con_seccion(docente_cargos, seccion)
-    )
     docente_error = ""
     if cuil_docente:
         busqueda_docente = EspecialBusquedaDocenteForm({"cuil": cuil_docente})
@@ -610,14 +608,17 @@ def _preparar_modales_gestionar(request, seccion, especial_context):
         "docente_en_banco": docente_en_banco,
         "persona_bnh_existe": bool(docente and Personas.objects.filter(cuil=cuil_docente, archivada=False).exists()),
         "docente_tiene_cargo_en_cue": docente_tiene_cargo_en_cue,
+        # La búsqueda desde Gestión de sección debe mostrar los mismos cargos
+        # del CUE-Anexo que se informan en el modal de Docentes.
+        "docente_cargos_cue": docente_cargos,
         "cuil_error_docente": docente_error,
         "modal_tiene_grupo": True,
         "docente_form": docente_form,
-        "docente_cargos_comparados": comparar_cargos_con_seccion(docente_cargos, seccion),
+        "docente_cargos_comparados": [],
         "cargo_validacion_requerida": getattr(
             settings, "ESPECIAL_REQUIERE_CARGO_VALIDADO", True
         ),
-        "docente_requiere_confirmacion": docente_requiere_confirmacion,
+        "docente_requiere_confirmacion": False,
         "docente_asignacion_activa": asignacion_activa,
         "url_editar_docente": "",
         "url_carga_profesor": "",
@@ -1115,10 +1116,6 @@ def _alta_docente_nuevo_gestionar(request, seccion):
         return False, _errores_form(form)
 
     cargo = form.cleaned_data.get("cargo_relacionado")
-    comparacion = comparar_cargo_con_seccion(cargo, seccion)
-    if comparacion and comparacion["estado"] != "coincide" and request.POST.get("confirmar_cargo") != "1":
-        return False, "El cargo no coincide completamente con la sección. Confirmá la asignación para continuar."
-
     # Validamos el formulario antes de consultar la asignación existente:
     # además de evitar una consulta innecesaria, esto permite devolver los
     # errores de entrada sin exigir una sección completamente materializada.
@@ -1135,7 +1132,7 @@ def _alta_docente_nuevo_gestionar(request, seccion):
     # otra fila para conservar las fechas del período anterior.
     asignacion = form.save(commit=False)
     asignacion.seccion = seccion
-    rol_cargo = rol_desde_situacion_revista(cargo) if comparacion and comparacion["estado"] == "coincide" else None
+    rol_cargo = rol_desde_situacion_revista(cargo)
     if rol_cargo:
         asignacion.rol = rol_cargo
     if not asignacion.pk:

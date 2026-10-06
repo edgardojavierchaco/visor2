@@ -1106,7 +1106,7 @@
     <div class="cef-docente-modal" role="dialog" aria-modal="true" aria-labelledby="asignarProfesorGrupoTitulo">
         <div class="cef-docente-modal-head">
             <h2 id="asignarProfesorGrupoTitulo" class="cef-docente-modal-title">
-                <i class="fa-solid fa-user-check me-2"></i>Asignar profesor <span>» Grupo</span>
+                <i class="fa-solid fa-user-check me-2"></i>Asignar docente <span>» Sección</span>
             </h2>
             <button class="cef-docente-close" type="button" aria-label="Cerrar" data-cef-asignar-grupo-close>
                 <i class="fa-solid fa-xmark"></i>
@@ -1121,6 +1121,20 @@
             </div>
 
             <div class="mb-3" data-cef-cargos-feedback></div>
+
+            <div class="table-responsive mb-3" data-cef-cargos-table hidden>
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Cargo en el CUE-Anexo</th>
+                            <th>CEIC</th>
+                            <th>Situación de revista</th>
+                            <th>Turno</th>
+                        </tr>
+                    </thead>
+                    <tbody data-cef-cargos-table-body></tbody>
+                </table>
+            </div>
 
             <form method="post" action="{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" novalidate data-cef-asignar-grupo-form>
                 {% csrf_token %}
@@ -1175,7 +1189,7 @@
                         <i class="fa-solid fa-xmark"></i> Cancelar
                     </button>
                     <button class="btn btn-primary" type="submit">
-                        <i class="fa-solid fa-user-check"></i> Asociar profesor
+                        <i class="fa-solid fa-user-check"></i> Asociar docente
                     </button>
                 </div>
             </form>
