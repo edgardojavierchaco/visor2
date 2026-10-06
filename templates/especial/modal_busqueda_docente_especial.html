@@ -35,7 +35,9 @@
             {% if docente_row %}
                 <div class="alert alert-{% if docente_tiene_cargo_en_cue %}success{% else %}warning{% endif %} mb-3" role="status">
                     <i class="fa-solid {% if docente_tiene_cargo_en_cue %}fa-briefcase{% else %}fa-triangle-exclamation{% endif %} me-1"></i>
-                    {% if not persona_bnh_existe %}
+                    {% if docente_en_banco %}
+                        El docente se encuentra cargado en el CUE-Anexo. Podés asociarlo a una sección.
+                    {% elif not persona_bnh_existe %}
                         El docente no existe en BNH Personas. Debe añadirlo junto con su cargo.
                     {% elif docente_tiene_cargo_en_cue %}
                         El docente buscado tiene un cargo asignado en este CUE-Anexo.
@@ -69,6 +71,71 @@
                 {% endif %}
             {% endif %}
 
+            {% if docente_row and not modal_tiene_grupo %}
+                <div class="cef-edit-panel">
+                    <h3><i class="fa-solid fa-user-check"></i> Docente encontrado</h3>
+                    <p class="mb-2"><strong>{{ docente_row.apellido|default:"-" }}, {{ docente_row.nombre|default:"-" }}</strong></p>
+                    <p class="small text-muted mb-3">CUIL: {{ docente_row.cuil }} · DNI: {{ docente_row.dni|default:"-" }}</p>
+
+                    {% if docente_tiene_cargo_en_cue and secciones_disponibles %}
+                        <label class="form-label" for="seccionAsignacionDocente">Elegí la sección para continuar</label>
+                        <select id="seccionAsignacionDocente" class="form-select" data-cef-seccion-selector onchange="var b=this.closest('.cef-edit-panel').querySelector('[data-cef-asignar-seccion-desde-busqueda]'); var o=this.options[this.selectedIndex]; b.disabled=!this.value; b.dataset.grupoId=this.value; b.dataset.grupoLabel=o.dataset.grupoLabel||o.textContent.trim()">
+                            <option value="">Seleccioná una sección</option>
+                            {% for seccion in secciones_disponibles %}
+                                <option value="{{ seccion.pk }}"
+                                        data-grupo-label="{{ seccion.nombre_seccion }}"
+                                        data-docente-cuil="{{ cuil_buscado }}"
+                                        data-docente-nombre="{{ docente_row.apellido|default:'' }} {{ docente_row.nombre|default:'' }}"
+                                        data-cueanexo="{{ especial_context.cueanexo }}"
+                                        data-ciclo="{{ especial_context.ciclo.pk }}"
+                                        data-cargos-url="{% url 'especial:cargos_docente_seccion' %}">
+                                    {{ seccion.nombre_seccion }} — {{ seccion.turno }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                            <span class="small text-muted">
+                                En caso de que ninguno de los cargos actuales corresponda, añadí el cargo correspondiente al docente en BNH.
+                            </span>
+                            {% if url_editar_docente %}
+                                <a class="btn btn-outline-primary btn-sm" href="{{ url_editar_docente }}" target="_blank" rel="noopener">
+                                    <i class="fa-solid fa-id-card"></i> Ver ficha
+                                </a>
+                            {% endif %}
+                        </div>
+                        <div class="d-block mt-3">
+                            <button type="button" class="btn btn-primary"
+                                    data-cef-asignar-seccion-desde-busqueda
+                                    data-cef-asignar-grupo-open="1"
+                                    data-grupo-id=""
+                                    data-docente-cuil="{{ cuil_buscado }}"
+                                    data-docente-nombre="{{ docente_row.apellido|default:'' }} {{ docente_row.nombre|default:'' }}"
+                                    data-cueanexo="{{ especial_context.cueanexo }}"
+                                    data-ciclo="{{ especial_context.ciclo.pk }}"
+                                    data-cargos-url="{% url 'especial:cargos_docente_seccion' %}"
+                                    onclick="var m=document.getElementById('modalBusquedaDocente'); if(m){m.classList.remove('is-open');m.setAttribute('aria-hidden','true')}"
+                                    disabled>
+                                <i class="fa-solid fa-user-check"></i> Asignar a sección
+                            </button>
+                        </div>
+                    {% elif docente_tiene_cargo_en_cue %}
+                        <div class="alert alert-warning mb-0">No hay secciones activas disponibles para asignar.</div>
+                    {% elif persona_bnh_existe %}
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                            <span class="small text-muted">
+                                En caso de querer asignar al docente a una sección, crear el cargo correspondiente.
+                            </span>
+                            {% if url_editar_docente %}
+                                <a class="btn btn-outline-primary btn-sm" href="{{ url_editar_docente }}" target="_blank" rel="noopener">
+                                    <i class="fa-solid fa-id-card"></i> Ver ficha
+                                </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if modal_tiene_grupo or not docente_row %}
             <div class="cef-docente-table-wrap">
                 <table class="cef-docente-table">
                     <thead>
@@ -94,7 +161,7 @@
                                     {% if modal_tiene_grupo and docente_row %}
                                         {% if docente_asignacion_activa %}
                                             <span class="text-muted small">Ya está asignado a esta sección.</span>
-                                        {% elif docente_form and docente_cargos_comparados %}
+                                        {% elif docente_form and docente_cargos_cue %}
                                             <span class="text-muted small">Completá los datos y elegí el cargo. {% if docente_en_banco %}Se asociará a esta sección.{% else %}Se agregará al banco y se asociará a esta sección.{% endif %}</span>
                                         {% else %}
                                             <span class="text-muted small">El docente no está en el banco de esta localización.</span>
@@ -129,6 +196,37 @@
                                         {% endif %}
                                     {% endif %}
 
+                                    {% if not modal_tiene_grupo and especial_context.puede_operar and docente_tiene_cargo_en_cue and secciones_disponibles %}
+                                        <div class="dropdown mt-2" data-cef-profesor-dropdown>
+                                            <button class="btn btn-primary btn-sm dropdown-toggle cef-secciones-action is-primary"
+                                                    type="button"
+                                                    data-cef-profesor-dropdown-toggle
+                                                    aria-expanded="false">
+                                                <i class="fa-solid fa-user-plus"></i>
+                                                Asignar a sección
+                                            </button>
+                                            <ul class="dropdown-menu cef-profesor-dropdown-menu" data-cef-profesor-dropdown-menu>
+                                                {% for seccion in secciones_disponibles %}
+                                                    <li>
+                                                        <a class="cef-profesor-dropdown-item"
+                                                           href="#"
+                                                           data-cef-asignar-grupo-open="1"
+                                                           data-grupo-id="{{ seccion.pk }}"
+                                                           data-grupo-label="{{ seccion.nombre_seccion }}"
+                                                           data-docente-cuil="{{ cuil_buscado }}"
+                                                           data-docente-nombre="{{ docente_row.apellido|default:'' }} {{ docente_row.nombre|default:'' }}"
+                                                           data-cueanexo="{{ especial_context.cueanexo }}"
+                                                           data-ciclo="{{ especial_context.ciclo.pk }}"
+                                                           data-cargos-url="{% url 'especial:cargos_docente_seccion' %}">
+                                                            <strong>{{ seccion.nombre_seccion }}</strong>
+                                                            <small>{{ seccion.turno }} - {{ seccion.get_estado_display }}</small>
+                                                        </a>
+                                                    </li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                    {% endif %}
+
                                     {# Botón ficha: usa url_editar_docente (enviado por views_docentes.py) #}
                                     {% if especial_context.puede_operar and url_editar_docente %}
                                         <a class="btn btn-outline-primary btn-sm" href="{{ url_editar_docente }}" target="_blank" rel="noopener">
@@ -153,7 +251,7 @@
                                     {% else %}
                                         <div class="cef-docente-msg">
                                             <i class="fa-solid fa-user-xmark" style="color:#bfdbfe"></i>
-                                        No se encontró ningún docente con ese CUIL. Podés cargar los datos del docente desde el formulario de carga correspondiente. Se abrirá una nueva pestaña para completar este formulario. Cuando termines de cargar y guardar al docente, regresá a esta pantalla y buscá nuevamente el CUIL para poder asociarlo.
+                                        No se encontró ningún docente con ese CUIL. Podés cargar los datos del docente desde el formulario de carga correspondiente.
                                             {% if url_carga_profesor %}
                                                 <a class="btn btn-outline-primary btn-sm" href="{{ url_carga_profesor }}" target="_blank" rel="noopener">
                                                     <i class="fa-solid fa-plus-circle"></i> Cargar datos del profesor
@@ -169,36 +267,17 @@
                     </tbody>
                 </table>
             </div>
+            {% endif %}
 
             {% if docente_row and modal_tiene_grupo and docente_asignacion_activa %}
                 <div class="alert alert-info mb-3">
                     Este docente ya está asignado a esta sección como {{ docente_asignacion_activa.get_rol_display }}.
                 </div>
-            {% elif docente_row and modal_tiene_grupo and docente_cargos_comparados %}
-                {% if docente_cargos_comparados %}
-                    {% for item in docente_cargos_comparados %}
-                        <div class="alert {% if item.estado == 'coincide' %}alert-success{% else %}alert-warning{% endif %} mb-2">
-                            {% if item.estado == 'coincide' %}
-                                <i class="fa-solid fa-circle-check me-1"></i>
-                                El cargo seleccionado coincide con la oferta y el turno de la sección.
-                            {% elif item.estado == 'oferta_coincide_turno_difiere' %}
-                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                                El cargo coincide con la oferta, pero el turno difiere.
-                            {% else %}
-                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                                El cargo pertenece al CUE-Anexo, pero corresponde a otra oferta.
-                            {% endif %}
-                        </div>
-                    {% endfor %}
-                    {% if docente_requiere_confirmacion %}
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" name="confirmar_cargo" value="1" id="confirmarCargoBusqueda">
-                            <label class="form-check-label" for="confirmarCargoBusqueda">
-                                Confirmo asignar el cargo aunque presente diferencias con la sección.
-                            </label>
-                        </div>
-                    {% endif %}
-                {% endif %}
+            {% elif docente_row and modal_tiene_grupo and docente_cargos_cue %}
+                <div class="alert alert-success mb-3">
+                    <i class="fa-solid fa-circle-check me-1"></i>
+                    El docente tiene cargos de modalidad Especial en este CUE-Anexo. Elegí el cargo para asignarlo.
+                </div>
                 <div class="cef-edit-panel">
                     <h3><i class="fa-solid fa-user-check"></i> {% if docente_en_banco %}Asociar docente a la sección{% else %}Agregar al banco y asociar a la sección{% endif %}</h3>
                     <form method="post" action="{{ modal_action_url }}" novalidate data-docente-modal-post-form>
@@ -233,16 +312,6 @@
                 </div>
             {% elif docente_row and modal_tiene_grupo %}
                 <p class="small text-muted mb-0">El docente debe estar previamente en el banco de esta localización para ser asignado.</p>
-            {% elif docente_row %}
-                <p class="small text-muted mb-0">
-                    La asignación a secciones se realiza desde la pantalla de secciones.
-                </p>
-            {% endif %}
-
-            {% if url_carga_profesor %}
-                <p class="small text-muted mt-3 mb-0">
-                    Se abrirá una nueva pestaña. Cuando termines de cargar y guardar al docente, regresá a esta pantalla de Especial y buscá nuevamente el CUIL.
-                </p>
             {% endif %}
 
             <div class="cef-docente-footer">

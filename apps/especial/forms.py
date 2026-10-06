@@ -683,6 +683,7 @@ class EspecialDocenteSeccionForm(forms.ModelForm):
     class Meta:
         model = DocenteSeccion
         fields = [
+            "docente_cuil",
             "cargo_relacionado",
             "rol",
             "estado",
@@ -691,6 +692,7 @@ class EspecialDocenteSeccionForm(forms.ModelForm):
             "observaciones",
         ]
         widgets = {
+            "docente_cuil": forms.HiddenInput(),
             "fecha_desde": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "fecha_hasta": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "observaciones": forms.Textarea(attrs={"rows": 2}),
@@ -706,6 +708,16 @@ class EspecialDocenteSeccionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         cargos_queryset = kwargs.pop("cargos_queryset", None)
         super().__init__(*args, **kwargs)
+        # El CUIL se informa por fuera del formulario visible. Se conserva
+        # como campo oculto porque la validación del modelo puede devolver
+        # errores asociados a docente_cuil.
+        self.fields["docente_cuil"].required = False
+        if self.is_bound and not self.data.get("docente_cuil") and getattr(
+            self.instance, "docente_cuil", ""
+        ):
+            datos = self.data.copy()
+            datos["docente_cuil"] = self.instance.docente_cuil
+            self.data = datos
         self.rol_sin_cambios = False
 
         self.fields["cargo_relacionado"].queryset = (
