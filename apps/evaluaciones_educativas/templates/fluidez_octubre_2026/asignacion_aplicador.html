@@ -3,7 +3,7 @@
 
 {% block head %}
 {{ block.super }}
-<title>Asignar Secciones — {{ aplicador.apellido }} {{ aplicador.nombre }}</title>
+<title>Asignar Secciones — {{ aplicador.apellido }} {{ aplicador.nombre }} — Fluidez Octubre 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
 <style>
@@ -76,6 +76,7 @@
 {% block content %}
 {{ block.super }}
 <div class="asig-wrapper">
+    {% include 'fluidez_octubre_2026/_badge_operativo.html' %}
 
     <div class="asig-breadcrumb">
         <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:gestion_aplicadores' %}"><i class="bi bi-arrow-left"></i> Volver a Aplicadores</a>
