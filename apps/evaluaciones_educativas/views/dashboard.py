@@ -52,6 +52,12 @@ def dashboard(request):
                                     'url':    'evaluaciones_educativas:fluidez_octubre_2026:gestion_tabuladores',
                                     'roles':  ['Regional'],
                                 },
+                                {
+                                    'titulo': 'Gestión de Aplicadores',
+                                    'icono':  'bi-people-fill',
+                                    'url':    'evaluaciones_educativas:fluidez_octubre_2026:gestion_aplicadores',
+                                    'roles':  ['Regional'],
+                                },
                             ],
                         },
                         {
