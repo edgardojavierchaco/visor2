@@ -1501,3 +1501,91 @@ class RevisionCatalogos(models.Model):
 
     def __str__(self):
         return f"Catálogos BNH v{self.version}"
+
+
+
+# ============================================================
+# CONSTANCIA DE SERVICIO VERIFICABLE
+# ============================================================
+class ConstanciaServicio(models.Model):
+    """
+    Registro inmutable de cada constancia de servicio emitida.
+
+    El QR no contiene datos personales: contiene una URL pública con un UUID
+    aleatorio. La página de verificación compara el hash del snapshot guardado
+    y muestra el estado vigente/anulado de la constancia.
+    """
+
+    ESTADO_VIGENTE = "VIGENTE"
+    ESTADO_ANULADA = "ANULADA"
+    ESTADOS = (
+        (ESTADO_VIGENTE, "Vigente"),
+        (ESTADO_ANULADA, "Anulada"),
+    )
+
+    token = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False,
+        db_index=True,
+    )
+    numero = models.CharField(
+        max_length=32,
+        unique=True,
+        blank=True,
+        db_index=True,
+    )
+    persona = models.ForeignKey(
+        'Personas',
+        on_delete=models.PROTECT,
+        related_name='constancias_servicio',
+    )
+    cueanexo = models.CharField(max_length=9, db_index=True)
+    nom_est = models.CharField(max_length=255)
+
+    fecha_emision = models.DateTimeField(default=timezone.now, editable=False, db_index=True)
+    usuario_emisor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='constancias_bnh_emitidas',
+    )
+
+    estado = models.CharField(
+        max_length=10,
+        choices=ESTADOS,
+        default=ESTADO_VIGENTE,
+        db_index=True,
+    )
+
+    # Snapshot canónico del contenido emitido. No se recalcula con los datos
+    # actuales de la persona: permite verificar exactamente lo emitido.
+    snapshot = models.JSONField(default=dict)
+    hash_contenido = models.CharField(max_length=64, editable=False, db_index=True)
+    hash_pdf = models.CharField(max_length=64, blank=True, default='', editable=False)
+
+    fecha_anulacion = models.DateTimeField(null=True, blank=True)
+    usuario_anulacion = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='constancias_bnh_anuladas',
+    )
+    motivo_anulacion = models.TextField(blank=True, default='')
+
+    class Meta:
+        db_table = 'constancia_servicio'
+        ordering = ('-fecha_emision', '-pk')
+        indexes = [
+            models.Index(fields=['cueanexo', 'estado'], name='bnh_const_cue_estado_idx'),
+            models.Index(fields=['persona', 'estado'], name='bnh_const_persona_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(estado__in=['VIGENTE', 'ANULADA']),
+                name='bnh_constancia_estado_valido',
+            ),
+        ]
+
+    def __str__(self):
+        return self.numero or str(self.token)

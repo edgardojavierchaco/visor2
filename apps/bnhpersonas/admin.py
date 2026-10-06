@@ -3,7 +3,7 @@ from .models import (
     Personas, RegistroActividades, AccesoRegional, EventoAuditoria,
     ModalidadNivel, ModalidadNivelCeic, ModalidadTipo, NivelServicioTipo,
     TitulacionNombre, TitulacionSuperior, TitulacionFP, EspacioCurricularNombre,
-    TipoPersonal, CondicionActividadNombre, RevisionCatalogos,
+    TipoPersonal, CondicionActividadNombre, RevisionCatalogos, ConstanciaServicio,
 )
 
 class SuperuserAdmin(admin.ModelAdmin):
@@ -79,3 +79,18 @@ admin.site.register(CondicionActividadNombre, ReadOnlyAdmin)
 class RevisionCatalogosAdmin(ReadOnlyAdmin):
     list_display = ("version", "actualizado_en", "actualizado_por")
     list_select_related = ("actualizado_por",)
+
+
+
+@admin.register(ConstanciaServicio)
+class ConstanciaServicioAdmin(ReadOnlyAdmin):
+    list_display = (
+        'numero', 'persona', 'cueanexo', 'fecha_emision', 'estado',
+        'usuario_emisor', 'fecha_anulacion',
+    )
+    list_filter = ('estado', 'fecha_emision', 'cueanexo')
+    search_fields = (
+        'numero', 'cueanexo', 'persona__apellido', 'persona__nombre',
+        'persona__dni', 'persona__cuil', 'token',
+    )
+    list_select_related = ('persona', 'usuario_emisor', 'usuario_anulacion')

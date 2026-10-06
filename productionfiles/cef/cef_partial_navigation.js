@@ -201,7 +201,8 @@
             fetch(fragmentUrl.href, {
                 credentials: "same-origin",
                 headers: { "X-Requested-With": "XMLHttpRequest" },
-                signal: currentController.signal
+                signal: currentController.signal,
+                cache: "no-store"
             })
                 .then(function (response) {
                     var contentType = response.headers.get("content-type") || "";

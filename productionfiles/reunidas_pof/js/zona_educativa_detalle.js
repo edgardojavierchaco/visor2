@@ -15,6 +15,8 @@
     const changeType = changeModal.querySelector("[data-pof-zone-change-type]");
     const changeZone = changeModal.querySelector("[data-pof-zone-change-zone]");
     const changePoints = changeModal.querySelector("[data-pof-zone-change-points]");
+    const changeObservation = changeModal.querySelector("[data-pof-zone-change-observation]");
+    const changeRemove = changeModal.querySelector("[data-pof-zone-change-remove]");
     const changeSave = changeModal.querySelector("[data-pof-zone-change-save]");
 
     const historyLabel = historyModal.querySelector("[data-pof-zone-history-label]");
@@ -224,6 +226,9 @@
         catalogRequestSequence += 1;
         changeLabel.textContent = trigger.dataset.zoneLabel || ("Localización #" + localizacionId);
         changeType.value = "";
+        changeObservation.value = "";
+        changeRemove.classList.add("pof-hidden");
+        changeRemove.disabled = true;
         resetZoneSelector();
         clearElement(changeCurrent);
         changeCurrent.classList.add("pof-hidden");
@@ -237,6 +242,8 @@
             const state = response.data || {};
             currentAssignment = state;
             renderCurrentSummary(changeCurrent, state);
+            changeRemove.classList.toggle("pof-hidden", !state.asignada);
+            changeRemove.disabled = !state.asignada;
 
             if (state.asignada && state.tipo) {
                 changeType.value = String(state.tipo).toUpperCase();
@@ -255,20 +262,18 @@
         }
     }
 
-    async function saveChange() {
-        if (!activeLocalizacionId || changeSave.disabled) {
+    async function persistChange(type, zone, successMessage) {
+        if (!activeLocalizacionId) {
             return;
         }
 
-        const type = String(changeType.value || "").trim().toUpperCase();
-        const zone = String(changeZone.value || "").trim();
-        if (!type || !zone) {
-            return;
-        }
+        const observation = String(changeObservation.value || "").trim();
 
         changeSave.disabled = true;
+        changeRemove.disabled = true;
         changeType.disabled = true;
         changeZone.disabled = true;
+        changeObservation.disabled = true;
         api.showStatus(changeStatus, "info", "Guardando cambio de Zona Educativa...");
 
         try {
@@ -281,24 +286,65 @@
                 body: {
                     tipo: type,
                     zona: zone,
+                    observacion: observation,
                 },
             });
             api.showStatus(
                 changeStatus,
                 "ok",
-                "Zona Educativa actualizada correctamente. Recargando el detalle..."
+                successMessage
             );
             window.location.reload();
         } catch (error) {
             if (error && error.tipo === "sin_cambios") {
-                api.showStatus(changeStatus, "info", error.mensaje || "La Zona Educativa seleccionada ya es la vigente.");
+                api.showStatus(
+                    changeStatus,
+                    "info",
+                    error.mensaje || "La Zona Educativa seleccionada ya es la vigente."
+                );
             } else {
                 api.showStatus(changeStatus, "error", api.formatError(error));
             }
             changeType.disabled = false;
             changeZone.disabled = !changeType.value || changeZone.options.length <= 1;
+            changeObservation.disabled = false;
+            changeRemove.disabled = !(currentAssignment && currentAssignment.asignada);
             updateSelectedZone();
         }
+    }
+
+    async function saveChange() {
+        if (!activeLocalizacionId || changeSave.disabled) {
+            return;
+        }
+
+        const type = String(changeType.value || "").trim().toUpperCase();
+        const zone = String(changeZone.value || "").trim();
+        if (!type || !zone) {
+            return;
+        }
+
+        await persistChange(
+            type,
+            zone,
+            "Zona Educativa actualizada correctamente. Recargando el detalle..."
+        );
+    }
+
+    async function removeChange() {
+        if (
+            !activeLocalizacionId
+            || changeRemove.disabled
+            || !(currentAssignment && currentAssignment.asignada)
+        ) {
+            return;
+        }
+
+        await persistChange(
+            "",
+            "",
+            "Zona Educativa quitada correctamente. Recargando el detalle..."
+        );
     }
 
     function createCell(value) {
@@ -327,19 +373,10 @@
         }).join(" · ");
     }
 
-    function renderHistory(payload) {
-        renderHistorySummary(payload);
-        clearElement(historyContent);
-        api.clearStatus(historyStatus);
-
-        const events = Array.isArray(payload.eventos) ? payload.eventos : [];
-        if (!events.length) {
-            api.showStatus(
-                historyStatus,
-                "info",
-                "No se registraron cambios de Zona Educativa para esta localización."
-            );
-            return;
+    function renderHistoryEvents(events, container) {
+        const items = Array.isArray(events) ? events : [];
+        if (!items.length) {
+            return false;
         }
 
         const wrap = document.createElement("div");
@@ -349,14 +386,14 @@
 
         const thead = document.createElement("thead");
         const headerRow = document.createElement("tr");
-        ["Fecha", "Usuario", "Anterior", "Nueva", "Cambios"].forEach(function (title) {
+        ["Fecha", "Usuario", "Anterior", "Nueva", "Cambios", "Observación"].forEach(function (title) {
             headerRow.appendChild(createHeader(title));
         });
         thead.appendChild(headerRow);
         table.appendChild(thead);
 
         const tbody = document.createElement("tbody");
-        events.forEach(function (event) {
+        items.forEach(function (event) {
             const row = document.createElement("tr");
             const previous = event.anterior || {};
             const next = event.nuevo || {};
@@ -373,12 +410,78 @@
                 + (next.puntos ? " · " + next.puntos + " puntos" : "")
             ));
             row.appendChild(createCell(describeChanges(event)));
+            row.appendChild(createCell(event.observacion || ""));
             tbody.appendChild(row);
         });
 
         table.appendChild(tbody);
         wrap.appendChild(table);
-        historyContent.appendChild(wrap);
+        container.appendChild(wrap);
+        return true;
+    }
+
+    function renderHistory(payload) {
+        renderHistorySummary(payload);
+        clearElement(historyContent);
+        api.clearStatus(historyStatus);
+
+        const cycles = Array.isArray(payload.ciclos) ? payload.ciclos : [];
+        if (cycles.length) {
+            let hasEvents = false;
+
+            cycles.forEach(function (cycle) {
+                const section = document.createElement("section");
+                if (cycles.length > 1) {
+                    section.className = "pof-admin-history-item pof-observation-timeline-group";
+
+                    const title = document.createElement("h3");
+                    title.className = "pof-observation-timeline-group-title";
+                    title.textContent = "POF " + visibleValue(cycle.anio);
+                    section.appendChild(title);
+
+                    const context = document.createElement("p");
+                    context.className = "pof-admin-history-meta";
+                    context.textContent = visibleValue(
+                        cycle.localizacion && cycle.localizacion.cabecera
+                    );
+                    section.appendChild(context);
+                }
+
+                if (!renderHistoryEvents(cycle.eventos, section)) {
+                    const empty = document.createElement("p");
+                    empty.className = "pof-help";
+                    empty.textContent = "Sin cambios explícitos de Zona Educativa en este ciclo.";
+                    section.appendChild(empty);
+                } else {
+                    hasEvents = true;
+                }
+
+                historyContent.appendChild(section);
+            });
+
+            if (payload.advertencia_continuidad) {
+                api.showStatus(
+                    historyStatus,
+                    "warning",
+                    payload.advertencia_continuidad + " Se muestran sólo los ciclos verificables."
+                );
+            } else if (!hasEvents) {
+                api.showStatus(
+                    historyStatus,
+                    "info",
+                    "No se registraron cambios de Zona Educativa para los ciclos enlazados."
+                );
+            }
+            return;
+        }
+
+        if (!renderHistoryEvents(payload.eventos, historyContent)) {
+            api.showStatus(
+                historyStatus,
+                "info",
+                "No se registraron cambios de Zona Educativa para esta localización."
+            );
+        }
     }
 
     async function openHistory(trigger) {
@@ -395,11 +498,21 @@
         openModal(historyModal);
 
         try {
-            const url = urlWithId(
-                historyModal.dataset.historialUrlBase,
-                Number(localizacionId)
+            const cargoId = String(trigger.dataset.cargoId || "").trim();
+            const url = new URL(
+                urlWithId(
+                    historyModal.dataset.historialUrlBase,
+                    Number(localizacionId)
+                ),
+                window.location.origin
             );
-            const response = await api.requestJson(url);
+            if (/^\d+$/.test(cargoId)) {
+                url.searchParams.set("cargo_id", cargoId);
+            }
+            const response = await api.requestJsonRead(
+                url.toString(),
+                { cache: "no-store" }
+            );
             renderHistory(response.data || {});
         } catch (error) {
             api.showStatus(historyStatus, "error", api.formatError(error));
@@ -414,6 +527,7 @@
     });
 
     changeZone.addEventListener("change", updateSelectedZone);
+    changeRemove.addEventListener("click", removeChange);
     changeSave.addEventListener("click", saveChange);
 
     document.addEventListener("click", function (event) {
