@@ -56,29 +56,47 @@ from django.db import models
 
 
 
-# class TablaTemporalAplicadoresFluidezOctubre2026(models.Model):
-# 	cuil = models.CharField(max_length=20, primary_key=True)
-# 	cueanexo = models.CharField(max_length=15, null=True, blank=True)
-# 	nombre_institucion = models.CharField(max_length=255, null=True, blank=True)
-# 	localidad = models.CharField(max_length=50, null=True, blank=True)
-# 	departamento = models.CharField(max_length=100, null=True, blank=True)
-# 	region = models.CharField(max_length=100, null=True, blank=True)
-# 	turno = models.CharField(max_length=10, null=True, blank=True)
-# 	tipo_documento = models.CharField(max_length=250, null=True, blank=True)
-# 	apellido = models.CharField(max_length=250, null=True, blank=True)
-# 	nombre_apellido = models.CharField(max_length=300, null=True, blank=True)
-# 	titulacion = models.CharField(max_length=255, null=True, blank=True)
-# 	grado = models.CharField(max_length=50, null=True, blank=True)
-# 	seccion = models.CharField(max_length=250, null=True, blank=True)
-# 	estado_inscripcion = models.CharField(max_length=100, null=True, blank=True)
-# 	ciclo_lectivo = models.CharField(max_length=50, null=True, blank=True)
+#-------------tabla aplicadores----------------------------
 
-# 	class Meta:
-# 		managed = False  # <--- Evita que Django cree o modifique la tabla
-# 		db_table = '"datos_oficiales"."tabla_temporal_aplicadores_fluidez_octubre_2026"'  # <--- Esquema y tabla
+class AplicadoresFluidezOctubre2026(models.Model):
+    """Datos personales del aplicador. Una fila por persona; sus secciones
+    están en SeccionesAplicadorFluidezOctubre2026."""
+    cuil = models.CharField(max_length=11, primary_key=True)
+    apellido = models.CharField(max_length=250)
+    nombre = models.CharField(max_length=250)
+    correo = models.EmailField(max_length=250, null=True, blank=True)
+    celular = models.CharField(max_length=20, null=True, blank=True)
+    region = models.CharField(max_length=100)  # región del regional que lo cargó
 
-# 	def str(self):
-# 		return f"{self.nombre_apellido} - {self.cuil}"
+    class Meta:
+        db_table = '"datos_oficiales"."aplicadores_fluidez_octubre_2026"'
+
+    def __str__(self):
+        return f"{self.apellido}, {self.nombre} - {self.cuil}"
+
+
+class SeccionesAplicadorFluidezOctubre2026(models.Model):
+    """Sección asignada a un aplicador. Los datos de escuela y sección se
+    copian de public.trayectoria_alumnos_sge (base sge_nacion) al asignarla."""
+    aplicador = models.ForeignKey(
+        AplicadoresFluidezOctubre2026,
+        on_delete=models.CASCADE,
+        related_name='secciones',
+    )
+    # id de la sección en SGE. Único: una sección tiene un solo aplicador.
+    id_seccion = models.BigIntegerField(unique=True)
+    id_institucion = models.BigIntegerField()
+    cueanexo = models.CharField(max_length=15)
+    c_grado_nivel_servicio = models.BigIntegerField()
+    anio_grado = models.CharField(max_length=50, null=True, blank=True)
+    turno = models.CharField(max_length=50, null=True, blank=True)
+    ciclo_lectivo = models.CharField(max_length=50, null=True, blank=True)
+
+    class Meta:
+        db_table = '"datos_oficiales"."secciones_aplicadores_fluidez_octubre_2026"'
+
+    def __str__(self):
+        return f"{self.cueanexo} - {self.anio_grado} sección {self.id_seccion} ({self.turno}) - {self.aplicador_id}"
 
 #-------------tabla tabuladores----------------------------
 
