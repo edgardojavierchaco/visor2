@@ -128,6 +128,21 @@ def dar_alta_docente_banco(*, banco_id, cueanexo, ciclo, user):
         )
 
 
+def borrar_docente_banco(*, banco_id, cueanexo, ciclo):
+    """Elimina físicamente un período del banco si no tiene asignaciones."""
+    with transaction.atomic():
+        banco = (
+            EspecialDocenteBanco.objects.select_for_update()
+            .get(pk=banco_id, cueanexo=cueanexo, ciclo=ciclo)
+        )
+        if DocenteSeccion.objects.filter(docente_banco=banco).exists():
+            raise ValidationError(
+                "No se puede borrar el docente porque conserva asignaciones de sección. "
+                "Primero deben eliminarse esas asignaciones."
+            )
+        banco.delete()
+
+
 def aplicar_traslados_docentes(ciclo_destino, user, cueanexo=None):
     """Aplica traslados pendientes al crear el ciclo destino, sin copiar cargos."""
     filtros = {

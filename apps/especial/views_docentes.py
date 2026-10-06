@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from urllib.parse import urlencode
 
 from django.contrib import messages
+from django.conf import settings
 from django.core.paginator import Paginator
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
@@ -33,9 +34,17 @@ from .models import (
 )
 from .permisos import especial_required
 from .services.docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
+from .services.cargos_docentes import (
+    cargos_especiales_docente,
+    comparar_cargo_con_seccion,
+    comparar_cargos_con_seccion,
+    rol_desde_situacion_revista,
+    texto_cargo,
+)
 from .services.baja_docentes import (
     dar_alta_docente_banco,
     dar_baja_docente_banco,
+    borrar_docente_banco,
     preparar_baja_docente,
 )
 from .views_contexto import contexto_base, redirect_con_contexto, render_especial
@@ -71,10 +80,24 @@ def _is_ajax(request):
 
 
 def _buscar_docente(cuil):
-    return (
+    docente = (
         EspecialDocenteBnh.objects.using(PADRON_DB_ALIAS)
         .filter(cuil=cuil)
         .first()
+    )
+    if docente:
+        return docente
+
+    persona = Personas.objects.filter(cuil=cuil, archivada=False).first()
+    if not persona:
+        return None
+    return SimpleNamespace(
+        cuil=persona.cuil,
+        apellido=persona.apellido or "",
+        nombre=persona.nombre or "",
+        nombre_completo=f"{persona.apellido or ''}, {persona.nombre or ''}".strip(", "),
+        dni=persona.dni or "",
+        estado="ACTIVO",
     )
 
 
@@ -589,11 +612,14 @@ def _docente_tiene_cargo(cuil):
     cuil_normalizado = _solo_digitos(cuil)
     if len(cuil_normalizado) != 11:
         return False
-    return RegistroActividades.objects.filter(
+    filtros = dict(
         persona__cuil=cuil_normalizado,
         eliminado=False,
-        validacion="VALIDADO",
-    ).exists()
+        modalidad__descrip_modalidad__iexact="ESPECIAL",
+    )
+    if getattr(settings, "ESPECIAL_REQUIERE_CARGO_VALIDADO", True):
+        filtros["validacion"] = "VALIDADO"
+    return RegistroActividades.objects.filter(**filtros).exists()
 
 
 def _persona_bnh_existe(cuil):
@@ -613,12 +639,7 @@ def _docente_tiene_cargo_en_cue(cuil, cueanexo):
     cueanexo_normalizado = _solo_digitos(cueanexo)
     if len(cuil_normalizado) != 11 or len(cueanexo_normalizado) != 9:
         return False
-    return RegistroActividades.objects.filter(
-        persona__cuil=cuil_normalizado,
-        cueanexo=cueanexo_normalizado,
-        eliminado=False,
-        validacion="VALIDADO",
-    ).exists()
+    return cargos_especiales_docente(cuil_normalizado, cueanexo_normalizado).exists()
 
 
 def _url_modal_docentes(especial_context, cuil=""):
@@ -631,6 +652,39 @@ def _url_modal_docentes(especial_context, cuil=""):
     if cuil:
         params["cuil"] = cuil
     return f"{reverse('especial:docentes')}?{urlencode(params)}"
+
+
+@especial_required
+def cargos_docente_seccion(request):
+    """Devuelve los cargos Especial disponibles para el modal de asignación."""
+    context = contexto_base(request, "docentes")
+    especial_context = context["especial_context"]
+    cuil = _solo_digitos(request.GET.get("cuil"))
+    try:
+        seccion_id = int(request.GET.get("seccion_id") or "")
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "Sección inválida."}, status=400)
+
+    seccion = get_object_or_404(
+        SeccionEspecial,
+        pk=seccion_id,
+        cueanexo=especial_context.get("cueanexo"),
+        ciclo=especial_context.get("ciclo"),
+    )
+    cargos = list(cargos_especiales_docente(cuil, seccion.cueanexo))
+    comparaciones = comparar_cargos_con_seccion(cargos, seccion)
+    return JsonResponse({
+        "ok": True,
+        "cargos": [
+            {
+                "id": cargo.pk,
+                "label": texto_cargo(cargo),
+                "estado": item["estado"],
+                "rol": rol_desde_situacion_revista(cargo) if item["estado"] == "coincide" else "",
+            }
+            for cargo, item in zip(cargos, comparaciones)
+        ],
+    })
 
 
 @especial_required
@@ -839,7 +893,13 @@ def editar_docente_seccion(request, seccion_id, docente_id):
     )
 
     if request.method == "POST":
-        form = EspecialDocenteSeccionForm(request.POST, instance=asignacion)
+        form = EspecialDocenteSeccionForm(
+            request.POST,
+            instance=asignacion,
+            cargos_queryset=cargos_especiales_docente(
+                asignacion.docente_cuil, seccion.cueanexo
+            ),
+        )
         if form.is_valid():
             if form.rol_sin_cambios:
                 bancos = list(
@@ -872,7 +932,12 @@ def editar_docente_seccion(request, seccion_id, docente_id):
                 messages.success(request, "Asignación actualizada correctamente.")
                 return redirect(volver_url)
     else:
-        form = EspecialDocenteSeccionForm(instance=asignacion)
+        form = EspecialDocenteSeccionForm(
+            instance=asignacion,
+            cargos_queryset=cargos_especiales_docente(
+                asignacion.docente_cuil, seccion.cueanexo
+            ),
+        )
 
     context.update({
         "form": form,
@@ -950,6 +1015,27 @@ def docentes(request):
 
     if request.method == "POST":
         accion = request.POST.get("accion")
+
+        if accion == "borrar_docente_banco":
+            if not especial_context.get("es_admin_especial"):
+                messages.error(request, "Sólo un Administrador puede borrar docentes del banco.")
+                return redirect(url_docentes)
+            try:
+                borrar_docente_banco(
+                    banco_id=request.POST.get("docente_banco_id"),
+                    cueanexo=especial_context["cueanexo"],
+                    ciclo=especial_context["ciclo"],
+                )
+            except (ValidationError, IntegrityError) as exc:
+                messages.error(
+                    request,
+                    "; ".join(exc.messages)
+                    if isinstance(exc, ValidationError)
+                    else "No se pudo borrar el docente del banco.",
+                )
+            else:
+                messages.success(request, "Docente borrado del banco de este CUE-Anexo y ciclo.")
+            return redirect(url_docentes)
 
         if accion == "alta_docente_especial":
             if not especial_context["puede_operar"]:
@@ -1112,21 +1198,57 @@ def docentes(request):
                 if campo_extra in form_data:
                     del form_data[campo_extra]
 
-            form = EspecialDocenteSeccionForm(form_data, instance=asignacion)
+            form = EspecialDocenteSeccionForm(
+                form_data,
+                instance=asignacion,
+                cargos_queryset=cargos_especiales_docente(cuil, seccion.cueanexo),
+            )
             
             if form.is_valid():
+                cargo = form.cleaned_data.get("cargo_relacionado")
+                comparacion = comparar_cargo_con_seccion(cargo, seccion)
+                if (
+                    comparacion
+                    and comparacion["estado"] != "coincide"
+                    and request.POST.get("confirmar_cargo") != "1"
+                ):
+                    form.add_error(
+                        "cargo_relacionado",
+                        "El cargo no coincide completamente con la sección. Confirmá la asignación para continuar.",
+                    )
+                    if _is_ajax(request):
+                        return JsonResponse({"modal_html": render_to_string(
+                            "especial/asignar_docente_seccion_modal_especial.html",
+                            {
+                                "docente_grupo_form": form,
+                                "asignacion_docente_cuil": cuil,
+                                "asignacion_grupo_seleccionado": seccion,
+                                "especial_context": especial_context,
+                                "docente_cargos_comparados": comparar_cargos_con_seccion(
+                                    list(cargos_especiales_docente(cuil, seccion.cueanexo)), seccion
+                                ),
+                            },
+                            request=request,
+                        )})
+                    messages.error(request, "Confirmá la asignación del cargo aunque no coincida completamente con la sección.")
+                    return redirect(url_docentes)
+                rol_cargo = rol_desde_situacion_revista(cargo) if comparacion and comparacion["estado"] == "coincide" else None
                 try:
                     if asignacion_historica:
                         asignacion = dar_alta_docente_seccion(
                             asignacion,
                             request.user,
-                            rol=form.cleaned_data.get("rol"),
+                            rol=rol_cargo or form.cleaned_data.get("rol"),
                             observaciones=form.cleaned_data.get("observaciones", ""),
+                            cargo_relacionado=form.cleaned_data.get("cargo_relacionado"),
                         )
                     else:
                         asignacion = form.save(commit=False)
                         asignacion.seccion = seccion
                         asignacion.docente_cuil = cuil
+                        asignacion.cargo_relacionado = form.cleaned_data.get("cargo_relacionado")
+                        if rol_cargo:
+                            asignacion.rol = rol_cargo
                         asignacion.docente_banco = (
                             EspecialDocenteBanco.objects.filter(
                                 cueanexo=seccion.cueanexo,
@@ -1207,6 +1329,16 @@ def docentes(request):
                         "asignacion_docente_cuil": cuil,
                         "asignacion_grupo_seleccionado": seccion,
                         "especial_context": especial_context,
+                        "docente_cargos_comparados": comparar_cargos_con_seccion(
+                            list(cargos_especiales_docente(cuil, seccion.cueanexo)),
+                            seccion,
+                        ),
+                        "docente_requiere_confirmacion": any(
+                            item["estado"] != "coincide"
+                            for item in comparar_cargos_con_seccion(
+                                list(cargos_especiales_docente(cuil, seccion.cueanexo)), seccion
+                            )
+                        ),
                     }
                     modal_html = render_to_string(
                         "especial/asignar_docente_seccion_modal_especial.html",
@@ -1301,6 +1433,11 @@ def docentes(request):
             cuil_buscado,
             especial_context.get("cueanexo"),
         )
+    )
+    docente_cargos_cue = list(
+        cargos_especiales_docente(cuil_buscado, especial_context.get("cueanexo"))
+        if docente
+        else []
     )
     url_carga_docente = _url_carga_docente(cuil_buscado, next_url)
     url_carga_profesor = _url_carga_docente(
@@ -1461,6 +1598,10 @@ def docentes(request):
             "docente_tiene_cargo": docente_tiene_cargo,
             "persona_bnh_existe": persona_bnh_existe,
             "docente_tiene_cargo_en_cue": docente_tiene_cargo_en_cue,
+            "cargo_validacion_requerida": getattr(
+                settings, "ESPECIAL_REQUIERE_CARGO_VALIDADO", True
+            ),
+            "docente_cargos_cue": docente_cargos_cue,
             "docentes": docentes,
             "docentes_actuales_url": docentes_actuales_url,
             "docentes_todos_url": docentes_todos_url,

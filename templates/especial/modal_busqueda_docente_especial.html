@@ -40,9 +40,33 @@
                     {% elif docente_tiene_cargo_en_cue %}
                         El docente buscado tiene un cargo asignado en este CUE-Anexo.
                     {% else %}
-                        El docente existe en BNH Personas, pero no tiene un cargo validado en este CUE-Anexo.
+                        El docente existe en BNH Personas, pero no tiene un cargo{% if cargo_validacion_requerida %} validado{% endif %} en este CUE-Anexo.
                     {% endif %}
                 </div>
+                {% if docente_cargos_cue %}
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Cargo validado en el CUE-Anexo</th>
+                                    <th>CEIC</th>
+                                    <th>Situación de revista</th>
+                                    <th>Turno</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cargo in docente_cargos_cue %}
+                                    <tr>
+                                        <td>{{ cargo.nivel_curricular|default:"-" }}</td>
+                                        <td>{{ cargo.ceic|default:"-" }}</td>
+                                        <td>{{ cargo.sit_revista|default:"-" }}</td>
+                                        <td>{{ cargo.turno|default:"-" }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
             {% endif %}
 
             <div class="cef-docente-table-wrap">
@@ -70,8 +94,8 @@
                                     {% if modal_tiene_grupo and docente_row %}
                                         {% if docente_asignacion_activa %}
                                             <span class="text-muted small">Ya está asignado a esta sección.</span>
-                                        {% elif docente_en_banco and docente_form %}
-                                            <span class="text-muted small">Completá los datos de asignación debajo.</span>
+                                        {% elif docente_form and docente_cargos_comparados %}
+                                            <span class="text-muted small">Completá los datos y elegí el cargo. {% if docente_en_banco %}Se asociará a esta sección.{% else %}Se agregará al banco y se asociará a esta sección.{% endif %}</span>
                                         {% else %}
                                             <span class="text-muted small">El docente no está en el banco de esta localización.</span>
                                         {% endif %}
@@ -150,9 +174,33 @@
                 <div class="alert alert-info mb-3">
                     Este docente ya está asignado a esta sección como {{ docente_asignacion_activa.get_rol_display }}.
                 </div>
-            {% elif docente_row and modal_tiene_grupo and docente_en_banco %}
+            {% elif docente_row and modal_tiene_grupo and docente_cargos_comparados %}
+                {% if docente_cargos_comparados %}
+                    {% for item in docente_cargos_comparados %}
+                        <div class="alert {% if item.estado == 'coincide' %}alert-success{% else %}alert-warning{% endif %} mb-2">
+                            {% if item.estado == 'coincide' %}
+                                <i class="fa-solid fa-circle-check me-1"></i>
+                                El cargo seleccionado coincide con la oferta y el turno de la sección.
+                            {% elif item.estado == 'oferta_coincide_turno_difiere' %}
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                El cargo coincide con la oferta, pero el turno difiere.
+                            {% else %}
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                El cargo pertenece al CUE-Anexo, pero corresponde a otra oferta.
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    {% if docente_requiere_confirmacion %}
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="confirmar_cargo" value="1" id="confirmarCargoBusqueda">
+                            <label class="form-check-label" for="confirmarCargoBusqueda">
+                                Confirmo asignar el cargo aunque presente diferencias con la sección.
+                            </label>
+                        </div>
+                    {% endif %}
+                {% endif %}
                 <div class="cef-edit-panel">
-                    <h3><i class="fa-solid fa-user-check"></i> Asociar docente a la sección</h3>
+                    <h3><i class="fa-solid fa-user-check"></i> {% if docente_en_banco %}Asociar docente a la sección{% else %}Agregar al banco y asociar a la sección{% endif %}</h3>
                     <form method="post" action="{{ modal_action_url }}" novalidate data-docente-modal-post-form>
                         {% csrf_token %}
                         {% if modal_tiene_grupo %}<input type="hidden" name="accion" value="asignar_seccion">{% endif %}
@@ -178,7 +226,7 @@
 
                         <div class="cef-form-actions mt-3">
                             <button class="btn btn-primary" type="submit">
-                                <i class="fa-solid fa-user-check"></i> Asociar docente
+                                <i class="fa-solid fa-user-check"></i> {% if docente_en_banco %}Asociar docente{% else %}Agregar al banco y asociar{% endif %}
                             </button>
                         </div>
                     </form>

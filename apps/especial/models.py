@@ -1366,6 +1366,18 @@ class DocenteSeccion(EspecialAuditoriaMixin):
     docente_nombre_snapshot = models.CharField(max_length=255, blank=True, editable=False)
     docente_dni_snapshot = models.CharField(max_length=20, blank=True, editable=False)
     docente_estado_bnh_snapshot = models.CharField(max_length=30, blank=True, editable=False)
+    cargo_relacionado = models.ForeignKey(
+        "bnhpersonas.RegistroActividades",
+        on_delete=models.PROTECT,
+        related_name="asignaciones_especiales",
+        blank=True,
+        null=True,
+        help_text="Cargo BNH validado utilizado para esta asignación.",
+    )
+    cargo_ceic_snapshot = models.CharField(max_length=150, blank=True, editable=False)
+    cargo_situacion_revista_snapshot = models.CharField(max_length=50, blank=True, editable=False)
+    cargo_turno_snapshot = models.CharField(max_length=30, blank=True, editable=False)
+    cargo_nivel_curricular_snapshot = models.CharField(max_length=255, blank=True, editable=False)
     observaciones = models.TextField(blank=True)
 
     class Meta:
@@ -1426,6 +1438,20 @@ class DocenteSeccion(EspecialAuditoriaMixin):
                     "CUE-Anexo y ciclo de la sección."
                 )
 
+        if self.cargo_relacionado_id and self.seccion_id:
+            cargo = self.cargo_relacionado
+            cargo_cuil = solo_digitos(getattr(cargo.persona, "cuil", ""))
+            modalidad = str(getattr(cargo.modalidad, "descrip_modalidad", "") or "").strip()
+            requiere_validacion = getattr(
+                settings, "ESPECIAL_REQUIERE_CARGO_VALIDADO", True
+            )
+            if cargo_cuil != self.docente_cuil:
+                errors["cargo_relacionado"] = "El cargo seleccionado no pertenece al CUIL del docente."
+            elif solo_digitos(cargo.cueanexo) != solo_digitos(self.seccion.cueanexo):
+                errors["cargo_relacionado"] = "El cargo seleccionado no pertenece al CUE-Anexo de la sección."
+            elif cargo.eliminado or (requiere_validacion and cargo.validacion != "VALIDADO") or modalidad.casefold() != "especial":
+                errors["cargo_relacionado"] = "El cargo debe estar validado, vigente y ser de modalidad Especial."
+
         if errors:
             raise ValidationError(errors)
 
@@ -1447,9 +1473,23 @@ class DocenteSeccion(EspecialAuditoriaMixin):
         self.docente_dni_snapshot = docente.dni or ""
         self.docente_estado_bnh_snapshot = docente.estado or ""
 
+    def actualizar_snapshots_cargo(self):
+        cargo = self.cargo_relacionado
+        if not cargo:
+            return
+        self.cargo_ceic_snapshot = getattr(getattr(cargo, "ceic", None), "descripcion", "") or ""
+        self.cargo_situacion_revista_snapshot = getattr(
+            getattr(cargo, "sit_revista", None), "descrip_sitrev", ""
+        ) or ""
+        self.cargo_turno_snapshot = cargo.turno or ""
+        self.cargo_nivel_curricular_snapshot = getattr(
+            getattr(cargo, "nivel_curricular", None), "descripcion", ""
+        ) or ""
+
     def save(self, *args, **kwargs):
         self.docente_cuil = solo_digitos(self.docente_cuil)
         self.actualizar_snapshots_docente()
+        self.actualizar_snapshots_cargo()
         self.full_clean()
         super().save(*args, **kwargs)
 
