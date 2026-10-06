@@ -3,7 +3,7 @@
 
 {% block head %}
 {{ block.super }}
-<title>Asignar Escuelas — {{ tabulador.apellido }} {{ tabulador.nombre }}</title>
+<title>Asignar Escuelas — {{ tabulador.apellido }} {{ tabulador.nombre }} — Fluidez Octubre 2026</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
 <style>
@@ -195,6 +195,7 @@
 {% block content %}
 {{ block.super }}
 <div class="asig-wrapper">
+    {% include 'fluidez_octubre_2026/_badge_operativo.html' %}
 
     {# Breadcrumb #}
     <div class="asig-breadcrumb">
