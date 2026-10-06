@@ -1013,7 +1013,7 @@ def buscar_persona_cuil(request):
 # Región activa de la pantalla de aplicadores. Clave de sesión propia para no
 # cambiar la región que tiene seleccionada la pantalla de tabuladores.
 SESION_REGION_APLICADORES = 'apl_fluidez_oct26_region'
-ERROR_SGE = 'No se pudieron consultar las secciones en SGE. Intentá de nuevo en unos minutos.'
+ERROR_SGE = 'No se pudieron consultar las secciones. Intentá de nuevo en unos minutos.'
 
 
 def _region_aplicadores(request):
