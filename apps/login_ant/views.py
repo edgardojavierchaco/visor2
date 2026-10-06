@@ -245,87 +245,9 @@ class LoginFormView(LoginView):
 
     # --------------------------
     def form_invalid(self, form):
-        """
-        Devuelve un mensaje de autenticación más útil para el usuario.
-
-        Casos contemplados:
-        - usuario y contraseña vacíos
-        - usuario vacío
-        - contraseña vacía
-        - usuario no registrado
-        - usuario inactivo
-        - contraseña incorrecta
-        - fallback para cualquier otro error de autenticación
-        """
-        from apps.usuarios.models import UsuariosVisualizador
-
-        username = (self.request.POST.get('username') or '').strip()
-        password = self.request.POST.get('password') or ''
-
-        contacto = (
-            'Comuníquese con un administrador a '
-            'estadisticaseducativaschaco@gmail.com / 3625311743.'
-        )
-
-        if not username and not password:
-            return JsonResponse({
-                'success': False,
-                'error_code': 'usuario_y_password_requeridos',
-                'message': 'Ingresá tu usuario y contraseña.'
-            })
-
-        if not username:
-            return JsonResponse({
-                'success': False,
-                'error_code': 'usuario_requerido',
-                'message': 'Ingresá tu usuario.'
-            })
-
-        if not password:
-            return JsonResponse({
-                'success': False,
-                'error_code': 'password_requerida',
-                'message': 'Ingresá tu contraseña.'
-            })
-
-        usuario = UsuariosVisualizador.objects.filter(
-            username=username
-        ).first()
-
-        if usuario is None:
-            return JsonResponse({
-                'success': False,
-                'error_code': 'usuario_no_registrado',
-                'message': (
-                    'El usuario ingresado no se encuentra registrado. '
-                    + contacto
-                )
-            })
-
-        if not usuario.is_active:
-            return JsonResponse({
-                'success': False,
-                'error_code': 'usuario_inactivo',
-                'message': (
-                    'El usuario se encuentra registrado, pero está inactivo. '
-                    + contacto
-                )
-            })
-
-        if not usuario.check_password(password):
-            return JsonResponse({
-                'success': False,
-                'error_code': 'password_incorrecta',
-                'message': 'La contraseña ingresada es incorrecta.'
-            })
-
         return JsonResponse({
             'success': False,
-            'error_code': 'autenticacion_fallida',
-            'message': (
-                'No fue posible iniciar sesión con esas credenciales. '
-                + contacto
-            )
+            'message': 'Credenciales incorrectas.'
         })
 
     # --------------------------
