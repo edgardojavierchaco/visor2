@@ -379,8 +379,87 @@
             "[data-cef-asignar-docente-label]",
             (trigger.dataset.docenteNombre || "Profesor") + " - " + trigger.dataset.docenteCuil
         );
+        loadAssignmentCargos(modal, trigger);
         modal.classList.add("is-open");
         modal.setAttribute("aria-hidden", "false");
+    }
+
+    function loadAssignmentCargos(modal, trigger) {
+        var cargoField = modal.querySelector("[name='cargo_relacionado']");
+        if (!cargoField || !trigger.dataset.cargosUrl) return;
+        var feedback = modal.querySelector("[data-cef-cargos-feedback]");
+        if (feedback) feedback.innerHTML = "";
+        cargoField.innerHTML = "";
+        var loading = document.createElement("option");
+        loading.value = "";
+        loading.textContent = "Cargando cargos...";
+        cargoField.appendChild(loading);
+        var params = new URLSearchParams({
+            cuil: trigger.dataset.docenteCuil || "",
+            seccion_id: trigger.dataset.grupoId || "",
+            cueanexo: trigger.dataset.cueanexo || "",
+            ciclo: trigger.dataset.ciclo || ""
+        });
+        fetch(trigger.dataset.cargosUrl + "?" + params.toString(), {
+            credentials: "same-origin",
+            headers: {"X-Requested-With": "XMLHttpRequest"}
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error("No se pudieron cargar los cargos.");
+                return response.json();
+            })
+            .then(function (data) {
+                cargoField.innerHTML = "";
+                var empty = document.createElement("option");
+                empty.value = "";
+                empty.textContent = "Seleccioná un cargo";
+                cargoField.appendChild(empty);
+                (data.cargos || []).forEach(function (cargo) {
+                    var option = document.createElement("option");
+                    option.value = cargo.id;
+                    option.textContent = cargo.label;
+                    cargoField.appendChild(option);
+                });
+                var exacto = (data.cargos || []).find(function (cargo) {
+                    return cargo.estado === "coincide";
+                });
+                if (exacto) {
+                    cargoField.value = String(exacto.id);
+                    var roleField = modal.querySelector("[name='rol']");
+                    if (roleField && exacto.rol) roleField.value = exacto.rol;
+                }
+                var hayDiferencia = (data.cargos || []).some(function (cargo) {
+                    return cargo.estado !== "coincide";
+                });
+                if (feedback && data.cargos && data.cargos.length) {
+                    var alert = document.createElement("div");
+                    alert.className = "alert " + (exacto ? "alert-success" : "alert-warning") + " mb-2";
+                    alert.textContent = exacto
+                        ? "Este docente coincide exactamente con la sección. El rol fue completado automáticamente."
+                        : "Este docente no coincide exactamente con la sección.";
+                    feedback.appendChild(alert);
+                    if (hayDiferencia && !exacto) {
+                        var wrapper = document.createElement("div");
+                        wrapper.className = "form-check mb-3";
+                        wrapper.innerHTML = '<input class="form-check-input" type="checkbox" name="confirmar_cargo" value="1" id="confirmarCargoAsignacionJs">' +
+                            '<label class="form-check-label" for="confirmarCargoAsignacionJs">Confirmo continuar con esta asignación.</label>';
+                        feedback.appendChild(wrapper);
+                    }
+                }
+                if (!data.cargos || !data.cargos.length) {
+                    empty.textContent = "No hay cargos Especial disponibles";
+                }
+            })
+            .catch(function () {
+                cargoField.innerHTML = "";
+                var error = document.createElement("option");
+                error.value = "";
+                error.textContent = "No se pudieron cargar los cargos";
+                cargoField.appendChild(error);
+                if (feedback) {
+                    feedback.innerHTML = '<div class="alert alert-danger mb-2">No se pudieron consultar los cargos BNH del docente.</div>';
+                }
+            });
     }
 
     function replaceAssignmentModal(html) {

@@ -62,6 +62,11 @@ urlpatterns = [
         views_docentes.agregar_docente_banco_desde_bnh,
         name="agregar_docente_banco_desde_bnh",
     ),
+    path(
+        "docentes/cargos-seccion/",
+        views_docentes.cargos_docente_seccion,
+        name="cargos_docente_seccion",
+    ),
     # CUE-Anexo
     path(
         "carga/cueanexo/",

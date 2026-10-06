@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from urllib.parse import urlencode
 
 from django.contrib import messages
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import DatabaseError, IntegrityError, transaction
@@ -37,6 +38,13 @@ from .models import (
 from .permisos import especial_required
 from .views_contexto import contexto_base, redirect_con_contexto, render_especial
 from .services.docentes_seccion import dar_alta_docente_seccion, dar_baja_docente_seccion
+from .services.cargos_docentes import (
+    cargos_especiales_docente,
+    comparar_cargo_con_seccion,
+    comparar_cargos_con_seccion,
+    rol_desde_situacion_revista,
+)
+from apps.bnhpersonas.models import Personas
 from .services.alumnos import (
     inscribir_alumno_en_seccion,
     ultima_matricula_compartida,
@@ -494,7 +502,17 @@ def _preparar_modales_gestionar(request, seccion, especial_context):
 
     cuil_docente = _solo_digitos(request.GET.get("cuil")) if abrir_docente else ""
     docente = _buscar_docente(cuil_docente) if cuil_docente else None
-    docente_form = EspecialDocenteSeccionForm()
+    docente_form = EspecialDocenteSeccionForm(
+        cargos_queryset=cargos_especiales_docente(cuil_docente, seccion.cueanexo)
+        if cuil_docente
+        else None
+    )
+    docente_cargos = list(cargos_especiales_docente(cuil_docente, seccion.cueanexo)) if cuil_docente else []
+    docente_tiene_cargo_en_cue = bool(docente_cargos)
+    docente_requiere_confirmacion = any(
+        item["estado"] != "coincide"
+        for item in comparar_cargos_con_seccion(docente_cargos, seccion)
+    )
     docente_error = ""
     if cuil_docente:
         busqueda_docente = EspecialBusquedaDocenteForm({"cuil": cuil_docente})
@@ -590,9 +608,16 @@ def _preparar_modales_gestionar(request, seccion, especial_context):
         "docente": docente,
         "docente_row": _docente_row(docente),
         "docente_en_banco": docente_en_banco,
+        "persona_bnh_existe": bool(docente and Personas.objects.filter(cuil=cuil_docente, archivada=False).exists()),
+        "docente_tiene_cargo_en_cue": docente_tiene_cargo_en_cue,
         "cuil_error_docente": docente_error,
         "modal_tiene_grupo": True,
         "docente_form": docente_form,
+        "docente_cargos_comparados": comparar_cargos_con_seccion(docente_cargos, seccion),
+        "cargo_validacion_requerida": getattr(
+            settings, "ESPECIAL_REQUIERE_CARGO_VALIDADO", True
+        ),
+        "docente_requiere_confirmacion": docente_requiere_confirmacion,
         "docente_asignacion_activa": asignacion_activa,
         "url_editar_docente": "",
         "url_carga_profesor": "",
@@ -1081,9 +1106,18 @@ def _alta_docente_nuevo_gestionar(request, seccion):
     asignacion = DocenteSeccion(
         docente_cuil=cuil,
     )
-    form = EspecialDocenteSeccionForm(request.POST, instance=asignacion)
+    form = EspecialDocenteSeccionForm(
+        request.POST,
+        instance=asignacion,
+        cargos_queryset=cargos_especiales_docente(cuil, seccion.cueanexo),
+    )
     if not form.is_valid():
         return False, _errores_form(form)
+
+    cargo = form.cleaned_data.get("cargo_relacionado")
+    comparacion = comparar_cargo_con_seccion(cargo, seccion)
+    if comparacion and comparacion["estado"] != "coincide" and request.POST.get("confirmar_cargo") != "1":
+        return False, "El cargo no coincide completamente con la sección. Confirmá la asignación para continuar."
 
     # Validamos el formulario antes de consultar la asignación existente:
     # además de evitar una consulta innecesaria, esto permite devolver los
@@ -1101,19 +1135,33 @@ def _alta_docente_nuevo_gestionar(request, seccion):
     # otra fila para conservar las fechas del período anterior.
     asignacion = form.save(commit=False)
     asignacion.seccion = seccion
-    asignacion.docente_banco = (
-        EspecialDocenteBanco.objects.filter(
-            cueanexo=seccion.cueanexo,
-            ciclo=seccion.ciclo,
-            docente_cuil=cuil,
-            estado=EspecialDocenteBanco.Estado.ACTIVO,
-        ).order_by("-pk").first()
-    )
+    rol_cargo = rol_desde_situacion_revista(cargo) if comparacion and comparacion["estado"] == "coincide" else None
+    if rol_cargo:
+        asignacion.rol = rol_cargo
     if not asignacion.pk:
         asignacion.creado_por = request.user
     asignacion.actualizado_por = request.user
     try:
         with transaction.atomic():
+            banco = (
+                EspecialDocenteBanco.objects.filter(
+                    cueanexo=seccion.cueanexo,
+                    ciclo=seccion.ciclo,
+                    docente_cuil=cuil,
+                    estado=EspecialDocenteBanco.Estado.ACTIVO,
+                ).order_by("-pk").first()
+            )
+            if banco is None:
+                banco = EspecialDocenteBanco(
+                    cueanexo=seccion.cueanexo,
+                    ciclo=seccion.ciclo,
+                    docente_cuil=cuil,
+                    estado=EspecialDocenteBanco.Estado.ACTIVO,
+                    creado_por=request.user,
+                    actualizado_por=request.user,
+                )
+                banco.save()
+            asignacion.docente_banco = banco
             asignacion.save()
         return True, "Profesor asignado a la sección correctamente."
     except ValidationError as exc:
