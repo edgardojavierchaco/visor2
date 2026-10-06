@@ -45,10 +45,10 @@ USUARIOS_CHOICES=[
 PROCESOS_CHOICES=[
     ('SELLADOS', 'SELLADOS'),
     ('INVENTARIADOS', 'INVENTARIADOS'),
-    ('CLASIFICADOS', 'CLASIFICADOS'),     
-    ('CATALOGADOS', 'CATALOGADOS'),   
+    ('CLASIFICADOS', 'CLASIFICADOS'),
+    ('CATALOGADOS', 'CATALOGADOS'),
     ('RESTAURADOS', 'RESTAURADOS'),
-    ('RESTAURADOS', 'RESTAURADOS'),
+    ('ETIQUETADOS', 'ETIQUETADOS'),
     ('BAJAS', 'BAJAS'),
 ]
 
@@ -158,7 +158,7 @@ class MaterialBibliografico(models.Model):
         super().clean()
 
         # 🔴 VALIDACIÓN SERVICIO PERMITIDO
-        if self.servicio and self.servicio.cod_servicio not in [110, 111, 112, 113]:
+        if self.servicio and self.servicio.cod_servicio not in (111, 112, 113, 114):
             raise ValidationError({
                 'servicio': 'El servicio seleccionado no es válido.'
             })

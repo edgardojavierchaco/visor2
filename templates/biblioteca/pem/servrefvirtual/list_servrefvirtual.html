@@ -7,8 +7,7 @@
 {% block delete_section_fields %}
     <span data-biblioteca-delete-field="servicio" data-label="Servicio"></span>
     <span data-biblioteca-delete-field="turnos" data-label="Turno"></span>
-    <span data-biblioteca-delete-field="varones" data-label="Varones"></span>
-    <span data-biblioteca-delete-field="total" data-label="Total"></span>
+    <span data-biblioteca-delete-field="total" data-label="Visualizaciones"></span>
 {% endblock %}
 
 {% block section_header %}
@@ -27,7 +26,7 @@
         <th scope="col" style="width: 15%;">SERVICIO</th>
         <th scope="col" style="width: 15%;">TURNOS</th>
         <th scope="col" style="width: 20%;">VARONES</th>
-        <th scope="col" style="width: 20%;">TOTAL</th>
+        <th scope="col" style="width: 20%;">VISUALIZACIONES</th>
         <th scope="col">ACCIÓN</th>
     </tr>
 {% endblock %}
@@ -49,18 +48,86 @@
     </div>
     <div class="biblioteca-crud__totals-metrics">
         <div class="biblioteca-crud__total-metric">
-            <span>Varones</span>
-            <strong data-biblioteca-total-field="varones">0</strong>
+            <span data-biblioteca-virtual-total-label>Visualizaciones</span>
+            <strong data-biblioteca-total-field="total">0</strong>
         </div>
         <div class="biblioteca-crud__total-metric">
-            <span>Total</span>
-            <strong data-biblioteca-total-field="total">0</strong>
+            <span>Mañana</span>
+            <strong data-biblioteca-total-group-field="turnos"
+                    data-biblioteca-total-group-value="MAÑANA"
+                    data-biblioteca-total-group-sum="total">0</strong>
+        </div>
+        <div class="biblioteca-crud__total-metric">
+            <span>Tarde</span>
+            <strong data-biblioteca-total-group-field="turnos"
+                    data-biblioteca-total-group-value="TARDE"
+                    data-biblioteca-total-group-sum="total">0</strong>
+        </div>
+        <div class="biblioteca-crud__total-metric">
+            <span>Vespertino</span>
+            <strong data-biblioteca-total-group-field="turnos"
+                    data-biblioteca-total-group-value="VESPERTINO"
+                    data-biblioteca-total-group-sum="total">0</strong>
+        </div>
+        <div class="biblioteca-crud__total-metric">
+            <span>Noche</span>
+            <strong data-biblioteca-total-group-field="turnos"
+                    data-biblioteca-total-group-value="NOCHE"
+                    data-biblioteca-total-group-sum="total">0</strong>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block javascript %}
+
+<script>
+    function ajustarColumnasReferenciaVirtual(api) {
+        var registros = api.rows({
+            page: 'all',
+            search: 'none'
+        }).data().toArray();
+
+        var tieneRegistrosLegacy = registros.some(function (registro) {
+            var varones = Number(registro && registro.varones ? registro.varones : 0);
+            var servicio = String(registro && registro.servicio ? registro.servicio : '')
+                .trim()
+                .toUpperCase();
+
+            return varones > 0 || servicio === 'CONSULTA ON LINE';
+        });
+
+        api.column(5).visible(tieneRegistrosLegacy, false);
+
+        var encabezadoTotal = api.column(6).header();
+        if (encabezadoTotal) {
+            encabezadoTotal.textContent = tieneRegistrosLegacy
+                ? 'TOTAL / VISUALIZACIONES'
+                : 'VISUALIZACIONES';
+        }
+
+        var etiquetaResumen = document.querySelector(
+            '[data-biblioteca-virtual-total-label]'
+        );
+        if (etiquetaResumen) {
+            etiquetaResumen.textContent = tieneRegistrosLegacy
+                ? 'Total / visualizaciones'
+                : 'Visualizaciones';
+        }
+    }
+
+    $(document).on('init.dt.referenciaVirtual draw.dt.referenciaVirtual', function (event, settings) {
+        if (settings.nTable && settings.nTable.id === 'data') {
+            ajustarColumnasReferenciaVirtual(new $.fn.dataTable.Api(settings));
+        }
+    });
+
+    $(function () {
+        if ($.fn.DataTable.isDataTable('#data')) {
+            ajustarColumnasReferenciaVirtual($('#data').DataTable());
+        }
+    });
+</script>
 
 <!-- 🔥 CSRF TOKEN (OCULTO PERO EXISTE) -->
 <form style="display:none;">

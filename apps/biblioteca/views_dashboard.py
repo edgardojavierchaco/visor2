@@ -100,10 +100,9 @@ SECCIONES_CARGA = (
         (
             ('servicio__nom_servicio', 'Servicio'),
             ('turnos__nom_turno', 'Turno'),
-            ('varones', 'Varones'),
-            ('total', 'Total'),
+            ('total', 'Visualizaciones'),
         ),
-        campos_totalizables=('varones', 'total'),
+        campos_totalizables=('total',),
     ),
     SeccionCarga(
         'prestamos',
@@ -196,7 +195,7 @@ SECCIONES_CARGA = (
     ),
     SeccionCarga(
         'destino-fondos',
-        'Destino de fondos',
+        'Compras realizadas con el FBCH',
         RegistroDestinoFondos,
         'fondos_list',
         'fa-coins',
@@ -229,9 +228,21 @@ SECCIONES_CARGA = (
     ),
 )
 
+SECCIONES_CARGA_ACTIVAS = tuple(
+    seccion for seccion in SECCIONES_CARGA
+    if seccion.clave != 'prestamos'
+)
+
 SECCIONES_CARGA_POR_CLAVE = {
     seccion.clave: seccion for seccion in SECCIONES_CARGA
 }
+
+REFERENCIA_VIRTUAL_COLUMNAS_HISTORICAS = (
+    ('servicio__nom_servicio', 'Servicio'),
+    ('turnos__nom_turno', 'Turno'),
+    ('varones', 'Varones'),
+    ('total', 'Total'),
+)
 
 
 PERSONAL_COLUMNAS_ACTUALES = (
@@ -429,12 +440,12 @@ def _resolver_periodo_pendiente(request, cueanexos_autorizados, pendientes):
     }
 
 
-def _obtener_conteos_secciones(periodo):
+def _obtener_conteos_secciones(periodo, secciones=SECCIONES_CARGA):
     cueanexo = str(periodo.cueanexo)
     anotaciones_conteo = {}
     alias_por_seccion = {}
 
-    for numero, seccion in enumerate(SECCIONES_CARGA, 1):
+    for numero, seccion in enumerate(secciones, 1):
         alias = f'cantidad_seccion_{numero}'
         conteo_seccion = (
             seccion.modelo.objects.filter(
@@ -468,7 +479,7 @@ def _obtener_conteos_secciones(periodo):
 
     return {
         seccion.clave: conteos[alias_por_seccion[seccion.clave]]
-        for seccion in SECCIONES_CARGA
+        for seccion in secciones
     }
 
 
@@ -479,10 +490,13 @@ def _construir_resumen_secciones(periodo_pendiente):
         'anio': periodo_pendiente.annos,
         'mes': periodo_pendiente.meses,
     })
-    conteos = _obtener_conteos_secciones(periodo_pendiente)
+    conteos = _obtener_conteos_secciones(
+        periodo_pendiente,
+        SECCIONES_CARGA_ACTIVAS,
+    )
     secciones = []
 
-    for numero, seccion in enumerate(SECCIONES_CARGA, 1):
+    for numero, seccion in enumerate(SECCIONES_CARGA_ACTIVAS, 1):
         cantidad = conteos[seccion.clave]
         secciones.append({
             'numero': numero,
@@ -632,6 +646,8 @@ class GuiaUsoView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Biblioteca | Guía de uso'
+        context['total_secciones'] = len(SECCIONES_CARGA_ACTIVAS)
+        context['secciones_guia'] = SECCIONES_CARGA_ACTIVAS
         return context
 
 
@@ -829,7 +845,12 @@ class PeriodoHistoricoDetalleView(LoginRequiredMixin, View):
                 },
             })
 
-        campos = tuple(campo for campo, _etiqueta in seccion_config.columnas)
+        columnas = (
+            REFERENCIA_VIRTUAL_COLUMNAS_HISTORICAS
+            if seccion == 'referencia-virtual'
+            else seccion_config.columnas
+        )
+        campos = tuple(campo for campo, _etiqueta in columnas)
         registros = list(
             seccion_config.modelo.objects.filter(
                 cueanexo=str(periodo.cueanexo),
@@ -842,14 +863,25 @@ class PeriodoHistoricoDetalleView(LoginRequiredMixin, View):
             [_valor_detalle_visible(valor) for valor in registro]
             for registro in registros
         ]
-        totales = _construir_totales_seccion(
-            seccion_config,
-            campos,
-            registros,
-        )
+        if seccion == 'referencia-virtual':
+            totales = {
+                'tipo': 'sumas',
+                'valores': [
+                    None,
+                    None,
+                    sum(registro[2] or 0 for registro in registros),
+                    sum(registro[3] or 0 for registro in registros),
+                ],
+            }
+        else:
+            totales = _construir_totales_seccion(
+                seccion_config,
+                campos,
+                registros,
+            )
         return JsonResponse({
             'seccion': seccion_config.nombre,
-            'columnas': [etiqueta for _campo, etiqueta in seccion_config.columnas],
+            'columnas': [etiqueta for _campo, etiqueta in columnas],
             'filas': filas,
             'totales': totales,
         })
@@ -890,7 +922,10 @@ class CargaView(LoginRequiredMixin, TemplateView):
             'secciones': secciones,
             'primera_sin_registros': primera_sin_registros,
             'secciones_con_registros': secciones_con_registros,
-            'todas_con_registros': secciones_con_registros == len(SECCIONES_CARGA),
+            'total_secciones': len(SECCIONES_CARGA_ACTIVAS),
+            'todas_con_registros': (
+                secciones_con_registros == len(SECCIONES_CARGA_ACTIVAS)
+            ),
         })
         return context
 
@@ -922,6 +957,7 @@ class InformeView(LoginRequiredMixin, TemplateView):
             'secciones_con_registros': sum(
                 1 for seccion in secciones if seccion['tiene_registros']
             ),
+            'total_secciones': len(SECCIONES_CARGA_ACTIVAS),
         })
         return context
 

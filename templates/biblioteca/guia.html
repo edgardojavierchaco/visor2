@@ -16,7 +16,7 @@
         <strong>En esta guía</strong>
         <a href="#flujo">Flujo de trabajo</a>
         <a href="#periodos">Períodos</a>
-        <a href="#secciones">Las 11 secciones</a>
+        <a href="#secciones">Las {{ total_secciones }} secciones</a>
         <a href="#revision">Revisión y envío</a>
         <a href="#ejemplos">Ejemplos</a>
     </nav>
@@ -39,7 +39,7 @@
             </li>
             <li>
                 <span class="biblioteca-guia__paso-numero">3</span>
-                <div><strong>Carga</strong><p>Da acceso a las 11 secciones del relevamiento para registrar o corregir información.</p></div>
+                <div><strong>Carga</strong><p>Da acceso a las {{ total_secciones }} secciones activas del relevamiento para registrar o corregir información.</p></div>
             </li>
             <li>
                 <span class="biblioteca-guia__paso-numero">4</span>
@@ -77,23 +77,15 @@
         <div class="biblioteca-bloque__encabezado">
             <div>
                 <p class="biblioteca-operativa__rotulo">CARGA DEL RELEVAMIENTO</p>
-                <h2 id="guia-secciones-titulo">Las 11 secciones</h2>
+                <h2 id="guia-secciones-titulo">Las {{ total_secciones }} secciones</h2>
             </div>
         </div>
         <div class="biblioteca-guia__contenido">
             <p>Cada sección se administra de manera independiente: podés agregar, editar o eliminar sus registros. Carga e Informe muestran solamente <strong>Con registros</strong> o <strong>Sin registros</strong>; esos estados no indican completitud.</p>
             <ol class="biblioteca-guia__secciones-lista">
-                <li><span>01</span>Material bibliográfico</li>
-                <li><span>02</span>Referencia</li>
-                <li><span>03</span>Referencia virtual</li>
-                <li><span>04</span>Préstamos</li>
-                <li><span>05</span>Informe pedagógico</li>
-                <li><span>06</span>Asistencia</li>
-                <li><span>07</span>Instituciones</li>
-                <li><span>08</span>Procesos técnicos</li>
-                <li><span>09</span>Aguapey</li>
-                <li><span>10</span>Destino de fondos</li>
-                <li><span>11</span>Personal bibliotecario</li>
+                {% for seccion in secciones_guia %}
+                    <li><span>{{ forloop.counter|stringformat:"02d" }}</span>{{ seccion.nombre }}</li>
+                {% endfor %}
             </ol>
         </div>
     </section>
@@ -106,7 +98,7 @@
             </div>
         </div>
         <div class="biblioteca-guia__contenido">
-            <p>Informe presenta las mismas 11 secciones. Los detalles se abren solo cuando los necesitás y desde cada bloque podés volver a la sección correspondiente para corregir datos.</p>
+            <p>Informe presenta las mismas {{ total_secciones }} secciones activas. Los detalles se abren solo cuando los necesitás y desde cada bloque podés volver a la sección correspondiente para corregir datos.</p>
             <p>Verificá siempre que el CUE-Anexo, el mes y el año correspondan al período que estás revisando.</p>
             <div class="biblioteca-guia__finalizacion" role="note">
                 <span class="biblioteca-symbol" aria-hidden="true">picture_as_pdf</span>

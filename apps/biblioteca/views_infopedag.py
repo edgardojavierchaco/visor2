@@ -241,7 +241,7 @@ class InfoPedagoListView(LoginRequiredMixin, InformeBloqueoMixin, ListView):
         context['update_url'] = reverse_lazy('bibliotecas:infopedago_update', args=[0]) 
         context['hide_lock_button'] = False     
         context['generar_pdf_button'] = True,  
-        context['before_url'] = reverse_lazy('bibliotecas:servprestamo_list')
+        context['before_url'] = reverse_lazy('bibliotecas:servrefvirtual_list')
         context['next_url'] = reverse_lazy('bibliotecas:asistusua_list')
         context['entity'] = 'Informe_Pedagógico'
         return context

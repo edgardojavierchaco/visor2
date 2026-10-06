@@ -35,6 +35,7 @@ class ServiciosRefVirtualCreateView(LoginRequiredMixin, InformeBloqueoMixin, Cre
 
                 if form.is_valid():
                     instance = form.save(commit=False)
+                    instance.varones = 0
                     self.aplicar_periodo_activo(instance)
                     instance.save()
                     form.save_m2m()
@@ -242,6 +243,6 @@ class ServiciosRefVirtualListView(LoginRequiredMixin, InformeBloqueoMixin, ListV
         context['hide_lock_button'] = False   
         context['generar_pdf_button'] = True, 
         context['before_url'] = reverse_lazy('bibliotecas:servref_list')    
-        context['next_url'] = reverse_lazy('bibliotecas:servprestamo_list')
+        context['next_url'] = reverse_lazy('bibliotecas:infopedago_list')
         context['entity'] = 'Servicios_Virtual'
         return context

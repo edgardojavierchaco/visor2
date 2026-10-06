@@ -34,7 +34,6 @@ from .models import (
     Aguapey,
     RegistroDestinoFondos,
     ProcesosTecnicos,
-    ServicioPrestamo
 )
 
 from apps.consultasge.models import CapaUnicaOfertas
@@ -280,10 +279,34 @@ def generar_pdf_material_bibliografico(request):
         for r in material
     ])
 
+    totales_por_turno = {
+        "MAÑANA": 0,
+        "TARDE": 0,
+        "VESPERTINO": 0,
+        "NOCHE": 0,
+    }
+    for registro in material:
+        turno = (registro["turnos__nom_turno"] or "").strip().upper()
+        if turno in totales_por_turno:
+            totales_por_turno[turno] += registro["total"] or 0
+
+    data_totales_turno = [
+        ["TURNO", "TOTAL"],
+        ["Mañana", totales_por_turno["MAÑANA"]],
+        ["Tarde", totales_por_turno["TARDE"]],
+        ["Vespertino", totales_por_turno["VESPERTINO"]],
+        ["Noche", totales_por_turno["NOCHE"]],
+    ]
+
     engine.add_section(
         "1. MATERIAL BIBLIOGRÁFICO Y ESPECIAL",
         build_table(data),
-        build_qr(f"MATERIAL BIBLIOGRÁFICO {cueanexos} {mes}/{anio}\n\n")
+        build_qr(f"MATERIAL BIBLIOGRÁFICO {cueanexos} {mes}/{anio}\n\n"),
+        extra_flowables=[
+            Paragraph("TOTALES POR TURNO", styles["Heading4"]),
+            Spacer(1, 4),
+            build_table(data_totales_turno),
+        ],
     )
 
     # =========================================================
@@ -311,78 +334,121 @@ def generar_pdf_material_bibliografico(request):
         for r in ref
     ])
 
+    totales_ref_por_turno = {
+        "MAÑANA": 0,
+        "TARDE": 0,
+        "VESPERTINO": 0,
+        "NOCHE": 0,
+    }
+    for registro in ref:
+        turno = (registro["turnos__nom_turno"] or "").strip().upper()
+        if turno in totales_ref_por_turno:
+            totales_ref_por_turno[turno] += registro["total"] or 0
+
+    data_totales_ref_turno = [
+        ["TURNO", "TOTAL"],
+        ["Mañana", totales_ref_por_turno["MAÑANA"]],
+        ["Tarde", totales_ref_por_turno["TARDE"]],
+        ["Vespertino", totales_ref_por_turno["VESPERTINO"]],
+        ["Noche", totales_ref_por_turno["NOCHE"]],
+    ]
+
     engine.add_section(
-        "2. SERVICIO DE REFERENCIA",
+        "2.1 SERVICIO DE REFERENCIA",
         build_table(data),
-        build_qr(f"SERVICIO DE REFERENCIA {cueanexos} {mes}/{anio}\n\n{qr_servref_data}")
+        build_qr(f"SERVICIO DE REFERENCIA {cueanexos} {mes}/{anio}\n\n{qr_servref_data}"),
+        extra_flowables=[
+            Paragraph("TOTALES POR TURNO", styles["Heading4"]),
+            Spacer(1, 4),
+            build_table(data_totales_ref_turno),
+        ],
     )
     
 
     # =========================================================
-    # 3. SERVICIO DE REFERENCIA VIRTUAL
+    # 2.2 SERVICIO DE REFERENCIA VIRTUAL
     # =========================================================
-    virtual = ServicioReferenciaVirtual.objects.filter(
-        cueanexo=cueanexo_activo,
-        mes=mes,
-        anio=anio
-    ).values(
-        "servicio__nom_servicio",
-        "turnos__nom_turno"
-    ).annotate(
-        varones=Sum("varones"),
-        total=Sum("total")
-    ).order_by("servicio__nom_servicio", "turnos__nom_turno")
-
-    data = [["SERVICIO", "TURNO", "VARONES", "TOTAL"]] + [
-        [r["servicio__nom_servicio"], r["turnos__nom_turno"], r["varones"], r["total"] or 0]
-        for r in virtual
-    ]
-    
-    qr_virtual_data = "\n".join([
-        f"{r['servicio__nom_servicio']} | {r['turnos__nom_turno']} | {r['varones']} | {r['total'] or 0}"
-        for r in virtual
-    ])
-
-    engine.add_section(
-        "3. SERVICIO DE REFERENCIA VIRTUAL",
-        build_table(data),
-        build_qr(f"VIRTUAL {cueanexos} {mes}/{anio}\n\n{qr_virtual_data}")
+    virtual = list(
+        ServicioReferenciaVirtual.objects.filter(
+            cueanexo=cueanexo_activo,
+            mes=mes,
+            anio=anio
+        ).values(
+            "servicio__nom_servicio",
+            "servicio__cod_servicio",
+            "turnos__nom_turno"
+        ).annotate(
+            varones=Sum("varones"),
+            total=Sum("total")
+        ).order_by("servicio__nom_servicio", "turnos__nom_turno")
     )
-    
-    
-    # =========================
-    # 4.  SERVICIO DE PRÉSTAMO
-    # =========================
-    prestamo = ServicioPrestamo.objects.filter(
-        cueanexo=cueanexo_activo,
-        mes=mes,
-        anio=anio
-    ).values(
-        "servicio__nom_servicio",
-        "turnos__nom_turno",
-        "instalacion",
-        "total"
-    ).order_by("servicio__nom_servicio", "turnos__nom_turno", "instalacion")
-    
-    data = [["SERVICIO", "TURNO", "INSTALACIÓN", "TOTAL"]] + [
-        [r["servicio__nom_servicio"], r["turnos__nom_turno"], r["instalacion"], r["total"] or 0]
-        for r in prestamo
+
+    virtual_legacy = any(
+        (r["varones"] or 0) > 0 or r["servicio__cod_servicio"] == 313
+        for r in virtual
+    )
+
+    if virtual_legacy:
+        data = [["SERVICIO", "TURNO", "VARONES", "TOTAL"]] + [
+            [
+                r["servicio__nom_servicio"],
+                r["turnos__nom_turno"],
+                r["varones"] or 0,
+                r["total"] or 0,
+            ]
+            for r in virtual
+        ]
+        qr_virtual_data = "\n".join([
+            f"{r['servicio__nom_servicio']} | {r['turnos__nom_turno']} | {r['varones'] or 0} | {r['total'] or 0}"
+            for r in virtual
+        ])
+    else:
+        data = [["SERVICIO", "TURNO", "VISUALIZACIONES"]] + [
+            [
+                r["servicio__nom_servicio"],
+                r["turnos__nom_turno"],
+                r["total"] or 0,
+            ]
+            for r in virtual
+        ]
+        qr_virtual_data = "\n".join([
+            f"{r['servicio__nom_servicio']} | {r['turnos__nom_turno']} | VISUALIZACIONES: {r['total'] or 0}"
+            for r in virtual
+        ])
+
+    totales_virtual_por_turno = {
+        "MAÑANA": 0,
+        "TARDE": 0,
+        "VESPERTINO": 0,
+        "NOCHE": 0,
+    }
+    for registro in virtual:
+        turno = (registro["turnos__nom_turno"] or "").strip().upper()
+        if turno in totales_virtual_por_turno:
+            totales_virtual_por_turno[turno] += registro["total"] or 0
+
+    data_totales_virtual_turno = [
+        ["TURNO", "TOTAL"],
+        ["Mañana", totales_virtual_por_turno["MAÑANA"]],
+        ["Tarde", totales_virtual_por_turno["TARDE"]],
+        ["Vespertino", totales_virtual_por_turno["VESPERTINO"]],
+        ["Noche", totales_virtual_por_turno["NOCHE"]],
     ]
-    
-    qr_prestamo_data = "\n".join([
-        f"{r['servicio__nom_servicio']} | {r['turnos__nom_turno']} | {r['instalacion']} | {r['total'] or 0}"
-        for r in prestamo
-    ])
-    
+
     engine.add_section(
-        "4. SERVICIO DE PRÉSTAMO",
+        "2.2 SERVICIO DE REFERENCIA VIRTUAL",
         build_table(data),
-        build_qr(f"PRÉSTAMO {cueanexos} {mes}/{anio}\n\n{qr_prestamo_data}")
+        build_qr(f"VIRTUAL {cueanexos} {mes}/{anio}\n\n{qr_virtual_data}"),
+        extra_flowables=[
+            Paragraph("TOTALES POR TURNO", styles["Heading4"]),
+            Spacer(1, 4),
+            build_table(data_totales_virtual_turno),
+        ],
     )
     
     
     # ========================
-    # 5.  INFORME PEDAGÓGICO
+    # 3. INFORME PEDAGÓGICO
     # ========================
     ped = InformePedagogico.objects.filter(
         cueanexo=cueanexo_activo,
@@ -406,7 +472,7 @@ def generar_pdf_material_bibliografico(request):
     ])
 
     engine.add_section(
-        "5. INFORME PEDAGÓGICO DE SERVICIOS",
+        "3. INFORME PEDAGÓGICO DE SERVICIOS",
         build_table(data),
         build_qr(f"PEDAGÓGICO {cueanexos} {mes}/{anio}\n\n{qr_pedagogico_data}")
     )
@@ -445,7 +511,7 @@ def generar_pdf_material_bibliografico(request):
     
 
     # ============================================
-    # 7. INSTITUCIONES A LAS QUE PRESTA SERVICIOS
+    # 5. INSTITUCIONES A LAS QUE PRESTA SERVICIOS
     # ============================================
     inst = InstitucionesPrestaServicios.objects.filter(
         cueanexo=cueanexo_activo, mes=mes, anio=anio
@@ -459,14 +525,14 @@ def generar_pdf_material_bibliografico(request):
     ])
     
     engine.add_section(
-        "7. INSTITUCIONES A LAS QUE PRESTA SERVICIOS",
+        "5. INSTITUCIONES A LAS QUE PRESTA SERVICIOS",
         build_table(data),
         build_qr(f"INSTITUCIONES {cueanexos} {mes}/{anio}\n\n{qr_material_data}")
     )
     
     
     # =========================================================
-    # 8. PROCESOS TÉCNICOS
+    # 6. PROCESOS TÉCNICOS
     # =========================================================
     registros = ProcesosTecnicos.objects.filter(
         cueanexo=cueanexo_activo, mes=mes, anio=anio
@@ -501,7 +567,7 @@ def generar_pdf_material_bibliografico(request):
         data.append(fila)
 
     engine.add_section(
-        "8. SECTOR PROCESOS TÉCNICOS",
+        "6. SECTOR PROCESOS TÉCNICOS",
         build_table(data),
         build_qr(f"PROCESOS {cueanexos} {mes}/{anio}\n\n{qr_material_data}")
     )   
@@ -529,7 +595,7 @@ def generar_pdf_material_bibliografico(request):
     
 
     # =========================================================
-    # 10. REGISTRO DESTINO DE FONDO BIBLIOTECARIO CHAQUEÑO
+    # 10. COMPRAS REALIZADAS CON EL FBCH
     # =========================================================
     fondos = RegistroDestinoFondos.objects.filter(cueanexo=cueanexo_activo, mes=mes, anio=anio)
 
@@ -543,7 +609,7 @@ def generar_pdf_material_bibliografico(request):
     ])
 
     engine.add_section(
-        "10. COMPRAS REALIZADAS CON EL FONDO BIBLIOTECARIO CHAQUEÑO",
+        "10. COMPRAS REALIZADAS CON EL FBCH",
         build_table(data),
         build_qr(qr_fondos_data)
     )

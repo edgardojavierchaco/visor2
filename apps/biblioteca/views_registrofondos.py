@@ -66,8 +66,8 @@ class RegistroDestinoFondosCreateView(LoginRequiredMixin, InformeBloqueoMixin, C
 
 
         
-        context['title'] = 'Registro Destino de Fondos'
-        context['entity'] = 'Servicios_Referencia'
+        context['title'] = 'Compras realizadas con el FBCH'
+        context['entity'] = 'Compras realizadas con el FBCH'
         context['list_url'] = self.success_url
         context['action'] = 'add'
         
@@ -130,8 +130,8 @@ class RegistroDestinoFondosUpdateView(LoginRequiredMixin, InformeBloqueoMixin, U
 
 
         
-        context['title'] = 'Edición Registro Destino de Fondos'
-        context['entity'] = 'Registro Destino de Fondos'
+        context['title'] = 'Edición de Compras realizadas con el FBCH'
+        context['entity'] = 'Compras realizadas con el FBCH'
         context['list_url'] = self.success_url
         context['action'] = 'edit'
         
@@ -178,8 +178,8 @@ class RegistroDestinoFondosDeleteView(LoginRequiredMixin, InformeBloqueoMixin, D
         context = super().get_context_data(**kwargs)
 
     
-        context['title'] = 'Eliminación Registro Destino de Fondos'
-        context['entity'] = 'Registro Destino de Fondos'
+        context['title'] = 'Eliminación de Compras realizadas con el FBCH'
+        context['entity'] = 'Compras realizadas con el FBCH'
         context['list_url'] = self.success_url
         return context
 
@@ -237,7 +237,7 @@ class RegistroDestinoFondosListView(LoginRequiredMixin, InformeBloqueoMixin, Lis
 
         
 
-        context['title'] = 'Listado de Registro Destino de Fondos'
+        context['title'] = 'Listado de Compras realizadas con el FBCH'
         context['create_url'] = reverse_lazy('bibliotecas:fondos_create')
         context['list_url'] = reverse_lazy('bibliotecas:fondos_list')
         context['update_url'] = reverse_lazy('bibliotecas:fondos_update', args=[0])
@@ -245,6 +245,6 @@ class RegistroDestinoFondosListView(LoginRequiredMixin, InformeBloqueoMixin, Lis
         context['generar_pdf_button'] = True,   
         context['before_url'] = reverse_lazy('bibliotecas:aguapey_list')
         context['next_url'] = reverse_lazy('bibliotecas:bibliotecario_list')
-        context['entity'] = 'Registro Destino de Fondos'
+        context['entity'] = 'Compras realizadas con el FBCH'
         return context
         

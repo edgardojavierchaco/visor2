@@ -88,7 +88,7 @@
                 <span>CUE-Anexo {{ periodo_pendiente.cueanexo }}</span>
             </div>
             <div class="biblioteca-carga__avance">
-                <strong>{{ secciones_con_registros }} de 11</strong>
+                <strong>{{ secciones_con_registros }} de {{ total_secciones }}</strong>
                 <span>secciones con registros</span>
             </div>
             <span class="biblioteca-estado biblioteca-estado--pendiente">PENDIENTE DE ENVÍO</span>
@@ -104,7 +104,7 @@
         {% if todas_con_registros %}
             <p class="biblioteca-carga__todas" role="status">
                 <span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">check_circle</span>
-                Las 11 secciones tienen registros.
+                Las {{ total_secciones }} secciones tienen registros.
             </p>
         {% endif %}
 

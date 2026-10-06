@@ -822,6 +822,27 @@
             destino.textContent = total.toLocaleString('es-AR');
         });
 
+        resumen.querySelectorAll('[data-biblioteca-total-group-field]').forEach(function (destino) {
+            var campoGrupo = destino.getAttribute('data-biblioteca-total-group-field');
+            var valorGrupo = destino.getAttribute('data-biblioteca-total-group-value');
+            var campoSuma = destino.getAttribute('data-biblioteca-total-group-sum');
+
+            var valorEsperado = String(valorGrupo || '').trim().toLocaleUpperCase('es-AR');
+            var totalGrupo = registros.reduce(function (acumulado, registro) {
+                var valorRegistro = registro && registro[campoGrupo] !== undefined
+                    ? String(registro[campoGrupo] || '').trim().toLocaleUpperCase('es-AR')
+                    : '';
+
+                if (valorRegistro !== valorEsperado) {
+                    return acumulado;
+                }
+
+                return acumulado + numeroTotalizable(registro ? registro[campoSuma] : 0);
+            }, 0);
+
+            destino.textContent = totalGrupo.toLocaleString('es-AR');
+        });
+
         resumen.querySelectorAll('[data-biblioteca-total-count]').forEach(function (destino) {
             destino.textContent = registros.length.toLocaleString('es-AR');
         });
