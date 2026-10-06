@@ -207,16 +207,13 @@
 
         const timeline = document.createElement("div");
         timeline.className = "pof-observation-timeline";
-        const indiceModificacionReciente = movimientos.findIndex(function (movimiento) {
-            return movimiento.tipo_evento === "modificacion";
-        });
 
         movimientos.forEach(function (movimiento, indice) {
             timeline.appendChild(
                 crearEventoTimeline(
                     movimiento,
                     indice,
-                    indice === indiceModificacionReciente
+                    false
                 )
             );
         });
