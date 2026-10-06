@@ -1,5 +1,6 @@
 # services/supervisor_query_service.py
 from django.db.models import Prefetch, Q
+from django.utils import timezone
 
 from apps.supervisor_registro.models import (
     ABMSupervisores,
@@ -102,13 +103,24 @@ class SupervisorQueryService:
         ).distinct()
 
     @staticmethod
-    def filtrar_situacion(queryset, situacion):
+    def filtrar_situacion(queryset, situacion, vigente=False):
         if not situacion:
             return queryset
-        return queryset.filter(
+
+        filtros = Q(
             situaciones__activo=True,
             situaciones__situacion_revista_id=situacion,
-        ).distinct()
+        )
+
+        if vigente:
+            hoy = timezone.localdate()
+            filtros &= Q(situaciones__fecha_desde__lte=hoy)
+            filtros &= (
+                Q(situaciones__fecha_hasta__isnull=True)
+                | Q(situaciones__fecha_hasta__gte=hoy)
+            )
+
+        return queryset.filter(filtros).distinct()
 
     @staticmethod
     def filtrar_nivel(queryset, nivel):
@@ -121,10 +133,66 @@ class SupervisorQueryService:
         ).distinct()
 
     @classmethod
-    def filtros(cls, queryset, q="", region=None, situacion=None, nivel=None):
+    def filtros(
+        cls,
+        queryset,
+        q="",
+        region=None,
+        situacion=None,
+        nivel=None,
+        situacion_vigente=False,
+    ):
+        """
+        Aplica todos los filtros con semántica AND.
+
+        IMPORTANTE:
+        ``SupervisorRegional`` es una relación multivaluada. Si ``region`` y
+        ``nivel`` se aplican en llamadas ``filter()`` separadas, Django puede
+        resolver cada condición contra una asignación regional distinta del
+        mismo supervisor. Eso produce falsos positivos al combinar filtros.
+
+        Por eso región + nivel se aplican dentro de la MISMA llamada a
+        ``filter()`` y, por lo tanto, sobre la misma asignación regional.
+        """
         queryset = cls.buscar(queryset, q)
-        queryset = cls.filtrar_region(queryset, region)
-        queryset = cls.filtrar_situacion(queryset, situacion)
-        queryset = cls.filtrar_nivel(queryset, nivel)
-        return queryset
+
+        filtros_regionales = {
+            "asignaciones_regionales__activo": True,
+        }
+
+        if region:
+            filtros_regionales[
+                "asignaciones_regionales__region_id"
+            ] = region
+
+        if nivel:
+            filtros_regionales[
+                "asignaciones_regionales__niveles__activo"
+            ] = True
+            filtros_regionales[
+                "asignaciones_regionales__niveles__nivel_id"
+            ] = nivel
+
+        if region or nivel:
+            queryset = queryset.filter(**filtros_regionales)
+
+        if situacion:
+            filtros_situacion = Q(
+                situaciones__activo=True,
+                situaciones__situacion_revista_id=situacion,
+            )
+
+            if situacion_vigente:
+                hoy = timezone.localdate()
+                filtros_situacion &= Q(
+                    situaciones__fecha_desde__lte=hoy
+                )
+                filtros_situacion &= (
+                    Q(situaciones__fecha_hasta__isnull=True)
+                    | Q(situaciones__fecha_hasta__gte=hoy)
+                )
+
+            queryset = queryset.filter(filtros_situacion)
+
+        return queryset.distinct()
 
