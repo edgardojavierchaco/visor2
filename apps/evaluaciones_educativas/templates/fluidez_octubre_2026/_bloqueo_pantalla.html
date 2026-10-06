@@ -1,0 +1,64 @@
+{% comment %}
+  Bloqueo de pantalla con spinner para las pantallas de aplicadores.
+  Al hacer clic en un link o enviar un formulario, cubre toda la página
+  (menú lateral incluido) para que no se pueda presionar otra cosa mientras
+  carga. Las pantallas con AJAX lo usan con bloquearPantalla(texto) y
+  desbloquearPantalla().
+
+  Se incluye al final del bloque content, después de los scripts propios de
+  la página: así, si un submit fue cancelado (por ejemplo, un confirm()
+  respondido con "Cancelar"), e.defaultPrevented ya está en true y no bloquea.
+{% endcomment %}
+<div id="bloqueo-pantalla" hidden>
+    <div class="bloqueo-caja">
+        <div class="bloqueo-spinner"></div>
+        <div class="bloqueo-texto" id="bloqueo-texto">Cargando...</div>
+    </div>
+</div>
+<style>
+    #bloqueo-pantalla { position: fixed; inset: 0; z-index: 99999; background: rgba(15,23,42,0.35); display: flex; align-items: center; justify-content: center; cursor: wait; }
+    #bloqueo-pantalla[hidden] { display: none; }
+    .bloqueo-caja { background: #fff; border-radius: 14px; padding: 22px 30px; display: flex; align-items: center; gap: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); font-family: 'Inter', sans-serif; }
+    .bloqueo-spinner { width: 26px; height: 26px; border: 3px solid #a7f3d0; border-top-color: #059669; border-radius: 50%; animation: bloqueo-giro 0.7s linear infinite; }
+    .bloqueo-texto { font-weight: 700; color: #1e293b; font-size: 0.95rem; }
+    @keyframes bloqueo-giro { to { transform: rotate(360deg); } }
+</style>
+<script>
+(function () {
+    var capa = document.getElementById('bloqueo-pantalla');
+    var texto = document.getElementById('bloqueo-texto');
+
+    window.bloquearPantalla = function (msg) {
+        texto.textContent = msg || 'Cargando...';
+        capa.hidden = false;
+        if (document.activeElement) document.activeElement.blur();
+    };
+    window.desbloquearPantalla = function () { capa.hidden = true; };
+
+    // Links: bloquear al navegar (no en anclas, pestañas nuevas ni con Ctrl/Cmd).
+    document.addEventListener('click', function (e) {
+        if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        var a = e.target.closest('a[href]');
+        if (!a || a.target === '_blank') return;
+        var href = a.getAttribute('href') || '';
+        if (href.charAt(0) === '#' || href.indexOf('javascript:') === 0) return;
+        bloquearPantalla('Cargando...');
+    });
+
+    // Formularios: bloquear al enviar, salvo que se haya cancelado.
+    document.addEventListener('submit', function (e) {
+        if (e.defaultPrevented) return;
+        bloquearPantalla('Guardando...');
+    });
+
+    // Teclado: mientras está bloqueado no se puede navegar con Tab/Enter.
+    document.addEventListener('keydown', function (e) {
+        if (!capa.hidden) e.preventDefault();
+    }, true);
+
+    // Al volver con "Atrás", el navegador puede restaurar la página bloqueada.
+    window.addEventListener('pageshow', function (e) {
+        if (e.persisted) desbloquearPantalla();
+    });
+})();
+</script>

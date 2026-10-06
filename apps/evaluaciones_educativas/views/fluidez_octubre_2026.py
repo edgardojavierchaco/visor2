@@ -16,6 +16,13 @@ from django.core.exceptions import PermissionDenied
 from django.contrib import messages
 from django.urls import reverse
 from urllib.parse import urlencode
+import re
+import logging
+from django.db import DatabaseError, IntegrityError
+from django.views.decorators.http import require_POST
+from apps.evaluaciones_educativas.services.fluidez_octubre_2026 import secciones_region
+
+logger = logging.getLogger(__name__)
 
 
 # def lista(request, fid_actual=None):
@@ -966,5 +973,306 @@ def asignacion_tabulador(request, cuil_tabulador):
         'total_disponibles':    len(escuelas_disponibles),
     }
     return render(request, 'fluidez_octubre_2026/asignacion_tabulador.html', context)
+
+
+#-------------------------------------------------CARGA DE APLICADORES-------------------------------------------------------------
+
+
+@login_required
+def buscar_persona_cuil(request):
+    """
+    Datos de una persona ya cargada como aplicador o tabulador (de cualquier
+    región), para autocompletar los formularios de carga. Solo lectura.
+    """
+    if request.user.nivelacceso_id != "Regional":
+        return JsonResponse({'ok': False, 'error': 'Sin permiso.'}, status=403)
+
+    cuil = re.sub(r'\D', '', request.GET.get('cuil', ''))
+    if len(cuil) != 11:
+        return JsonResponse({'ok': False, 'error': 'CUIL inválido.'}, status=400)
+
+    campos = ('apellido', 'nombre', 'correo', 'celular')
+    aplicador = AplicadoresFluidezOctubre2026.objects.filter(cuil=cuil).values(*campos).first()
+    tabulador = TabuladoresFluidezOctubre2026.objects.filter(cuil=cuil).values(*campos).first()
+    persona = aplicador or tabulador
+    if not persona:
+        return JsonResponse({'ok': True, 'encontrado': False})
+
+    # es_aplicador / es_tabulador: el formulario avisa si la persona ya está
+    # cargada en su propia tabla (el alta la va a rechazar).
+    return JsonResponse({
+        'ok': True,
+        'encontrado': True,
+        'origen': 'aplicador' if aplicador else 'tabulador',
+        'es_aplicador': bool(aplicador),
+        'es_tabulador': bool(tabulador),
+        **persona,
+    })
+
+
+# Región activa de la pantalla de aplicadores. Clave de sesión propia para no
+# cambiar la región que tiene seleccionada la pantalla de tabuladores.
+SESION_REGION_APLICADORES = 'apl_fluidez_oct26_region'
+ERROR_SGE = 'No se pudieron consultar las secciones en SGE. Intentá de nuevo en unos minutos.'
+
+
+def _region_aplicadores(request):
+    """
+    Regiones del regional y región activa. Devuelve (regiones, region) o
+    (None, None) si el usuario no es Regional o no tiene región; en ese caso
+    ya deja el mensaje de error cargado.
+    """
+    if request.user.nivelacceso_id != "Regional":
+        messages.error(request, 'No tienes permiso para acceder a esta página.')
+        return None, None
+
+    regiones = obtener_regional(str(request.user.username))
+    if not regiones:
+        messages.error(request, 'No se encontró una región asignada a tu usuario.')
+        return None, None
+    if 'R.E. 2' in regiones:
+        regiones = ['R.E. 2', 'SUB. R.E. 2-B']
+
+    solicitada = request.GET.get('region')
+    if solicitada and solicitada in regiones:
+        request.session[SESION_REGION_APLICADORES] = solicitada
+
+    region = request.session.get(SESION_REGION_APLICADORES)
+    if not region or region not in regiones:
+        region = regiones[0]
+        request.session[SESION_REGION_APLICADORES] = region
+    return regiones, region
+
+
+def _redirect_gestion_aplicadores():
+    return redirect(reverse('evaluaciones_educativas:fluidez_octubre_2026:gestion_aplicadores'))
+
+
+@login_required
+def gestion_aplicadores(request):
+    """Lista de aplicadores de la región y avance de secciones asignadas."""
+    regiones, region = _region_aplicadores(request)
+    if not region:
+        return redirect(reverse('evaluaciones_educativas:dashboard'))
+
+    aplicadores = (
+        AplicadoresFluidezOctubre2026.objects
+        .filter(region=region)
+        .annotate(cant_secciones=Count('secciones'))
+        .order_by('apellido', 'nombre')
+    )
+
+    # Total de secciones de la región (SGE) y cuántas ya tienen aplicador.
+    total_secciones = None
+    secciones_asignadas = None
+    try:
+        ids_region = [s['id_seccion'] for s in secciones_region(region)]
+        total_secciones = len(ids_region)
+        secciones_asignadas = SeccionesAplicadorFluidezOctubre2026.objects.filter(
+            id_seccion__in=ids_region
+        ).count()
+    except DatabaseError:
+        logger.exception('Error consultando secciones en sge_nacion (región %s)', region)
+        messages.error(request, ERROR_SGE)
+
+    context = {
+        'region':              region,
+        'regiones':            regiones,
+        'multiples_regiones':  len(regiones) > 1,
+        'aplicadores':         aplicadores,
+        'total_aplicadores':   aplicadores.count(),
+        'total_secciones':     total_secciones,
+        'secciones_asignadas': secciones_asignadas,
+    }
+    return render(request, 'fluidez_octubre_2026/gestion_aplicadores.html', context)
+
+
+@login_required
+def carga_aplicador(request, cuil_aplicador=None):
+    """Alta de aplicador, o edición si viene `cuil_aplicador`."""
+    regiones, region = _region_aplicadores(request)
+    if not region:
+        return redirect(reverse('evaluaciones_educativas:dashboard'))
+
+    instancia = None
+    if cuil_aplicador:
+        instancia = get_object_or_404(AplicadoresFluidezOctubre2026, cuil=cuil_aplicador, region=region)
+
+    form = AplicadorFluidezOctubreForm(request.POST or None, instance=instancia)
+    if request.method == 'POST' and form.is_valid():
+        aplicador = form.save(commit=False)
+        if not instancia:
+            aplicador.region = region
+        aplicador.save()
+        accion = 'actualizado' if instancia else 'cargado'
+        messages.success(request, f'Aplicador {aplicador.apellido}, {aplicador.nombre} (CUIL: {aplicador.cuil}) {accion} correctamente.')
+        if instancia:
+            return _redirect_gestion_aplicadores()
+        # Recién creado: pasar directo a asignarle secciones.
+        return redirect(reverse(
+            'evaluaciones_educativas:fluidez_octubre_2026:asignacion_aplicador',
+            kwargs={'cuil_aplicador': aplicador.cuil},
+        ))
+
+    context = {
+        'form':       form,
+        'region':     region,
+        'es_edicion': bool(instancia),
+    }
+    return render(request, 'fluidez_octubre_2026/carga_aplicador.html', context)
+
+
+@login_required
+@require_POST
+def eliminar_aplicador(request, cuil_aplicador):
+    """Elimina un aplicador de la región activa; sus secciones quedan libres."""
+    regiones, region = _region_aplicadores(request)
+    if not region:
+        return redirect(reverse('evaluaciones_educativas:dashboard'))
+
+    aplicador = AplicadoresFluidezOctubre2026.objects.filter(cuil=cuil_aplicador, region=region).first()
+    if aplicador:
+        nombre_completo = f'{aplicador.apellido}, {aplicador.nombre}'
+        aplicador.delete()  # CASCADE: borra también sus secciones
+        messages.success(request, f'Aplicador {nombre_completo} (CUIL: {cuil_aplicador}) eliminado. Sus secciones quedaron disponibles.')
+    else:
+        messages.warning(request, 'El aplicador ya no existe.')
+    return _redirect_gestion_aplicadores()
+
+
+@login_required
+def asignacion_aplicador(request, cuil_aplicador):
+    """Asignar y quitar secciones de 2º y 3º grado a un aplicador."""
+    regiones, region = _region_aplicadores(request)
+    if not region:
+        return redirect(reverse('evaluaciones_educativas:dashboard'))
+
+    aplicador = get_object_or_404(AplicadoresFluidezOctubre2026, cuil=cuil_aplicador, region=region)
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    # ── POST: agregar o quitar una sección ───────────────────────────
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+        try:
+            id_seccion = int(request.POST.get('id_seccion', ''))
+        except ValueError:
+            id_seccion = None
+
+        nivel, texto = 'error', 'Acción no válida.'
+
+        if accion == 'agregar' and id_seccion:
+            # Se vuelve a leer la sección de SGE: el front solo manda el id,
+            # así no se puede asignar una sección de otra región o grado.
+            try:
+                encontradas = secciones_region(region, id_seccion=id_seccion)
+            except DatabaseError:
+                logger.exception('Error consultando la sección %s en sge_nacion', id_seccion)
+                encontradas = None
+
+            if encontradas is None:
+                nivel, texto = 'error', ERROR_SGE
+            elif not encontradas:
+                nivel, texto = 'error', 'La sección no es de 2º o 3º grado de una escuela de tu región.'
+            else:
+                s = encontradas[0]
+                try:
+                    with transaction.atomic(using=SeccionesAplicadorFluidezOctubre2026.objects.db):
+                        SeccionesAplicadorFluidezOctubre2026.objects.create(
+                            aplicador=aplicador,
+                            id_seccion=s['id_seccion'],
+                            id_institucion=s['id_institucion'],
+                            cueanexo=s['cueanexo'],
+                            c_grado_nivel_servicio=s['c_grado_nivel_servicio'],
+                            anio_grado=s['anio_grado'],
+                            turno=s['turno'],
+                            ciclo_lectivo=str(s['ciclo_lectivo']) if s['ciclo_lectivo'] is not None else None,
+                        )
+                    nivel, texto = 'success', f"{s['escuela']}: {s['label']} asignada correctamente."
+                    if s['plurigrado']:
+                        texto += (
+                            f" Es una sección plurigrado: {aplicador.apellido}, {aplicador.nombre} "
+                            f"queda a cargo de los alumnos de {s['grados_corto']} grado de la Sección {s['nombre_seccion']}."
+                        )
+                except IntegrityError:
+                    # id_seccion es único: la sección ya tiene aplicador (incluye
+                    # dos regionales asignándola al mismo tiempo).
+                    nivel, texto = 'error', 'Esa sección ya tiene un aplicador asignado.'
+
+        elif accion == 'quitar' and id_seccion:
+            asignada = SeccionesAplicadorFluidezOctubre2026.objects.filter(
+                aplicador=aplicador, id_seccion=id_seccion
+            ).first()
+            if asignada:
+                asignada.delete()
+                texto = 'Sección quitada correctamente.'
+                if '/' in (asignada.anio_grado or ''):
+                    texto += f' Era plurigrado: quedaron sin aplicador los alumnos de {asignada.anio_grado} de esa sección.'
+                nivel = 'success'
+            else:
+                nivel, texto = 'warning', 'La sección no estaba asignada a este aplicador.'
+
+        if es_ajax:
+            return JsonResponse({
+                'ok': nivel in ('success', 'warning'),
+                'nivel': nivel,
+                'mensaje': texto,
+                'id_seccion': id_seccion,
+                'accion': accion,
+            }, status=200 if nivel != 'error' else 409)
+
+        getattr(messages, nivel)(request, texto)
+        return redirect(reverse(
+            'evaluaciones_educativas:fluidez_octubre_2026:asignacion_aplicador',
+            kwargs={'cuil_aplicador': cuil_aplicador},
+        ))
+
+    # ── GET: secciones asignadas y disponibles ───────────────────────
+    asignadas_qs = list(aplicador.secciones.all())
+
+    error_sge = False
+    try:
+        todas = secciones_region(region)
+    except DatabaseError:
+        logger.exception('Error consultando secciones en sge_nacion (región %s)', region)
+        todas = []
+        error_sge = True
+        messages.error(request, ERROR_SGE)
+
+    por_id = {s['id_seccion']: s for s in todas}
+    ocupadas = set(
+        SeccionesAplicadorFluidezOctubre2026.objects
+        .filter(id_seccion__in=list(por_id))
+        .values_list('id_seccion', flat=True)
+    )
+
+    # Asignadas: datos de SGE para mostrar escuela y nombre de sección; si la
+    # sección ya no figura en la vista, se muestra lo guardado.
+    secciones_asignadas = []
+    for sec in asignadas_qs:
+        datos = por_id.get(sec.id_seccion)
+        secciones_asignadas.append(datos or {
+            'id_seccion': sec.id_seccion,
+            'cueanexo': sec.cueanexo,
+            'escuela': f'(Escuela {sec.cueanexo})',
+            'label': f"{sec.anio_grado or ''} — Sección {sec.id_seccion} — {sec.turno or 'Sin turno'}",
+            'plurigrado': '/' in (sec.anio_grado or ''),
+            'grados_corto': sec.anio_grado or '',
+            'nombre_seccion': sec.id_seccion,
+        })
+    secciones_asignadas.sort(key=lambda s: (s.get('escuela') or '', s.get('label') or ''))
+
+    secciones_disponibles = [s for s in todas if s['id_seccion'] not in ocupadas]
+
+    context = {
+        'aplicador':             aplicador,
+        'region':                region,
+        'secciones_asignadas':   secciones_asignadas,
+        'secciones_disponibles': secciones_disponibles,
+        'total_asignadas':       len(secciones_asignadas),
+        'total_disponibles':     len(secciones_disponibles),
+        'error_sge':             error_sge,
+        'hay_plurigrado':        any(s.get('plurigrado') for s in secciones_asignadas + secciones_disponibles),
+    }
+    return render(request, 'fluidez_octubre_2026/asignacion_aplicador.html', context)
 
 
