@@ -18,7 +18,7 @@ from psycopg2 import extras
 # 		cuil = kwargs.pop('cuil', None)
 # 		super().__init__(*args, **kwargs)
 # 		if cuil:
-# 			qs = TablaTemporalAplicadoresFluidezOctubre2026.objects.filter(cuil=cuil).only('cueanexo').distinct()
+# 			qs = SeccionesAplicadorFluidezOctubre2026.objects.filter(aplicador_id=cuil).only('cueanexo').distinct()
 # 			choices_cueanexo = [
 # 					('', '---SELECCIONE UN CUEANEXO-----'),
 # 					]
@@ -264,6 +264,81 @@ class TabuladorFluidezOctubreForm(forms.ModelForm):
         if ' ' in val:
             raise forms.ValidationError('El correo no puede contener espacios.')
         return val.lower()
+
+
+#----------------------aplicadores------------------------------------
+
+
+class AplicadorFluidezOctubreForm(forms.ModelForm):
+    """Alta y edición de aplicador. En la edición el CUIL no se modifica
+    (es la clave primaria)."""
+
+    # Más largo que el campo del modelo (11) para aceptar el CUIL con guiones;
+    # clean_cuil lo deja en 11 dígitos antes de guardar.
+    cuil = forms.CharField(label='CUIL', max_length=20)
+
+    class Meta:
+        model = AplicadoresFluidezOctubre2026
+        fields = ['cuil', 'apellido', 'nombre', 'correo', 'celular']
+        labels = {
+            'cuil':     'CUIL',
+            'apellido': 'Apellido',
+            'nombre':   'Nombre',
+            'correo':   'Correo electrónico',
+            'celular':  'Celular',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.es_edicion = bool(self.instance and self.instance.pk)
+        if self.es_edicion:
+            self.fields['cuil'].disabled = True
+        self.fields['correo'].required = False
+        self.fields['celular'].required = True
+        for campo in self.fields.values():
+            campo.error_messages['required'] = 'Campo obligatorio.'
+        self.fields['correo'].error_messages['invalid'] = 'Ingresá un correo válido (ej: nombre@dominio.com).'
+
+    def clean_cuil(self):
+        if self.es_edicion:
+            return self.instance.cuil
+        cuil = re.sub(r'[\s\-]', '', self.cleaned_data.get('cuil', ''))
+        if not cuil.isdigit():
+            raise forms.ValidationError('El CUIL debe contener solo dígitos.')
+        if len(cuil) != 11:
+            raise forms.ValidationError('El CUIL debe tener 11 dígitos.')
+        if AplicadoresFluidezOctubre2026.objects.filter(cuil=cuil).exists():
+            raise forms.ValidationError('Ya existe un aplicador registrado con ese CUIL.')
+        return cuil
+
+    def clean_apellido(self):
+        val = (self.cleaned_data.get('apellido') or '').strip()
+        if not val:
+            raise forms.ValidationError('El apellido es obligatorio.')
+        return val.upper()
+
+    def clean_nombre(self):
+        val = (self.cleaned_data.get('nombre') or '').strip()
+        if not val:
+            raise forms.ValidationError('El nombre es obligatorio.')
+        return val.upper()
+
+    def clean_celular(self):
+        val = (self.cleaned_data.get('celular') or '').strip()
+        if not val:
+            raise forms.ValidationError('El celular es obligatorio.')
+        if re.search(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ]', val):
+            raise forms.ValidationError('El celular no puede contener letras.')
+        solo_digitos = re.sub(r'\D', '', val)
+        if len(solo_digitos) < 6:
+            raise forms.ValidationError('El celular debe tener al menos 6 dígitos.')
+        if len(solo_digitos) > 20:
+            raise forms.ValidationError('El celular no puede tener más de 20 dígitos.')
+        return solo_digitos
+
+    def clean_correo(self):
+        val = (self.cleaned_data.get('correo') or '').strip()
+        return val.lower() or None
 
 
 #----------------------FUNCIONES-------------------------------------------------------------

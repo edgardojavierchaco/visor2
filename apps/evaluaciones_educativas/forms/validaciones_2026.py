@@ -134,7 +134,22 @@ class ValPersonaBaseForm(forms.Form):
 # Form: Crear / Editar Veedor
 # ---------------------------------------------------------------------------
 class ValVeedorForm(ValPersonaBaseForm):
-    """Form para crear o editar un Veedor."""
+    """Form para crear un Veedor o un Asistente de veedor."""
+
+    ROL_VEEDOR = 'veedor'
+    ROL_ASISTENTE = 'asistente'
+
+    # Lo fija el botón elegido en el modal de rol (Veedor / Asistente de
+    # veedor). La vista valida que ese lugar esté disponible.
+    rol = forms.ChoiceField(
+        label='Rol',
+        choices=[
+            (ROL_VEEDOR, 'Veedor'),
+            (ROL_ASISTENTE, 'Asistente de veedor'),
+        ],
+        initial=ROL_VEEDOR,
+        widget=forms.HiddenInput(),
+    )
 
     def __init__(self, *args, prefix='veedor', **kwargs):
         super().__init__(*args, prefix=prefix, **kwargs)
