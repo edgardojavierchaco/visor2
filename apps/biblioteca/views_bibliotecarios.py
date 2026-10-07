@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 
 from django.db import connection
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, UpdateView, DeleteView, ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -11,7 +11,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from apps.bnhpersonas.models import Personas
 
 from .mixins import InformeBloqueoMixin
-from .models import BibliotecariosCue
+from .models import BibliotecariosCue, es_planilla_biblioteca_nueva
 from .forms import BibliotecariosCueForm
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -123,6 +123,34 @@ def _url_ficha_personal_bnh(persona_id):
     return f'/bnh/personas/{int(persona_id)}/detalle/'
 
 
+class PersonalBibliotecarioVigenciaMixin:
+    def dispatch(self, request, *args, **kwargs):
+        periodo = self.get_periodo_activo()
+        if (
+            periodo is not None
+            and es_planilla_biblioteca_nueva(
+                periodo.meses,
+                periodo.annos,
+            )
+        ):
+            if request.method == 'POST':
+                return JsonResponse({
+                    'error': True,
+                    'message': (
+                        'Personal bibliotecario no forma parte '
+                        'de este período.'
+                    ),
+                }, status=403)
+
+            return redirect(
+                self.get_periodo_url(
+                    reverse('bibliotecas:fondos_list')
+                )
+            )
+
+        return super().dispatch(request, *args, **kwargs)
+
+
 class BibliotecarioPersonaLookupView(
     LoginRequiredMixin,
     InformeBloqueoMixin,
@@ -200,7 +228,7 @@ class BibliotecarioPersonaLookupView(
         })
 
 
-class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,CreateView):
+class BibliotecariosCueCreateView(LoginRequiredMixin, PersonalBibliotecarioVigenciaMixin, InformeBloqueoMixin, CreateView):
     model = BibliotecariosCue
     form_class = BibliotecariosCueForm
     template_name = 'biblioteca/pem/personal/create.html'
@@ -380,7 +408,7 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
 # =========================================================
 # UPDATE
 # =========================================================
-class BibliotecariosCueUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
+class BibliotecariosCueUpdateView(LoginRequiredMixin, PersonalBibliotecarioVigenciaMixin, InformeBloqueoMixin, UpdateView):
     model = BibliotecariosCue
     form_class = BibliotecariosCueForm
     template_name = 'biblioteca/pem/personal/create.html'
@@ -462,7 +490,7 @@ class BibliotecariosCueUpdateView(LoginRequiredMixin, InformeBloqueoMixin, Updat
 # =========================================================
 # DELETE
 # =========================================================
-class BibliotecariosCueDeleteView(LoginRequiredMixin, InformeBloqueoMixin, DeleteView):
+class BibliotecariosCueDeleteView(LoginRequiredMixin, PersonalBibliotecarioVigenciaMixin, InformeBloqueoMixin, DeleteView):
     model = BibliotecariosCue
     template_name = 'biblioteca/pem/personal/delete.html'
     success_url = reverse_lazy('bibliotecas:bibliotecario_list')
@@ -505,7 +533,7 @@ class BibliotecariosCueDeleteView(LoginRequiredMixin, InformeBloqueoMixin, Delet
 #=========================
 # LIST
 #=========================
-class BibliotecariosCueListView(LoginRequiredMixin, InformeBloqueoMixin, ListView):
+class BibliotecariosCueListView(LoginRequiredMixin, PersonalBibliotecarioVigenciaMixin, InformeBloqueoMixin, ListView):
     model = BibliotecariosCue
     template_name = 'biblioteca/pem/personal/list_bibliotecario.html'    
 

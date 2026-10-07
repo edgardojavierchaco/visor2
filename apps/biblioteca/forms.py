@@ -11,7 +11,8 @@ from .models import (
     ServicioReferenciaVirtual, ServicioPrestamo, InformePedagogico,
     AsistenciaUsuarios, InstitucionesPrestaServicios, ProcesosTecnicos, Aguapey,
     GenerarInforme, PlanillasAnexas, DestinoFondos, RegistroDestinoFondos,
-        DocentePonMensual, NoDocentesMensual, BibliotecariosCue,
+    DocentePonMensual, NoDocentesMensual, BibliotecariosCue,
+    es_formato_referencia_virtual_nuevo,
 )
 
 
@@ -192,16 +193,24 @@ class ServicioReferenciaVirtualForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        periodo = kwargs.pop('periodo', None)
         super().__init__(*args, **kwargs)
 
         codigo_actual = None
         if self.instance and self.instance.pk and self.instance.servicio_id:
             codigo_actual = self.instance.servicio.cod_servicio
 
-        self.modo_legacy = bool(
-            self.instance
-            and self.instance.pk
-            and ((self.instance.varones or 0) > 0 or codigo_actual == 313)
+        mes_periodo = getattr(periodo, 'meses', None)
+        anio_periodo = getattr(periodo, 'annos', None)
+
+        if mes_periodo is None:
+            mes_periodo = getattr(self.instance, 'mes', None)
+        if anio_periodo is None:
+            anio_periodo = getattr(self.instance, 'anio', None)
+
+        self.modo_legacy = not es_formato_referencia_virtual_nuevo(
+            mes_periodo,
+            anio_periodo,
         )
 
         codigos_servicio = [311, 312, 313]

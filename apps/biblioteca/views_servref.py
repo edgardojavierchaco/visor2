@@ -3,7 +3,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, DeleteView, ListView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-from .models import ServicioReferencia
+from .models import ServicioReferencia, ServiciosMatBiblio
 from .forms import ServicioReferenciaForm
 from .mixins import InformeBloqueoMixin
 
@@ -234,8 +234,63 @@ class ServiciosReferenciaListView(LoginRequiredMixin, InformeBloqueoMixin, ListV
 
         context = super().get_context_data(**kwargs)
 
+        registros_por_servicio = {}
 
+        for registro in context.get('object_list') or ():
+            varones = registro.varones or 0
+            total = registro.total or 0
+            if varones <= 0 and total <= 0:
+                continue
 
+            servicio = registros_por_servicio.setdefault(
+                registro.servicio_id,
+                {
+                    'turnos': {},
+                    'varones': 0,
+                    'total': 0,
+                },
+            )
+            turno_id = registro.turnos_id
+            turno = servicio['turnos'].setdefault(
+                turno_id,
+                {
+                    'orden': turno_id,
+                    'nombre': registro.turnos.nom_turno,
+                    'varones': 0,
+                    'total': 0,
+                },
+            )
+            turno['varones'] += varones
+            turno['total'] += total
+            servicio['varones'] += varones
+            servicio['total'] += total
+
+        servicios_activos = (
+            ServiciosMatBiblio.objects
+            .filter(cod_servicio__in=(211, 212))
+            .order_by('cod_servicio', 'pk')
+        )
+
+        context['resumen_referencia_servicios'] = []
+        for servicio in servicios_activos:
+            resumen = registros_por_servicio.get(
+                servicio.pk,
+                {
+                    'turnos': {},
+                    'varones': 0,
+                    'total': 0,
+                },
+            )
+            turnos = list(resumen['turnos'].values())
+            turnos.sort(key=lambda item: item['orden'])
+
+            context['resumen_referencia_servicios'].append({
+                'id': servicio.pk,
+                'nombre': servicio.nom_servicio,
+                'turnos': turnos,
+                'varones': resumen['varones'],
+                'total': resumen['total'],
+            })
 
         context['title'] = 'Listado de Servicios de Referencia'
         context['create_url'] = reverse_lazy('bibliotecas:servref_create')

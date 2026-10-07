@@ -4,11 +4,11 @@ from django.shortcuts import render, redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-from .models import ProcesosTecnicos
+from .models import ProcesosTecnicos, TipoMaterialBiblio
 from .forms import ProcesosTecnicosForm
 from django.views.generic import CreateView, UpdateView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Func, F, Value 
+from django.db.models import Func, F, Sum, Value 
 from .mixins import InformeBloqueoMixin
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
@@ -233,8 +233,47 @@ class ProcTecListView(LoginRequiredMixin, InformeBloqueoMixin, ListView):
 
         context = super().get_context_data(**kwargs)
 
+        registros_por_material = {}
+        orden_procesos = {
+            codigo: indice
+            for indice, (codigo, _etiqueta) in enumerate(
+                self.model._meta.get_field('procesos').choices
+            )
+        }
 
-    
+        for registro in context.get('object_list') or ():
+            total = registro.total or 0
+            if total <= 0:
+                continue
+
+            etiqueta = (
+                'Inventario total'
+                if registro.procesos == 'INVENTARIO TOTAL'
+                else f"Total {registro.procesos.lower()}"
+            )
+            registros_por_material.setdefault(registro.material_id, []).append({
+                'proceso': registro.procesos,
+                'etiqueta': etiqueta,
+                'total': total,
+            })
+
+        materiales_activos = (
+            TipoMaterialBiblio.objects
+            .filter(pk__in=(1, 2, 3, 4, 5, 6))
+            .order_by('pk')
+        )
+
+        context['resumen_procesos_material'] = []
+        for material in materiales_activos:
+            procesos = registros_por_material.get(material.pk, [])
+            procesos.sort(
+                key=lambda item: orden_procesos.get(item['proceso'], 999)
+            )
+            context['resumen_procesos_material'].append({
+                'id': material.pk,
+                'nombre': material.nom_material,
+                'procesos': procesos,
+            })
 
         context['title'] = 'Listado de Procesos Técnicos'
         context['create_url'] = reverse_lazy('bibliotecas:proctec_create')

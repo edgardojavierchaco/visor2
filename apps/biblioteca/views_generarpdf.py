@@ -10,7 +10,7 @@ from collections import defaultdict
 
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum, F, Value, Func
+from django.db.models import Case, F, Func, IntegerField, Sum, Value, When
 from django.views.decorators.http import require_POST
 
 from reportlab.platypus import (
@@ -34,6 +34,7 @@ from .models import (
     Aguapey,
     RegistroDestinoFondos,
     ProcesosTecnicos,
+    es_formato_referencia_virtual_nuevo,
 )
 
 from apps.consultasge.models import CapaUnicaOfertas
@@ -331,9 +332,9 @@ def generar_pdf_material_bibliografico(request):
         ).order_by("servicio__nom_servicio", "turnos__nom_turno")
     )
 
-    virtual_legacy = any(
-        (r["varones"] or 0) > 0 or r["servicio__cod_servicio"] == 313
-        for r in virtual
+    virtual_legacy = not es_formato_referencia_virtual_nuevo(
+        mes,
+        anio,
     )
 
     if virtual_legacy:
@@ -374,16 +375,45 @@ def generar_pdf_material_bibliografico(request):
     # ========================
     # 3. INFORME PEDAGÓGICO
     # ========================
-    ped = InformePedagogico.objects.filter(
-        cueanexo=cueanexo_activo,
-        mes=mes,
-        anio=anio
-    ).values(
-        "servicio__nom_servicio"
-    ).annotate(
-        varones=Sum("varones"),
-        total=Sum("total")
-    ).order_by("servicio__nom_servicio")
+    orden_pedagogico = Case(
+        When(servicio__cod_servicio=528, then=0),
+        When(servicio__cod_servicio=513, then=1),
+        When(servicio__cod_servicio=514, then=2),
+        When(servicio__cod_servicio=515, then=3),
+        When(servicio__cod_servicio=516, then=4),
+        When(servicio__cod_servicio=517, then=5),
+        When(servicio__cod_servicio=518, then=6),
+        When(servicio__cod_servicio=519, then=7),
+        When(servicio__cod_servicio=520, then=8),
+        When(servicio__cod_servicio=529, then=9),
+        When(servicio__cod_servicio=522, then=10),
+        When(servicio__cod_servicio=523, then=11),
+        When(servicio__cod_servicio=524, then=12),
+        When(servicio__cod_servicio=525, then=13),
+        When(servicio__cod_servicio=526, then=14),
+        When(servicio__cod_servicio=527, then=15),
+        default=16,
+        output_field=IntegerField(),
+    )
+
+    ped = (
+        InformePedagogico.objects
+        .filter(
+            cueanexo=cueanexo_activo,
+            mes=mes,
+            anio=anio
+        )
+        .annotate(_orden_pedagogico=orden_pedagogico)
+        .values(
+            "servicio__nom_servicio",
+            "_orden_pedagogico"
+        )
+        .annotate(
+            varones=Sum("varones"),
+            total=Sum("total")
+        )
+        .order_by("_orden_pedagogico", "servicio__nom_servicio")
+    )
 
     data = [["SERVICIO", "VARONES", "TOTAL"]] + [
         [r["servicio__nom_servicio"], r["varones"], r["total"] or 0]
@@ -464,17 +494,29 @@ def generar_pdf_material_bibliografico(request):
 
     datos_agrupados = defaultdict(lambda: defaultdict(int))
     procesos_unicos = set()
+    inventario_total = {}
 
     for material, proceso, total in registros:
+        if proceso == 'INVENTARIO TOTAL':
+            inventario_total[material] = total or 0
+            datos_agrupados[material]
+            continue
+
         datos_agrupados[material][proceso] += total or 0
         procesos_unicos.add(proceso)
 
     procesos_unicos = sorted(procesos_unicos)
 
-    data = [["MATERIAL"] + procesos_unicos + ["SUBTOTAL"]]
+    data = [["MATERIAL"] + procesos_unicos + ["SUBTOTAL", "INVENTARIO TOTAL"]]
     
     qr_material_data = "\n".join([
-        f"{material} | " + " | ".join(f"{proceso}: {datos_agrupados[material].get(proceso, 0)}" for proceso in procesos_unicos) + f" | SUBTOTAL: {sum(datos_agrupados[material].get(proceso, 0) for proceso in procesos_unicos)}"
+        f"{material} | "
+        + " | ".join(
+            f"{proceso}: {datos_agrupados[material].get(proceso, 0)}"
+            for proceso in procesos_unicos
+        )
+        + f" | SUBTOTAL: {sum(datos_agrupados[material].get(proceso, 0) for proceso in procesos_unicos)}"
+        + f" | INVENTARIO TOTAL: {inventario_total.get(material, 0)}"
         for material in datos_agrupados
     ])
 
@@ -488,6 +530,7 @@ def generar_pdf_material_bibliografico(request):
             subtotal += v
 
         fila.append(subtotal)
+        fila.append(inventario_total.get(material, 0))
         data.append(fila)
 
     engine.add_section(

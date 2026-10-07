@@ -39,36 +39,52 @@
 {% endblock %}
 
 {% block section_totals %}
-    <section class="biblioteca-crud__section-summary"
-             aria-label="Resumen de la sección"
-             data-biblioteca-section-totals>
-        <div class="biblioteca-crud__section-summary-head">
-            <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
-                <span class="biblioteca-symbol">open_run</span>
-            </span>
-            <div>
-                <strong>Resumen de la sección</strong>
-                <span>Total de procesos técnicos registrados</span>
-            </div>
+<section class="biblioteca-crud__section-summary biblioteca-proctec-summary"
+         aria-label="Resumen de la sección">
+    <div class="biblioteca-crud__section-summary-head">
+        <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
+            <span class="biblioteca-symbol">open_run</span>
+        </span>
+        <div>
+            <strong>Resumen de la sección</strong>
+            <span>Totales registrados por tipo de material</span>
         </div>
+    </div>
 
-        <div class="biblioteca-crud__section-summary-table-wrap">
-            <table class="biblioteca-crud__section-summary-table">
-                <thead>
-                    <tr>
-                        <th scope="col">Concepto</th>
-                        <th scope="col">Total general</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <th scope="row">Procesos técnicos</th>
-                        <td data-biblioteca-total-field="total">0</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
+    <div class="biblioteca-proctec-summary__grid">
+        {% for material in resumen_procesos_material %}
+        <article class="biblioteca-proctec-summary__item">
+            <button type="button"
+                    class="biblioteca-proctec-summary__toggle collapsed"
+                    data-toggle="collapse"
+                    data-target="#proctec-resumen-material-{{ material.id }}"
+                    aria-expanded="false"
+                    aria-controls="proctec-resumen-material-{{ material.id }}">
+                <span>{{ material.nombre }}</span>
+                <span class="biblioteca-proctec-summary__chevron" aria-hidden="true">
+                    <span class="biblioteca-symbol">expand_more</span>
+                </span>
+            </button>
+
+            <div id="proctec-resumen-material-{{ material.id }}"
+                 class="collapse biblioteca-proctec-summary__detalle">
+                {% if material.procesos %}
+                    {% for proceso in material.procesos %}
+                    <div class="biblioteca-proctec-summary__fila">
+                        <span>{{ proceso.etiqueta }}</span>
+                        <strong>{{ proceso.total }}</strong>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="biblioteca-proctec-summary__vacio">
+                        Sin cantidades registradas.
+                    </p>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
 {% endblock %}
 
 {% block javascript %}

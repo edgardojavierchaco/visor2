@@ -18,6 +18,27 @@ MESES_CHOICES = [
     ('DICIEMBRE', 'DICIEMBRE'),
 ]
 
+
+def es_planilla_biblioteca_nueva(mes, anio):
+    try:
+        anio = int(anio)
+    except (TypeError, ValueError):
+        return False
+
+    mes = str(mes or '').strip().upper()
+
+    if anio > 2026:
+        return True
+    if anio < 2026:
+        return False
+
+    return mes in ('NOVIEMBRE', 'DICIEMBRE')
+
+
+def es_formato_referencia_virtual_nuevo(mes, anio):
+    return es_planilla_biblioteca_nueva(mes, anio)
+
+
 INSTALACIONES_CHOICES=[
     ('SALA', 'SALA'),
     ('AULA', 'AULA'),
@@ -50,6 +71,7 @@ PROCESOS_CHOICES=[
     ('RESTAURADOS', 'RESTAURADOS'),
     ('ETIQUETADOS', 'ETIQUETADOS'),
     ('BAJAS', 'BAJAS'),
+    ('INVENTARIO TOTAL', 'INVENTARIO TOTAL'),
 ]
 
 class ServiciosMatBiblio(models.Model):
@@ -373,8 +395,12 @@ class ServicioReferenciaVirtual(models.Model):
     def clean(self):
         super().clean()
 
-        # 🔴 VALIDACIÓN 1: total >= varones
-        if self.varones is not None and self.total is not None:
+        # 🔴 VALIDACIÓN 1: total >= varones solo en el formato anterior
+        if (
+            not es_formato_referencia_virtual_nuevo(self.mes, self.anio)
+            and self.varones is not None
+            and self.total is not None
+        ):
             if self.total < self.varones:
                 raise ValidationError({
                     'total': 'El Total no puede ser menor que Varones.'

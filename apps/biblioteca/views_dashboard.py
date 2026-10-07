@@ -39,6 +39,8 @@ from .models import (
     ServicioPrestamo,
     ServicioReferencia,
     ServicioReferenciaVirtual,
+    es_formato_referencia_virtual_nuevo,
+    es_planilla_biblioteca_nueva,
 )
 from .mixins import PERIODO_ACTIVO_SESSION_KEY, get_cueanexos_usuario
 
@@ -232,6 +234,37 @@ SECCIONES_CARGA_ACTIVAS = tuple(
     seccion for seccion in SECCIONES_CARGA
     if seccion.clave != 'prestamos'
 )
+
+
+def _secciones_carga_activas_periodo(periodo):
+    planilla_nueva = es_planilla_biblioteca_nueva(
+        periodo.meses,
+        periodo.annos,
+    )
+    return tuple(
+        seccion
+        for seccion in SECCIONES_CARGA_ACTIVAS
+        if not (
+            planilla_nueva
+            and seccion.clave == 'personal-bibliotecario'
+        )
+    )
+
+
+def _secciones_historicas_periodo(periodo):
+    planilla_nueva = es_planilla_biblioteca_nueva(
+        periodo.meses,
+        periodo.annos,
+    )
+    return tuple(
+        seccion
+        for seccion in SECCIONES_CARGA
+        if not (
+            planilla_nueva
+            and seccion.clave == 'personal-bibliotecario'
+        )
+    )
+
 
 SECCIONES_CARGA_NUMERACION = {
     'material-bibliografico': '1',
@@ -503,13 +536,14 @@ def _construir_resumen_secciones(periodo_pendiente):
         'anio': periodo_pendiente.annos,
         'mes': periodo_pendiente.meses,
     })
+    secciones_activas = _secciones_carga_activas_periodo(periodo_pendiente)
     conteos = _obtener_conteos_secciones(
         periodo_pendiente,
-        SECCIONES_CARGA_ACTIVAS,
+        secciones_activas,
     )
     secciones = []
 
-    for numero, seccion in enumerate(SECCIONES_CARGA_ACTIVAS, 1):
+    for numero, seccion in enumerate(secciones_activas, 1):
         cantidad = conteos[seccion.clave]
         secciones.append({
             'numero': numero,
@@ -539,11 +573,20 @@ def _construir_totales_seccion(seccion_config, campos, registros):
             seccion_config.columnas
         )
     }
+    registros_totalizables = registros
+    if seccion_config.clave == 'procesos-tecnicos':
+        indice_proceso = indice_por_campo['procesos']
+        registros_totalizables = [
+            registro
+            for registro in registros
+            if registro[indice_proceso] != 'INVENTARIO TOTAL'
+        ]
+
     valores = [None] * len(campos)
     for campo in seccion_config.campos_totalizables:
         indice = indice_por_campo[campo]
         valores[indice] = sum(
-            registro[indice] or 0 for registro in registros
+            registro[indice] or 0 for registro in registros_totalizables
         )
     return {
         'tipo': 'sumas',
@@ -660,8 +703,23 @@ class GuiaUsoView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Biblioteca | Guía de uso'
-        context['total_secciones'] = len(SECCIONES_CARGA_ACTIVAS)
-        context['secciones_guia'] = SECCIONES_CARGA_ACTIVAS
+
+        cueanexos_autorizados = _cueanexos_autorizados(self.request.user)
+        pendientes = _periodos_pendientes(cueanexos_autorizados)
+        resolucion = _resolver_periodo_pendiente(
+            self.request,
+            cueanexos_autorizados,
+            pendientes,
+        )
+        periodo_pendiente = resolucion['periodo_pendiente']
+        secciones_guia = (
+            _secciones_carga_activas_periodo(periodo_pendiente)
+            if periodo_pendiente
+            else SECCIONES_CARGA_ACTIVAS
+        )
+
+        context['total_secciones'] = len(secciones_guia)
+        context['secciones_guia'] = secciones_guia
         return context
 
 
@@ -807,10 +865,11 @@ class PeriodoPendienteDeleteView(LoginRequiredMixin, View):
 class PeriodoHistoricoResumenView(LoginRequiredMixin, View):
     def get(self, request, periodo_id, *args, **kwargs):
         periodo = _resolver_periodo_enviado_autorizado(request, periodo_id)
-        conteos = _obtener_conteos_secciones(periodo)
+        secciones_periodo = _secciones_historicas_periodo(periodo)
+        conteos = _obtener_conteos_secciones(periodo, secciones_periodo)
         secciones = []
 
-        for seccion in SECCIONES_CARGA:
+        for seccion in secciones_periodo:
             cantidad = conteos[seccion.clave]
             secciones.append({
                 'clave': seccion.clave,
@@ -841,6 +900,15 @@ class PeriodoHistoricoDetalleView(LoginRequiredMixin, View):
 
         periodo = _resolver_periodo_enviado_autorizado(request, periodo_id)
 
+        if (
+            seccion == 'personal-bibliotecario'
+            and es_planilla_biblioteca_nueva(
+                periodo.meses,
+                periodo.annos,
+            )
+        ):
+            raise Http404('La sección solicitada no forma parte de este período.')
+
         if seccion == 'personal-bibliotecario':
             detalle = _construir_detalle_personal(
                 periodo,
@@ -859,9 +927,16 @@ class PeriodoHistoricoDetalleView(LoginRequiredMixin, View):
                 },
             })
 
+        referencia_virtual_legacy = (
+            seccion == 'referencia-virtual'
+            and not es_formato_referencia_virtual_nuevo(
+                periodo.meses,
+                periodo.annos,
+            )
+        )
         columnas = (
             REFERENCIA_VIRTUAL_COLUMNAS_HISTORICAS
-            if seccion == 'referencia-virtual'
+            if referencia_virtual_legacy
             else seccion_config.columnas
         )
         campos = tuple(campo for campo, _etiqueta in columnas)
@@ -877,7 +952,7 @@ class PeriodoHistoricoDetalleView(LoginRequiredMixin, View):
             [_valor_detalle_visible(valor) for valor in registro]
             for registro in registros
         ]
-        if seccion == 'referencia-virtual':
+        if referencia_virtual_legacy:
             totales = {
                 'tipo': 'sumas',
                 'valores': [
@@ -936,9 +1011,9 @@ class CargaView(LoginRequiredMixin, TemplateView):
             'secciones': secciones,
             'primera_sin_registros': primera_sin_registros,
             'secciones_con_registros': secciones_con_registros,
-            'total_secciones': len(SECCIONES_CARGA_ACTIVAS),
+            'total_secciones': len(secciones),
             'todas_con_registros': (
-                secciones_con_registros == len(SECCIONES_CARGA_ACTIVAS)
+                secciones_con_registros == len(secciones)
             ),
         })
         return context
@@ -971,7 +1046,7 @@ class InformeView(LoginRequiredMixin, TemplateView):
             'secciones_con_registros': sum(
                 1 for seccion in secciones if seccion['tiene_registros']
             ),
-            'total_secciones': len(SECCIONES_CARGA_ACTIVAS),
+            'total_secciones': len(secciones),
         })
         return context
 
@@ -1004,6 +1079,15 @@ class InformeDetalleView(LoginRequiredMixin, View):
             )
             return JsonResponse({'detail': mensaje}, status=409)
 
+        if (
+            seccion == 'personal-bibliotecario'
+            and es_planilla_biblioteca_nueva(
+                periodo_pendiente.meses,
+                periodo_pendiente.annos,
+            )
+        ):
+            raise Http404('La sección solicitada no forma parte de este período.')
+
         if seccion == 'personal-bibliotecario':
             detalle = _construir_detalle_personal(periodo_pendiente)
             return JsonResponse({
@@ -1014,7 +1098,19 @@ class InformeDetalleView(LoginRequiredMixin, View):
                 'formato': detalle['formato'],
             })
 
-        campos = tuple(campo for campo, _etiqueta in seccion_config.columnas)
+        referencia_virtual_legacy = (
+            seccion == 'referencia-virtual'
+            and not es_formato_referencia_virtual_nuevo(
+                periodo_pendiente.meses,
+                periodo_pendiente.annos,
+            )
+        )
+        columnas = (
+            REFERENCIA_VIRTUAL_COLUMNAS_HISTORICAS
+            if referencia_virtual_legacy
+            else seccion_config.columnas
+        )
+        campos = tuple(campo for campo, _etiqueta in columnas)
         registros = seccion_config.modelo.objects.filter(
             cueanexo=str(periodo_pendiente.cueanexo),
             mes=periodo_pendiente.meses,
@@ -1027,7 +1123,7 @@ class InformeDetalleView(LoginRequiredMixin, View):
         ]
         return JsonResponse({
             'seccion': seccion_config.nombre,
-            'columnas': [etiqueta for _campo, etiqueta in seccion_config.columnas],
+            'columnas': [etiqueta for _campo, etiqueta in columnas],
             'filas': filas,
         })
 

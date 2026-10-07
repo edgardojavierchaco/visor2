@@ -7,7 +7,7 @@
 {% block delete_section_fields %}
     <span data-biblioteca-delete-field="servicio" data-label="Servicio"></span>
     <span data-biblioteca-delete-field="turnos" data-label="Turno"></span>
-    <span data-biblioteca-delete-field="total" data-label="Visualizaciones"></span>
+    <span data-biblioteca-delete-field="total" data-label="{% if referencia_virtual_formato_nuevo %}Visualizaciones{% else %}Total{% endif %}"></span>
 {% endblock %}
 
 {% block section_header %}
@@ -41,89 +41,219 @@
 {% endblock %}
 
 {% block section_totals %}
-<section class="biblioteca-crud__section-summary"
-         aria-label="Resumen de la sección"
-         data-biblioteca-section-totals>
+<section class="biblioteca-crud__section-summary biblioteca-servrefvirtual-summary"
+         aria-label="Resumen de la sección">
     <div class="biblioteca-crud__section-summary-head">
         <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
             <span class="biblioteca-symbol">open_run</span>
         </span>
         <div>
             <strong>Resumen de la sección</strong>
-            <span>Visualizaciones registradas por turno</span>
+            <span>Total / Visualizaciones registradas por servicio y turno</span>
         </div>
     </div>
 
-    <div class="biblioteca-crud__section-summary-table-wrap">
-        <table class="biblioteca-crud__section-summary-table">
-            <thead>
-                <tr>
-                    <th scope="col">Concepto</th>
-                    <th scope="col">Mañana</th>
-                    <th scope="col">Tarde</th>
-                    <th scope="col">Vespertino</th>
-                    <th scope="col">Noche</th>
-                    <th scope="col">Total general</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <th scope="row" data-biblioteca-virtual-total-label>Visualizaciones</th>
-                    <td data-biblioteca-total-group-field="turnos"
-                        data-biblioteca-total-group-value="MAÑANA"
-                        data-biblioteca-total-group-sum="total">0</td>
-                    <td data-biblioteca-total-group-field="turnos"
-                        data-biblioteca-total-group-value="TARDE"
-                        data-biblioteca-total-group-sum="total">0</td>
-                    <td data-biblioteca-total-group-field="turnos"
-                        data-biblioteca-total-group-value="VESPERTINO"
-                        data-biblioteca-total-group-sum="total">0</td>
-                    <td data-biblioteca-total-group-field="turnos"
-                        data-biblioteca-total-group-value="NOCHE"
-                        data-biblioteca-total-group-sum="total">0</td>
-                    <td data-biblioteca-total-field="total">0</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+    <div class="biblioteca-proctec-summary__grid"
+         data-biblioteca-virtual-summary-grid></div>
 </section>
 {% endblock %}
 
 {% block javascript %}
 
 <script>
+    function renderizarResumenReferenciaVirtual(registros) {
+        var grid = document.querySelector('[data-biblioteca-virtual-summary-grid]');
+        if (!grid) {
+            return;
+        }
+
+        var serviciosBase = [
+            'PUBLICACIONES EN REDES',
+            'INFORMACION AL CIUDADANO',
+            'CONSULTA ON LINE'
+        ];
+        var servicios = {};
+        var ordenServicios = [];
+        var ordenTurnos = {
+            'MAÑANA': 1,
+            'TARDE': 2,
+            'VESPERTINO': 3,
+            'NOCHE': 4
+        };
+
+        serviciosBase.forEach(function (nombreServicio) {
+            var claveServicio = nombreServicio.toLocaleUpperCase('es-AR');
+            servicios[claveServicio] = {
+                nombre: nombreServicio,
+                turnos: {},
+                total: 0
+            };
+            ordenServicios.push(claveServicio);
+        });
+
+        registros.forEach(function (registro) {
+            var nombreServicio = String(registro && registro.servicio ? registro.servicio : '').trim();
+            var nombreTurno = String(registro && registro.turnos ? registro.turnos : '').trim();
+            var total = Number(registro && registro.total ? registro.total : 0);
+
+            if (!nombreServicio || !nombreTurno || !Number.isFinite(total) || total <= 0) {
+                return;
+            }
+
+            var claveServicio = nombreServicio.toLocaleUpperCase('es-AR');
+            if (!servicios[claveServicio]) {
+                servicios[claveServicio] = {
+                    nombre: nombreServicio,
+                    turnos: {},
+                    total: 0
+                };
+                ordenServicios.push(claveServicio);
+            }
+
+            var claveTurno = nombreTurno.toLocaleUpperCase('es-AR');
+            if (!servicios[claveServicio].turnos[claveTurno]) {
+                servicios[claveServicio].turnos[claveTurno] = {
+                    nombre: nombreTurno,
+                    total: 0
+                };
+            }
+
+            servicios[claveServicio].turnos[claveTurno].total += total;
+            servicios[claveServicio].total += total;
+        });
+
+        grid.innerHTML = '';
+
+        if (!ordenServicios.length) {
+            var vacio = document.createElement('p');
+            vacio.className = 'biblioteca-proctec-summary__vacio';
+            vacio.textContent = 'Sin cantidades registradas.';
+            grid.appendChild(vacio);
+            return;
+        }
+
+        ordenServicios.forEach(function (claveServicio, indice) {
+            var servicio = servicios[claveServicio];
+            var turnos = Object.keys(servicio.turnos)
+                .map(function (claveTurno) {
+                    return {
+                        clave: claveTurno,
+                        nombre: servicio.turnos[claveTurno].nombre,
+                        total: servicio.turnos[claveTurno].total
+                    };
+                })
+                .sort(function (a, b) {
+                    return (ordenTurnos[a.clave] || 99) - (ordenTurnos[b.clave] || 99);
+                });
+
+            var article = document.createElement('article');
+            article.className = 'biblioteca-proctec-summary__item';
+
+            var collapseId = 'referencia-virtual-resumen-servicio-' + indice;
+
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'biblioteca-proctec-summary__toggle collapsed';
+            button.setAttribute('data-toggle', 'collapse');
+            button.setAttribute('data-target', '#' + collapseId);
+            button.setAttribute('aria-expanded', 'false');
+            button.setAttribute('aria-controls', collapseId);
+
+            var titulo = document.createElement('span');
+            titulo.textContent = servicio.nombre;
+
+            var chevron = document.createElement('span');
+            chevron.className = 'biblioteca-proctec-summary__chevron';
+            chevron.setAttribute('aria-hidden', 'true');
+
+            var chevronIcon = document.createElement('span');
+            chevronIcon.className = 'biblioteca-symbol';
+            chevronIcon.textContent = 'expand_more';
+            chevron.appendChild(chevronIcon);
+
+            button.appendChild(titulo);
+            button.appendChild(chevron);
+
+            var detalle = document.createElement('div');
+            detalle.id = collapseId;
+            detalle.className = 'collapse biblioteca-proctec-summary__detalle';
+
+            if (turnos.length) {
+                var tableWrap = document.createElement('div');
+                tableWrap.className = 'biblioteca-matbibl-summary__table-wrap';
+
+                var table = document.createElement('table');
+                table.className = 'biblioteca-matbibl-summary__table biblioteca-servrefvirtual-summary__table';
+
+                var thead = document.createElement('thead');
+                thead.innerHTML = '<tr><th scope="col">Turno</th><th scope="col">Total / Visualizaciones</th></tr>';
+
+                var tbody = document.createElement('tbody');
+
+                turnos.forEach(function (turno) {
+                    var tr = document.createElement('tr');
+                    var th = document.createElement('th');
+                    var td = document.createElement('td');
+
+                    th.scope = 'row';
+                    th.textContent = turno.nombre;
+                    td.textContent = turno.total.toLocaleString('es-AR');
+
+                    tr.appendChild(th);
+                    tr.appendChild(td);
+                    tbody.appendChild(tr);
+                });
+
+                var totalRow = document.createElement('tr');
+                totalRow.className = 'biblioteca-matbibl-summary__total';
+
+                var totalLabel = document.createElement('th');
+                totalLabel.scope = 'row';
+                totalLabel.textContent = 'Total / Visualizaciones';
+
+                var totalValue = document.createElement('td');
+                totalValue.textContent = servicio.total.toLocaleString('es-AR');
+
+                totalRow.appendChild(totalLabel);
+                totalRow.appendChild(totalValue);
+                tbody.appendChild(totalRow);
+
+                table.appendChild(thead);
+                table.appendChild(tbody);
+                tableWrap.appendChild(table);
+                detalle.appendChild(tableWrap);
+            } else {
+                var vacioServicio = document.createElement('p');
+                vacioServicio.className = 'biblioteca-proctec-summary__vacio';
+                vacioServicio.textContent = 'Sin cantidades registradas.';
+                detalle.appendChild(vacioServicio);
+            }
+
+            article.appendChild(button);
+            article.appendChild(detalle);
+            grid.appendChild(article);
+        });
+    }
+
     function ajustarColumnasReferenciaVirtual(api) {
         var registros = api.rows({
             page: 'all',
             search: 'none'
         }).data().toArray();
 
-        var tieneRegistrosLegacy = registros.some(function (registro) {
-            var varones = Number(registro && registro.varones ? registro.varones : 0);
-            var servicio = String(registro && registro.servicio ? registro.servicio : '')
-                .trim()
-                .toUpperCase();
+        var formatoNuevo = {{ referencia_virtual_formato_nuevo|yesno:"true,false" }};
+        var formatoLegacy = !formatoNuevo;
 
-            return varones > 0 || servicio === 'CONSULTA ON LINE';
-        });
-
-        api.column(5).visible(tieneRegistrosLegacy, false);
+        api.column(5).visible(formatoLegacy, false);
 
         var encabezadoTotal = api.column(6).header();
         if (encabezadoTotal) {
-            encabezadoTotal.textContent = tieneRegistrosLegacy
+            encabezadoTotal.textContent = formatoLegacy
                 ? 'TOTAL / VISUALIZACIONES'
                 : 'VISUALIZACIONES';
         }
 
-        var etiquetaResumen = document.querySelector(
-            '[data-biblioteca-virtual-total-label]'
-        );
-        if (etiquetaResumen) {
-            etiquetaResumen.textContent = tieneRegistrosLegacy
-                ? 'Total / visualizaciones'
-                : 'Visualizaciones';
-        }
+        renderizarResumenReferenciaVirtual(registros);
     }
 
     $(document).on('init.dt.referenciaVirtual draw.dt.referenciaVirtual', function (event, settings) {

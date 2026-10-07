@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-from .models import RegistroDestinoFondos, DestinoFondos
+from .models import RegistroDestinoFondos, DestinoFondos, es_planilla_biblioteca_nueva
 from .forms import RegistroDestinoFondosForm
 from django.views.generic import CreateView, UpdateView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -244,7 +244,11 @@ class RegistroDestinoFondosListView(LoginRequiredMixin, InformeBloqueoMixin, Lis
         context['hide_lock_button'] = False      
         context['generar_pdf_button'] = True,   
         context['before_url'] = reverse_lazy('bibliotecas:aguapey_list')
-        context['next_url'] = reverse_lazy('bibliotecas:bibliotecario_list')
+
+        periodo = self.get_periodo_activo()
+        if not es_planilla_biblioteca_nueva(periodo.meses, periodo.annos):
+            context['next_url'] = reverse_lazy('bibliotecas:bibliotecario_list')
+
         context['entity'] = 'Compras realizadas con el FBCH'
         return context
         

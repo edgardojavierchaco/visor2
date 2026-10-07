@@ -42,52 +42,69 @@
 {% endblock %}
 
 {% block section_totals %}
-<section class="biblioteca-crud__section-summary"
-         aria-label="Resumen de la sección"
-         data-biblioteca-section-totals>
+<section class="biblioteca-crud__section-summary biblioteca-servref-summary"
+         aria-label="Resumen de la sección">
     <div class="biblioteca-crud__section-summary-head">
         <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
             <span class="biblioteca-symbol">open_run</span>
         </span>
         <div>
             <strong>Resumen de la sección</strong>
-            <span>Totales de referencia registrados por turno</span>
+            <span>Totales registrados por servicio y turno</span>
         </div>
     </div>
 
-    <div class="biblioteca-crud__section-summary-table-wrap">
-        <table class="biblioteca-crud__section-summary-table">
-            <thead>
-                <tr>
-                    <th scope="col">Concepto</th>
-                    <th scope="col">Varones</th>
-                    <th scope="col">Mañana</th>
-                    <th scope="col">Tarde</th>
-                    <th scope="col">Vespertino</th>
-                    <th scope="col">Noche</th>
-                    <th scope="col">Total general</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <th scope="row">Referencia</th>
-                    <td data-biblioteca-total-field="varones">0</td>
-                    <td data-biblioteca-total-group-field="turnos"
-                        data-biblioteca-total-group-value="MAÑANA"
-                        data-biblioteca-total-group-sum="total">0</td>
-                    <td data-biblioteca-total-group-field="turnos"
-                        data-biblioteca-total-group-value="TARDE"
-                        data-biblioteca-total-group-sum="total">0</td>
-                    <td data-biblioteca-total-group-field="turnos"
-                        data-biblioteca-total-group-value="VESPERTINO"
-                        data-biblioteca-total-group-sum="total">0</td>
-                    <td data-biblioteca-total-group-field="turnos"
-                        data-biblioteca-total-group-value="NOCHE"
-                        data-biblioteca-total-group-sum="total">0</td>
-                    <td data-biblioteca-total-field="total">0</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="biblioteca-proctec-summary__grid biblioteca-servref-summary__grid">
+        {% for servicio in resumen_referencia_servicios %}
+        <article class="biblioteca-proctec-summary__item">
+            <button type="button"
+                    class="biblioteca-proctec-summary__toggle collapsed"
+                    data-toggle="collapse"
+                    data-target="#referencia-resumen-servicio-{{ servicio.id }}"
+                    aria-expanded="false"
+                    aria-controls="referencia-resumen-servicio-{{ servicio.id }}">
+                <span>{{ servicio.nombre }}</span>
+                <span class="biblioteca-proctec-summary__chevron" aria-hidden="true">
+                    <span class="biblioteca-symbol">expand_more</span>
+                </span>
+            </button>
+
+            <div id="referencia-resumen-servicio-{{ servicio.id }}"
+                 class="collapse biblioteca-proctec-summary__detalle">
+                {% if servicio.turnos %}
+                <div class="biblioteca-matbibl-summary__table-wrap">
+                    <table class="biblioteca-matbibl-summary__table biblioteca-servref-summary__table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Turno</th>
+                                <th scope="col">Varones</th>
+                                <th scope="col">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for turno in servicio.turnos %}
+                            <tr>
+                                <th scope="row">{{ turno.nombre }}</th>
+                                <td>{{ turno.varones }}</td>
+                                <td>{{ turno.total }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="biblioteca-matbibl-summary__total">
+                                <th scope="row">Total servicio</th>
+                                <td>{{ servicio.varones }}</td>
+                                <td>{{ servicio.total }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <p class="biblioteca-proctec-summary__vacio">
+                        Sin cantidades registradas.
+                    </p>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
     </div>
 </section>
 {% endblock %}

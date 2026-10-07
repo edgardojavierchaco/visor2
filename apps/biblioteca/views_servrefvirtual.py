@@ -6,7 +6,7 @@ from django.shortcuts import render, redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-from .models import ServicioReferenciaVirtual
+from .models import ServicioReferenciaVirtual, es_formato_referencia_virtual_nuevo
 from .forms import ServicioReferenciaVirtualForm
 from django.views.generic import CreateView, UpdateView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -20,6 +20,11 @@ class ServiciosRefVirtualCreateView(LoginRequiredMixin, InformeBloqueoMixin, Cre
     form_class = ServicioReferenciaVirtualForm
     template_name = 'biblioteca/pem/servrefvirtual/create.html'
     success_url = reverse_lazy('bibliotecas:servrefvirtual_list')   
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['periodo'] = self.get_periodo_activo()
+        return kwargs
     
     # =========================
     # DISPATCH
@@ -35,8 +40,12 @@ class ServiciosRefVirtualCreateView(LoginRequiredMixin, InformeBloqueoMixin, Cre
 
                 if form.is_valid():
                     instance = form.save(commit=False)
-                    instance.varones = 0
                     self.aplicar_periodo_activo(instance)
+                    if es_formato_referencia_virtual_nuevo(
+                        instance.mes,
+                        instance.anio,
+                    ):
+                        instance.varones = 0
                     instance.save()
                     form.save_m2m()
                     return JsonResponse(instance.toJSON())
@@ -85,6 +94,11 @@ class ServiciosRefVirtualUpdateView(LoginRequiredMixin, InformeBloqueoMixin, Upd
     template_name = 'biblioteca/pem/servrefvirtual/create.html'
     success_url = reverse_lazy('bibliotecas:servrefvirtual_list')
     url_redirect = success_url
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['periodo'] = self.get_periodo_activo()
+        return kwargs
 
     # =========================
     # DISPATCH
@@ -233,8 +247,13 @@ class ServiciosRefVirtualListView(LoginRequiredMixin, InformeBloqueoMixin, ListV
 
         context = super().get_context_data(**kwargs)
 
-
-        
+        periodo = self.get_periodo_activo()
+        context['referencia_virtual_formato_nuevo'] = (
+            es_formato_referencia_virtual_nuevo(
+                periodo.meses,
+                periodo.annos,
+            )
+        )
 
         context['title'] = 'Listado de Servicios de Referencia Virtual cargado'
         context['create_url'] = reverse_lazy('bibliotecas:servrefvirtual_create')

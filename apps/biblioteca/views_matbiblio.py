@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-from .models import MaterialBibliografico
+from .models import MaterialBibliografico, TipoMaterialBiblio
 from .forms import MaterialBibliograficoForm
 from django.views.generic import CreateView, UpdateView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -214,6 +214,63 @@ class MaterialBibliograficoListView(LoginRequiredMixin, InformeBloqueoMixin, Lis
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        turnos_resumen = ('MAÑANA', 'TARDE', 'VESPERTINO', 'NOCHE')
+        registros_por_material = {}
+
+        for registro in context.get('object_list') or ():
+            cantidad = registro.cantidad or 0
+            if cantidad <= 0:
+                continue
+
+            turno = (registro.turnos.nom_turno or '').strip().upper()
+            if turno not in turnos_resumen:
+                continue
+
+            servicios = registros_por_material.setdefault(
+                registro.t_material_id,
+                {},
+            )
+            servicio = servicios.setdefault(
+                registro.servicio_id,
+                {
+                    'codigo': registro.servicio.cod_servicio,
+                    'nombre': registro.servicio.nom_servicio,
+                    'turnos': {nombre: 0 for nombre in turnos_resumen},
+                    'total': 0,
+                },
+            )
+            servicio['turnos'][turno] += cantidad
+            servicio['total'] += cantidad
+
+        context['resumen_material_bibliografico'] = []
+        for material in TipoMaterialBiblio.objects.all().order_by('pk'):
+            servicios = list(
+                registros_por_material.get(material.pk, {}).values()
+            )
+            servicios.sort(key=lambda item: item['codigo'])
+
+            totales_turno = {nombre: 0 for nombre in turnos_resumen}
+            total_material = 0
+
+            for servicio in servicios:
+                for turno in turnos_resumen:
+                    totales_turno[turno] += servicio['turnos'][turno]
+                servicio['valores_turno'] = [
+                    servicio['turnos'][turno]
+                    for turno in turnos_resumen
+                ]
+                total_material += servicio['total']
+
+            context['resumen_material_bibliografico'].append({
+                'id': material.pk,
+                'nombre': material.nom_material,
+                'servicios': servicios,
+                'valores_totales_turno': [
+                    totales_turno[turno]
+                    for turno in turnos_resumen
+                ],
+                'total': total_material,
+            })
 
         context['title'] = 'Listado de Material Bibliográfico'
         context['create_url'] = reverse_lazy('bibliotecas:materialbibliografico_create')

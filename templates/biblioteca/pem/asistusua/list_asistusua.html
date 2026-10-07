@@ -38,70 +38,71 @@
 {% endblock %}
 
 {% block section_totals %}
-    <section class="biblioteca-crud__section-summary"
-             aria-label="Resumen de la sección"
-             data-biblioteca-section-totals>
-        <div class="biblioteca-crud__section-summary-head">
-            <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
-                <span class="biblioteca-symbol">open_run</span>
-            </span>
-            <div>
-                <strong>Resumen de la sección</strong>
-                <span>Totales generales y por nivel</span>
-            </div>
+<section class="biblioteca-crud__section-summary biblioteca-asistencia-summary"
+         aria-label="Resumen de la sección">
+    <div class="biblioteca-crud__section-summary-head">
+        <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
+            <span class="biblioteca-symbol">open_run</span>
+        </span>
+        <div>
+            <strong>Resumen de la sección</strong>
+            <span>Totales registrados por nivel y tipo de usuario</span>
         </div>
+    </div>
 
-        <div class="biblioteca-crud__section-summary-table-wrap">
-            <table class="biblioteca-crud__section-summary-table biblioteca-crud__section-summary-table--wide">
-                <thead>
-                    <tr>
-                        <th scope="col">Concepto</th>
-                        <th scope="col">Varones</th>
-                        <th scope="col">Inicial</th>
-                        <th scope="col">Primario</th>
-                        <th scope="col">Secundario</th>
-                        <th scope="col">Primario adulto</th>
-                        <th scope="col">Secundario adulto</th>
-                        <th scope="col">Superior no universitario</th>
-                        <th scope="col">Universitario</th>
-                        <th scope="col">Otros</th>
-                        <th scope="col">Total general</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <th scope="row">Total</th>
-                        <td data-biblioteca-total-field="varones">0</td>
-                        <td data-biblioteca-total-group-field="nivel"
-                            data-biblioteca-total-group-value="INICIAL"
-                            data-biblioteca-total-group-sum="total">0</td>
-                        <td data-biblioteca-total-group-field="nivel"
-                            data-biblioteca-total-group-value="PRIMARIO"
-                            data-biblioteca-total-group-sum="total">0</td>
-                        <td data-biblioteca-total-group-field="nivel"
-                            data-biblioteca-total-group-value="SECUNDARIO"
-                            data-biblioteca-total-group-sum="total">0</td>
-                        <td data-biblioteca-total-group-field="nivel"
-                            data-biblioteca-total-group-value="PRIMARIO ADULTO"
-                            data-biblioteca-total-group-sum="total">0</td>
-                        <td data-biblioteca-total-group-field="nivel"
-                            data-biblioteca-total-group-value="SECUNDARIO ADULTO"
-                            data-biblioteca-total-group-sum="total">0</td>
-                        <td data-biblioteca-total-group-field="nivel"
-                            data-biblioteca-total-group-value="SUPERIOR NO UNIVERSITARIO"
-                            data-biblioteca-total-group-sum="total">0</td>
-                        <td data-biblioteca-total-group-field="nivel"
-                            data-biblioteca-total-group-value="UNIVERSITARIO"
-                            data-biblioteca-total-group-sum="total">0</td>
-                        <td data-biblioteca-total-group-field="nivel"
-                            data-biblioteca-total-group-value="OTROS"
-                            data-biblioteca-total-group-sum="total">0</td>
-                        <td data-biblioteca-total-field="total">0</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
+    <div class="biblioteca-proctec-summary__grid">
+        {% for nivel in resumen_asistencia_niveles %}
+        <article class="biblioteca-proctec-summary__item">
+            <button type="button"
+                    class="biblioteca-proctec-summary__toggle collapsed"
+                    data-toggle="collapse"
+                    data-target="#asistencia-resumen-nivel-{{ nivel.id }}"
+                    aria-expanded="false"
+                    aria-controls="asistencia-resumen-nivel-{{ nivel.id }}">
+                <span>{{ nivel.nombre }}</span>
+                <span class="biblioteca-proctec-summary__chevron" aria-hidden="true">
+                    <span class="biblioteca-symbol">expand_more</span>
+                </span>
+            </button>
+
+            <div id="asistencia-resumen-nivel-{{ nivel.id }}"
+                 class="collapse biblioteca-proctec-summary__detalle">
+                {% if nivel.usuarios %}
+                <div class="biblioteca-matbibl-summary__table-wrap">
+                    <table class="biblioteca-matbibl-summary__table biblioteca-asistencia-summary__table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Usuario</th>
+                                <th scope="col">Varones</th>
+                                <th scope="col">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for usuario in nivel.usuarios %}
+                            <tr>
+                                <th scope="row">{{ usuario.usuario }}</th>
+                                <td>{{ usuario.varones }}</td>
+                                <td>{{ usuario.total }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="biblioteca-matbibl-summary__total">
+                                <th scope="row">Total nivel</th>
+                                <td>{{ nivel.varones }}</td>
+                                <td>{{ nivel.total }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <p class="biblioteca-proctec-summary__vacio">
+                        Sin cantidades registradas.
+                    </p>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
 {% endblock %}
 
 {% block javascript %}
