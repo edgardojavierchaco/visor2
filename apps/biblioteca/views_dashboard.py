@@ -421,7 +421,7 @@ def _resolver_periodo_pendiente(request, cueanexos_autorizados, pendientes):
         if cantidad > 1
     )
     cueanexos_inconsistentes_set = set(cueanexos_inconsistentes)
-    periodos_seleccionables = [
+    periodos_seleccionables_automaticos = [
         periodo
         for periodo in pendientes
         if str(periodo.cueanexo) not in cueanexos_inconsistentes_set
@@ -435,7 +435,7 @@ def _resolver_periodo_pendiente(request, cueanexos_autorizados, pendientes):
         periodo_pendiente = next(
             (
                 periodo
-                for periodo in periodos_seleccionables
+                for periodo in pendientes
                 if str(periodo.pk) == str(periodo_solicitado)
             ),
             None,
@@ -447,7 +447,7 @@ def _resolver_periodo_pendiente(request, cueanexos_autorizados, pendientes):
         periodo_pendiente = next(
             (
                 periodo
-                for periodo in periodos_seleccionables
+                for periodo in periodos_seleccionables_automaticos
                 if str(periodo.pk) == str(periodo_sesion)
             ),
             None,
@@ -456,9 +456,9 @@ def _resolver_periodo_pendiente(request, cueanexos_autorizados, pendientes):
     if (
         periodo_solicitado is None
         and periodo_pendiente is None
-        and len(periodos_seleccionables) == 1
+        and len(periodos_seleccionables_automaticos) == 1
     ):
-        periodo_pendiente = periodos_seleccionables[0]
+        periodo_pendiente = periodos_seleccionables_automaticos[0]
 
     if periodo_pendiente is not None:
         _alinear_periodo_sesion(request, periodo_pendiente)
@@ -471,16 +471,19 @@ def _resolver_periodo_pendiente(request, cueanexos_autorizados, pendientes):
         'opciones_periodos': [
             {
                 'periodo': periodo,
-                'seleccionable': (
-                    str(periodo.cueanexo) not in cueanexos_inconsistentes_set
+                'seleccionable': True,
+                'requiere_regularizacion': (
+                    str(periodo.cueanexo) in cueanexos_inconsistentes_set
                 ),
             }
             for periodo in pendientes
         ],
         'requiere_seleccion_periodo': (
-            periodo_pendiente is None and len(periodos_seleccionables) > 1
+            periodo_pendiente is None and len(pendientes) > 1
         ),
-        'hay_varios_periodos_seleccionables': len(periodos_seleccionables) > 1,
+        'hay_varios_periodos_seleccionables': (
+            periodo_pendiente is None and len(pendientes) > 1
+        ),
         'cueanexos_inconsistentes': cueanexos_inconsistentes,
         'periodo_solicitado_invalido': periodo_solicitado_invalido,
     }
