@@ -42,18 +42,36 @@
 {% endblock %}
 
 {% block section_totals %}
-    <div class="biblioteca-crud__totals" data-biblioteca-section-totals>
-        <div class="biblioteca-crud__totals-title">
-            <span class="biblioteca-symbol" aria-hidden="true">functions</span>
-            <span>Totales de la sección</span>
-        </div>
-        <div class="biblioteca-crud__totals-metrics">
-            <div class="biblioteca-crud__total-metric">
-                <span>Cantidad</span>
-                <strong data-biblioteca-total-field="cantidad">0</strong>
+    <section class="biblioteca-crud__section-summary"
+             aria-label="Resumen de la sección"
+             data-biblioteca-section-totals>
+        <div class="biblioteca-crud__section-summary-head">
+            <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
+                <span class="biblioteca-symbol">open_run</span>
+            </span>
+            <div>
+                <strong>Resumen de la sección</strong>
+                <span>Cantidad total registrada</span>
             </div>
         </div>
-    </div>
+
+        <div class="biblioteca-crud__section-summary-table-wrap">
+            <table class="biblioteca-crud__section-summary-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Concepto</th>
+                        <th scope="col">Total general</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">Cantidad</th>
+                        <td data-biblioteca-total-field="cantidad">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
 {% endblock %}
 
 {% block javascript %}

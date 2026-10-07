@@ -41,42 +41,52 @@
 {% endblock %}
 
 {% block section_totals %}
-<div class="biblioteca-crud__totals" data-biblioteca-section-totals>
-    <div class="biblioteca-crud__totals-title">
-        <span class="biblioteca-symbol" aria-hidden="true">functions</span>
-        <span>Totales de la sección</span>
-    </div>
-    <div class="biblioteca-crud__totals-metrics">
-        <div class="biblioteca-crud__total-metric">
-            <span data-biblioteca-virtual-total-label>Visualizaciones</span>
-            <strong data-biblioteca-total-field="total">0</strong>
-        </div>
-        <div class="biblioteca-crud__total-metric">
-            <span>Mañana</span>
-            <strong data-biblioteca-total-group-field="turnos"
-                    data-biblioteca-total-group-value="MAÑANA"
-                    data-biblioteca-total-group-sum="total">0</strong>
-        </div>
-        <div class="biblioteca-crud__total-metric">
-            <span>Tarde</span>
-            <strong data-biblioteca-total-group-field="turnos"
-                    data-biblioteca-total-group-value="TARDE"
-                    data-biblioteca-total-group-sum="total">0</strong>
-        </div>
-        <div class="biblioteca-crud__total-metric">
-            <span>Vespertino</span>
-            <strong data-biblioteca-total-group-field="turnos"
-                    data-biblioteca-total-group-value="VESPERTINO"
-                    data-biblioteca-total-group-sum="total">0</strong>
-        </div>
-        <div class="biblioteca-crud__total-metric">
-            <span>Noche</span>
-            <strong data-biblioteca-total-group-field="turnos"
-                    data-biblioteca-total-group-value="NOCHE"
-                    data-biblioteca-total-group-sum="total">0</strong>
+<section class="biblioteca-crud__section-summary"
+         aria-label="Resumen de la sección"
+         data-biblioteca-section-totals>
+    <div class="biblioteca-crud__section-summary-head">
+        <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
+            <span class="biblioteca-symbol">open_run</span>
+        </span>
+        <div>
+            <strong>Resumen de la sección</strong>
+            <span>Visualizaciones registradas por turno</span>
         </div>
     </div>
-</div>
+
+    <div class="biblioteca-crud__section-summary-table-wrap">
+        <table class="biblioteca-crud__section-summary-table">
+            <thead>
+                <tr>
+                    <th scope="col">Concepto</th>
+                    <th scope="col">Mañana</th>
+                    <th scope="col">Tarde</th>
+                    <th scope="col">Vespertino</th>
+                    <th scope="col">Noche</th>
+                    <th scope="col">Total general</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th scope="row" data-biblioteca-virtual-total-label>Visualizaciones</th>
+                    <td data-biblioteca-total-group-field="turnos"
+                        data-biblioteca-total-group-value="MAÑANA"
+                        data-biblioteca-total-group-sum="total">0</td>
+                    <td data-biblioteca-total-group-field="turnos"
+                        data-biblioteca-total-group-value="TARDE"
+                        data-biblioteca-total-group-sum="total">0</td>
+                    <td data-biblioteca-total-group-field="turnos"
+                        data-biblioteca-total-group-value="VESPERTINO"
+                        data-biblioteca-total-group-sum="total">0</td>
+                    <td data-biblioteca-total-group-field="turnos"
+                        data-biblioteca-total-group-value="NOCHE"
+                        data-biblioteca-total-group-sum="total">0</td>
+                    <td data-biblioteca-total-field="total">0</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
 {% endblock %}
 
 {% block javascript %}

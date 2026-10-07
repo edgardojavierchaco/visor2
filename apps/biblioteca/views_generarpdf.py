@@ -97,16 +97,12 @@ class ReportEngine:
         self.story = story
         self.styles = styles
 
-    def add_section(self, title, table, qr=None, extra_flowables=None):
+    def add_section(self, title, table, qr=None):
         block = []
 
         block.append(Paragraph(title, self.styles["Heading3"]))
         block.append(table)
         block.append(Spacer(1, 6))
-
-        if extra_flowables:
-            block.extend(extra_flowables)
-            block.append(Spacer(1, 6))
 
         if qr:
             block.append(qr)
@@ -279,34 +275,10 @@ def generar_pdf_material_bibliografico(request):
         for r in material
     ])
 
-    totales_por_turno = {
-        "MAÑANA": 0,
-        "TARDE": 0,
-        "VESPERTINO": 0,
-        "NOCHE": 0,
-    }
-    for registro in material:
-        turno = (registro["turnos__nom_turno"] or "").strip().upper()
-        if turno in totales_por_turno:
-            totales_por_turno[turno] += registro["total"] or 0
-
-    data_totales_turno = [
-        ["TURNO", "TOTAL"],
-        ["Mañana", totales_por_turno["MAÑANA"]],
-        ["Tarde", totales_por_turno["TARDE"]],
-        ["Vespertino", totales_por_turno["VESPERTINO"]],
-        ["Noche", totales_por_turno["NOCHE"]],
-    ]
-
     engine.add_section(
         "1. MATERIAL BIBLIOGRÁFICO Y ESPECIAL",
         build_table(data),
-        build_qr(f"MATERIAL BIBLIOGRÁFICO {cueanexos} {mes}/{anio}\n\n"),
-        extra_flowables=[
-            Paragraph("TOTALES POR TURNO", styles["Heading4"]),
-            Spacer(1, 4),
-            build_table(data_totales_turno),
-        ],
+        build_qr(f"MATERIAL BIBLIOGRÁFICO {cueanexos} {mes}/{anio}\n\n")
     )
 
     # =========================================================
@@ -334,34 +306,10 @@ def generar_pdf_material_bibliografico(request):
         for r in ref
     ])
 
-    totales_ref_por_turno = {
-        "MAÑANA": 0,
-        "TARDE": 0,
-        "VESPERTINO": 0,
-        "NOCHE": 0,
-    }
-    for registro in ref:
-        turno = (registro["turnos__nom_turno"] or "").strip().upper()
-        if turno in totales_ref_por_turno:
-            totales_ref_por_turno[turno] += registro["total"] or 0
-
-    data_totales_ref_turno = [
-        ["TURNO", "TOTAL"],
-        ["Mañana", totales_ref_por_turno["MAÑANA"]],
-        ["Tarde", totales_ref_por_turno["TARDE"]],
-        ["Vespertino", totales_ref_por_turno["VESPERTINO"]],
-        ["Noche", totales_ref_por_turno["NOCHE"]],
-    ]
-
     engine.add_section(
         "2.1 SERVICIO DE REFERENCIA",
         build_table(data),
-        build_qr(f"SERVICIO DE REFERENCIA {cueanexos} {mes}/{anio}\n\n{qr_servref_data}"),
-        extra_flowables=[
-            Paragraph("TOTALES POR TURNO", styles["Heading4"]),
-            Spacer(1, 4),
-            build_table(data_totales_ref_turno),
-        ],
+        build_qr(f"SERVICIO DE REFERENCIA {cueanexos} {mes}/{anio}\n\n{qr_servref_data}")
     )
     
 
@@ -416,34 +364,10 @@ def generar_pdf_material_bibliografico(request):
             for r in virtual
         ])
 
-    totales_virtual_por_turno = {
-        "MAÑANA": 0,
-        "TARDE": 0,
-        "VESPERTINO": 0,
-        "NOCHE": 0,
-    }
-    for registro in virtual:
-        turno = (registro["turnos__nom_turno"] or "").strip().upper()
-        if turno in totales_virtual_por_turno:
-            totales_virtual_por_turno[turno] += registro["total"] or 0
-
-    data_totales_virtual_turno = [
-        ["TURNO", "TOTAL"],
-        ["Mañana", totales_virtual_por_turno["MAÑANA"]],
-        ["Tarde", totales_virtual_por_turno["TARDE"]],
-        ["Vespertino", totales_virtual_por_turno["VESPERTINO"]],
-        ["Noche", totales_virtual_por_turno["NOCHE"]],
-    ]
-
     engine.add_section(
         "2.2 SERVICIO DE REFERENCIA VIRTUAL",
         build_table(data),
-        build_qr(f"VIRTUAL {cueanexos} {mes}/{anio}\n\n{qr_virtual_data}"),
-        extra_flowables=[
-            Paragraph("TOTALES POR TURNO", styles["Heading4"]),
-            Spacer(1, 4),
-            build_table(data_totales_virtual_turno),
-        ],
+        build_qr(f"VIRTUAL {cueanexos} {mes}/{anio}\n\n{qr_virtual_data}")
     )
     
     
@@ -479,7 +403,7 @@ def generar_pdf_material_bibliografico(request):
     
 
     # ==========================
-    # 6. ASISTENCIA DE USUARIOS
+    # 4. ASISTENCIA DE USUARIOS
     # ==========================
     asi = AsistenciaUsuarios.objects.filter(
         cueanexo=cueanexo_activo,
@@ -504,7 +428,7 @@ def generar_pdf_material_bibliografico(request):
     ])
     
     engine.add_section(
-        "6. ASISTENCIA DE USUARIOS BIBLIOTECAS ESCOLARES",
+        "4. ASISTENCIA DE USUARIOS BIBLIOTECAS ESCOLARES",
         build_table(data),
         build_qr(f"ASISTENCIA {cueanexos} {mes}/{anio}\n\n{qr_asistencia_data}")
     )
@@ -574,7 +498,7 @@ def generar_pdf_material_bibliografico(request):
     
 
     # ===========
-    # 9. AGUAPEY
+    # 7. AGUAPEY
     # ===========
     aguapey = Aguapey.objects.filter(cueanexo=cueanexo_activo, mes=mes, anio=anio).first()
 
@@ -588,14 +512,14 @@ def generar_pdf_material_bibliografico(request):
     qr_aguapey_data = f"BASE DE DATOS COMO RECURSO DE GESTION | MES: {getattr(aguapey, 'total_mes', 0)} | BASE: {getattr(aguapey, 'total_base', 0)} | USUARIOS: {getattr(aguapey, 'total_usuarios', 0)} | OBS: {getattr(aguapey, 'observaciones', '')}"
     
     engine.add_section(
-        "9. BASE DE DATOS COMO RECURSOS DE GESTION",
+        "7. BASE DE DATOS COMO RECURSOS DE GESTION",
         build_table(data),
         build_qr(qr_aguapey_data)
     )
     
 
     # =========================================================
-    # 10. COMPRAS REALIZADAS CON EL FBCH
+    # 8. COMPRAS REALIZADAS CON EL FBCH
     # =========================================================
     fondos = RegistroDestinoFondos.objects.filter(cueanexo=cueanexo_activo, mes=mes, anio=anio)
 
@@ -609,7 +533,7 @@ def generar_pdf_material_bibliografico(request):
     ])
 
     engine.add_section(
-        "10. COMPRAS REALIZADAS CON EL FBCH",
+        "8. COMPRAS REALIZADAS CON EL FBCH",
         build_table(data),
         build_qr(qr_fondos_data)
     )

@@ -121,7 +121,7 @@
                 {% for seccion in secciones %}
                     <li>
                         <a class="biblioteca-seccion" href="{{ seccion.url }}">
-                            <span class="biblioteca-seccion__numero">{{ seccion.numero|stringformat:"02d" }}</span>
+                            <span class="biblioteca-seccion__numero">{{ seccion.numero_visible }}</span>
                             {% include 'biblioteca/includes/section_material_icon.html' with seccion=seccion only %}
                             <span class="biblioteca-seccion__contenido">
                                 <strong>{{ seccion.nombre }}</strong>

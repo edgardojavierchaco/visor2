@@ -796,12 +796,18 @@
         return Number.isFinite(numero) ? numero : 0;
     }
 
+    function obtenerResumenTotales(table) {
+        var contenedorTabla = table.closest('.biblioteca-crud__table-wrap');
+        var cuerpoPanel = contenedorTabla ? contenedorTabla.parentElement : null;
+
+        return cuerpoPanel
+            ? cuerpoPanel.querySelector('[data-biblioteca-section-totals]')
+            : null;
+    }
+
     function sincronizarResumenTotales(settings) {
         var table = settings.nTable;
-        var contenedor = table.closest('.biblioteca-crud__table-wrap');
-        var resumen = contenedor
-            ? contenedor.querySelector('[data-biblioteca-section-totals]')
-            : null;
+        var resumen = obtenerResumenTotales(table);
 
         if (!resumen) {
             return;
@@ -940,34 +946,6 @@
     }
 
     function configurarResumenTotales(settings) {
-        var table = settings.nTable;
-        var contenedor = table.closest('.biblioteca-crud__table-wrap');
-        var resumen = contenedor
-            ? contenedor.querySelector('[data-biblioteca-section-totals]')
-            : null;
-
-        if (!resumen) {
-            return;
-        }
-
-        var wrapper = table.closest('.dataTables_wrapper');
-
-        if (wrapper) {
-            var meta = normalizarMetaTabla(settings);
-            var ancla = meta;
-
-            if (!ancla) {
-                var filas = Array.prototype.filter.call(wrapper.children, function (elemento) {
-                    return elemento.classList && elemento.classList.contains('row');
-                });
-                ancla = filas.length ? filas[filas.length - 1] : null;
-            }
-
-            if (resumen.parentNode !== wrapper || resumen.nextSibling !== ancla) {
-                wrapper.insertBefore(resumen, ancla);
-            }
-        }
-
         sincronizarResumenTotales(settings);
     }
 

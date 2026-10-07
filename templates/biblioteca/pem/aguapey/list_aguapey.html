@@ -41,26 +41,40 @@
 {% endblock %}
 
 {% block section_totals %}
-    <div class="biblioteca-crud__totals" data-biblioteca-section-totals>
-        <div class="biblioteca-crud__totals-title">
-            <span class="biblioteca-symbol" aria-hidden="true">functions</span>
-            <span>Totales de la sección</span>
-        </div>
-        <div class="biblioteca-crud__totals-metrics">
-            <div class="biblioteca-crud__total-metric">
-                <span>Total mes</span>
-                <strong data-biblioteca-total-field="total_mes">0</strong>
-            </div>
-            <div class="biblioteca-crud__total-metric">
-                <span>Total base</span>
-                <strong data-biblioteca-total-field="total_base">0</strong>
-            </div>
-            <div class="biblioteca-crud__total-metric">
-                <span>Total usuarios</span>
-                <strong data-biblioteca-total-field="total_usuarios">0</strong>
+    <section class="biblioteca-crud__section-summary"
+             aria-label="Resumen de la sección"
+             data-biblioteca-section-totals>
+        <div class="biblioteca-crud__section-summary-head">
+            <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
+                <span class="biblioteca-symbol">open_run</span>
+            </span>
+            <div>
+                <strong>Resumen de la sección</strong>
+                <span>Totales registrados en Aguapey</span>
             </div>
         </div>
-    </div>
+
+        <div class="biblioteca-crud__section-summary-table-wrap">
+            <table class="biblioteca-crud__section-summary-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Concepto</th>
+                        <th scope="col">Total mes</th>
+                        <th scope="col">Total base</th>
+                        <th scope="col">Total usuarios</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">Total</th>
+                        <td data-biblioteca-total-field="total_mes">0</td>
+                        <td data-biblioteca-total-field="total_base">0</td>
+                        <td data-biblioteca-total-field="total_usuarios">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
 {% endblock %}
 
 {% block javascript %}

@@ -38,70 +38,70 @@
 {% endblock %}
 
 {% block section_totals %}
-    <div class="biblioteca-crud__totals" data-biblioteca-section-totals>
-        <div class="biblioteca-crud__totals-title">
-            <span class="biblioteca-symbol" aria-hidden="true">functions</span>
-            <span>Totales de la sección</span>
-        </div>
-        <div class="biblioteca-crud__totals-metrics">
-            <div class="biblioteca-crud__total-metric">
-                <span>Varones</span>
-                <strong data-biblioteca-total-field="varones">0</strong>
-            </div>
-            <div class="biblioteca-crud__total-metric">
-                <span>Total general</span>
-                <strong data-biblioteca-total-field="total">0</strong>
-            </div>
-            <div class="biblioteca-crud__total-metric">
-                <span>Inicial</span>
-                <strong data-biblioteca-total-group-field="nivel"
-                        data-biblioteca-total-group-value="INICIAL"
-                        data-biblioteca-total-group-sum="total">0</strong>
-            </div>
-            <div class="biblioteca-crud__total-metric">
-                <span>Primario</span>
-                <strong data-biblioteca-total-group-field="nivel"
-                        data-biblioteca-total-group-value="PRIMARIO"
-                        data-biblioteca-total-group-sum="total">0</strong>
-            </div>
-            <div class="biblioteca-crud__total-metric">
-                <span>Secundario</span>
-                <strong data-biblioteca-total-group-field="nivel"
-                        data-biblioteca-total-group-value="SECUNDARIO"
-                        data-biblioteca-total-group-sum="total">0</strong>
-            </div>
-            <div class="biblioteca-crud__total-metric">
-                <span>Primario adulto</span>
-                <strong data-biblioteca-total-group-field="nivel"
-                        data-biblioteca-total-group-value="PRIMARIO ADULTO"
-                        data-biblioteca-total-group-sum="total">0</strong>
-            </div>
-            <div class="biblioteca-crud__total-metric">
-                <span>Secundario adulto</span>
-                <strong data-biblioteca-total-group-field="nivel"
-                        data-biblioteca-total-group-value="SECUNDARIO ADULTO"
-                        data-biblioteca-total-group-sum="total">0</strong>
-            </div>
-            <div class="biblioteca-crud__total-metric">
-                <span>Superior no universitario</span>
-                <strong data-biblioteca-total-group-field="nivel"
-                        data-biblioteca-total-group-value="SUPERIOR NO UNIVERSITARIO"
-                        data-biblioteca-total-group-sum="total">0</strong>
-            </div>
-            <div class="biblioteca-crud__total-metric">
-                <span>Universitario</span>
-                <strong data-biblioteca-total-group-field="nivel"
-                        data-biblioteca-total-group-value="UNIVERSITARIO"
-                        data-biblioteca-total-group-sum="total">0</strong>
-            </div>
-            <div class="biblioteca-crud__total-metric">
-                <span>Otros</span>
-                <strong data-biblioteca-total-group-field="nivel"
-                        data-biblioteca-total-group-value="OTROS"
-                        data-biblioteca-total-group-sum="total">0</strong>
+    <section class="biblioteca-crud__section-summary"
+             aria-label="Resumen de la sección"
+             data-biblioteca-section-totals>
+        <div class="biblioteca-crud__section-summary-head">
+            <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
+                <span class="biblioteca-symbol">open_run</span>
+            </span>
+            <div>
+                <strong>Resumen de la sección</strong>
+                <span>Totales generales y por nivel</span>
             </div>
         </div>
-    </div>
+
+        <div class="biblioteca-crud__section-summary-table-wrap">
+            <table class="biblioteca-crud__section-summary-table biblioteca-crud__section-summary-table--wide">
+                <thead>
+                    <tr>
+                        <th scope="col">Concepto</th>
+                        <th scope="col">Varones</th>
+                        <th scope="col">Inicial</th>
+                        <th scope="col">Primario</th>
+                        <th scope="col">Secundario</th>
+                        <th scope="col">Primario adulto</th>
+                        <th scope="col">Secundario adulto</th>
+                        <th scope="col">Superior no universitario</th>
+                        <th scope="col">Universitario</th>
+                        <th scope="col">Otros</th>
+                        <th scope="col">Total general</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">Total</th>
+                        <td data-biblioteca-total-field="varones">0</td>
+                        <td data-biblioteca-total-group-field="nivel"
+                            data-biblioteca-total-group-value="INICIAL"
+                            data-biblioteca-total-group-sum="total">0</td>
+                        <td data-biblioteca-total-group-field="nivel"
+                            data-biblioteca-total-group-value="PRIMARIO"
+                            data-biblioteca-total-group-sum="total">0</td>
+                        <td data-biblioteca-total-group-field="nivel"
+                            data-biblioteca-total-group-value="SECUNDARIO"
+                            data-biblioteca-total-group-sum="total">0</td>
+                        <td data-biblioteca-total-group-field="nivel"
+                            data-biblioteca-total-group-value="PRIMARIO ADULTO"
+                            data-biblioteca-total-group-sum="total">0</td>
+                        <td data-biblioteca-total-group-field="nivel"
+                            data-biblioteca-total-group-value="SECUNDARIO ADULTO"
+                            data-biblioteca-total-group-sum="total">0</td>
+                        <td data-biblioteca-total-group-field="nivel"
+                            data-biblioteca-total-group-value="SUPERIOR NO UNIVERSITARIO"
+                            data-biblioteca-total-group-sum="total">0</td>
+                        <td data-biblioteca-total-group-field="nivel"
+                            data-biblioteca-total-group-value="UNIVERSITARIO"
+                            data-biblioteca-total-group-sum="total">0</td>
+                        <td data-biblioteca-total-group-field="nivel"
+                            data-biblioteca-total-group-value="OTROS"
+                            data-biblioteca-total-group-sum="total">0</td>
+                        <td data-biblioteca-total-field="total">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
 {% endblock %}
 
 {% block javascript %}

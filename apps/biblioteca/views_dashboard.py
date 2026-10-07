@@ -233,6 +233,19 @@ SECCIONES_CARGA_ACTIVAS = tuple(
     if seccion.clave != 'prestamos'
 )
 
+SECCIONES_CARGA_NUMERACION = {
+    'material-bibliografico': '1',
+    'referencia': '2.1',
+    'referencia-virtual': '2.2',
+    'informe-pedagogico': '3',
+    'asistencia': '4',
+    'instituciones': '5',
+    'procesos-tecnicos': '6',
+    'aguapey': '7',
+    'destino-fondos': '8',
+    'personal-bibliotecario': '9',
+}
+
 SECCIONES_CARGA_POR_CLAVE = {
     seccion.clave: seccion for seccion in SECCIONES_CARGA
 }
@@ -500,6 +513,7 @@ def _construir_resumen_secciones(periodo_pendiente):
         cantidad = conteos[seccion.clave]
         secciones.append({
             'numero': numero,
+            'numero_visible': SECCIONES_CARGA_NUMERACION[seccion.clave],
             'clave': seccion.clave,
             'nombre': seccion.nombre,
             'icono': seccion.icono,

@@ -35,30 +35,42 @@
 {% endblock %}
 
 {% block section_totals %}
-<div class="biblioteca-crud__totals" data-biblioteca-section-totals>
-    <div class="biblioteca-crud__totals-title">
-        <span class="biblioteca-symbol" aria-hidden="true">functions</span>
-        <span>Totales de la sección</span>
-    </div>
-    <div class="biblioteca-crud__totals-metrics">
-        <div class="biblioteca-crud__total-metric">
-            <span>Matrícula</span>
-            <strong data-biblioteca-total-field="matricula">0</strong>
-        </div>
-        <div class="biblioteca-crud__total-metric">
-            <span>Docentes</span>
-            <strong data-biblioteca-total-field="docentes">0</strong>
-        </div>
-        <div class="biblioteca-crud__total-metric">
-            <span>Matrícula con discapacidad</span>
-            <strong data-biblioteca-total-field="matricdisc">0</strong>
-        </div>
-        <div class="biblioteca-crud__total-metric">
-            <span>Etnia</span>
-            <strong data-biblioteca-total-field="etnia">0</strong>
+<section class="biblioteca-crud__section-summary"
+         aria-label="Resumen de la sección"
+         data-biblioteca-section-totals>
+    <div class="biblioteca-crud__section-summary-head">
+        <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
+            <span class="biblioteca-symbol">open_run</span>
+        </span>
+        <div>
+            <strong>Resumen de la sección</strong>
+            <span>Totales de las instituciones registradas</span>
         </div>
     </div>
-</div>
+
+    <div class="biblioteca-crud__section-summary-table-wrap">
+        <table class="biblioteca-crud__section-summary-table">
+            <thead>
+                <tr>
+                    <th scope="col">Concepto</th>
+                    <th scope="col">Matrícula</th>
+                    <th scope="col">Docentes</th>
+                    <th scope="col">Matrícula con discapacidad</th>
+                    <th scope="col">Etnia</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th scope="row">Total</th>
+                    <td data-biblioteca-total-field="matricula">0</td>
+                    <td data-biblioteca-total-field="docentes">0</td>
+                    <td data-biblioteca-total-field="matricdisc">0</td>
+                    <td data-biblioteca-total-field="etnia">0</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
 {% endblock %}
 
 {% block javascript %}
