@@ -61,16 +61,38 @@ REGLAS_MENU = {
 
 
 def get_flags_ofertas_director(user):
-    flags = set()
+    perfil = getattr(
+        user,
+        "perfil",
+        None,
+    )
 
-    perfil = getattr(user, "perfil", None)
-    rol = getattr(perfil, "rol", None)
+    rol = getattr(
+        perfil,
+        "rol",
+        None,
+    )
 
-    # Solo Director
     if not rol or rol.nombre != "Director":
-        return flags
+        return set()
 
-    usuario_limpio = re.sub(r"\D", "", user.username)
+    usuario_limpio = re.sub(
+        r"\D",
+        "",
+        str(user.username or ""),
+    )
+
+    if len(usuario_limpio) != 11:
+        return set()
+
+    cache_key = (
+        f"menu:flags-director:{usuario_limpio}"
+    )
+
+    cached = cache.get(cache_key)
+
+    if cached is not None:
+        return set(cached)
 
     ofertas = (
         CapaUnicaOfertas.objects
@@ -80,11 +102,16 @@ def get_flags_ofertas_director(user):
                 Value(r"\D"),
                 Value(""),
                 Value("g"),
-                function="regexp_replace"
+                function="regexp_replace",
             )
         )
-        .filter(cuit_limpio=usuario_limpio)
-        .values_list("acronimo", flat=True)
+        .filter(
+            cuit_limpio=usuario_limpio
+        )
+        .values_list(
+            "acronimo",
+            flat=True,
+        )
         .distinct()
     )
 
@@ -94,24 +121,44 @@ def get_flags_ofertas_director(user):
         if a
     }
 
-    print("📚 Acrónimos Director:", acronimos)
+    flags = set()
 
-    # BI%
-    if any(a.startswith("BI") for a in acronimos):
-        flags.add("tiene_biblioteca")
-
-    # Primaria
-    if any(a.startswith("EEP") for a in acronimos):
-        flags.add("tiene_primaria")
-
-    # Secundaria: EES / EET / EET-A
     if any(
-        a.startswith(("EES", "EET", "EET-A", "EFA"))
+        a.startswith("BI")
         for a in acronimos
     ):
-        flags.add("tiene_secundaria")
+        flags.add(
+            "tiene_biblioteca"
+        )
 
-    print("🚩 Flags ofertas:", flags)
+    if any(
+        a.startswith("EEP")
+        for a in acronimos
+    ):
+        flags.add(
+            "tiene_primaria"
+        )
+
+    if any(
+        a.startswith(
+            (
+                "EES",
+                "EET",
+                "EET-A",
+                "EFA",
+            )
+        )
+        for a in acronimos
+    ):
+        flags.add(
+            "tiene_secundaria"
+        )
+
+    cache.set(
+        cache_key,
+        tuple(flags),
+        CACHE_TTL,
+    )
 
     return flags
 
