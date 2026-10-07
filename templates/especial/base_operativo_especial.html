@@ -31,6 +31,23 @@
         }, 120);
     }, true);
 })();
+(function () {
+    function programarCierreMensajes() {
+        document.querySelectorAll('.cef-alert-stack .alert.alert-success').forEach(function (alerta) {
+            window.setTimeout(function () {
+                alerta.style.transition = 'opacity .35s ease, max-height .35s ease, margin .35s ease, padding .35s ease';
+                alerta.style.opacity = '0';
+                alerta.style.maxHeight = '0';
+                alerta.style.marginTop = '0';
+                alerta.style.marginBottom = '0';
+                alerta.style.paddingTop = '0';
+                alerta.style.paddingBottom = '0';
+                window.setTimeout(function () { alerta.remove(); }, 400);
+            }, 4000);
+        });
+    }
+    document.addEventListener('DOMContentLoaded', programarCierreMensajes);
+})();
 </script>
 <link rel="stylesheet" href="{% static 'especial/css/operativo.css' %}">
 <link rel="stylesheet" href="{% static 'especial/css/especial-icons.css' %}?v=20260831-3">
@@ -137,7 +154,7 @@
 <script src="{% static 'especial/js/busqueda_personas.js' %}" defer></script>
 <script src="{% static 'especial/js/busqueda_especial.js' %}?v=20260901-1" defer></script>
 <script src="{% static 'especial/js/alumnos.js' %}?v=20260930-1" defer></script>
-<script src="{% static 'especial/js/docentes.js' %}" defer></script>
+<script src="{% static 'especial/js/docentes.js' %}?v=20261006-1" defer></script>
 <script src="{% static 'especial/js/ui_lifecycle.js' %}?v=20260831-4" defer></script>
 <script src="{% static 'especial/js/partial_navigation.js' %}?v=20260907-3" defer></script>
         {% endif %}

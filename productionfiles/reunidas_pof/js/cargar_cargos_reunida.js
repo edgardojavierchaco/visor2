@@ -4,10 +4,6 @@
     }
     const CARGAR_CARGOS_REUNIDA_CONFIG = JSON.parse(cargarCargosReunidaConfigElement.textContent || "{}");
     const CUEANEXO_INICIAL = String(CARGAR_CARGOS_REUNIDA_CONFIG.cueanexoInicial || "").trim();
-    const VOLVER_EXPORTAR_DISPONIBLE = (
-        Boolean(CUEANEXO_INICIAL)
-        && new URLSearchParams(window.location.search || "").get("origen") === "exportar"
-    );
     const URLS_CARGAR_CARGOS_REUNIDA = CARGAR_CARGOS_REUNIDA_CONFIG.urls || {};
     const URL_VALIDAR_REUNIDA = URLS_CARGAR_CARGOS_REUNIDA.validarReunida;
     const URL_BUSCAR_PADRON = URLS_CARGAR_CARGOS_REUNIDA.buscarPadron;
@@ -16,10 +12,11 @@
     const URL_GUARDAR_CARGA_POF = URLS_CARGAR_CARGOS_REUNIDA.guardarCargaPof;
     const URL_ZONA_EDUCATIVA_CATALOGO = URLS_CARGAR_CARGOS_REUNIDA.zonaEducativaCatalogo;
     const URL_ZONA_EDUCATIVA_VIGENTE = URLS_CARGAR_CARGOS_REUNIDA.zonaEducativaVigente;
+    const URL_ANEXO_POF_CATALOGO = URLS_CARGAR_CARGOS_REUNIDA.anexoPofCatalogo;
+    const URL_ANEXO_POF_CATALOGO_CREAR = URLS_CARGAR_CARGOS_REUNIDA.anexoPofCatalogoCrear;
     const URL_ANEXO_POF_ASOCIACIONES = URLS_CARGAR_CARGOS_REUNIDA.anexoPofAsociaciones;
-    const URL_DETALLE_REUNIDA = URLS_CARGAR_CARGOS_REUNIDA.detalleReunida;
     const URL_EXPORTAR_REUNIDA = URLS_CARGAR_CARGOS_REUNIDA.exportarReunida;
-    if (!URL_VALIDAR_REUNIDA || !URL_BUSCAR_PADRON || !URL_BUSCAR_CEIC || !URL_CATALOGO_CEIC || !URL_GUARDAR_CARGA_POF || !URL_ZONA_EDUCATIVA_CATALOGO || !URL_ZONA_EDUCATIVA_VIGENTE || !URL_ANEXO_POF_ASOCIACIONES || !URL_DETALLE_REUNIDA || !URL_EXPORTAR_REUNIDA) {
+    if (!URL_VALIDAR_REUNIDA || !URL_BUSCAR_PADRON || !URL_BUSCAR_CEIC || !URL_CATALOGO_CEIC || !URL_GUARDAR_CARGA_POF || !URL_ZONA_EDUCATIVA_CATALOGO || !URL_ZONA_EDUCATIVA_VIGENTE || !URL_ANEXO_POF_CATALOGO || !URL_ANEXO_POF_CATALOGO_CREAR || !URL_ANEXO_POF_ASOCIACIONES || !URL_EXPORTAR_REUNIDA) {
         throw new Error("La configuracion de Carga de Cargos de Reunida esta incompleta.");
     }
     let cabeceraReunidaValidada = false;
@@ -48,7 +45,6 @@
     let zonaEducativaFijadaPorCiclo = false;
     let secuenciaZonaEducativa = 0;
     let secuenciaCatalogoZonaEducativa = 0;
-    let secuenciaConsultaAnexoPof = 0;
     const LIMITE_RESULTADOS_CEIC = 5;
     const CAMPOS_HISTORICOS_EDITABLES = [
         { clave: "establecimiento", etiqueta: "Establecimiento", campos: ["nom_est", "establecimiento", "nombre_establecimiento"], principal: "nom_est" },
@@ -86,9 +82,18 @@
     const zonaEducativaTipo = document.getElementById("zonaEducativaTipo");
     const zonaEducativaSelect = document.getElementById("zonaEducativaSelect");
     const puntosZonaEducativa = document.getElementById("puntosZonaEducativa");
+    const observacionZonaEducativa = document.getElementById("observacionZonaEducativa");
     const estadoZonaEducativa = document.getElementById("estadoZonaEducativa");
-    const anexoPofCodigos = document.getElementById("anexoPofCodigos");
-    const anexoPofHint = document.getElementById("anexoPofHint");
+    const anexoPofPropietario = document.getElementById("anexoPofPropietario");
+    const anexoPofToggle = document.getElementById("anexoPofToggle");
+    const anexoPofResumen = document.getElementById("anexoPofResumen");
+    const anexoPofOpciones = document.getElementById("anexoPofOpciones");
+    const anexoPofNuevoPanel = document.getElementById("anexoPofNuevoPanel");
+    const anexoPofNuevoCodigo = document.getElementById("anexoPofNuevoCodigo");
+    const btnAnexoPofCrear = document.getElementById("btnAnexoPofCrear");
+    const btnAnexoPofCancelarCrear = document.getElementById("btnAnexoPofCancelarCrear");
+    const anexoPofSeleccionados = document.getElementById("anexoPofSeleccionados");
+    const estadoAnexoPof = document.getElementById("estadoAnexoPof");
     const bloqueCargos = document.getElementById("bloqueCargos");
     const cargoListaWrapper = document.getElementById("cargoListaWrapper");
     const cargoInfoGeneral = document.getElementById("cargoInfoGeneral");
@@ -127,6 +132,22 @@
         accionesPanel: observationCargoActions,
         botonPrincipal: btnAgregarCargoLista,
         textarea: observacionCargo,
+    });
+    const editorAnexoPof = crearEditorAnexoPofCarga({
+        catalogoUrl: URL_ANEXO_POF_CATALOGO,
+        catalogoCrearUrl: URL_ANEXO_POF_CATALOGO_CREAR,
+        asociacionesUrl: URL_ANEXO_POF_ASOCIACIONES,
+        toggle: anexoPofToggle,
+        resumen: anexoPofResumen,
+        opciones: anexoPofOpciones,
+        nuevoPanel: anexoPofNuevoPanel,
+        nuevoCodigo: anexoPofNuevoCodigo,
+        crearButton: btnAnexoPofCrear,
+        cancelarButton: btnAnexoPofCancelarCrear,
+        seleccionadosInput: anexoPofSeleccionados,
+        estado: estadoAnexoPof,
+        propietarioTexto: anexoPofPropietario,
+        onChange: actualizarEstadoBotonGuardar,
     });
 
     function valor(dato) {
@@ -671,6 +692,19 @@
         );
     }
 
+    function zonaEducativaSeleccionValidaParaGuardar() {
+        if (zonaEducativaFijadaPorCiclo) {
+            return true;
+        }
+
+        const tipo = String(zonaEducativaTipo.value || "").trim().toUpperCase();
+        if (!tipo && !zonaEducativaSeleccionada) {
+            return true;
+        }
+
+        return zonaEducativaEstaResuelta();
+    }
+
     function reiniciarZonaEducativa(ocultar = true) {
         secuenciaZonaEducativa += 1;
         secuenciaCatalogoZonaEducativa += 1;
@@ -686,6 +720,8 @@
         zonaEducativaSelect.classList.remove("pof-locked-control");
 
         puntosZonaEducativa.value = "";
+        observacionZonaEducativa.value = "";
+        observacionZonaEducativa.disabled = true;
         mostrarEstadoZonaEducativa("", "");
 
         bloqueZonaEducativa.classList.toggle("pof-hidden", ocultar);
@@ -714,6 +750,8 @@
         zonaEducativaSelect.classList.add("pof-locked-control");
 
         puntosZonaEducativa.value = zonaEducativaSeleccionada.puntos;
+        observacionZonaEducativa.value = "";
+        observacionZonaEducativa.disabled = true;
 
         mostrarEstadoZonaEducativa(
             "ok",
@@ -735,34 +773,25 @@
         zonaEducativaSelect.classList.remove("pof-locked-control");
 
         puntosZonaEducativa.value = "";
+        observacionZonaEducativa.value = "";
+        observacionZonaEducativa.disabled = false;
 
         mostrarEstadoZonaEducativa(
             "warn",
-            "Esta identidad todavía no tiene Zona Educativa asignada en el año. Seleccioná tipo y zona para continuar."
+            "Esta identidad todavía no tiene Zona Educativa asignada en el año. La Zona es opcional: podés continuar sin asignarla o seleccionar tipo y zona; la observación se guardará sólo si asignás una Zona."
         );
         actualizarEstadoBotonGuardar();
     }
 
-    function mostrarHintAnexoPof(mensaje, esAdvertencia = false) {
-        anexoPofHint.textContent = mensaje || "";
-        anexoPofHint.className = esAdvertencia
-            ? "pof-field-hint pof-field-hint--warning"
-            : "pof-field-hint";
-    }
-
     function reiniciarLecturaAnexoPof() {
-        secuenciaConsultaAnexoPof += 1;
-        anexoPofCodigos.value = "";
-        anexoPofCodigos.placeholder = "Sin Código Anexo POF asociado";
-        mostrarHintAnexoPof(
-            "Dato vigente del CUE. Se administra desde Anexo POF y no se modifica desde esta carga."
-        );
+        editorAnexoPof.reset();
+        actualizarEstadoBotonGuardar();
     }
 
     async function resolverAnexoPofSeleccionActual() {
         if (!padronSeleccionado) {
             reiniciarLecturaAnexoPof();
-            return;
+            return false;
         }
 
         const cueanexo = String(
@@ -774,82 +803,18 @@
 
         if (!/^\d{9}$/.test(cueanexo)) {
             reiniciarLecturaAnexoPof();
-            mostrarHintAnexoPof(
-                "No se pudo resolver el CUE para consultar Código Anexo POF. Este dato no bloquea la carga.",
-                true
-            );
-            return;
+            estadoAnexoPof.className = "pof-status error";
+            estadoAnexoPof.textContent =
+                "El CUEANEXO confirmado no es válido para administrar Código Anexo POF.";
+            return false;
         }
 
-        const cue = cueanexo.slice(0, 7);
-        const secuenciaSolicitud = ++secuenciaConsultaAnexoPof;
-
-        anexoPofCodigos.value = "";
-        anexoPofCodigos.placeholder = "Consultando...";
-        mostrarHintAnexoPof(`Consultando Código(s) Anexo POF vigentes del CUE ${cue}...`);
-
-        const parametros = new URLSearchParams({
-            tipo: "CUE",
-            valor: cue,
+        const cargado = await editorAnexoPof.cargar({
+            tipo: "CUEANEXO",
+            valor: cueanexo,
         });
-
-        try {
-            const resultadoLectura = await solicitarJsonLecturaResiliente(
-                `${URL_ANEXO_POF_ASOCIACIONES}?${parametros.toString()}`
-            );
-            const response = resultadoLectura.response;
-            const data = resultadoLectura.data;
-
-            if (secuenciaSolicitud !== secuenciaConsultaAnexoPof || !padronSeleccionado) {
-                return;
-            }
-
-            if (!response.ok || !data.ok) {
-                const detalleErrores = formatearErroresBackend(data.errores);
-                anexoPofCodigos.value = "";
-                anexoPofCodigos.placeholder = "No disponible";
-                mostrarHintAnexoPof(
-                    detalleErrores
-                        || data.mensaje
-                        || "No se pudo consultar Código Anexo POF. Este dato no bloquea la carga.",
-                    true
-                );
-                return;
-            }
-
-            const payload = data.data || {};
-            const asociaciones = Array.isArray(payload.asociaciones)
-                ? payload.asociaciones
-                : [];
-            const codigos = asociaciones
-                .map(item => String(item.codigo || "").trim())
-                .filter(Boolean);
-
-            anexoPofCodigos.value = codigos.join(", ");
-
-            if (codigos.length) {
-                anexoPofCodigos.placeholder = "";
-                mostrarHintAnexoPof(
-                    `${codigos.length === 1 ? "Código vigente" : "Códigos vigentes"} del CUE ${cue}. Se administra desde Anexo POF.`
-                );
-            } else {
-                anexoPofCodigos.placeholder = `Sin código asociado al CUE ${cue}`;
-                mostrarHintAnexoPof(
-                    `El CUE ${cue} no tiene Código Anexo POF vigente asociado. Esto no bloquea la carga.`
-                );
-            }
-        } catch (error) {
-            if (secuenciaSolicitud !== secuenciaConsultaAnexoPof) {
-                return;
-            }
-
-            anexoPofCodigos.value = "";
-            anexoPofCodigos.placeholder = "No disponible";
-            mostrarHintAnexoPof(
-                "No se pudo consultar Código Anexo POF. Este dato no bloquea la carga.",
-                true
-            );
-        }
+        actualizarEstadoBotonGuardar();
+        return cargado;
     }
 
     async function resolverZonaEducativaSeleccionActual() {
@@ -882,7 +847,7 @@
         zonaEducativaSeleccionada = null;
         zonaEducativaFijadaPorCiclo = false;
         bloqueZonaEducativa.classList.remove("pof-hidden");
-        bloqueCargos.classList.add("pof-hidden");
+        bloqueCargos.classList.remove("pof-hidden");
 
         zonaEducativaTipo.value = "";
         zonaEducativaTipo.disabled = true;
@@ -913,9 +878,9 @@
                 const detalleErrores = formatearErroresBackend(data.errores);
                 mostrarEstadoZonaEducativa(
                     "error",
-                    detalleErrores || data.mensaje || "No se pudo resolver la Zona Educativa vigente."
+                    detalleErrores || data.mensaje || "No se pudo resolver la Zona Educativa vigente. Podés continuar con el cargo sin asignarla."
                 );
-                bloqueCargos.classList.add("pof-hidden");
+                bloqueCargos.classList.remove("pof-hidden");
                 actualizarEstadoBotonGuardar();
                 return;
             }
@@ -926,7 +891,7 @@
                 bloqueCargos.classList.remove("pof-hidden");
             } else {
                 habilitarSeleccionZonaEducativaNueva();
-                bloqueCargos.classList.add("pof-hidden");
+                bloqueCargos.classList.remove("pof-hidden");
             }
         } catch (error) {
             if (secuenciaSolicitud !== secuenciaZonaEducativa) {
@@ -934,9 +899,9 @@
             }
             mostrarEstadoZonaEducativa(
                 "error",
-                "No se pudo consultar la Zona Educativa. Intentá nuevamente."
+                "No se pudo consultar la Zona Educativa. Podés continuar con el cargo sin asignarla y volver a intentarlo después."
             );
-            bloqueCargos.classList.add("pof-hidden");
+            bloqueCargos.classList.remove("pof-hidden");
             actualizarEstadoBotonGuardar();
         }
     }
@@ -965,7 +930,7 @@
         const tipoNormalizado = String(tipo || "").trim().toUpperCase();
         zonaEducativaSeleccionada = null;
         puntosZonaEducativa.value = "";
-        bloqueCargos.classList.add("pof-hidden");
+        bloqueCargos.classList.remove("pof-hidden");
         actualizarEstadoBotonGuardar();
 
         if (!tipoNormalizado) {
@@ -973,8 +938,9 @@
             zonaEducativaSelect.disabled = true;
             mostrarEstadoZonaEducativa(
                 "warn",
-                "Seleccioná primero si la Zona Educativa es urbana o rural."
+                "Zona Educativa opcional. Podés continuar sin asignarla o seleccionar un tipo y una zona."
             );
+            actualizarEstadoBotonGuardar();
             return;
         }
 
@@ -1040,8 +1006,13 @@
         if (!tipo || !zona || puntos <= 0) {
             zonaEducativaSeleccionada = null;
             puntosZonaEducativa.value = "";
-            bloqueCargos.classList.add("pof-hidden");
-            mostrarEstadoZonaEducativa("warn", "Seleccioná una Zona Educativa.");
+            bloqueCargos.classList.remove("pof-hidden");
+            mostrarEstadoZonaEducativa(
+                "warn",
+                tipo
+                    ? "Seleccioná una Zona Educativa para completar la asignación o limpiá el tipo para continuar sin Zona."
+                    : "Zona Educativa opcional. Podés continuar sin asignarla."
+            );
             actualizarEstadoBotonGuardar();
             return;
         }
@@ -1075,14 +1046,20 @@
     }
 
     function actualizarEstadoBotonGuardar() {
-        const puedeGuardar = (
+        const baseLista = Boolean(
             cabeceraReunidaValidada
             && padronSeleccionado
-            && zonaEducativaEstaResuelta()
             && cargosTemporales.length > 0
         );
-        bloqueGuardarCarga.classList.toggle("pof-hidden", !puedeGuardar);
-        btnGuardarCarga.disabled = !puedeGuardar || guardandoCarga;
+        const puedeGuardar = Boolean(
+            baseLista
+            && zonaEducativaSeleccionValidaParaGuardar()
+            && editorAnexoPof
+            && editorAnexoPof.estaListo()
+            && !guardandoCarga
+        );
+        bloqueGuardarCarga.classList.toggle("pof-hidden", !baseLista);
+        btnGuardarCarga.disabled = !puedeGuardar;
     }
 
     function obtenerContextoGuardadoReunida() {
@@ -1109,31 +1086,7 @@
         };
     }
 
-    function construirUrlDetalleGuardado(data) {
-        const params = new URLSearchParams();
-        const contexto = obtenerContextoGuardadoReunida();
-
-        if (!contexto.anio || !contexto.nivel) {
-            return "";
-        }
-
-        params.set("anio", contexto.anio);
-        params.set("nivel", contexto.nivel);
-
-        const cuofDetalle = obtenerCampoOferta(padronSeleccionado, ["cuof_loc", "cuof"]);
-        if (contexto.cueanexo && cuofDetalle) {
-            params.set("cueanexo", contexto.cueanexo);
-            params.set("cuof", cuofDetalle);
-        }
-
-        return `${URL_DETALLE_REUNIDA}?${params.toString()}`;
-    }
-
     function construirUrlVolverExportarGuardado() {
-        if (!VOLVER_EXPORTAR_DISPONIBLE) {
-            return "";
-        }
-
         const contexto = obtenerContextoGuardadoReunida();
         if (!contexto.anio || !contexto.nivel || !contexto.cueanexo) {
             return "";
@@ -1155,29 +1108,18 @@
         mensaje.textContent = data.mensaje || "Carga guardada correctamente.";
 
         const urlVolverExportar = construirUrlVolverExportarGuardado();
-        const urlDetalle = construirUrlDetalleGuardado(data);
 
         estadoGuardado.appendChild(mensaje);
 
-        if (urlVolverExportar || urlDetalle) {
+        if (urlVolverExportar) {
             const acciones = document.createElement("div");
             acciones.className = "pof-actions pof-mt-2 pof-post-save-actions";
 
-            if (urlVolverExportar) {
-                const linkVolverExportar = document.createElement("a");
-                linkVolverExportar.className = "pof-btn pof-btn-primary";
-                linkVolverExportar.href = urlVolverExportar;
-                linkVolverExportar.textContent = "Volver a Exportar POF";
-                acciones.appendChild(linkVolverExportar);
-            }
-
-            if (urlDetalle) {
-                const linkDetalle = document.createElement("a");
-                linkDetalle.className = "pof-btn pof-btn-light";
-                linkDetalle.href = urlDetalle;
-                linkDetalle.textContent = "Ver en detalle de la POF";
-                acciones.appendChild(linkDetalle);
-            }
+            const linkVolverExportar = document.createElement("a");
+            linkVolverExportar.className = "pof-btn pof-btn-primary";
+            linkVolverExportar.href = urlVolverExportar;
+            linkVolverExportar.textContent = "Volver a Exportar POF";
+            acciones.appendChild(linkVolverExportar);
 
             estadoGuardado.appendChild(acciones);
         }
@@ -2403,6 +2345,12 @@
             tipo_operacion: "AFECTADO",
             zona_educativa_tipo: zonaEducativaSeleccionada ? zonaEducativaSeleccionada.tipo : "",
             zona_educativa: zonaEducativaSeleccionada ? zonaEducativaSeleccionada.zona : "",
+            observacion_zona_educativa: zonaEducativaFijadaPorCiclo
+                ? ""
+                : String(observacionZonaEducativa.value || "").trim(),
+            anexo_pof: {
+                catalogo_ids: editorAnexoPof.obtenerCatalogoIdsSeleccionados(),
+            },
             padron: padronSeleccionado,
             cargos: cargosTemporales.map(cargo => ({
                 ceic: cargo.ceic,
@@ -2421,10 +2369,25 @@
     }
 
     function abrirConfirmacionCarga() {
-        if (!cabeceraReunidaValidada || !padronSeleccionado || !zonaEducativaEstaResuelta() || cargosTemporales.length === 0) {
+        if (
+            !cabeceraReunidaValidada
+            || !padronSeleccionado
+            || !zonaEducativaSeleccionValidaParaGuardar()
+            || cargosTemporales.length === 0
+        ) {
             mostrarEstadoGuardado(
                 "error",
-                "Validá la cabecera, seleccioná padrón y Zona Educativa, y agregá al menos un cargo."
+                !zonaEducativaSeleccionValidaParaGuardar()
+                    ? "Si querés asignar Zona Educativa, completá tipo y zona; también podés dejarla sin asignar."
+                    : "Validá la cabecera, seleccioná padrón y agregá al menos un cargo."
+            );
+            actualizarEstadoBotonGuardar();
+            return;
+        }
+        if (!editorAnexoPof.estaListo()) {
+            mostrarEstadoGuardado(
+                "error",
+                "Esperá a que cargue Anexo POF o reintentá la selección antes de guardar."
             );
             actualizarEstadoBotonGuardar();
             return;
@@ -2456,10 +2419,25 @@
             return;
         }
 
-        if (!cabeceraReunidaValidada || !padronSeleccionado || !zonaEducativaEstaResuelta() || cargosTemporales.length === 0) {
+        if (
+            !cabeceraReunidaValidada
+            || !padronSeleccionado
+            || !zonaEducativaSeleccionValidaParaGuardar()
+            || cargosTemporales.length === 0
+        ) {
             mostrarEstadoGuardado(
                 "error",
-                "Validá la cabecera, seleccioná padrón y Zona Educativa, y agregá al menos un cargo."
+                !zonaEducativaSeleccionValidaParaGuardar()
+                    ? "Si querés asignar Zona Educativa, completá tipo y zona; también podés dejarla sin asignar."
+                    : "Validá la cabecera, seleccioná padrón y agregá al menos un cargo."
+            );
+            actualizarEstadoBotonGuardar();
+            return;
+        }
+        if (!editorAnexoPof.estaListo()) {
+            mostrarEstadoGuardado(
+                "error",
+                "El estado de Anexo POF no está listo. Reintentá antes de guardar."
             );
             actualizarEstadoBotonGuardar();
             return;

@@ -77,7 +77,10 @@
                                                            data-grupo-id="{{ seccion.pk }}"
                                                            data-grupo-label="{{ seccion.nombre_seccion }}"
                                                            data-docente-cuil="{{ docente_banco.docente_cuil }}"
-                                                           data-docente-nombre="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}">
+                                                           data-docente-nombre="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}"
+                                                           data-cueanexo="{{ especial_context.cueanexo }}"
+                                                           data-ciclo="{{ especial_context.ciclo.pk }}"
+                                                           data-cargos-url="{% url 'especial:cargos_docente_seccion' %}">
                                                             <strong>{{ seccion.nombre_seccion }}</strong>
                                                             <small>{{ seccion.turno }} - {{ seccion.get_estado_display }}</small>
                                                         </a>
@@ -104,6 +107,18 @@
                                     <a class="dropdown-item cef-secciones-action is-outline" title="Ver ficha del profesor" href="{{ docente_banco.url_editar_docente }}" target="_blank" rel="noopener">
                                         <i class="fa-solid fa-id-card"></i> Ver ficha
                                     </a>
+                                    </li>
+                                {% endif %}
+                                {% if especial_context.es_admin_especial %}
+                                    <li>
+                                        <form method="post" action="{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" class="m-0" data-cef-confirm-submit data-cef-confirm-title="Borrar docente del banco" data-cef-confirm-message="Esta acción eliminará físicamente el registro del banco de este CUE-Anexo y ciclo. No es una baja y no se puede deshacer. ¿Querés continuar?" data-cef-confirm-entity="{{ docente_banco.docente_nombre_snapshot|default:docente_banco.docente_cuil }}">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="accion" value="borrar_docente_banco">
+                                            <input type="hidden" name="docente_banco_id" value="{{ docente_banco.pk }}">
+                                            <button class="dropdown-item cef-secciones-action text-danger" type="submit">
+                                                <i class="fa-solid fa-trash"></i> Borrar docente del banco
+                                            </button>
+                                        </form>
                                     </li>
                                 {% endif %}
                                     <li>

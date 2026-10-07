@@ -16,6 +16,12 @@ load_dotenv(BASE_DIR / '.env')
 # Directorio de aplicaciones
 APPS_DIR = ROOT_DIR / 'apps'
 
+# En producción sólo se deben utilizar cargos BNH validados. Para pruebas
+# locales puede desactivarse temporalmente con ESPECIAL_REQUIERE_CARGO_VALIDADO=0.
+ESPECIAL_REQUIERE_CARGO_VALIDADO = os.environ.get(
+    "ESPECIAL_REQUIERE_CARGO_VALIDADO", "1"
+).strip().lower() not in {"0", "false", "no", "off"}
+
 # Configuración de aplicaciones
 BASE_APPS = [
     'django.contrib.auth',
@@ -209,6 +215,15 @@ CKEDITOR_BASEPATH = "/static/ckeditor/ckeditor/"
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 #MEDIA_ROOT = ROOT_DIR / 'apps/media'
+
+# ===============================
+# BNH - URL PÚBLICA PARA QR
+# ===============================
+
+BNH_PUBLIC_BASE_URL = os.environ.get(
+    "BNH_PUBLIC_BASE_URL",
+    ""
+).rstrip("/")
 
 # Configuración de tiempo y formato
 LANGUAGE_CODE = 'es-ar'

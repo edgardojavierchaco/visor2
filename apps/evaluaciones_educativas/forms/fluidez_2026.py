@@ -322,8 +322,16 @@ class CueanexoForm(forms.Form):
 		sector = kwargs.pop('sector', None)
 		ambito = kwargs.pop('ambito', None)
 		region = kwargs.pop('region', None)
+		escuelas_permitidas = kwargs.pop('escuelas_permitidas', None) or []
 		super().__init__(*args, **kwargs)
 		
+		if nivel_acceso == 'Supervisor':
+			por_cue = {e['cueanexo']: e['escuela'] for e in escuelas_permitidas}
+			self.fields['cueanexo_seleccionado'].choices = [
+				('', '--------'), ('TODOS', '----TODOS LOS CUEANEXOS----')
+			] + [(cue, f'{nombre}-({cue})') for cue, nombre in sorted(por_cue.items())]
+			return
+
 		if cuil:
 			# cueanexo_grado= GradoFluidez2026.objects.values_list('cueanexo',flat=True).order_by('cueanexo')
 			# lista_enteros = [int(i) for i in cueanexo_grado]

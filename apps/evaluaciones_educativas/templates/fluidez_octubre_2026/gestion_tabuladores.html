@@ -117,6 +117,7 @@
 {% block content %}
 {{ block.super }}
 <div class="tab-wrapper">
+    {% include 'fluidez_octubre_2026/_badge_operativo.html' %}
 
     {% for message in messages %}
     <div class="tab-alert {% if message.tags == 'success' %}tab-alert-success{% else %}tab-alert-error{% endif %}">

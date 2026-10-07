@@ -166,6 +166,7 @@ def mapa_supervisores(request):
         region=region,
         situacion=situacion,
         nivel=nivel,
+        situacion_vigente=True,
     )
 
     # Alcance territorial permitido/seleccionado para las escuelas.

@@ -23,6 +23,8 @@ Umbrales de desempeño — Lengua:
   Escritura:         <15 | 15-18.75 | 18.75-21.25 | 21.25-25
 """
 
+from apps.usuarios.services.user_context import get_user_rol
+from django.db import connection
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -68,7 +70,7 @@ REGIONES_CHOICES = [
     'R.E. 9', 'R.E. 10-C', 'R.E. 10-AB',
 ]
 
-LISTA_JERARQUICOS = ['Regional', 'Funcionario', 'Ministro', 'Subse']
+LISTA_JERARQUICOS = ['Regional', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse']
 
 # Valores que se consideran "ninguna condición"
 VALORES_NINGUNA = {'', 'NO', 'no', 'No', 'NINGUNA', 'NINGUNO', 'FALSE', 'False', 'false', 'ninguna'}
@@ -77,6 +79,70 @@ VALORES_NINGUNA = {'', 'NO', 'no', 'No', 'NINGUNA', 'NINGUNO', 'FALSE', 'False',
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+OFERTA_SUPERVISOR = 'Secundaria Completa req. 7 años'
+
+
+def _es_supervisor(usuario):
+    return (
+        getattr(usuario, 'nivelacceso_id', None) == 'Supervisor'
+        or get_user_rol(usuario) == 'Supervisor'
+    )
+
+
+def _escuelas_del_supervisor(username, oferta):
+    """Cruza asignaciones activas con el padrón por región, CUE y oferta.
+
+    El ámbito y sector provienen de la misma fila autorizada del padrón.
+    No basta con autorizar el CUE: puede contener otras ofertas educativas.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT TRIM(v.cueanexo::text), v.nom_est,
+                   TRIM(v.region_loc), TRIM(v.ambito), TRIM(v.sector)
+            FROM supervisores.supervisor_registro_supervisor AS s
+            JOIN supervisores.supervisor_registro_supervisor_regional AS sr
+              ON sr.supervisor_id = s.id AND sr.activo = TRUE
+            JOIN supervisores.supervisor_registro_supervisor_regional_oferta AS o
+              ON o.supervisor_regional_id = sr.id AND o.activo = TRUE
+            JOIN region AS r ON r.id = sr.region_id
+            JOIN public.v_capa_unica_ofertas_ant AS v
+              ON TRIM(v.cueanexo::text) = TRIM(o.cueanexo::text)
+             AND LOWER(TRIM(v.oferta)) = LOWER(TRIM(o.oferta))
+             AND LOWER(TRIM(v.region_loc)) = LOWER(TRIM(r.nombre))
+            WHERE s.cuil = %s AND s.activo = TRUE
+              AND v.oferta ILIKE %s
+            ORDER BY 1, 2, 3, 4, 5
+            """,
+            [str(username), '%' + oferta + '%'],
+        )
+        return [
+            dict(zip(('cueanexo', 'escuela', 'region', 'ambito', 'sector'), fila))
+            for fila in cursor.fetchall()
+        ]
+
+
+def _filtrar_escuelas_supervisor(escuelas, sector=None, ambito=None, region=None):
+    filtros = {'sector': sector, 'ambito': ambito, 'region': region}
+    return [
+        escuela for escuela in escuelas
+        if all(
+            not valor or str(valor).strip().upper() == 'TODOS'
+            or str(escuela.get(campo) or '').strip().casefold()
+            == str(valor).strip().casefold()
+            for campo, valor in filtros.items()
+        )
+    ]
+
+
+def _opciones_filtro_supervisor(escuelas, campo):
+    return ['TODOS'] + sorted({
+        str(escuela.get(campo) or '').strip()
+        for escuela in escuelas if escuela.get(campo)
+    })
+
 
 def _safe_float(val):
     """Convierte un CharField (puede tener coma decimal) a float; None si falla."""
@@ -188,7 +254,9 @@ def analisis_evaluacion(request):
     usuario = request.user
     name    = usuario.username
     cuil_con_caracter = f"{name[:2]}-{name[2:10]}-{name[10:]}"
-    rol_usuario = usuario.nivelacceso_id
+    rol_usuario = 'Supervisor' if _es_supervisor(usuario) else usuario.nivelacceso_id
+    if rol_usuario != 'Supervisor' and get_user_rol(usuario) == 'Evaluacion':
+        rol_usuario = 'Evaluacion'
     rol_denied = 'Director/a'
     print(rol_usuario)
 
@@ -196,7 +264,7 @@ def analisis_evaluacion(request):
     if rol_usuario == rol_denied:
         raise PermissionDenied("No tienes permiso para acceder a esta sección.")
 
-    if rol_usuario not in LISTA_JERARQUICOS:
+    if rol_usuario != 'Supervisor' and rol_usuario not in LISTA_JERARQUICOS:
         has_oferta = CapaUnicaOfertas.objects.filter(
             resploc_cuitcuil=cuil_con_caracter,
             oferta__icontains='Secundaria Completa req. 7 años'
@@ -212,7 +280,16 @@ def analisis_evaluacion(request):
     filtro_condicion = request.GET.get('condicion', '').strip()
 
     # ── 2. UNIVERSO DE CUEs ───────────────────────────────────────────────────
-    if rol_usuario in LISTA_JERARQUICOS:
+    escuelas_supervisor = []
+    if rol_usuario == 'Supervisor':
+        escuelas_supervisor = _escuelas_del_supervisor(
+            name, OFERTA_SUPERVISOR
+        )
+        escuelas_filtradas = _filtrar_escuelas_supervisor(
+            escuelas_supervisor, filtro_sector, filtro_ambito, filtro_region
+        )
+        user_cueanexos = sorted({e['cueanexo'] for e in escuelas_filtradas})
+    elif rol_usuario in LISTA_JERARQUICOS:
         q_gestion = Q()
         if filtro_sector and filtro_sector != 'TODOS':
             q_gestion &= Q(sector=filtro_sector)
@@ -236,6 +313,8 @@ def analisis_evaluacion(request):
         user_cueanexos = [str(c) for c in utilidades.obtener_cueanexos(usuario.username)]
 
     selected_cue = request.GET.get('cueanexo', '').strip() or None
+    if rol_usuario == 'Supervisor' and selected_cue and selected_cue != 'TODOS' and selected_cue not in user_cueanexos:
+        raise PermissionDenied('No tienes acceso a los registros de este establecimiento.')
     if not selected_cue and user_cueanexos:
         selected_cue = user_cueanexos[0]
     if selected_cue and selected_cue not in user_cueanexos and selected_cue != 'TODOS':
@@ -509,9 +588,9 @@ def analisis_evaluacion(request):
         'sector_sel':         filtro_sector  or 'TODOS',
         'ambito_sel':         filtro_ambito  or 'TODOS',
         'region_sel':         filtro_region  or 'TODOS',
-        'sectores_opciones':  SECTORES_CHOICES,
-        'ambitos_opciones':   AMBITOS_CHOICES,
-        'regiones_opciones':  REGIONES_CHOICES,
+        'sectores_opciones':  (_opciones_filtro_supervisor(escuelas_supervisor, 'sector') if rol_usuario == 'Supervisor' else SECTORES_CHOICES),
+        'ambitos_opciones':   (_opciones_filtro_supervisor(escuelas_supervisor, 'ambito') if rol_usuario == 'Supervisor' else AMBITOS_CHOICES),
+        'regiones_opciones':  (_opciones_filtro_supervisor(escuelas_supervisor, 'region') if rol_usuario == 'Supervisor' else REGIONES_CHOICES),
         'presentes_etnia':        presentes_etnia,
         'presentes_discapacidad': presentes_discapacidad,
         'presentes_ambas':        presentes_ambas,

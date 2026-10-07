@@ -11,7 +11,7 @@ from apps.bnhalumnos.models import (
     normalizar_documento_bnh,
     validar_cuil_con_documento,
 )
-from apps.bnhpersonas.models import DocumentoTipo, Sexo
+from apps.bnhpersonas.models import DocumentoTipo, Sexo, RegistroActividades
 from .models import (
     AlumnoSeccion,
     CatalogoTipoEstructuraEspecial,
@@ -683,6 +683,8 @@ class EspecialDocenteSeccionForm(forms.ModelForm):
     class Meta:
         model = DocenteSeccion
         fields = [
+            "docente_cuil",
+            "cargo_relacionado",
             "rol",
             "estado",
             "fecha_desde",
@@ -690,6 +692,7 @@ class EspecialDocenteSeccionForm(forms.ModelForm):
             "observaciones",
         ]
         widgets = {
+            "docente_cuil": forms.HiddenInput(),
             "fecha_desde": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "fecha_hasta": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "observaciones": forms.Textarea(attrs={"rows": 2}),
@@ -703,8 +706,33 @@ class EspecialDocenteSeccionForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        cargos_queryset = kwargs.pop("cargos_queryset", None)
         super().__init__(*args, **kwargs)
+        # El CUIL se informa por fuera del formulario visible. Se conserva
+        # como campo oculto porque la validación del modelo puede devolver
+        # errores asociados a docente_cuil.
+        self.fields["docente_cuil"].required = False
+        if self.is_bound and not self.data.get("docente_cuil") and getattr(
+            self.instance, "docente_cuil", ""
+        ):
+            datos = self.data.copy()
+            datos["docente_cuil"] = self.instance.docente_cuil
+            self.data = datos
         self.rol_sin_cambios = False
+
+        self.fields["cargo_relacionado"].queryset = (
+            cargos_queryset
+            if cargos_queryset is not None
+            else RegistroActividades.objects.none()
+        )
+        self.fields["cargo_relacionado"].required = not bool(getattr(self.instance, "pk", None))
+        self.fields["cargo_relacionado"].label = "Cargo BNH relacionado"
+        self.fields["cargo_relacionado"].label_from_instance = lambda cargo: (
+            f"{getattr(getattr(cargo, 'ceic', None), 'descripcion', '') or 'Sin CEIC'} · "
+            f"{getattr(getattr(cargo, 'nivel_curricular', None), 'descripcion', '') or 'Sin oferta'} · "
+            f"{cargo.turno or 'Sin turno'} · "
+            f"{getattr(getattr(cargo, 'sit_revista', None), 'descrip_sitrev', '') or 'Sin situación'}"
+        )
         
         if not self.is_bound and not getattr(self.instance, "pk", None):
             self.fields["fecha_desde"].initial = timezone.localdate

@@ -1,0 +1,152 @@
+{% extends 'dashboard/bodydirector.html' %}
+{% load static %}
+
+{% block head %}
+{{ block.super }}
+<title>{% if es_edicion %}Editar{% else %}Cargar{% endif %} Aplicador — Fluidez Octubre 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+    .form-wrapper { font-family: 'Inter', sans-serif; max-width: 640px; margin: 0 auto; padding: 30px 16px 80px; }
+    .form-breadcrumb { display: flex; align-items: center; gap: 8px; margin-bottom: 24px; font-size: 0.85rem; color: #64748b; }
+    .form-breadcrumb a { color: #10b981; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+    .form-breadcrumb a:hover { color: #059669; text-decoration: none; }
+    .form-breadcrumb .sep { color: #cbd5e1; }
+    .form-hero { margin-bottom: 24px; }
+    .form-hero h1 { font-size: clamp(1.3rem, 3vw, 1.8rem); font-weight: 900; color: #0a1628; margin-bottom: 6px; }
+    .form-hero h1 span { color: #10b981; }
+    .form-hero p { color: #64748b; font-size: 0.9rem; margin: 0; }
+    .form-card { background: #fff; border-radius: 18px; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 6px 24px rgba(0,0,0,0.07); overflow: hidden; }
+    .form-card-header { padding: 20px 28px; background: linear-gradient(135deg, #0a1628, #1e293b); display: flex; align-items: center; gap: 12px; }
+    .form-card-header i { font-size: 1.4rem; color: #34d399; }
+    .form-card-header h2 { color: #fff; font-size: 1rem; font-weight: 700; margin: 0; }
+    .form-card-body { padding: 28px; }
+    .field-group { margin-bottom: 22px; }
+    .field-group label { display: block; font-size: 0.82rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 7px; }
+    .required-star { color: #ef4444; margin-left: 2px; }
+    .field-group input { width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 0.92rem; color: #1e293b; background: #f8fafc; outline: none; }
+    .field-group input:focus { border-color: #10b981; background: #fff; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
+    .field-group input[disabled] { background: #f1f5f9; color: #64748b; cursor: not-allowed; }
+    .field-group input.has-error { border-color: #ef4444; background: #fef2f2; }
+    .field-error-item { font-size: 0.8rem; color: #dc2626; margin-top: 6px; display: flex; align-items: center; gap: 5px; font-weight: 500; }
+    .field-hint { font-size: 0.78rem; color: #94a3b8; margin-top: 5px; }
+    .fila-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 520px) { .fila-2 { grid-template-columns: 1fr; } }
+    .form-actions { display: flex; gap: 12px; margin-top: 6px; flex-wrap: wrap; }
+    .btn-submit { flex: 1; min-width: 160px; padding: 13px 24px; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-cancel { padding: 13px 24px; background: #f1f5f9; color: #475569; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+    .btn-cancel:hover { background: #e2e8f0; color: #1e293b; text-decoration: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+{{ block.super }}
+<div class="form-wrapper">
+    {% include 'fluidez_octubre_2026/_badge_operativo.html' %}
+
+    <div class="form-breadcrumb">
+        <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:gestion_aplicadores' %}"><i class="bi bi-arrow-left"></i> Volver a Aplicadores</a>
+        <span class="sep">/</span>
+        <span>{% if es_edicion %}Editar aplicador{% else %}Cargar aplicador{% endif %}</span>
+    </div>
+
+    <div class="form-hero">
+        <h1>{% if es_edicion %}Editar{% else %}Nuevo{% endif %} <span>Aplicador</span></h1>
+        <p>
+            {% if es_edicion %}Modificá los datos del aplicador. El CUIL no se puede cambiar.
+            {% else %}Completá los datos del aplicador para la región <strong>{{ region }}</strong>. Después vas a poder asignarle secciones.{% endif %}
+        </p>
+    </div>
+
+    <div class="form-card">
+        <div class="form-card-header">
+            <i class="bi bi-person-badge-fill"></i>
+            <h2>Datos del aplicador</h2>
+        </div>
+        <div class="form-card-body">
+            <form method="post" id="form-carga-aplicador" novalidate>
+                {% csrf_token %}
+
+                {% for error in form.non_field_errors %}
+                <div class="field-error-item"><i class="bi bi-exclamation-triangle-fill"></i>{{ error }}</div>
+                {% endfor %}
+
+                <div class="field-group">
+                    <label for="{{ form.cuil.id_for_label }}">CUIL <span class="required-star">*</span></label>
+                    <input type="text" id="{{ form.cuil.id_for_label }}" name="{{ form.cuil.html_name }}"
+                           value="{{ form.cuil.value|default:'' }}" placeholder="Ej: 20123456789"
+                           maxlength="13" inputmode="numeric" autocomplete="off"
+                           {% if es_edicion %}disabled{% endif %}
+                           {% if form.cuil.errors %}class="has-error"{% endif %}>
+                    {% if not es_edicion %}<div class="field-hint">11 dígitos, con o sin guiones.</div>{% endif %}
+                    {% for error in form.cuil.errors %}<div class="field-error-item"><i class="bi bi-x-circle-fill"></i>{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="fila-2">
+                    <div class="field-group">
+                        <label for="{{ form.apellido.id_for_label }}">Apellido <span class="required-star">*</span></label>
+                        <input type="text" id="{{ form.apellido.id_for_label }}" name="{{ form.apellido.html_name }}"
+                               value="{{ form.apellido.value|default:'' }}" placeholder="Apellido del aplicador"
+                               {% if form.apellido.errors %}class="has-error"{% endif %}>
+                        {% for error in form.apellido.errors %}<div class="field-error-item"><i class="bi bi-x-circle-fill"></i>{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="field-group">
+                        <label for="{{ form.nombre.id_for_label }}">Nombre <span class="required-star">*</span></label>
+                        <input type="text" id="{{ form.nombre.id_for_label }}" name="{{ form.nombre.html_name }}"
+                               value="{{ form.nombre.value|default:'' }}" placeholder="Nombre del aplicador"
+                               {% if form.nombre.errors %}class="has-error"{% endif %}>
+                        {% for error in form.nombre.errors %}<div class="field-error-item"><i class="bi bi-x-circle-fill"></i>{{ error }}</div>{% endfor %}
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label for="{{ form.correo.id_for_label }}">Correo electrónico</label>
+                    <input type="email" id="{{ form.correo.id_for_label }}" name="{{ form.correo.html_name }}"
+                           value="{{ form.correo.value|default:'' }}" placeholder="correo@ejemplo.com"
+                           {% if form.correo.errors %}class="has-error"{% endif %}>
+                    <div class="field-hint">Opcional.</div>
+                    {% for error in form.correo.errors %}<div class="field-error-item"><i class="bi bi-x-circle-fill"></i>{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="field-group">
+                    <label for="{{ form.celular.id_for_label }}">Celular <span class="required-star">*</span></label>
+                    <input type="text" id="{{ form.celular.id_for_label }}" name="{{ form.celular.html_name }}"
+                           value="{{ form.celular.value|default:'' }}" placeholder="Ej: 3624123456" inputmode="numeric"
+                           {% if form.celular.errors %}class="has-error"{% endif %}>
+                    {% for error in form.celular.errors %}<div class="field-error-item"><i class="bi bi-x-circle-fill"></i>{{ error }}</div>{% endfor %}
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit" id="btn-guardar-aplicador">
+                        <i class="bi bi-floppy-fill"></i>
+                        {% if es_edicion %}Guardar cambios{% else %}Guardar y asignar secciones{% endif %}
+                    </button>
+                    <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:gestion_aplicadores' %}" class="btn-cancel"><i class="bi bi-x-lg"></i> Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Evitar doble envío y restaurar el botón si se vuelve con "Atrás"
+(function () {
+    var form = document.getElementById('form-carga-aplicador');
+    var btn = document.getElementById('btn-guardar-aplicador');
+    var html = btn.innerHTML;
+    form.addEventListener('submit', function (e) {
+        if (btn.disabled) { e.preventDefault(); return; }
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.innerHTML = 'Guardando...';
+    });
+    window.addEventListener('pageshow', function (e) {
+        if (e.persisted) { btn.disabled = false; btn.style.opacity = ''; btn.innerHTML = html; }
+    });
+})();
+</script>
+{% if not es_edicion %}
+{% include 'fluidez_octubre_2026/_autocompletar_cuil.html' with prefijo='id_' formulario='aplicador' %}
+{% endif %}
+{% include 'fluidez_octubre_2026/_bloqueo_pantalla.html' %}
+{% endblock %}
