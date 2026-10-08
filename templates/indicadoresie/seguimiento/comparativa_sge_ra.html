@@ -367,7 +367,7 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <span class="badge rounded-pill" id="comparativaSgeRaRefreshFloatingStep" style="background: #dbeafe; color: #1e40af; font-weight: 800; padding: 0.45rem 0.7rem;">0 / 7</span>
+            <span class="badge rounded-pill" id="comparativaSgeRaRefreshFloatingStep" style="background: #dbeafe; color: #1e40af; font-weight: 800; padding: 0.45rem 0.7rem;">0 / 8</span>
             <button id="comparativaSgeRaRefreshReloadBtn" type="button" class="btn btn-sm btn-primary d-none" style="font-weight: 800; box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);">Recargar ahora</button>
             <button id="comparativaSgeRaRefreshClearBtn" type="button" class="btn btn-sm btn-outline-secondary d-none" style="font-weight: 700;">Cerrar</button>
         </div>
@@ -4026,6 +4026,7 @@ $(function () {
     'use strict';
     var STORAGE_KEY = 'comparativaSgeRaRefreshJobId';
     var STARTED_AT_STORAGE_KEY = 'comparativaSgeRaRefreshStartedAt';
+    var FECHA_STORAGE_KEY = 'comparativaSgeRaRefreshRequestedFecha';
 
     function getCsrfToken() {
         var tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -4145,7 +4146,7 @@ $(function () {
 
     function actualizarFloating(data) {
         lastProgressData = Object.assign({}, lastProgressData || {}, data || {});
-        var total = data.total || 7;
+        var total = data.total || 8;
         var step = data.step || 0;
         var percent = Math.max(0, Math.min(100, parseInt(data.percent || 0, 10)));
         mostrarFloating();
@@ -4191,6 +4192,7 @@ $(function () {
     function borrarEstadoRefreshStorage() {
         sessionStorage.removeItem(STORAGE_KEY);
         sessionStorage.removeItem(STARTED_AT_STORAGE_KEY);
+        sessionStorage.removeItem(FECHA_STORAGE_KEY);
     }
 
     function mostrarRecuperandoSeguimiento() {
@@ -4236,7 +4238,7 @@ $(function () {
             floatingBar.style.background = 'linear-gradient(90deg, #2563eb 0%, #06b6d4 55%, #22c55e 100%)';
             floatingBar.classList.remove('progress-bar-striped', 'progress-bar-animated', 'bg-danger');
         }
-        if (floatingStep) floatingStep.textContent = (data.step || 7) + ' / ' + (data.total || 7);
+        if (floatingStep) floatingStep.textContent = (data.step || 8) + ' / ' + (data.total || 8);
         if (floatingCurrent) floatingCurrent.textContent = '';
         if (floatingElapsed) floatingElapsed.textContent = formatearTiempoTranscurrido(data.elapsed_seconds);
         if (reloadBtn) reloadBtn.classList.remove('d-none');
@@ -4299,6 +4301,10 @@ $(function () {
             && refresh.estado_auditoria === 'OK'
             && (errorAt === null || errorAt <= successAt);
         if (successMatches) {
+            var requestedFecha = timestampValue(sessionStorage.getItem(FECHA_STORAGE_KEY));
+            var visibleFecha = timestampValue(data.fecha_iso);
+            // El OK de A/B/F por sí solo no confirma la actualización de fecha.
+            if (requestedFecha === null || visibleFecha !== requestedFecha) return null;
             return {
                 status: 'success',
                 message: 'Actualización completada correctamente.'
@@ -4320,8 +4326,8 @@ $(function () {
     function datosTerminalesRecuperados(result) {
         var data = Object.assign({}, lastProgressData || {}, result);
         if (result.status === 'success') {
-            data.step = 7;
-            data.total = 7;
+            data.step = 8;
+            data.total = 8;
             data.percent = 100;
             data.current_view = '';
         }
@@ -4476,6 +4482,7 @@ $(function () {
                         sessionStorage.setItem(STORAGE_KEY, data.job_id);
                         sessionStorage.removeItem(STARTED_AT_STORAGE_KEY);
                         guardarStartedAt(data.started_at, true);
+                        sessionStorage.setItem(FECHA_STORAGE_KEY, data.requested_fecha || '');
                         emitirEventoRefresh('comparativa:refresh-start', {
                             status: 'running',
                             job_id: data.job_id,
@@ -4483,7 +4490,7 @@ $(function () {
                         });
                         if (fechaModalBS) fechaModalBS.hide();
                         resetBotonGuardar();
-                        actualizarFloating({ status: 'running', step: 0, total: 4, percent: 0, current_view: 'Trayectoria SGE', message: 'Actualizando trayectoria de alumnos SGE...', started_at: data.started_at || '' });
+                        actualizarFloating({ status: 'running', step: 0, total: 8, percent: 0, current_view: 'Calificaciones Primaria', message: 'Actualizando calificaciones de Primaria...', started_at: data.started_at || '' });
                         consultarProgreso(data.job_id);
                         return;
                     }
@@ -4513,7 +4520,7 @@ $(function () {
             job_id: jobIdActivo,
             started_at: startedAtActivo || ''
         });
-        actualizarFloating({ status: 'running', step: 0, total: 4, percent: 0, current_view: '', message: 'Recuperando progreso del refresh...' });
+        actualizarFloating({ status: 'running', step: 0, total: 8, percent: 0, current_view: '', message: 'Recuperando progreso del refresh...' });
         consultarProgreso(jobIdActivo);
     }
 });
