@@ -11,7 +11,9 @@ LOG_DIR = BASE_DIR / "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # Cargar variables de entorno
-load_dotenv(BASE_DIR / '.env')
+#load_dotenv(BASE_DIR / '.env')
+ENV_FILE = os.environ.get("DJANGO_ENV_FILE", ".env")
+load_dotenv(BASE_DIR / ENV_FILE, override=False)
 
 # Directorio de aplicaciones
 APPS_DIR = ROOT_DIR / 'apps'
