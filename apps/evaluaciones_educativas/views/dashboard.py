@@ -306,8 +306,51 @@ def dashboard(request):
                 'anios':       anios_visibles,
             })
 
+    # ================================================================
+    # MONITOREOS
+    # Tarjeta aparte, fuera de los operativos: accesos directos a los
+    # tableros de seguimiento. Mismos campos que los links de operativos.
+    # ================================================================
+    monitoreos = [
+        {
+            'titulo':      'Carga de personas · Fluidez Octubre',
+            'descripcion': 'Aplicadores y tabuladores por regional',
+            'icono':       'bi-book-half',
+            'url':         'evaluaciones_educativas:monitoreo_personas_2026:monitoreo',
+            'query':       '?tab=fluidez',
+            'roles':       ['Evaluacion'],
+        },
+        {
+            'titulo':      'Carga de personas · Aprender 2026',
+            'descripcion': 'Aplicadores y veedores por regional',
+            'icono':       'bi-check2-circle',
+            'url':         'evaluaciones_educativas:monitoreo_personas_2026:monitoreo',
+            'query':       '?tab=aprender',
+            'roles':       ['Evaluacion'],
+        },
+    ]
+
+    monitoreos_visibles = []
+    for link in monitoreos:
+        rol_autorizado = (rol in link['roles']) or (
+            usuario.is_superuser and any(r in ['Funcionario', 'Evaluacion', 'Ministro', 'Subse'] for r in link['roles'])
+        )
+        if not rol_autorizado:
+            continue
+        try:
+            url_resuelta = reverse(link['url']) + link.get('query', '')
+        except NoReverseMatch:
+            continue
+        monitoreos_visibles.append({
+            'titulo':      link['titulo'],
+            'descripcion': link['descripcion'],
+            'icono':       link['icono'],
+            'url':         url_resuelta,
+        })
+
     context = {
         'title':          'Evaluaciones Educativas',
+        'monitoreos':     monitoreos_visibles,
         'usuario':        usuario,
         'rol':            rol,
         'es_director':    es_director,

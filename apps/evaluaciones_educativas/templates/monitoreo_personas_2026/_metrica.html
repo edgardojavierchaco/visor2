@@ -1,0 +1,24 @@
+{% comment %}
+  Métrica cargados / esperados dentro de una tarjeta.
+  Uso: {% include 'monitoreo_personas_2026/_metrica.html' with ind=f.aplicadores etiqueta='Aplicadores' icono='bi-person-badge' vacio='Sin secciones' %}
+  `vacio`: texto cuando no hay nada esperado. `nota` (opcional) se muestra debajo en ámbar.
+{% endcomment %}
+<div class="met">
+    <div class="met-top">
+        <span class="met-label"><i class="bi {{ icono }}" aria-hidden="true"></i>{{ etiqueta }}</span>
+        {% if ind.esperados %}
+            <span class="met-val">{{ ind.cargados }} <small>de {{ ind.esperados }} · {{ ind.pct }}%</small></span>
+        {% else %}
+            <span class="met-val">{{ ind.cargados }}</span>
+        {% endif %}
+    </div>
+    {% if ind.esperados is None %}
+        <div class="met-vacio">Sin total de SGE</div>
+    {% elif not ind.esperados %}
+        <div class="met-vacio">{{ vacio|default:'Sin meta' }}</div>
+    {% else %}
+        <div class="bar {{ ind.estado }}" role="progressbar" aria-valuenow="{{ ind.pct }}" aria-valuemin="0" aria-valuemax="100"
+             aria-label="{{ etiqueta }}: {{ ind.cargados }} de {{ ind.esperados }}"><span style="width: {{ ind.pct }}%"></span></div>
+    {% endif %}
+    {% if nota %}<div class="met-nota"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ nota }}</div>{% endif %}
+</div>

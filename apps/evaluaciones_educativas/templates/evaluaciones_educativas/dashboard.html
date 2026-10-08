@@ -282,6 +282,144 @@
         opacity: 0;
     }
 
+    /* ─── TARJETA DE MONITOREO (fuera de los operativos) ─── */
+    .mon-dash-wrap {
+        margin-top: 18px;
+        animation: fadeInUp 0.45s ease-out forwards;
+        opacity: 0;
+    }
+    .mon-dash {
+        position: relative;
+        overflow: hidden;
+        border-radius: 18px;
+        padding: 24px 26px;
+        background: linear-gradient(135deg, #0a1628 0%, #12305a 60%, #1565c0 130%);
+        color: #ffffff;
+        box-shadow: 0 12px 32px rgba(10, 22, 40, 0.28);
+    }
+    /* Brillo decorativo en cyan, el acento de la paleta */
+    .mon-dash::after {
+        content: '';
+        position: absolute;
+        width: 280px;
+        height: 280px;
+        right: -90px;
+        top: -120px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(0, 188, 212, 0.35), transparent 70%);
+        pointer-events: none;
+    }
+    .mon-dash-head {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 18px;
+        position: relative;
+        z-index: 1;
+    }
+    .mon-dash-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        font-size: 1.6rem;
+        color: #00bcd4;
+        background: rgba(0, 188, 212, 0.14);
+        border: 1px solid rgba(0, 188, 212, 0.35);
+    }
+    .mon-dash-head h2 {
+        font-size: 1.2rem;
+        font-weight: 800;
+        margin: 0 0 3px;
+        color: #ffffff;
+    }
+    .mon-dash-head p {
+        font-size: 0.86rem;
+        color: #cbd5e1;
+        margin: 0;
+    }
+    .mon-dash-tag {
+        margin-left: auto;
+        align-self: flex-start;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        border-radius: 50px;
+        color: #0a1628;
+        background: #00bcd4;
+        white-space: nowrap;
+    }
+    .mon-dash-links {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+        position: relative;
+        z-index: 1;
+    }
+    .mon-dash-link {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-height: 64px;
+        padding: 14px 16px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        color: #ffffff;
+        text-decoration: none;
+        transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    }
+    .mon-dash-link:hover {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: rgba(0, 188, 212, 0.6);
+        color: #ffffff;
+        text-decoration: none;
+        transform: translateY(-2px);
+    }
+    .mon-dash-link:focus-visible {
+        outline: 3px solid #00bcd4;
+        outline-offset: 2px;
+    }
+    .mon-dash-link-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 11px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        font-size: 1.15rem;
+        color: #0a1628;
+        background: #00bcd4;
+    }
+    .mon-dash-link-txt { flex: 1; min-width: 0; }
+    .mon-dash-link-txt strong {
+        display: block;
+        font-size: 0.93rem;
+        font-weight: 700;
+    }
+    .mon-dash-link-txt small {
+        display: block;
+        font-size: 0.8rem;
+        color: #cbd5e1;
+    }
+    .mon-dash-link .bi-arrow-right {
+        color: #00bcd4;
+        transition: transform 0.2s ease;
+    }
+    .mon-dash-link:hover .bi-arrow-right { transform: translateX(4px); }
+    @media (max-width: 576px) {
+        .mon-dash { padding: 20px 18px; }
+        .mon-dash-tag { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .mon-dash-wrap { animation: none; opacity: 1; }
+        .mon-dash-link, .mon-dash-link .bi-arrow-right { transition: none; }
+    }
+
     .empty-state {
         text-align: center;
         padding: 60px 24px;
@@ -310,6 +448,34 @@
             {{ rol }}
         </div>
     </div>
+
+    {% if monitoreos %}
+    <!-- Monitoreo: tarjeta aparte, fuera de los operativos -->
+    <section class="mon-dash-wrap" aria-labelledby="mon-dash-titulo">
+        <div class="mon-dash">
+            <div class="mon-dash-head">
+                <div class="mon-dash-icon" aria-hidden="true"><i class="bi bi-speedometer2"></i></div>
+                <div>
+                    <h2 id="mon-dash-titulo">Monitoreo</h2>
+                    <p>Seguimiento de la carga de personas de cada regional</p>
+                </div>
+                <span class="mon-dash-tag">Equipo de Evaluación</span>
+            </div>
+            <div class="mon-dash-links">
+                {% for link in monitoreos %}
+                <a href="{{ link.url }}" class="mon-dash-link">
+                    <span class="mon-dash-link-icon" aria-hidden="true"><i class="bi {{ link.icono }}"></i></span>
+                    <span class="mon-dash-link-txt">
+                        <strong>{{ link.titulo }}</strong>
+                        <small>{{ link.descripcion }}</small>
+                    </span>
+                    <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
 
     {% if operativos %}
     <div class="row g-4 mt-2">
@@ -410,7 +576,7 @@
         {% endfor %}
     </div>
 
-    {% else %}
+    {% elif not monitoreos %}
     <div class="empty-state">
         <i class="bi bi-info-circle empty-icon"></i>
         <h3>Sin acceso</h3>

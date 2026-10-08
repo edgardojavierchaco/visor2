@@ -1,0 +1,190 @@
+{% extends 'dashboard/bodydirector.html' %}
+{% load static %}
+
+{% block head %}
+{{ block.super }}
+<title>Monitoreo de carga por regional</title>
+{% include 'monitoreo_personas_2026/_estilos.html' %}
+{% endblock %}
+
+{% block content %}
+{{ block.super }}
+<main class="mon" data-pagina="resumen">
+    <div class="mon-topbar">
+        <a href="{% url 'evaluaciones_educativas:dashboard' %}" class="mon-volver"><i class="bi bi-arrow-left" aria-hidden="true"></i> Evaluaciones Educativas</a>
+    </div>
+
+    <header class="mon-hero">
+        <h1>Monitoreo de <span>carga por regional</span></h1>
+        <p>Qué regionales ya cargaron a sus aplicadores, veedores y tabuladores, y cuánto les falta. Tocá una regional para ver sus escuelas.</p>
+        <div class="mon-meta">
+            <span><i class="bi bi-clock" aria-hidden="true"></i> Actualizado {{ actualizado|date:"d/m/Y H:i" }}</span>
+            <a href="?tab={{ tab }}&refrescar=1" class="mon-pill" id="btn-actualizar"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Actualizar datos</a>
+        </div>
+    </header>
+
+    {% for message in messages %}
+    <div class="mon-alert {% if message.tags == 'success' %}mon-alert-success{% elif message.tags == 'warning' %}mon-alert-warning{% else %}mon-alert-error{% endif %}" role="alert">
+        <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% else %}bi-exclamation-triangle-fill{% endif %}" aria-hidden="true"></i>
+        {{ message }}
+    </div>
+    {% endfor %}
+
+    <div class="mon-tabs" role="tablist" aria-label="Operativo">
+        <button type="button" class="mon-tab {% if tab == 'fluidez' %}active{% endif %}" role="tab" id="tab-fluidez" data-tab="fluidez"
+                aria-selected="{% if tab == 'fluidez' %}true{% else %}false{% endif %}" aria-controls="panel-fluidez" tabindex="{% if tab == 'fluidez' %}0{% else %}-1{% endif %}">
+            <i class="bi bi-book-half" aria-hidden="true"></i>
+            <span>Fluidez Lectora Octubre<small>Aplicadores y tabuladores</small></span>
+        </button>
+        <button type="button" class="mon-tab {% if tab == 'aprender' %}active{% endif %}" role="tab" id="tab-aprender" data-tab="aprender"
+                aria-selected="{% if tab == 'aprender' %}true{% else %}false{% endif %}" aria-controls="panel-aprender" tabindex="{% if tab == 'aprender' %}0{% else %}-1{% endif %}">
+            <i class="bi bi-check2-circle" aria-hidden="true"></i>
+            <span>Aprender 2026<small>Aplicadores y veedores</small></span>
+        </button>
+    </div>
+
+    {# ═════════════════════════ FLUIDEZ OCTUBRE ═════════════════════════ #}
+    <section id="panel-fluidez" class="mon-panel" role="tabpanel" aria-labelledby="tab-fluidez" data-panel="fluidez" {% if tab != 'fluidez' %}hidden{% endif %}>
+        <h2 class="sr-only">Fluidez Lectora Octubre 2026</h2>
+        {% with t=fluidez.totales %}
+        <div class="mon-kpis">
+            {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Aplicadores cargados' icono='bi-person-badge' color='#1565c0' valor=t.aplicadores_cargados sub='Personas cargadas por las regionales' %}
+            {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Secciones con aplicador' icono='bi-grid-3x3-gap' color='#00bcd4' ind=t.aplicadores sub='de las secciones de 2º y 3º' %}
+            {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Tabuladores' icono='bi-table' color='#6366f1' ind=t.tabuladores sub='del cupo provincial' %}
+            {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Escuelas con tabulador' icono='bi-building-check' color='#10b981' ind=t.escuelas_tabulador sub='de las escuelas primarias' %}
+        </div>
+
+        {% include 'monitoreo_personas_2026/_toolbar.html' with grilla='fluidez' modo='regiones' estados=t.estados total=fluidez.filas|length %}
+        {% endwith %}
+
+        <div class="mon-grid" data-filtrable="fluidez" data-singular="regional" data-plural="regionales">
+            {% for f in fluidez.filas %}
+            <article class="mon-card is-link est-{{ f.estado }}" data-item
+                     data-texto="{{ f.region }}" data-estado="{{ f.estado }}" data-nombre="{{ forloop.counter }}" data-avance="{{ f.avance|default_if_none:'101' }}"
+                     style="animation-delay: {% widthratio forloop.counter0 1 25 %}ms">
+                <div class="mon-card-head">
+                    <div class="ring {{ f.estado }}" style="--p: {{ f.avance|default:0 }}" title="Avance general (promedio de los indicadores)" aria-hidden="true"><span>{% if f.avance is not None %}{{ f.avance }}%{% else %}—{% endif %}</span></div>
+                    <div class="mon-card-head-txt">
+                        <h3 class="mon-card-title">
+                            <a class="mon-card-link" href="{% url 'evaluaciones_educativas:monitoreo_personas_2026:detalle_regional' region=f.region %}?tab=fluidez">{{ f.region }}{% if f.avance is not None %}<span class="sr-only">, avance general {{ f.avance }}%</span>{% endif %}</a>
+                        </h3>
+                        <div class="mon-card-sub">
+                            {% include 'monitoreo_personas_2026/_chip_estado.html' with estado=f.estado %}
+                            <span>{{ f.aplicadores_cargados }} aplicador{{ f.aplicadores_cargados|pluralize:"es" }} cargado{{ f.aplicadores_cargados|pluralize }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mon-card-metricas">
+                    {% include 'monitoreo_personas_2026/_metrica.html' with ind=f.aplicadores etiqueta='Secciones con aplicador' icono='bi-person-badge' vacio='Sin secciones de 2º y 3º' nota=f.nota_aplicadores %}
+                    {% include 'monitoreo_personas_2026/_metrica.html' with ind=f.tabuladores etiqueta='Tabuladores (cupo)' icono='bi-table' vacio='Sin cupo asignado' nota='' %}
+                    {% include 'monitoreo_personas_2026/_metrica.html' with ind=f.escuelas_tabulador etiqueta='Escuelas con tabulador' icono='bi-building-check' vacio='Sin escuelas primarias' nota='' %}
+                </div>
+                {% include 'monitoreo_personas_2026/_pie_region.html' with faltantes=f.faltantes estado=f.estado %}
+            </article>
+            {% empty %}
+            <div class="mon-vacio"><i class="bi bi-inbox" aria-hidden="true"></i>No hay regionales para mostrar.</div>
+            {% endfor %}
+            <div class="mon-vacio" data-sin-resultados hidden>
+                <i class="bi bi-search" aria-hidden="true"></i>
+                Ninguna regional coincide con la búsqueda o el filtro.
+                <div><button type="button" class="mon-limpiar" data-limpiar-vacio><i class="bi bi-x-circle" aria-hidden="true"></i> Limpiar filtros</button></div>
+            </div>
+        </div>
+    </section>
+
+    {# ═════════════════════════ APRENDER 2026 ═════════════════════════ #}
+    <section id="panel-aprender" class="mon-panel" role="tabpanel" aria-labelledby="tab-aprender" data-panel="aprender" {% if tab != 'aprender' %}hidden{% endif %}>
+        <h2 class="sr-only">Aprender 2026</h2>
+        {% with t=aprender.totales %}
+        <div class="mon-kpis">
+            {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Escuelas que participan' icono='bi-buildings' color='#1565c0' valor=t.escuelas sub='Con participación validada en Aprender' %}
+            {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Secciones con aplicador' icono='bi-person-badge' color='#00bcd4' ind=t.aplicadores sub='de las secciones habilitadas' %}
+            {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Escuelas con veedor' icono='bi-eye' color='#6366f1' ind=t.veedores sub='de las escuelas' %}
+            {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Asistentes de veedor' icono='bi-person-plus' color='#10b981' valor=t.asistentes sub='Opcional en escuelas con 2 o más secciones' %}
+        </div>
+
+        {% include 'monitoreo_personas_2026/_toolbar.html' with grilla='aprender' modo='regiones' estados=t.estados total=aprender.filas|length %}
+        {% endwith %}
+
+        <div class="mon-grid" data-filtrable="aprender" data-singular="regional" data-plural="regionales">
+            {% for f in aprender.filas %}
+            <article class="mon-card is-link est-{{ f.estado }}" data-item
+                     data-texto="{{ f.region }}" data-estado="{{ f.estado }}" data-nombre="{{ forloop.counter }}" data-avance="{{ f.avance|default_if_none:'101' }}"
+                     style="animation-delay: {% widthratio forloop.counter0 1 25 %}ms">
+                <div class="mon-card-head">
+                    <div class="ring {{ f.estado }}" style="--p: {{ f.avance|default:0 }}" title="Avance general (promedio de los indicadores)" aria-hidden="true"><span>{% if f.avance is not None %}{{ f.avance }}%{% else %}—{% endif %}</span></div>
+                    <div class="mon-card-head-txt">
+                        <h3 class="mon-card-title">
+                            <a class="mon-card-link" href="{% url 'evaluaciones_educativas:monitoreo_personas_2026:detalle_regional' region=f.region %}?tab=aprender">{{ f.region }}{% if f.avance is not None %}<span class="sr-only">, avance general {{ f.avance }}%</span>{% endif %}</a>
+                        </h3>
+                        <div class="mon-card-sub">
+                            {% include 'monitoreo_personas_2026/_chip_estado.html' with estado=f.estado %}
+                            <span>{{ f.escuelas }} escuela{{ f.escuelas|pluralize }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mon-card-metricas">
+                    {% include 'monitoreo_personas_2026/_metrica.html' with ind=f.aplicadores etiqueta='Secciones con aplicador' icono='bi-person-badge' vacio='Sin secciones habilitadas' nota='' %}
+                    {% include 'monitoreo_personas_2026/_metrica.html' with ind=f.veedores etiqueta='Escuelas con veedor' icono='bi-eye' vacio='Sin escuelas que participen' nota='' %}
+                    <div class="met">
+                        <div class="met-top">
+                            <span class="met-label"><i class="bi bi-person-plus" aria-hidden="true"></i>Asistentes de veedor</span>
+                            <span class="met-val">{{ f.asistentes }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% include 'monitoreo_personas_2026/_pie_region.html' with faltantes=f.faltantes estado=f.estado %}
+            </article>
+            {% empty %}
+            <div class="mon-vacio"><i class="bi bi-inbox" aria-hidden="true"></i>No hay regionales para mostrar.</div>
+            {% endfor %}
+            <div class="mon-vacio" data-sin-resultados hidden>
+                <i class="bi bi-search" aria-hidden="true"></i>
+                Ninguna regional coincide con la búsqueda o el filtro.
+                <div><button type="button" class="mon-limpiar" data-limpiar-vacio><i class="bi bi-x-circle" aria-hidden="true"></i> Limpiar filtros</button></div>
+            </div>
+        </div>
+    </section>
+</main>
+
+{% include 'monitoreo_personas_2026/_filtros_js.html' %}
+<script>
+(function () {
+    // Pestañas: cambian sin recargar, dejan la pestaña en la URL y se
+    // manejan con flechas, Inicio y Fin (patrón ARIA de tabs).
+    const tabs = Array.from(document.querySelectorAll('.mon-tab'));
+    const actualizar = document.getElementById('btn-actualizar');
+
+    function activar(btn, enfocar) {
+        const tab = btn.dataset.tab;
+        tabs.forEach(function (b) {
+            const activa = b === btn;
+            b.classList.toggle('active', activa);
+            b.setAttribute('aria-selected', activa ? 'true' : 'false');
+            b.tabIndex = activa ? 0 : -1;
+        });
+        document.querySelectorAll('.mon-panel').forEach(function (p) { p.hidden = p.dataset.panel !== tab; });
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tab);
+        url.searchParams.delete('refrescar');
+        history.replaceState(null, '', url);
+        window.monGuardarResumen();
+        actualizar.href = '?tab=' + tab + '&refrescar=1';
+        if (enfocar) btn.focus();
+    }
+
+    tabs.forEach(function (btn, i) {
+        btn.addEventListener('click', function () { activar(btn, false); });
+        btn.addEventListener('keydown', function (e) {
+            let destino = null;
+            if (e.key === 'ArrowRight') destino = tabs[(i + 1) % tabs.length];
+            else if (e.key === 'ArrowLeft') destino = tabs[(i - 1 + tabs.length) % tabs.length];
+            else if (e.key === 'Home') destino = tabs[0];
+            else if (e.key === 'End') destino = tabs[tabs.length - 1];
+            if (destino) { e.preventDefault(); activar(destino, true); }
+        });
+    });
+    window.monGuardarResumen();
+})();
+</script>
+{% endblock %}

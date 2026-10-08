@@ -17,3 +17,5 @@ staticfiles/
 
 *.md
 
+
+.env.local

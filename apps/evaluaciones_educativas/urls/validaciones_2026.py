@@ -121,6 +121,13 @@ urlpatterns = [
         name='personas_establecimientos',
     ),
 
+    # Exportar personas de la región a Excel
+    path(
+        'personas/region/<str:region>/exportar-excel/',
+        validaciones_2026.exportar_personas_excel_region,
+        name='exportar_personas_excel',
+    ),
+
     # API: Obtener secciones de un establecimiento (JSON)
     path(
         'personas/establecimiento/<str:cueanexo>/secciones_json/',
