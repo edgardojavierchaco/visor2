@@ -536,7 +536,7 @@
                         <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Estado actual</strong>Estado vigente registrado para ese CUE-Anexo.</div></div>
                         <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Hallazgos</strong>Sin filtro por tipo muestra el total del CUE-Anexo. Con un Tipo de hallazgo seleccionado muestra “hallazgo filtrado” o “hallazgos filtrados” para indicar cuántos coinciden con ese filtro, seguido del total general del CUE-Anexo.</div></div>
                         <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Resultado</strong>Resume si el CUE-Anexo requiere revisión según la auditoría vigente.</div></div>
-                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Acción</strong><strong class="d-inline">Ver detalle</strong> abre la revisión dentro de la tabla y <strong class="d-inline">PDF</strong> genera el informe completo de ese CUE-Anexo.</div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Acción</strong>el <strong class="d-inline">ojito</strong> abre los registros RA 2026 y SGE 2026 en paralelo; <strong class="d-inline">Ver detalle</strong> abre la revisión de hallazgos dentro de la tabla y <strong class="d-inline">PDF</strong> genera el informe de auditoría de ese CUE-Anexo.</div></div>
                         <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Filas por página</strong>Permite mostrar 10, 25 o 50 registros por página. Esta opción sólo cambia la visualización de la tabla.</div></div>
                     </div>
                 </section>
@@ -544,7 +544,7 @@
                 <section class="ayuda-comparativa-section">
                     <h6><i class="fas fa-search-plus text-primary me-2" aria-hidden="true"></i>Ver detalle</h6>
                     <div class="ayuda-comparativa-card" style="border-left-color: #1d4ed8;">
-                        <p>El botón <strong class="d-inline">Ver detalle</strong> abre la revisión del CUE-Anexo sin salir de la tabla.</p>
+                        <p>El <strong class="d-inline">ojito</strong> muestra los registros completos RA 2026 y SGE 2026 en un modal, sin depender de que existan hallazgos. El botón <strong class="d-inline">Ver detalle</strong> mantiene la revisión de hallazgos dentro de la tabla.</p>
                         <div class="row g-3">
                             <div class="col-md-6"><div class="p-3 rounded-3 h-100" style="background: #fff7ed; border: 1px solid #fed7aa;"><strong style="color: #9a3412;">Sólo hallazgos</strong>Muestra el resumen de los hallazgos y la información necesaria para entenderlos y corregirlos. No muestra el detalle completo de la auditoría. Si hay un Tipo de hallazgo filtrado, esta vista se concentra en ese tipo.</div></div>
                             <div class="col-md-6"><div class="p-3 rounded-3 h-100" style="background: #eff6ff; border: 1px solid #bfdbfe;"><strong>Ver todo</strong>Mantiene el resumen y agrega el detalle completo de la auditoría RA/SGE del CUE-Anexo, incluyendo estructuras con diferencias y coincidencias.</div></div>
@@ -634,6 +634,7 @@
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+{% include 'indicadoresie/seguimiento/_detalle_ra_sge_modal.html' %}
 
 <script>
 $(function () {
@@ -3882,6 +3883,7 @@ $(function () {
                 if (type !== 'display') return '';
                 var cue = escapeAttribute(row.cueanexo);
                 var actions = [];
+                actions.push('<button type="button" class="btn btn-sm btn-outline-primary btn-detalle-ra-sge" title="Ver registros RA 2026 y SGE 2026" aria-label="Ver registros RA 2026 y SGE 2026 del CUE-Anexo ' + cue + '" data-detalle-vista="comparativa" data-cueanexo="' + cue + '" data-establecimiento="' + escapeAttribute(row.establecimiento) + '"><i class="fas fa-eye" aria-hidden="true"></i></button>');
                 if (visibleSituationCount(row) > 0 || row.estado_codigo === 'sin_diferencias') {
                     actions.push('<button type="button" class="btn btn-sm btn-outline-primary detail-toggle" aria-expanded="false" aria-controls="' + escapeAttribute(detailId(row)) + '" aria-label="Ver detalle del CUE-Anexo ' + cue + '">Ver detalle</button>');
                 }
