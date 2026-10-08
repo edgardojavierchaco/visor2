@@ -345,10 +345,6 @@ class ActividadDirectorForm(StyledForm):
         self.fields["titulaciones_multiplan"].choices = [
             (str(item["id_titulacion"]), item["descripcion"])
             for item in title_options
-            # "NO CORRESPONDE" es una opción válida para la titulación
-            # simple de Secundario-Común, pero no constituye un plan
-            # y por eso no debe ofrecerse dentro de Multiplan.
-            if int(item["id_titulacion"]) != -2
         ]
         self.fields["titulaciones_multiplan"].widget.attrs.update({
             "size": "6",
