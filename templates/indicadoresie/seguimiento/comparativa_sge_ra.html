@@ -2467,25 +2467,11 @@ $(function () {
     }
 
     function beginRefreshGuard() {
-        var hadPendingRequest = Boolean(currentRequest || loadingTimer);
         refreshInProgress = true;
         reloadRequestedAfterRefresh = true;
         postRefreshReloadScheduled = false;
-        requestId += 1;
-        cancelPostRefreshRetry();
-        if (textTimer) {
-            window.clearTimeout(textTimer);
-            textTimer = null;
-        }
-        clearDetailRequests();
-        abortBulkExportRequest();
-        if (currentRequest) {
-            var requestToAbort = currentRequest;
-            currentRequest = null;
-            requestToAbort.abort();
-        }
-        $('#requestError').hide().text('');
-        if (hadPendingRequest) endLoading(hasLoadedSnapshot, false);
+        // El refresh no debe cancelar las consultas ni ocultar la última carga.
+        if (hasLoadedSnapshot) endLoading(exportsEnabled, false);
     }
 
     function finishRefreshGuardSuccess(event) {
@@ -2523,24 +2509,9 @@ $(function () {
     }
 
     function finishRefreshGuardError() {
-        var hadPendingRequest = Boolean(currentRequest || loadingTimer);
         refreshInProgress = false;
         reloadRequestedAfterRefresh = false;
         postRefreshReloadScheduled = false;
-        requestId += 1;
-        cancelPostRefreshRetry();
-        if (textTimer) {
-            window.clearTimeout(textTimer);
-            textTimer = null;
-        }
-        clearDetailRequests();
-        abortBulkExportRequest();
-        if (currentRequest) {
-            var requestToAbort = currentRequest;
-            currentRequest = null;
-            requestToAbort.abort();
-        }
-        if (hadPendingRequest) endLoading(hasLoadedSnapshot, false);
     }
 
     document.addEventListener('comparativa:refresh-start', beginRefreshGuard);
@@ -3705,7 +3676,6 @@ $(function () {
     }
 
     function loadDetail(rowData, shell) {
-        if (refreshInProgress) return;
         var key = detailRequestKey(rowData);
         var request = detailRequests[key];
         if (!request) {
@@ -3732,7 +3702,7 @@ $(function () {
                 renderDetailError(shell, 'La respuesta recibida no contiene el detalle esperado. Intente nuevamente.');
             }
         }).fail(function (xhr, status) {
-            if (status === 'abort' || refreshInProgress || !shell || !shell.length) return;
+            if (status === 'abort' || !shell || !shell.length) return;
             renderDetailError(shell, 'Intente nuevamente.');
         });
     }
@@ -3765,10 +3735,7 @@ $(function () {
             window.clearTimeout(textTimer);
             textTimer = null;
         }
-        if (refreshInProgress) {
-            reloadRequestedAfterRefresh = true;
-            return;
-        }
+        if (refreshInProgress) reloadRequestedAfterRefresh = true;
         if (!isPostRefreshLoad) {
             cancelPostRefreshRetry();
             postRefreshReloadScheduled = false;
@@ -3780,7 +3747,7 @@ $(function () {
         var thisRequest = ++requestId;
         var reloadAfterRequest = false;
         var requestSucceeded = false;
-        var preserveSnapshot = loadOptions.preserveSnapshot === true && hasLoadedSnapshot;
+        var preserveSnapshot = (loadOptions.preserveSnapshot === true || refreshInProgress) && hasLoadedSnapshot;
         if (currentRequest) currentRequest.abort();
         if (!preserveSnapshot) beginLoading();
         $('#requestError').hide().text('');
@@ -3794,10 +3761,12 @@ $(function () {
             var validResponse = isRecord(response) && Array.isArray(response.data)
                 && isRecord(response.resumen) && isRecord(response.auditoria);
             if (!validResponse) {
-                hasLoadedSnapshot = false;
-                lastSuccessfulRequestKey = null;
-                table.clear().draw();
-                updateSummary(null);
+                if (!preserveSnapshot) {
+                    hasLoadedSnapshot = false;
+                    lastSuccessfulRequestKey = null;
+                    table.clear().draw();
+                    updateSummary(null);
+                }
                 $('#requestError').text('No fue posible cargar la auditoría: la respuesta recibida no tiene el formato esperado. Intente nuevamente.').show();
                 return;
             }
@@ -3813,10 +3782,6 @@ $(function () {
             }
         }).fail(function (xhr, status) {
             if (thisRequest !== requestId || status === 'abort') return;
-            if (refreshInProgress) {
-                reloadRequestedAfterRefresh = true;
-                return;
-            }
             var httpStatus = Number(xhr && xhr.status) || 0;
             var retryable = status === 'timeout'
                 || httpStatus === 0
@@ -3827,11 +3792,6 @@ $(function () {
                 retryScheduled = true;
                 postRefreshRetryTimer = window.setTimeout(function () {
                     postRefreshRetryTimer = null;
-                    if (refreshInProgress) {
-                        reloadRequestedAfterRefresh = true;
-                        postRefreshReloadScheduled = false;
-                        return;
-                    }
                     loadData({
                         postRefresh: isPostRefreshLoad,
                         retryRemaining: retryRemaining - 1,
@@ -3840,7 +3800,7 @@ $(function () {
                 }, 1000);
                 return;
             }
-            if (canKeepCurrentSnapshot) {
+            if (canKeepCurrentSnapshot || preserveSnapshot) {
                 $('#requestError').text('No fue posible actualizar la auditoría. Se mantiene la última carga disponible. Intente nuevamente.').show();
                 return;
             }
@@ -3941,7 +3901,6 @@ $(function () {
             return;
         }
 
-        if (refreshInProgress) return;
         row.child(detailShellMarkup(rowData), 'detalle-row').show();
         rowElement.addClass('shown');
         button.attr({
