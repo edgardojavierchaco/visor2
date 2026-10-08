@@ -1,5 +1,7 @@
 import datetime
 import json
+import logging
+from hashlib import sha256
 import threading
 import time
 import uuid
@@ -1488,6 +1490,7 @@ def _respuesta_export_bulk(request, resumen_autorizado, auditoria):
 
 
 @method_decorator(login_required, name='dispatch')
+@method_decorator(never_cache, name='dispatch')
 class ComparativaSgeRaView(TemplateView):
     template_name = 'indicadoresie/seguimiento/comparativa_sge_ra.html'
 
@@ -1514,6 +1517,77 @@ class ComparativaSgeRaView(TemplateView):
         return context
 
 
+# Respuestas en el servidor; never_cache impide su almacenamiento HTTP.
+COMPARATIVA_DATOS_CACHE_PREFIX = 'indicadoresie:comparativa:datos:v1'
+COMPARATIVA_DATOS_CACHE_TIMEOUT = 6 * 60 * 60
+COMPARATIVA_DATOS_ESTADO_KEY = f'{COMPARATIVA_DATOS_CACHE_PREFIX}:estado'
+logger = logging.getLogger(__name__)
+
+
+def _comparativa_estado_cache_datos():
+    estado = cache.get(COMPARATIVA_DATOS_ESTADO_KEY)
+    if estado is None:
+        cache.add(
+            COMPARATIVA_DATOS_ESTADO_KEY,
+            {'version': str(uuid.uuid4()), 'publicando': False},
+            24 * 60 * 60,
+        )
+        estado = cache.get(COMPARATIVA_DATOS_ESTADO_KEY)
+    return estado
+
+
+def _comparativa_marcar_cache_datos(job_id, publicando):
+    estado = _comparativa_estado_cache_datos() or {}
+    if not publicando and estado.get('job_id') not in (None, str(job_id)):
+        return  # Una reconciliación anterior no debe publicar sobre otro refresh.
+    cache.set(
+        COMPARATIVA_DATOS_ESTADO_KEY,
+        {
+            'version': estado.get('version', str(uuid.uuid4())) if publicando else str(job_id),
+            'publicando': publicando,
+            'job_id': str(job_id),
+        },
+        24 * 60 * 60,
+    )
+
+
+def _comparativa_buscar_cache_datos(request, contexto, params):
+    # Resolver permisos antes de buscar: ni usuarios ni alcances comparten claves.
+    fecha = FechaActualizacionComparativaSgeRa.objects.filter(id=1).first()
+    fecha_version = fecha.fecha.isoformat() if fecha and fecha.fecha else ''
+    try:
+        estado = _comparativa_estado_cache_datos()
+        if estado is None:
+            return None, None, None
+        identidad = {
+            'usuario': str(request.user.pk),
+            'cargo': contexto['cargo'],
+            'alcance': contexto['alcance'],
+            'regiones': contexto['regiones_permitidas'],
+            'cueanexos': sorted(contexto.get('cueanexos_permitidos') or []),
+            'params': params,
+            'fecha': fecha_version,
+            'version': estado['version'],
+        }
+        digest = sha256(json.dumps(identidad, sort_keys=True).encode('utf-8')).hexdigest()
+        key = f'{COMPARATIVA_DATOS_CACHE_PREFIX}:{digest}'
+        return cache.get(key), key, estado
+    except Exception:
+        logger.warning('No se pudo leer la caché de datos de Comparativa.')
+        return None, None, None
+
+
+def _comparativa_respuesta_cache_datos(payload, key, estado):
+    if key and estado and not estado['publicando'] and payload['auditoria']['valida']:
+        try:
+            # Si empezó/terminó un refresh mientras se consultaba, no guardar.
+            if _comparativa_estado_cache_datos() == estado:
+                cache.set(key, payload, COMPARATIVA_DATOS_CACHE_TIMEOUT)
+        except Exception:
+            logger.warning('No se pudo guardar la caché de datos de Comparativa.')
+    return JsonResponse(payload)
+
+
 @login_required
 @never_cache
 def comparativa_sge_ra_json(request):
@@ -1521,6 +1595,15 @@ def comparativa_sge_ra_json(request):
         return JsonResponse({'error': 'Método no permitido.'}, status=405)
 
     contexto_sge = resolver_contexto_sge(request)
+    params = _parametros_comparativa(request) if request.method == 'GET' else None
+    cache_key = cache_estado = None
+    if params is not None:
+        payload, cache_key, cache_estado = _comparativa_buscar_cache_datos(
+            request, contexto_sge, params,
+        )
+        if payload is not None:
+            return JsonResponse(payload)
+
     resumen_autorizado = _queryset_resumen_autorizado(contexto_sge)
     estado_auditoria = (
         AuditoriaSgeRaEstado.objects.using('sge_nacion')
@@ -1531,8 +1614,6 @@ def comparativa_sge_ra_json(request):
 
     if request.method == 'POST':
         return _respuesta_export_bulk(request, resumen_autorizado, auditoria)
-
-    params = _parametros_comparativa(request)
 
     if params['detalle_cueanexo']:
         cueanexo = params['detalle_cueanexo']
@@ -1556,10 +1637,10 @@ def comparativa_sge_ra_json(request):
             situaciones,
             situaciones_visibles,
         )
-        return JsonResponse({
+        return _comparativa_respuesta_cache_datos({
             'detalle_cue': detalle,
             'auditoria': auditoria,
-        })
+        }, cache_key, cache_estado)
 
     resumen_filtrado = _filtrar_resumen(
         resumen_autorizado,
@@ -1572,12 +1653,12 @@ def comparativa_sge_ra_json(request):
         auditoria['valida'],
     )
 
-    return JsonResponse({
+    return _comparativa_respuesta_cache_datos({
         'data': filas,
         'resumen': _respuesta_resumen(filas),
         'auditoria': auditoria,
         'tipos_situacion': _catalogo_tipos_situacion(),
-    })
+    }, cache_key, cache_estado)
 
 
 # Actualización de fecha y materializadas exclusiva de Comparativa RA-SGE.
@@ -1731,6 +1812,7 @@ def _comparativa_reconciliar_estado_job(job_id, state):
                 )
                 return state
 
+        _comparativa_marcar_cache_datos(job_id, publicando=False)
         state.update({
             'status': 'success',
             'step': 8,
@@ -1948,6 +2030,9 @@ def _ejecutar_refresh_comparativa_sge_ra_job(job_id, nueva_fecha):
             if missing_views:
                 raise RuntimeError('Faltan materializadas: ' + ', '.join(missing_views))
 
+            # Conservar respuestas publicadas; no cachear datos durante el refresh.
+            # Ante error queda bloqueada la escritura hasta una publicación exitosa.
+            _comparativa_marcar_cache_datos(job_id, publicando=True)
             cursor.execute('SELECT pg_backend_pid();')
             refresh_backend_pid = cursor.fetchone()[0]
 
@@ -2072,6 +2157,7 @@ def _ejecutar_refresh_comparativa_sge_ra_job(job_id, nueva_fecha):
                 id=1,
                 defaults={'fecha': nueva_fecha},
             )
+            _comparativa_marcar_cache_datos(job_id, publicando=False)
             _comparativa_actualizar_estado_job(
                 job_id,
                 status='success',
