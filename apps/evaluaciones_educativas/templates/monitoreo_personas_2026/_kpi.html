@@ -1,0 +1,25 @@
+{% comment %}
+  Tarjeta de total. Con `ind` muestra cargados / esperados y barra; con `valor`, solo el número.
+  Uso: {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Tabuladores' icono='bi-table' color='#6366f1' ind=t.tabuladores sub='del cupo' %}
+{% endcomment %}
+<div class="kpi" style="--kpi-color:{{ color|default:'#1565c0' }}">
+    <div class="kpi-top">
+        <div class="kpi-icon" aria-hidden="true"><i class="bi {{ icono }}"></i></div>
+        <div class="kpi-label">{{ titulo }}</div>
+    </div>
+    {% if ind %}
+        {% if ind.esperados %}
+            <div class="kpi-value">{{ ind.cargados }} <small>/ {{ ind.esperados }}</small></div>
+            <div class="bar {{ ind.estado }}" role="progressbar" aria-valuenow="{{ ind.pct }}" aria-valuemin="0" aria-valuemax="100"
+                 aria-label="{{ titulo }}: {{ ind.cargados }} de {{ ind.esperados }}"><span style="width: {{ ind.pct }}%"></span></div>
+            <div class="kpi-sub">{{ ind.pct }}% {{ sub }}{% if ind.faltan %} · faltan {{ ind.faltan }}{% endif %}</div>
+        {% else %}
+            <div class="kpi-value">{{ ind.cargados }}</div>
+            <div class="kpi-sub">{% if ind.esperados is None %}Total de SGE no disponible{% else %}{{ vacio|default:'Sin meta' }}{% endif %}</div>
+        {% endif %}
+    {% else %}
+        <div class="kpi-value">{{ valor }}</div>
+        {% if sub %}<div class="kpi-sub">{{ sub }}</div>{% endif %}
+    {% endif %}
+    {% if nota %}<div class="met-nota"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ nota }}</div>{% endif %}
+</div>

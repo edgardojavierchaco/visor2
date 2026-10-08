@@ -1,11 +1,15 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
 from django.views.decorators.http import require_POST
 from django.urls import reverse
 from django.db.models import Count, Q, Value
 from django.db.models.functions import Replace
+import io
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 from apps.evaluaciones_educativas.forms.validaciones_2026 import (
     ValVeedorForm,
@@ -969,6 +973,7 @@ def lista_establecimientos_personas(request, region):
     establecimientos = (
         ValEstablecimiento.objects
         .filter(region=region, participa_aprender="participa")
+        .select_related('cabecera')
         .order_by('escuela')
     )
 
@@ -1029,6 +1034,183 @@ def lista_establecimientos_personas(request, region):
         'form_editar': ValPersonaEditForm(),
     }
     return render(request, 'validaciones_2026/establecimientos_personas.html', contexto)
+
+
+# ---------------------------------------------------------------------------
+# Exportar personas de la región a Excel
+# ---------------------------------------------------------------------------
+@login_required
+def exportar_personas_excel_region(request, region):
+    """
+    Genera y descarga un archivo Excel con todos los establecimientos
+    de la región que participan, sus secciones, aplicadores, veedores
+    y asistentes de veedor.
+
+    Columnas:
+      Regional | Cód. Cabecera | Establecimiento | Nombre Grado |
+      Sección | Turno | Matrícula |
+      Aplicador Apellido | Aplicador Nombre | Aplicador CUIL |
+      Veedor Apellido   | Veedor Nombre   | Veedor CUIL   |
+      Asistente Apellido | Asistente Nombre | Asistente CUIL
+    """
+    cuil = _get_cuil(request)
+
+    regiones_autorizadas = list(
+        ValReferenteCargaTemporal.objects
+        .filter(cuil=cuil)
+        .values_list('region', flat=True)
+        .distinct()
+    )
+    if not regiones_autorizadas or region not in regiones_autorizadas:
+        return redirect('evaluaciones_educativas:validaciones_2026:personas_lista')
+
+    # ── Traer secciones con todo lo necesario en pocas queries ─────────────
+    secciones = (
+        ValSeccion.objects
+        .filter(
+            grado__establecimiento__region=region,
+            grado__establecimiento__participa_aprender='participa',
+        )
+        .exclude(estado_validacion='DESHABILITADO')
+        .select_related(
+            'grado__establecimiento__cabecera',
+            'aplicadores',          # OneToOne
+        )
+        .order_by(
+            'grado__establecimiento__escuela',
+            'grado__nombre_grado',
+            'seccion',
+            'turno',
+        )
+    )
+
+    # Veedores y asistentes indexados por cueanexo
+    veedores_qs = (
+        ValVeedor.objects
+        .filter(establecimiento__region=region)
+        .select_related('establecimiento')
+    )
+    veedores_por_est = {}     # cueanexo → ValVeedor (asistente_veedor=False)
+    asistentes_por_est = {}   # cueanexo → ValVeedor (asistente_veedor=True)
+    for v in veedores_qs:
+        cue = v.establecimiento_id
+        if v.asistente_veedor:
+            asistentes_por_est[cue] = v
+        else:
+            veedores_por_est[cue] = v
+
+    # ── Crear el workbook ───────────────────────────────────────────────────
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = f"Personas {region}"
+
+    # Estilos
+    header_font   = Font(bold=True, color='FFFFFF', size=11)
+    header_fill   = PatternFill('solid', fgColor='1E3A5F')
+    center_align  = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    left_align    = Alignment(horizontal='left',   vertical='center', wrap_text=True)
+    thin_side     = Side(style='thin', color='CCCCCC')
+    thin_border   = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+
+    alt_fill      = PatternFill('solid', fgColor='F0F4FA')   # filas pares
+
+    # ── Encabezados ─────────────────────────────────────────────────────────
+    HEADERS = [
+        'Regional',
+        'Cód. Cabecera',
+        'Establecimiento',
+        'CUE-Anexo',
+        'Nombre Grado',
+        'Sección',
+        'Turno',
+        'Matrícula',
+        'Aplic. Apellido',
+        'Aplic. Nombre',
+        'Aplic. CUIL',
+        'Veedor Apellido',
+        'Veedor Nombre',
+        'Veedor CUIL',
+        'Asistente Apellido',
+        'Asistente Nombre',
+        'Asistente CUIL',
+    ]
+    ws.append(HEADERS)
+    for col_idx, _ in enumerate(HEADERS, start=1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.font      = header_font
+        cell.fill      = header_fill
+        cell.alignment = center_align
+        cell.border    = thin_border
+
+    ws.row_dimensions[1].height = 30
+
+    # ── Filas de datos ───────────────────────────────────────────────────────
+    for row_idx, sec in enumerate(secciones, start=2):
+        est      = sec.grado.establecimiento
+        cabecera = est.cabecera
+
+        # Aplicador (OneToOne, puede no existir)
+        try:
+            aplic = sec.aplicadores
+        except ValAplicador.DoesNotExist:
+            aplic = None
+
+        veedor    = veedores_por_est.get(est.cueanexo)
+        asistente = asistentes_por_est.get(est.cueanexo)
+
+        fila = [
+            est.region,
+            cabecera.codigo_cabecera if cabecera else '',
+            est.escuela,
+            est.cueanexo,
+            sec.grado.nombre_grado,
+            sec.seccion,
+            sec.turno,
+            sec.matricula if sec.matricula is not None else '',
+            # Aplicador
+            aplic.apellido if aplic else '',
+            aplic.nombre   if aplic else '',
+            aplic.cuil     if aplic else '',
+            # Veedor
+            veedor.apellido if veedor else '',
+            veedor.nombre   if veedor else '',
+            veedor.cuil     if veedor else '',
+            # Asistente
+            asistente.apellido if asistente else '',
+            asistente.nombre   if asistente else '',
+            asistente.cuil     if asistente else '',
+        ]
+        ws.append(fila)
+
+        # Estilo de fila
+        fill = alt_fill if row_idx % 2 == 0 else None
+        for col_idx in range(1, len(HEADERS) + 1):
+            cell = ws.cell(row=row_idx, column=col_idx)
+            if fill:
+                cell.fill = fill
+            cell.border    = thin_border
+            cell.alignment = left_align
+
+    # ── Anchos de columna ────────────────────────────────────────────────────
+    col_widths = [18, 14, 40, 12, 16, 10, 20, 11, 20, 20, 16, 20, 20, 16, 20, 20, 16]
+    for col_idx, width in enumerate(col_widths, start=1):
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+    # Congelar la fila de encabezado
+    ws.freeze_panes = 'A2'
+
+    # ── Respuesta HTTP ───────────────────────────────────────────────────────
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f"personas_region_{region}.xlsx".replace(' ', '_')
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 
 # ---------------------------------------------------------------------------

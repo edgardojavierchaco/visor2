@@ -160,6 +160,71 @@
       .cupo-aplicadores strong { color: #0f766e; }
       .cupo-aplicadores.completo strong { color: #b45309; }
 
+      /* Barra de búsqueda + botón Excel */
+      .search-excel-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 1.5rem;
+      }
+      .search-excel-row .search-wrap {
+        flex: 1;
+        margin-bottom: 0;
+      }
+      .btn-excel {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        background: linear-gradient(135deg, #059669, #047857);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        padding: 10px 18px;
+        white-space: nowrap;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.2s;
+        box-shadow: 0 2px 8px rgba(5,150,105,0.25);
+      }
+      .btn-excel:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(5,150,105,0.35);
+        color: #fff;
+      }
+      .btn-excel i { font-size: 1rem; }
+
+      /* Datos de la cabecera asignada */
+      .card-cabecera-info {
+        background: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: 7px;
+        padding: 7px 10px;
+        margin-bottom: 0.6rem;
+        font-size: 0.72rem;
+      }
+      .cabecera-label {
+        font-weight: 700;
+        color: #0369a1;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .cabecera-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+      }
+      .cabecera-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: #0c4a6e;
+      }
+      .cabecera-item i { color: #0284c7; font-size: 0.78rem; }
+
       /* Footer de tarjeta */
       .card-footer-row {
         display: flex; align-items: center; justify-content: space-between;
@@ -394,12 +459,20 @@
         </div>
       </div>
 
-      <!-- Buscador -->
-      <div class="search-wrap">
-        <i class="bi bi-search"></i>
-        <input type="text" class="search-input" id="buscadorEscuelas"
-               placeholder="Buscar establecimiento por nombre o CUE..."
-               oninput="filtrarCards(this.value)" autocomplete="off" />
+      <!-- Buscador + botón descarga Excel -->
+      <div class="search-excel-row">
+        <div class="search-wrap">
+          <i class="bi bi-search"></i>
+          <input type="text" class="search-input" id="buscadorEscuelas"
+                 placeholder="Buscar establecimiento por nombre o CUE..."
+                 oninput="filtrarCards(this.value)" autocomplete="off" />
+        </div>
+        <a href="{% url 'evaluaciones_educativas:validaciones_2026:exportar_personas_excel' region_actual %}"
+           class="btn-excel"
+           id="btn-descargar-excel"
+           title="Descargar Excel con todas las personas de la región">
+          <i class="bi bi-file-earmark-excel-fill"></i>Descargar Excel
+        </a>
       </div>
 
       <!-- Grid de tarjetas -->
@@ -429,6 +502,24 @@
               <div class="card-meta-item"><i class="bi bi-building"></i><span>{% if est.sector|upper == 'S/N' or est.sector == '#¡REF!' %}-{% else %}{{ est.sector }}{% endif %} | {% if est.ambito|upper == 'S/N' or est.ambito == '#¡REF!' %}-{% else %}{{ est.ambito }}{% endif %}</span></div>
               <div class="card-meta-item"><i class="bi bi-map"></i><span>{% if est.departamento|upper == 'S/N' or est.departamento == '#¡REF!' %}-{% else %}{{ est.departamento }}{% endif %}</span></div>
             </div>
+
+            <!-- Datos de la cabecera asignada -->
+            {% if est.cabecera %}
+            <div class="card-cabecera-info">
+              <div class="cabecera-label"><i class="bi bi-diagram-3-fill"></i>Cabecera asignada</div>
+              <div class="cabecera-items">
+                <span class="cabecera-item" title="Código de cabecera">
+                  <i class="bi bi-hash"></i>{{ est.cabecera.codigo_cabecera|default:"-" }}
+                </span>
+                <span class="cabecera-item" title="Localidad de la cabecera">
+                  <i class="bi bi-geo-alt-fill"></i>{{ est.cabecera.localidad|default:"-" }}
+                </span>
+                <span class="cabecera-item" title="Dirección de la cabecera">
+                  <i class="bi bi-pin-map-fill"></i>{{ est.cabecera.direccion|default:"-" }}
+                </span>
+              </div>
+            </div>
+            {% endif %}
 
             <!-- Badges personas -->
             <div class="d-flex flex-wrap gap-2 mb-2" id="badges-{{ est.cueanexo }}">
