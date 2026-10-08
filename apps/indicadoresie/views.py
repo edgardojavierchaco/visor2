@@ -1,5 +1,3 @@
-import datetime
-import json
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -7,16 +5,16 @@ from django.views.generic import ListView, TemplateView
 from django.db.models import Count, F, Value, Q
 from django.db.models.functions import Concat, Coalesce, Trim
 from django.shortcuts import render
-from django.utils import timezone
 
 # Importamos modelos
 from .models import (
     SeguimientoSIE2025, SIESegimiento, InformeSGE, 
-    FechaActualizacionSGE, UsuarioPerfil
+    FechaActualizacionComparativaSgeRa, UsuarioPerfil
 )
 
 # Importamos las funciones de lógica que creamos en el paso anterior
 from .views_dash import (
+    completar_indicadores_sge_2026,
     filtrar_queryset_sge,
     obtener_cargo_usuario,
     resolver_contexto_sge,
@@ -120,7 +118,7 @@ class SeguimientoSIE2025ListView(ListView):
 class InformeSGEListView(ListView):
     """
     VISTA PRINCIPAL: aplica el contexto territorial SGE compartido
-    y valida el 'lapicito' de edición.
+    y muestra la fecha compartida con Comparativa en modo solo lectura.
     """
     model = InformeSGE
     template_name = 'indicadoresie/seguimiento/list_sge.html' 
@@ -128,7 +126,7 @@ class InformeSGEListView(ListView):
     def get_queryset(self):
         contexto_sge = resolver_contexto_sge(self.request)
         queryset = filtrar_queryset_sge(
-            InformeSGE.objects.all(),
+            InformeSGE.objects.using('sge_nacion').all(),
             contexto_sge,
             campo_region="regional",
             campo_cueanexo="cueanexo",
@@ -175,18 +173,19 @@ class InformeSGEListView(ListView):
         # ACA ESTÁ LA MAGIA: Le enviamos el cargo al HTML para que lo imprima y filtre
         context['cargo_usuario'] = cargo
         
-        # EL LAPICITO: Solo habilitado si el nombre del rol es exactamente 'Administrador'
+        # Rol de administrador disponible para el contexto de la pantalla
         context['is_admin'] = (cargo == "Administrador")
         
-        # Fecha de actualización
-        obj_fecha = FechaActualizacionSGE.objects.filter(id=1).first()
+        # Fecha compartida con Comparativa; lectura mediante el mismo router.
+        obj_fecha = FechaActualizacionComparativaSgeRa.objects.filter(id=1).first()
         context['ultima_fecha'] = obj_fecha.fecha if obj_fecha else None
         
-        # Regiones para el selector de filtros (basado en lo que puede ver)
+        # Autorizar primero; filtros y tabla comparten los valores enriquecidos.
         queryset_usuario = context['object_list']
+        registros = completar_indicadores_sge_2026(queryset_usuario)
 
         def valores_filtro(campo):
-            valores = queryset_usuario.order_by().values_list(campo, flat=True).distinct()
+            valores = (getattr(registro, campo) for registro in registros)
             return sorted(
                 {str(valor).strip() for valor in valores if valor and str(valor).strip()},
                 key=str.casefold,
@@ -196,48 +195,25 @@ class InformeSGEListView(ListView):
         context['ofertas'] = valores_filtro('tipo_oferta')
         context['ambitos'] = valores_filtro('ambito')
         context['sectores'] = valores_filtro('sector')
+        context['object_list'] = registros
+        context_object_name = self.get_context_object_name(queryset_usuario)
+        if context_object_name:
+            context[context_object_name] = registros
         context['active_menu'] = 'listado'
         
         return context
 
 # =====================================================================
-# VISTA PARA ACTUALIZAR FECHA (AJAX)
+# ENDPOINT OBSOLETO DE FECHA (COMPATIBILIDAD)
 # =====================================================================
 
 @login_required
 def actualizar_fecha_sge(request):
-    """
-    Seguridad reforzada: Valida que el ROL sea Administrador antes de procesar.
-    """
-    if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Método no permitido.'}, status=405)
-
-    # Verificamos ROL en lugar de CUIL hardcodeado
-    cargo = obtener_cargo_usuario(request.user)
-    if cargo != "Administrador":
-        return JsonResponse({'status': 'error', 'message': 'No tiene permisos de administrador.'}, status=403)
-
-    try:
-        data = json.loads(request.body)
-        nueva_fecha_str = data.get('fecha')
-        if not nueva_fecha_str:
-            return JsonResponse({'status': 'error', 'message': 'Fecha no proporcionada.'}, status=400)
-
-        # Convertir string a objeto datetime
-        nueva_fecha = timezone.make_aware(
-            datetime.datetime.strptime(nueva_fecha_str, '%Y-%m-%dT%H:%M')
-        )
-
-        # Actualizar o Crear el registro único (id=1)
-        obj, created = FechaActualizacionSGE.objects.update_or_create(
-            id=1, 
-            defaults={'fecha': nueva_fecha}
-        )
-
-        return JsonResponse({'status': 'success', 'message': 'Fecha actualizada correctamente.'})
-
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    """La fecha del Listado se administra exclusivamente desde Comparativa."""
+    return JsonResponse(
+        {'status': 'error', 'message': 'Endpoint obsoleto. La fecha se actualiza desde Comparativa RA-SGE.'},
+        status=410,
+    )
 
 # DASHBOARDS DE PRUEBA (Mantenidos)
 def dashboard_prueba(request): return render(request, "indicadoresie/dashboard_prueba.html")

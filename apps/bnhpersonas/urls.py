@@ -96,6 +96,12 @@ urlpatterns = [
     ),
 
     path(
+        "personas/<int:pk>/reactivar/",
+        views.reactivar_persona,
+        name="reactivar_persona",
+    ),
+
+    path(
         "personas/<int:persona_id>/actividad/nueva/",
         views.nueva_actividad,
         name="nueva_actividad",
