@@ -3,6 +3,7 @@ from pyexpat import model
 from django import forms
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
+from django.db.models import Case, IntegerField, When
 from shapely import length
 from datetime import date
 from .models import (
@@ -10,7 +11,8 @@ from .models import (
     ServicioReferenciaVirtual, ServicioPrestamo, InformePedagogico,
     AsistenciaUsuarios, InstitucionesPrestaServicios, ProcesosTecnicos, Aguapey,
     GenerarInforme, PlanillasAnexas, DestinoFondos, RegistroDestinoFondos,
-        DocentePonMensual, NoDocentesMensual, BibliotecariosCue,
+    DocentePonMensual, NoDocentesMensual, BibliotecariosCue,
+    es_formato_referencia_virtual_nuevo, es_planilla_biblioteca_nueva,
 )
 
 
@@ -52,11 +54,30 @@ class MaterialBibliograficoForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        periodo = kwargs.pop('periodo', None)
         super().__init__(*args, **kwargs)
 
-        self.fields['servicio'].queryset = ServiciosMatBiblio.objects.filter(
-            cod_servicio__range=(110, 113)
+        mes_periodo = getattr(periodo, 'meses', None)
+        anio_periodo = getattr(periodo, 'annos', None)
+        if mes_periodo is None:
+            mes_periodo = getattr(self.instance, 'mes', None)
+        if anio_periodo is None:
+            anio_periodo = getattr(self.instance, 'anio', None)
+
+        planilla_nueva = es_planilla_biblioteca_nueva(
+            mes_periodo,
+            anio_periodo,
         )
+        codigos_servicio = [111, 112, 113, 114] if planilla_nueva else [110, 111, 112, 113]
+
+        if self.instance and self.instance.pk and self.instance.servicio_id:
+            codigo_actual = self.instance.servicio.cod_servicio
+            if codigo_actual not in codigos_servicio:
+                codigos_servicio.append(codigo_actual)
+
+        self.fields['servicio'].queryset = ServiciosMatBiblio.objects.filter(
+            cod_servicio__in=codigos_servicio
+        ).order_by('cod_servicio', 'pk')
 
         self.fields['cantidad'].required = True
 
@@ -115,12 +136,30 @@ class ServicioReferenciaForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        periodo = kwargs.pop('periodo', None)
         super().__init__(*args, **kwargs)
 
-        # Filtrado de servicios SIEMPRE (no depende de instance)
-        self.fields['servicio'].queryset = ServiciosMatBiblio.objects.filter(
-            cod_servicio__range=(210, 213)
+        mes_periodo = getattr(periodo, 'meses', None)
+        anio_periodo = getattr(periodo, 'annos', None)
+        if mes_periodo is None:
+            mes_periodo = getattr(self.instance, 'mes', None)
+        if anio_periodo is None:
+            anio_periodo = getattr(self.instance, 'anio', None)
+
+        planilla_nueva = es_planilla_biblioteca_nueva(
+            mes_periodo,
+            anio_periodo,
         )
+        codigos_servicio = [211, 212] if planilla_nueva else [210, 211, 212, 213]
+
+        if self.instance and self.instance.pk and self.instance.servicio_id:
+            codigo_actual = self.instance.servicio.cod_servicio
+            if codigo_actual not in codigos_servicio:
+                codigos_servicio.append(codigo_actual)
+
+        self.fields['servicio'].queryset = ServiciosMatBiblio.objects.filter(
+            cod_servicio__in=codigos_servicio
+        ).order_by('cod_servicio', 'pk')
 
         # Campos obligatorios
         self.fields['varones'].required = True
@@ -191,40 +230,64 @@ class ServicioReferenciaVirtualForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        periodo = kwargs.pop('periodo', None)
         super().__init__(*args, **kwargs)
 
-        # Filtrado de servicios virtuales
-        self.fields['servicio'].queryset = ServiciosMatBiblio.objects.filter(
-            cod_servicio__range=(310, 313)
+        codigo_actual = None
+        if self.instance and self.instance.pk and self.instance.servicio_id:
+            codigo_actual = self.instance.servicio.cod_servicio
+
+        mes_periodo = getattr(periodo, 'meses', None)
+        anio_periodo = getattr(periodo, 'annos', None)
+
+        if mes_periodo is None:
+            mes_periodo = getattr(self.instance, 'mes', None)
+        if anio_periodo is None:
+            anio_periodo = getattr(self.instance, 'anio', None)
+
+        self.modo_legacy = not es_formato_referencia_virtual_nuevo(
+            mes_periodo,
+            anio_periodo,
         )
 
-        # Obligatorios
-        self.fields['varones'].required = True
+        codigos_servicio = (
+            [311, 312, 313]
+            if not self.modo_legacy
+            else [310, 311, 312, 313]
+        )
+        if codigo_actual and codigo_actual not in codigos_servicio:
+            codigos_servicio.append(codigo_actual)
+
+        self.fields['servicio'].queryset = ServiciosMatBiblio.objects.filter(
+            cod_servicio__in=codigos_servicio
+        )
+
         self.fields['total'].required = True
 
-    def clean_varones(self):
-        varones = self.cleaned_data.get('varones')
-        if varones is not None and varones < 0:
-            raise ValidationError("Varones no puede ser negativo.")
-        return varones
+        if self.modo_legacy:
+            self.fields['varones'].required = True
+            self.fields['total'].label = 'Total'
+        else:
+            self.fields.pop('varones', None)
+            self.fields['total'].label = 'Visualizaciones'
 
     def clean_total(self):
         total = self.cleaned_data.get('total')
         if total is not None and total < 0:
-            raise ValidationError("El total no puede ser negativo.")
+            raise ValidationError(
+                "El total no puede ser negativo."
+                if self.modo_legacy
+                else "Las visualizaciones no pueden ser negativas."
+            )
         return total
 
     def clean(self):
         cleaned_data = super().clean()
-
-        varones = cleaned_data.get('varones')
-        total = cleaned_data.get('total')
-
-        # Validación cruzada
-        if varones is not None and total is not None:
-            if total < varones:
+        if self.modo_legacy:
+            varones = cleaned_data.get('varones')
+            total = cleaned_data.get('total')
+            if varones is not None and total is not None and total < varones:
                 self.add_error('total', 'El Total no puede ser menor que Varones.')
-
         return cleaned_data
         
 
@@ -331,11 +394,64 @@ class InformePedagogicoForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        periodo = kwargs.pop('periodo', None)
         super().__init__(*args, **kwargs)
 
-        # Servicios pedagógicos
-        self.fields['servicio'].queryset = ServiciosMatBiblio.objects.filter(
-            cod_servicio__range=(510, 528)
+        mes_periodo = getattr(periodo, 'meses', None)
+        anio_periodo = getattr(periodo, 'annos', None)
+        if mes_periodo is None:
+            mes_periodo = getattr(self.instance, 'mes', None)
+        if anio_periodo is None:
+            anio_periodo = getattr(self.instance, 'anio', None)
+
+        planilla_nueva = es_planilla_biblioteca_nueva(
+            mes_periodo,
+            anio_periodo,
+        )
+
+        if planilla_nueva:
+            # Servicios vigentes y orden oficial de la planilla nueva.
+            codigos_servicio = [
+                528,  # HORA DEL CUENTO
+                513,  # JORNADA DE LECTURA
+                514,  # EXPOSICIONES Y FERIAS
+                515,  # CURSOS
+                516,  # CLUBES DE LECTORES Y NARRADORES
+                517,  # ALFABETIZACION INFORMACIONAL
+                518,  # PROYECTO INSTITUCIONAL DE LECTURA
+                519,  # PROYECCIONES
+                520,  # VISITAS DE ESCRITORES
+                529,  # TALLERES - ATENEOS - CONVERSATORIOS
+                522,  # ACTIVIDADES CULTURALES
+                523,  # CONCURSOS
+                524,  # ASISTENCIA LECTURA A OTRAS INSTITUCIONES
+                525,  # SERVICIOS A OTRAS INSTITUCIONES
+                526,  # TEXTOS LITERARIOS UTILIZADOS
+                527,  # ASISTENCIA - ADECUACIONES
+            ]
+        else:
+            # La planilla histórica exponía el catálogo 510-528 completo.
+            codigos_servicio = list(range(510, 529))
+
+        if self.instance and self.instance.pk and self.instance.servicio_id:
+            codigo_actual = self.instance.servicio.cod_servicio
+            if codigo_actual not in codigos_servicio:
+                codigos_servicio.append(codigo_actual)
+
+        orden_servicios = Case(
+            *[
+                When(cod_servicio=codigo, then=posicion)
+                for posicion, codigo in enumerate(codigos_servicio)
+            ],
+            default=len(codigos_servicio),
+            output_field=IntegerField(),
+        )
+
+        self.fields['servicio'].queryset = (
+            ServiciosMatBiblio.objects
+            .filter(cod_servicio__in=codigos_servicio)
+            .annotate(_orden_pedagogico=orden_servicios)
+            .order_by('_orden_pedagogico', 'pk')
         )
 
         # Obligatorios
@@ -537,8 +653,59 @@ class ProcesosTecnicosForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        periodo = kwargs.pop('periodo', None)
         super().__init__(*args, **kwargs)
 
+        mes_periodo = getattr(periodo, 'meses', None)
+        anio_periodo = getattr(periodo, 'annos', None)
+        if mes_periodo is None:
+            mes_periodo = getattr(self.instance, 'mes', None)
+        if anio_periodo is None:
+            anio_periodo = getattr(self.instance, 'anio', None)
+
+        planilla_nueva = es_planilla_biblioteca_nueva(
+            mes_periodo,
+            anio_periodo,
+        )
+
+        if planilla_nueva:
+            materiales_activos = [1, 2, 3, 4, 5, 6]
+            if self.instance and self.instance.pk and self.instance.material_id:
+                if self.instance.material_id not in materiales_activos:
+                    materiales_activos.append(self.instance.material_id)
+
+            self.fields['material'].queryset = (
+                self.fields['material'].queryset
+                .filter(pk__in=materiales_activos)
+                .order_by('pk')
+            )
+        else:
+            self.fields['material'].queryset = (
+                self.fields['material'].queryset.order_by('pk')
+            )
+
+        if planilla_nueva:
+            procesos_disponibles = list(
+                self._meta.model._meta.get_field('procesos').choices
+            )
+        else:
+            procesos_disponibles = [
+                ('SELLADOS', 'SELLADOS'),
+                ('INVENTARIADOS', 'INVENTARIADOS'),
+                ('CLASIFICADOS', 'CLASIFICADOS'),
+                ('CATALOGADOS', 'CATALOGADOS'),
+                ('RESTAURADOS', 'RESTAURADOS'),
+                ('BAJAS', 'BAJAS'),
+            ]
+
+        proceso_actual = getattr(self.instance, 'procesos', None)
+        if proceso_actual and all(
+            codigo != proceso_actual
+            for codigo, _etiqueta in procesos_disponibles
+        ):
+            procesos_disponibles.append((proceso_actual, proceso_actual))
+
+        self.fields['procesos'].choices = procesos_disponibles
         self.fields['total'].required = True
 
     def clean_total(self):

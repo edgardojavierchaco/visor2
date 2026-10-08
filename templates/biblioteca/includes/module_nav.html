@@ -1,4 +1,5 @@
 {% load biblioteca_nav %}
+{% firstof periodo_activo_id periodo_activo.pk periodo_pendiente.pk as biblioteca_nav_periodo_id %}
 {% with current=request.resolver_match.url_name %}
 {% with section=current|biblioteca_nav_section %}
 <nav class="biblioteca-module-nav" aria-label="Navegación de Biblioteca">
@@ -37,13 +38,13 @@
             <span class="biblioteca-symbol" aria-hidden="true">calendar_month</span>
             <span>Períodos</span>
         </a>
-        <a href="{% url 'bibliotecas:carga' %}"
+        <a href="{% url 'bibliotecas:carga' %}{% if biblioteca_nav_periodo_id %}?periodo={{ biblioteca_nav_periodo_id }}{% endif %}"
            class="biblioteca-module-nav__link"
            {% if section == 'carga' %}aria-current="page"{% endif %}>
             <span class="biblioteca-symbol biblioteca-module-nav__icon--carga" aria-hidden="true">edit_note</span>
             <span>Carga</span>
         </a>
-        <a href="{% url 'bibliotecas:informe' %}"
+        <a href="{% url 'bibliotecas:informe' %}{% if biblioteca_nav_periodo_id %}?periodo={{ biblioteca_nav_periodo_id }}{% endif %}"
            class="biblioteca-module-nav__link"
            {% if section == 'informe' %}aria-current="page"{% endif %}>
             <span class="biblioteca-symbol" aria-hidden="true">description</span>

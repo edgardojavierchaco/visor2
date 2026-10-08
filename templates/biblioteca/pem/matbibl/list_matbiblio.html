@@ -1,6 +1,16 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
+{% block delete_section_name %}Material bibliográfico{% endblock %}
+{% block delete_section_icon %}menu_book{% endblock %}
+{% block delete_primary_fields %}t_material{% endblock %}
+{% block delete_section_fields %}
+    <span data-biblioteca-delete-field="servicio" data-label="Servicio"></span>
+    <span data-biblioteca-delete-field="turnos" data-label="Turno"></span>
+    <span data-biblioteca-delete-field="t_material" data-label="Material"></span>
+    <span data-biblioteca-delete-field="cantidad" data-label="Cantidad"></span>
+{% endblock %}
+
 {% block section_header %}
     {% include 'biblioteca/includes/crud_section_header.html' with material_icon='menu_book' %}
 {% endblock %}
@@ -31,18 +41,78 @@
 {% endblock %}
 
 {% block section_totals %}
-<div class="biblioteca-crud__totals" data-biblioteca-section-totals>
-    <div class="biblioteca-crud__totals-title">
-        <span class="biblioteca-symbol" aria-hidden="true">functions</span>
-        <span>Totales de la sección</span>
-    </div>
-    <div class="biblioteca-crud__totals-metrics">
-        <div class="biblioteca-crud__total-metric">
-            <span>Cantidad</span>
-            <strong data-biblioteca-total-field="cantidad">0</strong>
+<section class="biblioteca-crud__section-summary biblioteca-matbibl-summary"
+         aria-label="Resumen de la sección">
+    <div class="biblioteca-crud__section-summary-head">
+        <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
+            <span class="biblioteca-symbol">open_run</span>
+        </span>
+        <div>
+            <strong>Resumen de la sección</strong>
+            <span>Cantidades registradas por tipo de material, servicio y turno</span>
         </div>
     </div>
-</div>
+
+    <div class="biblioteca-proctec-summary__grid">
+        {% for material in resumen_material_bibliografico %}
+        <article class="biblioteca-proctec-summary__item">
+            <button type="button"
+                    class="biblioteca-proctec-summary__toggle collapsed"
+                    data-toggle="collapse"
+                    data-target="#matbibl-resumen-material-{{ material.id }}"
+                    aria-expanded="false"
+                    aria-controls="matbibl-resumen-material-{{ material.id }}">
+                <span>{{ material.nombre }}</span>
+                <span class="biblioteca-proctec-summary__chevron" aria-hidden="true">
+                    <span class="biblioteca-symbol">expand_more</span>
+                </span>
+            </button>
+
+            <div id="matbibl-resumen-material-{{ material.id }}"
+                 class="collapse biblioteca-proctec-summary__detalle">
+                {% if material.servicios %}
+                <div class="biblioteca-matbibl-summary__table-wrap">
+                    <table class="biblioteca-matbibl-summary__table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Servicio</th>
+                                <th scope="col">Mañana</th>
+                                <th scope="col">Tarde</th>
+                                <th scope="col">Vespertino</th>
+                                <th scope="col">Noche</th>
+                                <th scope="col">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for servicio in material.servicios %}
+                            <tr>
+                                <th scope="row">{{ servicio.nombre }}</th>
+                                {% for valor in servicio.valores_turno %}
+                                <td>{{ valor }}</td>
+                                {% endfor %}
+                                <td>{{ servicio.total }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="biblioteca-matbibl-summary__total">
+                                <th scope="row">Total material</th>
+                                {% for valor in material.valores_totales_turno %}
+                                <td>{{ valor }}</td>
+                                {% endfor %}
+                                <td>{{ material.total }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <p class="biblioteca-proctec-summary__vacio">
+                        Sin cantidades registradas.
+                    </p>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
 {% endblock %}
 
 {% block javascript %}

@@ -44,7 +44,11 @@
                 {% endif %}
 
                 <section class="biblioteca-form__block" aria-labelledby="biblioteca-form-datos">
-                    {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' show_info=1 info_title='Referencia virtual' info_section_icon='settings_system_daydream' info_text='Registrá los servicios de referencia virtual brindados durante el período.' info_item_1='Servicio' info_icon_1='category' info_item_2='Turno' info_icon_2='schedule' info_item_3='Varones' info_icon_3='man' info_item_4='Total' info_icon_4='calculate' only %}
+                    {% if form.varones %}
+                        {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' show_info=1 info_title='Referencia virtual' info_section_icon='settings_system_daydream' info_text='Este período utiliza el formato anterior de Referencia virtual.' info_item_1='Servicio' info_icon_1='category' info_item_2='Turno' info_icon_2='schedule' info_item_3='Varones' info_icon_3='man' info_item_4='Total' info_icon_4='calculate' only %}
+                    {% else %}
+                        {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' show_info=1 info_title='Referencia virtual' info_section_icon='settings_system_daydream' info_text='Registrá los servicios de referencia virtual brindados durante el período. Se informa la cantidad de visualizaciones.' info_item_1='Servicio' info_icon_1='category' info_item_2='Turno' info_icon_2='schedule' info_item_3='Visualizaciones' info_icon_3='visibility' only %}
+                    {% endif %}
                     <div class="biblioteca-form__block-body">
                         <div class="biblioteca-form__grid">
                             <div>
@@ -61,12 +65,14 @@
                                     <span class="biblioteca-symbol biblioteca-form__select-icon" aria-hidden="true">expand_more</span>
                                 </div>
                             </div>
+                            {% if form.varones %}
+                                <div>
+                                    <label for="id_varones">Varones</label>
+                                    {{ form.varones|add_class:"form-control text-center" }}
+                                </div>
+                            {% endif %}
                             <div>
-                                <label for="id_varones">Varones</label>
-                                {{ form.varones|add_class:"form-control text-center" }}
-                            </div>
-                            <div>
-                                <label for="id_total">Total</label>
+                                <label for="id_total">{{ form.total.label }}</label>
                                 {{ form.total|add_class:"form-control text-center" }}
                             </div>
                         </div>
@@ -142,11 +148,29 @@
 
         const { varones, total } = fields;
 
-        if (varones.value && total.value) {
-            if (parseInt(total.value) < parseInt(varones.value)) {
-                setError(total, 'No debe ser menor a cantidad de varones');
-                errores++;
-            }
+        if (varones && varones.value && parseInt(varones.value) < 0) {
+            setError(varones, 'Varones no puede ser negativo');
+            errores++;
+        }
+
+        if (total.value && parseInt(total.value) < 0) {
+            setError(
+                total,
+                varones
+                    ? 'El total no puede ser negativo'
+                    : 'Las visualizaciones no pueden ser negativas'
+            );
+            errores++;
+        }
+
+        if (
+            varones &&
+            varones.value &&
+            total.value &&
+            parseInt(total.value) < parseInt(varones.value)
+        ) {
+            setError(total, 'El Total no puede ser menor que Varones');
+            errores++;
         }
 
         if (window.biblioteca_form_state) {
