@@ -1,0 +1,47 @@
+{% comment %}
+  Búsqueda, filtro por estado y orden de una grilla de tarjetas. El
+  comportamiento está en _filtros_js.html y se engancha por data-filtrable.
+
+  Uso (regionales): {% include 'monitoreo_personas_2026/_toolbar.html' with grilla='fluidez' modo='regiones' estados=... total=... %}
+  Uso (escuelas):   {% include 'monitoreo_personas_2026/_toolbar.html' with grilla='escuelas' modo='escuelas' estados=... total=... %}
+  `estados` es un dict con la cantidad de tarjetas por estado.
+{% endcomment %}
+<div class="mon-toolbar" data-toolbar="{{ grilla }}">
+    <label class="mon-search">
+        <span class="sr-only">{% if modo == 'regiones' %}Buscar regional{% else %}Buscar escuela, CUE o localidad{% endif %}</span>
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input type="search" data-buscar autocomplete="off" aria-keyshortcuts="/"
+               placeholder="{% if modo == 'regiones' %}Buscar regional…{% else %}Buscar escuela, CUE o localidad…{% endif %}">
+        <kbd aria-hidden="true">/</kbd>
+    </label>
+
+    <div class="mon-filtros" role="group" aria-label="Filtrar por estado">
+        <button type="button" class="mon-filtro" data-estado="todas" aria-pressed="true">Todas <b>{{ total }}</b></button>
+        {% if modo == 'regiones' %}
+            <button type="button" class="mon-filtro" data-estado="sin_iniciar" aria-pressed="false"><span class="dot dot-sin_iniciar" aria-hidden="true"></span> Sin iniciar <b>{{ estados.sin_iniciar }}</b></button>
+            <button type="button" class="mon-filtro" data-estado="en_curso" aria-pressed="false"><span class="dot dot-en_curso" aria-hidden="true"></span> En curso <b>{{ estados.en_curso }}</b></button>
+            <button type="button" class="mon-filtro" data-estado="completa" aria-pressed="false"><span class="dot dot-completa" aria-hidden="true"></span> Completas <b>{{ estados.completa }}</b></button>
+        {% else %}
+            <button type="button" class="mon-filtro" data-estado="pendiente" aria-pressed="false"><span class="dot dot-pendiente" aria-hidden="true"></span> Con pendientes <b>{{ estados.pendiente }}</b></button>
+            <button type="button" class="mon-filtro" data-estado="completa" aria-pressed="false"><span class="dot dot-completa" aria-hidden="true"></span> Completas <b>{{ estados.completa }}</b></button>
+        {% endif %}
+    </div>
+
+    <label class="sr-only" for="orden-{{ grilla }}">Ordenar</label>
+    <select class="mon-select" id="orden-{{ grilla }}" data-ordenar>
+        {% if modo == 'regiones' %}
+            <option value="nombre:asc">Ordenar: regional</option>
+            <option value="avance:asc">Ordenar: menor avance primero</option>
+            <option value="avance:desc">Ordenar: mayor avance primero</option>
+        {% else %}
+            <option value="nombre:asc">Ordenar: nombre de escuela</option>
+            <option value="peso:desc">Ordenar: más pendientes primero</option>
+            <option value="avance:asc">Ordenar: menor avance de aplicadores</option>
+        {% endif %}
+    </select>
+</div>
+
+<div class="mon-resultados">
+    <span data-contador aria-live="polite" aria-atomic="true"></span>
+    <button type="button" class="mon-limpiar" data-limpiar hidden><i class="bi bi-x-circle" aria-hidden="true"></i> Limpiar filtros</button>
+</div>

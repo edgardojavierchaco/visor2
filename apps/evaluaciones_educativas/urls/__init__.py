@@ -11,5 +11,6 @@ urlpatterns = [
     path('fluidez_2026/', include('apps.evaluaciones_educativas.urls.fluidez_2026', namespace='fluidez_2026')),
     path('diagnostico_2025/', include('apps.evaluaciones_educativas.urls.diagnostico_2025', namespace='diagnostico_2025')),
     path('validaciones_2026/', include('apps.evaluaciones_educativas.urls.validaciones_2026', namespace='validaciones_2026')),
+    path('monitoreo_personas_2026/', include('apps.evaluaciones_educativas.urls.monitoreo_personas_2026', namespace='monitoreo_personas_2026')),
 ]
 
