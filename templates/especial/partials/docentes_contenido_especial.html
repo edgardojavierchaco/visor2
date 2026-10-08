@@ -1106,7 +1106,7 @@
     <div class="cef-docente-modal" role="dialog" aria-modal="true" aria-labelledby="asignarProfesorGrupoTitulo">
         <div class="cef-docente-modal-head">
             <h2 id="asignarProfesorGrupoTitulo" class="cef-docente-modal-title">
-                <i class="fa-solid fa-user-check me-2"></i>Asignar profesor <span>» Grupo</span>
+                <i class="fa-solid fa-user-check me-2"></i>Asignar docente <span>» Sección</span>
             </h2>
             <button class="cef-docente-close" type="button" aria-label="Cerrar" data-cef-asignar-grupo-close>
                 <i class="fa-solid fa-xmark"></i>
@@ -1116,8 +1116,24 @@
         <div class="cef-docente-modal-body">
             <div class="cef-context-pill mb-3">
                 <i class="fa-solid fa-chalkboard-user"></i>
-                <span data-cef-asignar-docente-label>{% if asignacion_docente_cuil %}{{ asignacion_docente_cuil }}{% else %}Profesor{% endif %}</span>
-                <span data-cef-asignar-grupo-label>{% if asignacion_grupo_seleccionado %}{{ asignacion_grupo_seleccionado.actividad }} N° {{ asignacion_grupo_seleccionado.numero }} - {{ asignacion_grupo_seleccionado.turno }}{% else %}Grupo{% endif %}</span>
+                <span data-cef-asignar-docente-label>{% if asignacion_docente_cuil %}{{ asignacion_docente_cuil }}{% else %}Docente{% endif %}</span>
+                <span data-cef-asignar-grupo-label>{% if asignacion_grupo_seleccionado %}{{ asignacion_grupo_seleccionado.nombre_seccion }}{% else %}Sección{% endif %}</span>
+            </div>
+
+            <div class="mb-3" data-cef-cargos-feedback></div>
+
+            <div class="table-responsive mb-3" data-cef-cargos-table hidden>
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Cargo en el CUE-Anexo</th>
+                            <th>CEIC</th>
+                            <th>Situación de revista</th>
+                            <th>Turno</th>
+                        </tr>
+                    </thead>
+                    <tbody data-cef-cargos-table-body></tbody>
+                </table>
             </div>
 
             <form method="post" action="{{ request.path }}{% if especial_context.querystring %}?{{ especial_context.querystring }}{% endif %}" novalidate data-cef-asignar-grupo-form>
@@ -1130,6 +1146,26 @@
 
                 {% if asignacion_modal_error %}
                     <div class="alert alert-danger mb-3">{{ asignacion_modal_error }}</div>
+                {% endif %}
+
+                {% if docente_cargos_comparados %}
+                    {% for item in docente_cargos_comparados %}
+                        <div class="alert {% if item.estado == 'coincide' %}alert-success{% else %}alert-warning{% endif %} mb-2">
+                            {% if item.estado == 'coincide' %}
+                                <i class="fa-solid fa-circle-check me-1"></i> Cargo coincidente con oferta y turno.
+                            {% elif item.estado == 'oferta_coincide_turno_difiere' %}
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i> Oferta coincidente, pero turno diferente.
+                            {% else %}
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i> Cargo del CUE-Anexo correspondiente a otra oferta.
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    {% if docente_requiere_confirmacion %}<div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="confirmar_cargo" value="1" id="confirmarCargoAsignacion">
+                        <label class="form-check-label" for="confirmarCargoAsignacion">
+                            Confirmo asignar el cargo aunque presente diferencias con la sección.
+                        </label>
+                    </div>{% endif %}
                 {% endif %}
 
                 {% if docente_grupo_form.non_field_errors %}
@@ -1153,7 +1189,7 @@
                         <i class="fa-solid fa-xmark"></i> Cancelar
                     </button>
                     <button class="btn btn-primary" type="submit">
-                        <i class="fa-solid fa-user-check"></i> Asociar profesor
+                        <i class="fa-solid fa-user-check"></i> Asociar docente
                     </button>
                 </div>
             </form>

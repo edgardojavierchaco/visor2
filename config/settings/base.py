@@ -11,10 +11,18 @@ LOG_DIR = BASE_DIR / "logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # Cargar variables de entorno
-load_dotenv(BASE_DIR / '.env')
+#load_dotenv(BASE_DIR / '.env')
+ENV_FILE = os.environ.get("DJANGO_ENV_FILE", ".env")
+load_dotenv(BASE_DIR / ENV_FILE, override=False)
 
 # Directorio de aplicaciones
 APPS_DIR = ROOT_DIR / 'apps'
+
+# En producción sólo se deben utilizar cargos BNH validados. Para pruebas
+# locales puede desactivarse temporalmente con ESPECIAL_REQUIERE_CARGO_VALIDADO=0.
+ESPECIAL_REQUIERE_CARGO_VALIDADO = os.environ.get(
+    "ESPECIAL_REQUIERE_CARGO_VALIDADO", "1"
+).strip().lower() not in {"0", "false", "no", "off"}
 
 # Configuración de aplicaciones
 BASE_APPS = [

@@ -44,6 +44,9 @@
                     <th class="gestionar-col-centered">Estado en esta sección</th>
                     <th class="gestionar-col-centered">Desde</th>
                     <th class="gestionar-col-centered">Hasta</th>
+                    <th class="gestionar-col-centered">CEIC</th>
+                    <th class="gestionar-col-centered">Situación de revista</th>
+                    <th class="gestionar-col-centered">Cargo BNH</th>
                     <th class="gestionar-col-observaciones">Observaciones</th>
                     <th class="gestionar-col-centered gestionar-col-actions">Acciones</th>
                 </tr>
@@ -62,6 +65,9 @@
                         </td>
                         <td class="gestionar-col-centered">{% if asignacion.fecha_desde %}{{ asignacion.fecha_desde|date:"d/m/Y" }}{% else %}{% if gestionar_seccion_modo %}—{% else %}-{% endif %}{% endif %}</td>
                         <td class="gestionar-col-centered">{% if asignacion.fecha_hasta %}{{ asignacion.fecha_hasta|date:"d/m/Y" }}{% else %}{% if gestionar_seccion_modo %}—{% else %}-{% endif %}{% endif %}</td>
+                        <td class="gestionar-col-centered">{{ asignacion.cargo_ceic_snapshot|default:"—" }}</td>
+                        <td class="gestionar-col-centered">{{ asignacion.cargo_situacion_revista_snapshot|default:"—" }}</td>
+                        <td class="gestionar-col-centered">{{ asignacion.cargo_relacionado.id_puesto|default:"—" }}</td>
                         <td class="gestionar-col-observaciones">{% if asignacion.observaciones %}{{ asignacion.observaciones }}{% elif gestionar_seccion_modo %}<span class="gestionar-empty-value">—</span>{% else %}-{% endif %}</td>
                         {% if especial_context.puede_operar %}
                         <td class="cef-act-cell gestionar-col-centered gestionar-col-actions">

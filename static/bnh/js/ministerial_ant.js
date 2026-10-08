@@ -2,7 +2,7 @@
 "use strict";
 
 (() => {
-    const VERSION = "20261007.1";
+    const VERSION = "20261002.3";
     const jq = () => window.jQuery;
     const hasSelect2 = () => Boolean(jq() && jq().fn && jq().fn.select2);
 
@@ -568,19 +568,6 @@
                         input.disabled = true;
                         refresh(input);
                     });
-
-                    // NO DOCENTE:
-                    // Turno NO pertenece al circuito curricular y siempre debe
-                    // permanecer visible y habilitado, también en "Vincular".
-                    const turnoInput = field("turno");
-                    if (turnoInput) {
-                        const turnoWrapper = turnoInput.closest("[data-field]");
-                        if (turnoWrapper) turnoWrapper.hidden = false;
-                        turnoInput.disabled = false;
-                        turnoInput.required = true;
-                        refresh(turnoInput);
-                    }
-
                     const source = field("titulacion_fuente");
                     if (source) source.value = "";
                 }
@@ -990,15 +977,13 @@
                     if (multiSelect) {
                         const selectedSet = new Set(selected.titulaciones.map(String));
                         multiSelect.innerHTML = "";
-                        data.titulaciones
-                            .filter(item => Number(item.id_titulacion) !== -2)
-                            .forEach(item => {
-                                const opt = document.createElement("option");
-                                opt.value = String(item.id_titulacion);
-                                opt.textContent = item.descripcion;
-                                opt.selected = selectedSet.has(opt.value);
-                                multiSelect.appendChild(opt);
-                            });
+                        data.titulaciones.forEach(item => {
+                            const opt = document.createElement("option");
+                            opt.value = String(item.id_titulacion);
+                            opt.textContent = item.descripcion;
+                            opt.selected = selectedSet.has(opt.value);
+                            multiSelect.appendChild(opt);
+                        });
                     }
 
                     const sourceField = field("titulacion_fuente");
@@ -1236,19 +1221,11 @@
                         const extraBox = form.querySelector("[data-ubicaciones-extra]");
                         if (extraBox) extraBox.hidden = !isMultipleLocation;
 
-                        ["grado_anio", "secciones"].forEach(name => {
+                        ["grado_anio", "secciones", "turno"].forEach(name => {
                             const input = field(name);
                             const wrapper = input?.closest("[data-field]");
                             if (wrapper) wrapper.hidden = isMultipleLocation;
                         });
-
-                        // Turno debe seguir visible para NO DOCENTE.
-                        const turnoInput = field("turno");
-                        const turnoWrapper = turnoInput?.closest("[data-field]");
-                        if (turnoWrapper) {
-                            turnoWrapper.hidden =
-                                !nonTeaching() && isMultipleLocation;
-                        }
 
                         if (isMultipleLocation) {
                             ensureMultipleLocationRows();
