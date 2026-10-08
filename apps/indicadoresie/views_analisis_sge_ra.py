@@ -564,26 +564,41 @@ def detalle_listado_sge_ra_json(request):
     if not cueanexo:
         return JsonResponse({'error': 'CUE-Anexo requerido.'}, status=400)
 
+    vista = _texto(request.GET.get('vista', 'listado')).strip()
+    if vista not in ('listado', 'comparativa'):
+        return JsonResponse({'error': 'Vista de detalle no válida.'}, status=400)
+
     contexto_sge = resolver_contexto_sge(request)
-    listado_autorizado = filtrar_queryset_sge(
-        InformeSGE.objects.all(),
-        contexto_sge,
-        campo_region='regional',
-        campo_cueanexo='cueanexo',
-    )
-    if not listado_autorizado.filter(cueanexo=cueanexo).exists():
+    if vista == 'comparativa':
+        # Mismo alcance CUE-Anexo que el detalle y el PDF de Comparativa.
+        autorizado = _queryset_resumen_autorizado(contexto_sge).filter(
+            cueanexo=cueanexo,
+        ).exists()
+    else:
+        # Listado no debe ampliar su alcance ni entregar filas de RA.
+        listado_autorizado = filtrar_queryset_sge(
+            InformeSGE.objects.all(),
+            contexto_sge,
+            campo_region='regional',
+            campo_cueanexo='cueanexo',
+        )
+        autorizado = listado_autorizado.filter(cueanexo=cueanexo).exists()
+
+    if not autorizado:
         return JsonResponse(
             {'error': 'CUE-Anexo no disponible en el alcance autorizado.'},
             status=404,
         )
 
+    sistemas = ('RA', 'SGE') if vista == 'comparativa' else ('SGE',)
     filas = {'RA': [], 'SGE': []}
     queryset = (
         AnalisisSgeRa.objects.using('sge_nacion')
         .annotate(cueanexo_limpio=Trim('cueanexo'))
-        .filter(cueanexo_limpio=cueanexo, sistema__in=('RA', 'SGE'))
+        .filter(cueanexo_limpio=cueanexo, sistema__in=sistemas)
     )
-    if contexto_sge.get('cargo') == 'Supervisor':
+
+    if vista == 'listado' and contexto_sge.get('cargo') == 'Supervisor':
         niveles_permitidos = _niveles_detalle_listado_supervisor(
             contexto_sge,
             cueanexo,
@@ -600,7 +615,7 @@ def detalle_listado_sge_ra_json(request):
     )
     for row in queryset:
         sistema = _texto(row.get('sistema')).strip()
-        if sistema in filas:
+        if sistema in sistemas:
             filas[sistema].append(_serializar_fila_detalle_listado_sge(row))
 
     return JsonResponse({
