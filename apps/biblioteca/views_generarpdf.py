@@ -320,24 +320,26 @@ def generar_pdf_material_bibliografico(request):
     # =========================================================
     # 2.2 SERVICIO DE REFERENCIA VIRTUAL
     # =========================================================
+    virtual_legacy = not es_formato_referencia_virtual_nuevo(
+        mes,
+        anio,
+    )
+    campos_agrupacion_virtual = (
+        ("servicio__nom_servicio", "turnos__nom_turno")
+        if virtual_legacy
+        else ("servicio__nom_servicio", "servicio__cod_servicio", "turnos__nom_turno")
+    )
     virtual = list(
         ServicioReferenciaVirtual.objects.filter(
             cueanexo=cueanexo_activo,
             mes=mes,
             anio=anio
         ).values(
-            "servicio__nom_servicio",
-            "servicio__cod_servicio",
-            "turnos__nom_turno"
+            *campos_agrupacion_virtual
         ).annotate(
             varones=Sum("varones"),
             total=Sum("total")
         ).order_by("servicio__nom_servicio", "turnos__nom_turno")
-    )
-
-    virtual_legacy = not es_formato_referencia_virtual_nuevo(
-        mes,
-        anio,
     )
 
     if virtual_legacy:
