@@ -3,7 +3,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, DeleteView, ListView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
-from .models import ServicioReferencia, ServiciosMatBiblio
+from .models import ServicioReferencia, ServiciosMatBiblio, es_planilla_biblioteca_nueva
 from .forms import ServicioReferenciaForm
 from .mixins import InformeBloqueoMixin
 
@@ -19,6 +19,11 @@ class ServiciosReferenciaCreateView(LoginRequiredMixin, InformeBloqueoMixin, Cre
     form_class = ServicioReferenciaForm
     template_name = 'biblioteca/pem/servref/create.html'
     success_url = reverse_lazy('bibliotecas:servref_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['periodo'] = self.get_periodo_activo()
+        return kwargs
 
     # =========================
     # DISPATCH
@@ -83,6 +88,11 @@ class ServiciosReferenciaUpdateView(LoginRequiredMixin, InformeBloqueoMixin, Upd
     template_name = 'biblioteca/pem/servref/create.html'
     success_url = reverse_lazy('bibliotecas:servref_list')
     url_redirect = success_url
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['periodo'] = self.get_periodo_activo()
+        return kwargs
 
     # =========================
     # DISPATCH
@@ -265,9 +275,18 @@ class ServiciosReferenciaListView(LoginRequiredMixin, InformeBloqueoMixin, ListV
             servicio['varones'] += varones
             servicio['total'] += total
 
+        periodo = self.get_periodo_activo()
+        codigos_servicio = (
+            (211, 212)
+            if es_planilla_biblioteca_nueva(
+                periodo.meses,
+                periodo.annos,
+            )
+            else (210, 211, 212, 213)
+        )
         servicios_activos = (
             ServiciosMatBiblio.objects
-            .filter(cod_servicio__in=(211, 212))
+            .filter(cod_servicio__in=codigos_servicio)
             .order_by('cod_servicio', 'pk')
         )
 

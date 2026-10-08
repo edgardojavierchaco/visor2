@@ -1,10 +1,10 @@
 from django.http import JsonResponse
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-from .models import ServicioPrestamo
+from .models import ServicioPrestamo, es_planilla_biblioteca_nueva
 from .forms import ServicioPrestamoForm
 from django.views.generic import CreateView, UpdateView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -13,7 +13,34 @@ from .mixins import InformeBloqueoMixin
 # =========================
 # 🔹 UTIL
 # =========================
-class ServiciosPrestamoCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
+class ServicioPrestamoVigenciaMixin:
+    def dispatch(self, request, *args, **kwargs):
+        periodo = self.get_periodo_activo()
+        if (
+            periodo is not None
+            and es_planilla_biblioteca_nueva(
+                periodo.meses,
+                periodo.annos,
+            )
+        ):
+            if request.method == 'POST':
+                return JsonResponse({
+                    'error': True,
+                    'message': (
+                        'Préstamos no forma parte de este período.'
+                    ),
+                }, status=403)
+
+            return redirect(
+                self.get_periodo_url(
+                    reverse('bibliotecas:infopedago_list')
+                )
+            )
+
+        return super().dispatch(request, *args, **kwargs)
+
+
+class ServiciosPrestamoCreateView(LoginRequiredMixin, ServicioPrestamoVigenciaMixin, InformeBloqueoMixin, CreateView):
     model = ServicioPrestamo
     form_class = ServicioPrestamoForm
     template_name = 'biblioteca/pem/servprestamo/create.html'
@@ -76,7 +103,7 @@ class ServiciosPrestamoCreateView(LoginRequiredMixin, InformeBloqueoMixin, Creat
 #===========================
 # UPDATE
 #===========================
-class ServiciosPrestamoUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
+class ServiciosPrestamoUpdateView(LoginRequiredMixin, ServicioPrestamoVigenciaMixin, InformeBloqueoMixin, UpdateView):
     model = ServicioPrestamo
     form_class = ServicioPrestamoForm
     template_name = 'biblioteca/pem/servprestamo/create.html'
@@ -141,7 +168,7 @@ class ServiciosPrestamoUpdateView(LoginRequiredMixin, InformeBloqueoMixin, Updat
 #=====================
 # DELETE
 #=====================
-class ServiciosPrestamoDeleteView(LoginRequiredMixin, InformeBloqueoMixin, DeleteView):
+class ServiciosPrestamoDeleteView(LoginRequiredMixin, ServicioPrestamoVigenciaMixin, InformeBloqueoMixin, DeleteView):
     model = ServicioPrestamo
     template_name = 'biblioteca/pem/servprestamo/delete.html'
     success_url = reverse_lazy('bibliotecas:servprestamo_list')
@@ -185,7 +212,7 @@ class ServiciosPrestamoDeleteView(LoginRequiredMixin, InformeBloqueoMixin, Delet
 #=========================
 # LIST
 #=========================
-class ServiciosPrestamoListView(LoginRequiredMixin, InformeBloqueoMixin, ListView):
+class ServiciosPrestamoListView(LoginRequiredMixin, ServicioPrestamoVigenciaMixin, InformeBloqueoMixin, ListView):
     model = ServicioPrestamo
     template_name = 'biblioteca/pem/servprestamo/list_servprestamo.html'
       

@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-from .models import ProcesosTecnicos, TipoMaterialBiblio
+from .models import ProcesosTecnicos, TipoMaterialBiblio, es_planilla_biblioteca_nueva
 from .forms import ProcesosTecnicosForm
 from django.views.generic import CreateView, UpdateView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -21,6 +21,11 @@ class ProcTecCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
     form_class = ProcesosTecnicosForm
     template_name = 'biblioteca/pem/proctec/create.html'
     success_url = reverse_lazy('bibliotecas:proctec_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['periodo'] = self.get_periodo_activo()
+        return kwargs
         
     # =========================
     # DISPATCH
@@ -85,6 +90,11 @@ class ProcTecUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
     template_name = 'biblioteca/pem/proctec/create.html'
     success_url = reverse_lazy('bibliotecas:proctec_list')
     url_redirect = success_url
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['periodo'] = self.get_periodo_activo()
+        return kwargs
 
     # =========================
     # DISPATCH
@@ -233,12 +243,28 @@ class ProcTecListView(LoginRequiredMixin, InformeBloqueoMixin, ListView):
 
         context = super().get_context_data(**kwargs)
 
+        periodo = self.get_periodo_activo()
+        planilla_nueva = es_planilla_biblioteca_nueva(
+            periodo.meses,
+            periodo.annos,
+        )
+
         registros_por_material = {}
+        procesos_ordenados = (
+            self.model._meta.get_field('procesos').choices
+            if planilla_nueva
+            else (
+                ('SELLADOS', 'SELLADOS'),
+                ('INVENTARIADOS', 'INVENTARIADOS'),
+                ('CLASIFICADOS', 'CLASIFICADOS'),
+                ('CATALOGADOS', 'CATALOGADOS'),
+                ('RESTAURADOS', 'RESTAURADOS'),
+                ('BAJAS', 'BAJAS'),
+            )
+        )
         orden_procesos = {
             codigo: indice
-            for indice, (codigo, _etiqueta) in enumerate(
-                self.model._meta.get_field('procesos').choices
-            )
+            for indice, (codigo, _etiqueta) in enumerate(procesos_ordenados)
         }
 
         for registro in context.get('object_list') or ():
@@ -257,11 +283,11 @@ class ProcTecListView(LoginRequiredMixin, InformeBloqueoMixin, ListView):
                 'total': total,
             })
 
-        materiales_activos = (
-            TipoMaterialBiblio.objects
-            .filter(pk__in=(1, 2, 3, 4, 5, 6))
-            .order_by('pk')
-        )
+        materiales_activos = TipoMaterialBiblio.objects.order_by('pk')
+        if planilla_nueva:
+            materiales_activos = materiales_activos.filter(
+                pk__in=(1, 2, 3, 4, 5, 6)
+            )
 
         context['resumen_procesos_material'] = []
         for material in materiales_activos:

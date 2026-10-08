@@ -969,7 +969,189 @@
     white-space: normal;
 }
 
+.biblioteca-proctec-summary__grid {
+    align-items: start;
+    display: grid;
+    gap: .625rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: .75rem;
+}
+
+.biblioteca-proctec-summary__item {
+    background: var(--biblioteca-surface);
+    border: 1px solid var(--biblioteca-border);
+    border-radius: var(--biblioteca-radius-md);
+    min-width: 0;
+    overflow: hidden;
+}
+
+.biblioteca-proctec-summary__toggle {
+    align-items: center;
+    background: var(--biblioteca-surface-soft);
+    border: 0;
+    color: var(--biblioteca-text);
+    display: flex;
+    font-size: .78rem;
+    font-weight: 800;
+    gap: .625rem;
+    justify-content: space-between;
+    min-height: 2.75rem;
+    padding: .625rem .75rem;
+    text-align: left;
+    width: 100%;
+}
+
+.biblioteca-proctec-summary__toggle:hover,
+.biblioteca-proctec-summary__toggle:focus-visible,
+.biblioteca-proctec-summary__toggle[aria-expanded="true"] {
+    background: var(--biblioteca-primary-soft);
+    color: var(--biblioteca-primary-3);
+}
+
+.biblioteca-proctec-summary__toggle:focus {
+    outline: 0;
+}
+
+.biblioteca-proctec-summary__toggle:focus-visible {
+    box-shadow: inset var(--biblioteca-shadow-focus);
+    outline: 2px solid transparent;
+}
+
+.biblioteca-proctec-summary__chevron {
+    align-items: center;
+    background: var(--biblioteca-surface);
+    border: 1px solid var(--biblioteca-primary-border);
+    border-radius: 50%;
+    color: var(--biblioteca-primary-3);
+    display: inline-flex;
+    flex: 0 0 1.75rem;
+    height: 1.75rem;
+    justify-content: center;
+    transition: transform 160ms ease;
+    width: 1.75rem;
+}
+
+.biblioteca-proctec-summary__chevron .biblioteca-symbol {
+    font-size: 1.05rem;
+}
+
+.biblioteca-proctec-summary__toggle[aria-expanded="true"] .biblioteca-proctec-summary__chevron {
+    transform: rotate(180deg);
+}
+
+.biblioteca-proctec-summary__detalle {
+    border-top: 1px solid var(--biblioteca-border);
+}
+
+.biblioteca-proctec-summary__fila {
+    align-items: center;
+    display: flex;
+    gap: .75rem;
+    justify-content: space-between;
+    min-height: 2.5rem;
+    padding: .55rem .75rem;
+}
+
+.biblioteca-proctec-summary__fila + .biblioteca-proctec-summary__fila {
+    border-top: 1px solid var(--biblioteca-border);
+}
+
+.biblioteca-proctec-summary__fila span {
+    color: var(--biblioteca-text-secondary);
+    font-size: .75rem;
+    font-weight: 700;
+}
+
+.biblioteca-proctec-summary__fila strong {
+    color: var(--biblioteca-primary-3);
+    font-size: .82rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+}
+
+.biblioteca-proctec-summary__vacio {
+    color: var(--biblioteca-muted);
+    font-size: .72rem;
+    margin: 0;
+    padding: .75rem;
+}
+
+.biblioteca-matbibl-summary__table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+.biblioteca-matbibl-summary__table {
+    border-collapse: collapse;
+    min-width: 33rem;
+    width: 100%;
+}
+
+.biblioteca-matbibl-summary__table th,
+.biblioteca-matbibl-summary__table td {
+    border-bottom: 1px solid var(--biblioteca-border);
+    padding: .55rem .6rem;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.biblioteca-matbibl-summary__table thead th {
+    background: var(--biblioteca-surface-soft);
+    color: var(--biblioteca-muted);
+    font-size: .61rem;
+    font-weight: 800;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+}
+
+.biblioteca-matbibl-summary__table thead th:first-child,
+.biblioteca-matbibl-summary__table tbody th {
+    text-align: left;
+}
+
+.biblioteca-matbibl-summary__table tbody th {
+    color: var(--biblioteca-text-secondary);
+    font-size: .69rem;
+    font-weight: 700;
+    white-space: normal;
+}
+
+.biblioteca-matbibl-summary__table tbody td {
+    color: var(--biblioteca-primary-3);
+    font-size: .72rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+}
+
+.biblioteca-matbibl-summary__table tbody tr:last-child th,
+.biblioteca-matbibl-summary__table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.biblioteca-matbibl-summary__total th,
+.biblioteca-matbibl-summary__total td {
+    background: var(--biblioteca-primary-soft);
+    color: var(--biblioteca-primary-3);
+    font-weight: 800;
+}
+
+.biblioteca-asistencia-summary__table,
+.biblioteca-servref-summary__table,
+.biblioteca-servrefvirtual-summary__table {
+    min-width: 18rem;
+}
+
+.biblioteca-servref-summary__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 @media (max-width: 991.98px) {
+    .biblioteca-proctec-summary__grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .biblioteca-crud__section-summary-table thead th {
         line-height: 1.25;
         white-space: normal;
@@ -977,12 +1159,22 @@
 }
 
 @media (max-width: 767.98px) {
+    .biblioteca-proctec-summary__grid {
+        grid-template-columns: 1fr;
+    }
+
     .biblioteca-crud__section-summary-table {
         min-width: 47.5rem;
     }
 
     .biblioteca-crud__section-summary-table--wide {
         min-width: 78rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .biblioteca-proctec-summary__chevron {
+        transition: none;
     }
 }
 

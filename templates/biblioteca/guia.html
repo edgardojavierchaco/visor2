@@ -84,7 +84,7 @@
             <p>Cada sección se administra de manera independiente: podés agregar, editar o eliminar sus registros. Carga e Informe muestran solamente <strong>Con registros</strong> o <strong>Sin registros</strong>; esos estados no indican completitud.</p>
             <ol class="biblioteca-guia__secciones-lista">
                 {% for seccion in secciones_guia %}
-                    <li><span>{{ forloop.counter|stringformat:"02d" }}</span>{{ seccion.nombre }}</li>
+                    <li><span>{{ seccion.numero_visible }}</span>{{ seccion.nombre }}</li>
                 {% endfor %}
             </ol>
         </div>

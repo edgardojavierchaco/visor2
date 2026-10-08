@@ -66,8 +66,26 @@ class RegistroDestinoFondosCreateView(LoginRequiredMixin, InformeBloqueoMixin, C
 
 
         
-        context['title'] = 'Compras realizadas con el FBCH'
-        context['entity'] = 'Compras realizadas con el FBCH'
+        periodo = self.get_periodo_activo()
+        planilla_nueva = es_planilla_biblioteca_nueva(
+            periodo.meses,
+            periodo.annos,
+        )
+        context['title'] = (
+            'Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Registro Destino de Fondos'
+        )
+        context['entity'] = (
+            'Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Destino de fondos'
+        )
+        context['section_return_label'] = (
+            'Volver a Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Volver a Destino de fondos'
+        )
         context['list_url'] = self.success_url
         context['action'] = 'add'
         
@@ -130,8 +148,26 @@ class RegistroDestinoFondosUpdateView(LoginRequiredMixin, InformeBloqueoMixin, U
 
 
         
-        context['title'] = 'Edición de Compras realizadas con el FBCH'
-        context['entity'] = 'Compras realizadas con el FBCH'
+        periodo = self.get_periodo_activo()
+        planilla_nueva = es_planilla_biblioteca_nueva(
+            periodo.meses,
+            periodo.annos,
+        )
+        context['title'] = (
+            'Edición de Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Edición Registro Destino de Fondos'
+        )
+        context['entity'] = (
+            'Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Destino de fondos'
+        )
+        context['section_return_label'] = (
+            'Volver a Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Volver a Destino de fondos'
+        )
         context['list_url'] = self.success_url
         context['action'] = 'edit'
         
@@ -178,8 +214,21 @@ class RegistroDestinoFondosDeleteView(LoginRequiredMixin, InformeBloqueoMixin, D
         context = super().get_context_data(**kwargs)
 
     
-        context['title'] = 'Eliminación de Compras realizadas con el FBCH'
-        context['entity'] = 'Compras realizadas con el FBCH'
+        periodo = self.get_periodo_activo()
+        planilla_nueva = es_planilla_biblioteca_nueva(
+            periodo.meses,
+            periodo.annos,
+        )
+        context['title'] = (
+            'Eliminación de Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Eliminación Registro Destino de Fondos'
+        )
+        context['entity'] = (
+            'Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Destino de fondos'
+        )
         context['list_url'] = self.success_url
         return context
 
@@ -246,9 +295,15 @@ class RegistroDestinoFondosListView(LoginRequiredMixin, InformeBloqueoMixin, Lis
         context['before_url'] = reverse_lazy('bibliotecas:aguapey_list')
 
         periodo = self.get_periodo_activo()
-        if not es_planilla_biblioteca_nueva(periodo.meses, periodo.annos):
+        planilla_nueva = es_planilla_biblioteca_nueva(
+            periodo.meses,
+            periodo.annos,
+        )
+        if not planilla_nueva:
             context['next_url'] = reverse_lazy('bibliotecas:bibliotecario_list')
-
-        context['entity'] = 'Compras realizadas con el FBCH'
+            context['title'] = 'Listado de Registro Destino de Fondos'
+            context['entity'] = 'Destino de fondos'
+        else:
+            context['entity'] = 'Compras realizadas con el FBCH'
         return context
         

@@ -20,6 +20,11 @@ class MaterialBibliograficoCreateView(LoginRequiredMixin, InformeBloqueoMixin, C
     form_class = MaterialBibliograficoForm
     template_name = 'biblioteca/pem/matbibl/create.html'
     success_url = reverse_lazy('bibliotecas:materialbibliografico_list')    
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['periodo'] = self.get_periodo_activo()
+        return kwargs
     
     # =========================
     # DISPATCH
@@ -73,6 +78,11 @@ class MaterialBibliograficoUpdateView(LoginRequiredMixin, InformeBloqueoMixin, U
     form_class = MaterialBibliograficoForm
     template_name = 'biblioteca/pem/matbibl/create.html'
     success_url = reverse_lazy('bibliotecas:materialbibliografico_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['periodo'] = self.get_periodo_activo()
+        return kwargs
     
      # =========================
     # DISPATCH

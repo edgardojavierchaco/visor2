@@ -231,42 +231,51 @@ SECCIONES_CARGA = (
 )
 
 SECCIONES_CARGA_ACTIVAS = tuple(
-    seccion for seccion in SECCIONES_CARGA
-    if seccion.clave != 'prestamos'
+    seccion
+    for seccion in SECCIONES_CARGA
+    if seccion.clave not in (
+        'prestamos',
+        'personal-bibliotecario',
+    )
 )
 
 
 def _secciones_carga_activas_periodo(periodo):
-    planilla_nueva = es_planilla_biblioteca_nueva(
+    if not es_planilla_biblioteca_nueva(
         periodo.meses,
         periodo.annos,
-    )
+    ):
+        return SECCIONES_CARGA
+
     return tuple(
         seccion
-        for seccion in SECCIONES_CARGA_ACTIVAS
-        if not (
-            planilla_nueva
-            and seccion.clave == 'personal-bibliotecario'
+        for seccion in SECCIONES_CARGA
+        if seccion.clave not in (
+            'prestamos',
+            'personal-bibliotecario',
         )
     )
 
 
 def _secciones_historicas_periodo(periodo):
-    planilla_nueva = es_planilla_biblioteca_nueva(
-        periodo.meses,
-        periodo.annos,
-    )
-    return tuple(
-        seccion
-        for seccion in SECCIONES_CARGA
-        if not (
-            planilla_nueva
-            and seccion.clave == 'personal-bibliotecario'
-        )
-    )
+    return _secciones_carga_activas_periodo(periodo)
 
 
-SECCIONES_CARGA_NUMERACION = {
+SECCIONES_CARGA_NUMERACION_LEGACY = {
+    'material-bibliografico': '1',
+    'referencia': '2',
+    'referencia-virtual': '3',
+    'prestamos': '4',
+    'informe-pedagogico': '5',
+    'asistencia': '6',
+    'instituciones': '7',
+    'procesos-tecnicos': '8',
+    'aguapey': '9',
+    'destino-fondos': '10',
+    'personal-bibliotecario': '11',
+}
+
+SECCIONES_CARGA_NUMERACION_NUEVA = {
     'material-bibliografico': '1',
     'referencia': '2.1',
     'referencia-virtual': '2.2',
@@ -276,8 +285,28 @@ SECCIONES_CARGA_NUMERACION = {
     'procesos-tecnicos': '6',
     'aguapey': '7',
     'destino-fondos': '8',
-    'personal-bibliotecario': '9',
 }
+
+
+def _numeracion_secciones_periodo(periodo):
+    if es_planilla_biblioteca_nueva(
+        periodo.meses,
+        periodo.annos,
+    ):
+        return SECCIONES_CARGA_NUMERACION_NUEVA
+    return SECCIONES_CARGA_NUMERACION_LEGACY
+
+
+def _nombre_seccion_periodo(seccion, periodo):
+    if (
+        seccion.clave == 'destino-fondos'
+        and not es_planilla_biblioteca_nueva(
+            periodo.meses,
+            periodo.annos,
+        )
+    ):
+        return 'Destino de fondos'
+    return seccion.nombre
 
 SECCIONES_CARGA_POR_CLAVE = {
     seccion.clave: seccion for seccion in SECCIONES_CARGA
@@ -545,14 +574,15 @@ def _construir_resumen_secciones(periodo_pendiente):
         secciones_activas,
     )
     secciones = []
+    numeracion = _numeracion_secciones_periodo(periodo_pendiente)
 
     for numero, seccion in enumerate(secciones_activas, 1):
         cantidad = conteos[seccion.clave]
         secciones.append({
             'numero': numero,
-            'numero_visible': SECCIONES_CARGA_NUMERACION[seccion.clave],
+            'numero_visible': numeracion[seccion.clave],
             'clave': seccion.clave,
-            'nombre': seccion.nombre,
+            'nombre': _nombre_seccion_periodo(seccion, periodo_pendiente),
             'icono': seccion.icono,
             'material_icon': seccion.material_icon,
             'cantidad': cantidad,
@@ -715,11 +745,31 @@ class GuiaUsoView(LoginRequiredMixin, TemplateView):
             pendientes,
         )
         periodo_pendiente = resolucion['periodo_pendiente']
-        secciones_guia = (
-            _secciones_carga_activas_periodo(periodo_pendiente)
-            if periodo_pendiente
-            else SECCIONES_CARGA_ACTIVAS
-        )
+        if periodo_pendiente:
+            secciones_config = _secciones_carga_activas_periodo(
+                periodo_pendiente
+            )
+            numeracion = _numeracion_secciones_periodo(periodo_pendiente)
+            secciones_guia = [
+                {
+                    'numero_visible': numeracion[seccion.clave],
+                    'nombre': _nombre_seccion_periodo(
+                        seccion,
+                        periodo_pendiente,
+                    ),
+                }
+                for seccion in secciones_config
+            ]
+        else:
+            secciones_guia = [
+                {
+                    'numero_visible': SECCIONES_CARGA_NUMERACION_NUEVA[
+                        seccion.clave
+                    ],
+                    'nombre': seccion.nombre,
+                }
+                for seccion in SECCIONES_CARGA_ACTIVAS
+            ]
 
         context['total_secciones'] = len(secciones_guia)
         context['secciones_guia'] = secciones_guia
@@ -870,13 +920,15 @@ class PeriodoHistoricoResumenView(LoginRequiredMixin, View):
         periodo = _resolver_periodo_enviado_autorizado(request, periodo_id)
         secciones_periodo = _secciones_historicas_periodo(periodo)
         conteos = _obtener_conteos_secciones(periodo, secciones_periodo)
+        numeracion = _numeracion_secciones_periodo(periodo)
         secciones = []
 
         for seccion in secciones_periodo:
             cantidad = conteos[seccion.clave]
             secciones.append({
                 'clave': seccion.clave,
-                'nombre': seccion.nombre,
+                'numero_visible': numeracion[seccion.clave],
+                'nombre': _nombre_seccion_periodo(seccion, periodo),
                 'material_icon': seccion.material_icon,
                 'cantidad': cantidad,
                 'tiene_registros': cantidad > 0,
@@ -903,13 +955,11 @@ class PeriodoHistoricoDetalleView(LoginRequiredMixin, View):
 
         periodo = _resolver_periodo_enviado_autorizado(request, periodo_id)
 
-        if (
-            seccion == 'personal-bibliotecario'
-            and es_planilla_biblioteca_nueva(
-                periodo.meses,
-                periodo.annos,
-            )
-        ):
+        secciones_disponibles = {
+            item.clave
+            for item in _secciones_historicas_periodo(periodo)
+        }
+        if seccion not in secciones_disponibles:
             raise Http404('La sección solicitada no forma parte de este período.')
 
         if seccion == 'personal-bibliotecario':
@@ -972,7 +1022,7 @@ class PeriodoHistoricoDetalleView(LoginRequiredMixin, View):
                 registros,
             )
         return JsonResponse({
-            'seccion': seccion_config.nombre,
+            'seccion': _nombre_seccion_periodo(seccion_config, periodo),
             'columnas': [etiqueta for _campo, etiqueta in columnas],
             'filas': filas,
             'totales': totales,
@@ -1082,13 +1132,11 @@ class InformeDetalleView(LoginRequiredMixin, View):
             )
             return JsonResponse({'detail': mensaje}, status=409)
 
-        if (
-            seccion == 'personal-bibliotecario'
-            and es_planilla_biblioteca_nueva(
-                periodo_pendiente.meses,
-                periodo_pendiente.annos,
-            )
-        ):
+        secciones_disponibles = {
+            item.clave
+            for item in _secciones_carga_activas_periodo(periodo_pendiente)
+        }
+        if seccion not in secciones_disponibles:
             raise Http404('La sección solicitada no forma parte de este período.')
 
         if seccion == 'personal-bibliotecario':
@@ -1125,7 +1173,10 @@ class InformeDetalleView(LoginRequiredMixin, View):
             for registro in registros
         ]
         return JsonResponse({
-            'seccion': seccion_config.nombre,
+            'seccion': _nombre_seccion_periodo(
+                seccion_config,
+                periodo_pendiente,
+            ),
             'columnas': [etiqueta for _campo, etiqueta in columnas],
             'filas': filas,
         })

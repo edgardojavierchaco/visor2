@@ -261,7 +261,11 @@ class ServiciosRefVirtualListView(LoginRequiredMixin, InformeBloqueoMixin, ListV
         context['update_url'] = reverse_lazy('bibliotecas:servrefvirtual_update', args=[0]) 
         context['hide_lock_button'] = False   
         context['generar_pdf_button'] = True, 
-        context['before_url'] = reverse_lazy('bibliotecas:servref_list')    
-        context['next_url'] = reverse_lazy('bibliotecas:infopedago_list')
+        context['before_url'] = reverse_lazy('bibliotecas:servref_list')
+        context['next_url'] = reverse_lazy(
+            'bibliotecas:infopedago_list'
+            if context['referencia_virtual_formato_nuevo']
+            else 'bibliotecas:servprestamo_list'
+        )
         context['entity'] = 'Servicios_Virtual'
         return context

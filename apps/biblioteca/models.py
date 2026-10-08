@@ -179,8 +179,16 @@ class MaterialBibliografico(models.Model):
     def clean(self):
         super().clean()
 
-        # 🔴 VALIDACIÓN SERVICIO PERMITIDO
-        if self.servicio and self.servicio.cod_servicio not in (111, 112, 113, 114):
+        # 🔴 VALIDACIÓN SERVICIO PERMITIDO SEGÚN VERSIÓN DE PLANILLA
+        servicios_permitidos = (
+            (111, 112, 113, 114)
+            if es_planilla_biblioteca_nueva(self.mes, self.anio)
+            else (110, 111, 112, 113)
+        )
+        if (
+            self.servicio
+            and self.servicio.cod_servicio not in servicios_permitidos
+        ):
             raise ValidationError({
                 'servicio': 'El servicio seleccionado no es válido.'
             })
