@@ -615,9 +615,6 @@ def _preparar_modales_gestionar(request, seccion, especial_context):
         "modal_tiene_grupo": True,
         "docente_form": docente_form,
         "docente_cargos_comparados": [],
-        "cargo_validacion_requerida": getattr(
-            settings, "ESPECIAL_REQUIERE_CARGO_VALIDADO", True
-        ),
         "docente_requiere_confirmacion": False,
         "docente_asignacion_activa": asignacion_activa,
         "url_editar_docente": "",

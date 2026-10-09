@@ -4,7 +4,6 @@
 import re
 import unicodedata
 
-from django.conf import settings
 from apps.bnhpersonas.models import RegistroActividades
 
 
@@ -18,8 +17,7 @@ def cargos_especiales_docente(cuil, cueanexo):
         "eliminado": False,
         "modalidad__descrip_modalidad__iexact": "ESPECIAL",
     }
-    if getattr(settings, "ESPECIAL_REQUIERE_CARGO_VALIDADO", True):
-        filtros["validacion"] = "VALIDADO"
+    filtros["validacion"] = "VALIDADO"
     return (
         RegistroActividades.objects
         .select_related("persona", "modalidad", "ceic", "sit_revista", "nivel_curricular")

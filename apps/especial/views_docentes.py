@@ -644,8 +644,7 @@ def _docente_tiene_cargo(cuil):
         eliminado=False,
         modalidad__descrip_modalidad__iexact="ESPECIAL",
     )
-    if getattr(settings, "ESPECIAL_REQUIERE_CARGO_VALIDADO", True):
-        filtros["validacion"] = "VALIDADO"
+    filtros["validacion"] = "VALIDADO"
     return RegistroActividades.objects.filter(**filtros).exists()
 
 
@@ -1614,9 +1613,6 @@ def docentes(request):
             "docente_tiene_cargo": docente_tiene_cargo,
             "persona_bnh_existe": persona_bnh_existe,
             "docente_tiene_cargo_en_cue": docente_tiene_cargo_en_cue,
-            "cargo_validacion_requerida": getattr(
-                settings, "ESPECIAL_REQUIERE_CARGO_VALIDADO", True
-            ),
             "docente_cargos_cue": docente_cargos_cue,
             "docentes": docentes,
             "docentes_actuales_url": docentes_actuales_url,
