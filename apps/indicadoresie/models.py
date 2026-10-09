@@ -91,15 +91,13 @@ class InformeSGE(models.Model):
     responsable_nombre = models.CharField(max_length=100, blank=True, null=True)
     telefono_responsable = models.CharField(max_length=50, blank=True, null=True)
     sge_2025 = models.CharField(max_length=50, blank=True, null=True)
-    sge_2026 = models.CharField(max_length=50, blank=True, null=True)
     inscriptos_2025 = models.CharField(max_length=50, blank=True, null=True)
-    inscriptos_2026 = models.CharField(max_length=50, blank=True, null=True)
     
     id = models.AutoField(primary_key=True)
     
     class Meta:
         managed = False  
-        db_table = 'sie_seguimiento_actualizado2026'
+        db_table = '"public"."listado_sge_historico_2025"'
         verbose_name = 'Informe SGE'
         verbose_name_plural = 'Informes SGE'
 

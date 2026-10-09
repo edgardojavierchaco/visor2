@@ -503,12 +503,9 @@
         <div class="page-header-left">
             <h2>
                 <i class="fas fa-school text-primary"></i>SGE 2026
-                {% if ultima_fecha %}
-                    <span class="fecha-badge">
-                        <i class="fas fa-calendar-alt"></i> Ultima Actualización: {{ ultima_fecha|date:'d/m/Y H:i' }}
-                        {% if is_admin %} <i class="fas fa-edit edit-icon" id="editFechaBtn" title="Editar fecha"></i> {% endif %}
-                    </span>
-                {% endif %}
+                <span class="fecha-badge">
+                    <i class="fas fa-calendar-alt"></i> Ultima Actualización: {% if ultima_fecha %}{{ ultima_fecha|date:'d/m/Y H:i' }}{% else %}Sin definir{% endif %}
+                </span>
             </h2>
             <p>Sistema de Gestión Escolar - <strong>Cargo: {{ cargo_usuario|default:"Usuario" }}</strong></p>
         </div>
@@ -757,45 +754,6 @@
 </div>
 
 
-{% if is_admin %}
-<div class="modal fade" id="fechaModal" tabindex="-1" aria-labelledby="fechaModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
-        <div class="modal-content" style="border-radius: 1rem; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.18); overflow: hidden;">
-            <div class="modal-header" style="background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); border: none; padding: 1.4rem 1.6rem;">
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div style="background: rgba(255,255,255,0.15); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-calendar-alt" style="color: #fff; font-size: 1rem;"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title mb-0" id="fechaModalLabel" style="color: #fff; font-weight: 800; font-size: 1rem;">Actualizar fecha</h5>
-                        <p style="color: rgba(255,255,255,0.7); font-size: 0.78rem; margin: 0; font-weight: 500;">Solo visible para administradores</p>
-                    </div>
-                </div>
-                <button type="button" id="fechaModalCloseBtn" class="ms-auto" aria-label="Cerrar" style="background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 32px; height: 32px; color: #fff; cursor: pointer;"><i class="fas fa-times"></i></button>
-            </div>
-            
-            <div class="modal-body" style="padding: 1.6rem;">
-                {% csrf_token %}
-                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.6rem; padding: 1rem 1.2rem; margin-bottom: 1.2rem;">
-                    <p style="font-size: 0.78rem; color: #64748b; margin: 0; display: flex; align-items: flex-start; gap: 0.5rem;"><i class="fas fa-info-circle" style="color: #3b82f6; margin-top: 2px; flex-shrink: 0;"></i>Esta fecha indica cuándo fueron extraídos los datos del SGE. Se muestra en el encabezado.</p>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 0.4rem;">
-                    <label for="nuevaFecha" style="font-size: 0.82rem; font-weight: 700; color: #111827; text-transform: uppercase;"><i class="fas fa-clock me-1 text-primary"></i>Nueva fecha y hora</label>
-                    <input type="datetime-local" id="nuevaFecha" required style="border: 1.5px solid #cbd5e1; border-radius: 0.5rem; padding: 0.65rem 0.9rem; font-size: 0.95rem; width: 100%;">
-                </div>
-                <div id="modalError" class="mt-3" style="display: none; background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 0.7rem 1rem; font-size: 0.85rem; color: #b91c1c;">
-                    <i class="fas fa-exclamation-circle me-2"></i><span id="modalErrorText"></span>
-                </div>
-            </div>
-            
-            <div class="modal-footer" style="border-top: 1px solid #e2e8f0; padding: 1rem 1.6rem; background: #f8fafc;">
-                <button type="button" id="fechaModalCancelBtn" class="btn btn-light" style="border: 1.5px solid #cbd5e1; font-weight: 600;">Cancelar</button>
-                <button type="button" id="guardarFechaBtn" class="btn btn-primary" style="font-weight: 700;"><i class="fas fa-save me-1"></i> Guardar cambios</button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
@@ -1366,78 +1324,6 @@ $(document).ready(function () {
 
     if ($('#toggleRegionActivo').is(':checked')) { applyAllFilters(); actualizarChips(); }
 
-    {% if is_admin %}
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) { cookieValue = decodeURIComponent(cookie.substring(name.length + 1)); break; }
-            }
-        }
-        return cookieValue;
-    }
-
-    const modalElement = document.getElementById('fechaModal');
-    if (modalElement) {
-        const fechaModalBS = new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: false });
-
-        function mostrarErrorModal(msg) {
-            const errDiv = document.getElementById('modalError');
-            const errText = document.getElementById('modalErrorText');
-            if (msg) { errText.textContent = msg; errDiv.style.display = 'flex'; } else { errDiv.style.display = 'none'; errText.textContent = ''; }
-        }
-
-        function cerrarModal() { mostrarErrorModal(''); fechaModalBS.hide(); }
-
-        const editBtn = document.getElementById('editFechaBtn');
-        if (editBtn) {
-            editBtn.addEventListener('click', function () {
-                mostrarErrorModal('');
-                {% if ultima_fecha %}
-                    try {
-                        let fechaActual = new Date('{{ ultima_fecha|date:"Y-m-d H:i:s" }}');
-                        document.getElementById('nuevaFecha').value = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-${String(fechaActual.getDate()).padStart(2, '0')}T${String(fechaActual.getHours()).padStart(2, '0')}:${String(fechaActual.getMinutes()).padStart(2, '0')}`;
-                    } catch(e) {}
-                {% endif %}
-                fechaModalBS.show();
-            });
-        }
-
-        const closeBtn = document.getElementById('fechaModalCloseBtn');
-        if (closeBtn) closeBtn.addEventListener('click', cerrarModal);
-
-        const cancelBtn = document.getElementById('fechaModalCancelBtn');
-        if (cancelBtn) cancelBtn.addEventListener('click', cerrarModal);
-
-        const guardarBtn = document.getElementById('guardarFechaBtn');
-        if (guardarBtn) {
-            guardarBtn.addEventListener('click', function () {
-                const nuevaFecha = document.getElementById('nuevaFecha').value;
-                if (!nuevaFecha) { mostrarErrorModal('Debes seleccionar una fecha y hora.'); return; }
-                guardarBtn.disabled = true; guardarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-
-               fetch('{% url "indicsie:actualizar_fecha_sge" %}', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value },
-                    body: JSON.stringify({ fecha: nuevaFecha })
-                })
-                .then(function(response) { if (!response.ok) throw new Error('HTTP ' + response.status); return response.json(); })
-                .then(function(data) {
-                    if (data.status === 'success') { cerrarModal(); location.reload(); } 
-                    else { mostrarErrorModal(data.message || 'Error al actualizar la fecha.'); guardarBtn.disabled = false; guardarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar cambios'; }
-                })
-                .catch(function(error) { console.error('Error:', error); mostrarErrorModal('Error de conexión. Verificá tu red e intentá de nuevo.'); guardarBtn.disabled = false; guardarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar cambios'; });
-            });
-        }
-
-        modalElement.addEventListener('hidden.bs.modal', function () {
-            mostrarErrorModal('');
-            if (guardarBtn) { guardarBtn.disabled = false; guardarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar cambios'; }
-        });
-    }
-{% endif %}
 });
 </script>
 {% endblock %}
