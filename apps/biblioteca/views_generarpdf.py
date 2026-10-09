@@ -10,7 +10,7 @@ from collections import defaultdict
 
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum, F, Value, Func
+from django.db.models import Case, F, Func, IntegerField, Sum, Value, When
 from django.views.decorators.http import require_POST
 
 from reportlab.platypus import (
@@ -28,13 +28,15 @@ from .models import (
     MaterialBibliografico,
     ServicioReferencia,
     ServicioReferenciaVirtual,
+    ServicioPrestamo,
     InformePedagogico,
     AsistenciaUsuarios,
     InstitucionesPrestaServicios,
     Aguapey,
     RegistroDestinoFondos,
     ProcesosTecnicos,
-    ServicioPrestamo
+    es_formato_referencia_virtual_nuevo,
+    es_planilla_biblioteca_nueva,
 )
 
 from apps.consultasge.models import CapaUnicaOfertas
@@ -98,16 +100,12 @@ class ReportEngine:
         self.story = story
         self.styles = styles
 
-    def add_section(self, title, table, qr=None, extra_flowables=None):
+    def add_section(self, title, table, qr=None):
         block = []
 
         block.append(Paragraph(title, self.styles["Heading3"]))
         block.append(table)
         block.append(Spacer(1, 6))
-
-        if extra_flowables:
-            block.extend(extra_flowables)
-            block.append(Spacer(1, 6))
 
         if qr:
             block.append(qr)
@@ -174,6 +172,7 @@ def generar_pdf_material_bibliografico(request):
     cueanexos = cueanexo_activo
     mes = periodo.meses
     anio = periodo.annos
+    planilla_nueva = es_planilla_biblioteca_nueva(mes, anio)
 
     # =========================================================
     # DB
@@ -312,88 +311,168 @@ def generar_pdf_material_bibliografico(request):
     ])
 
     engine.add_section(
-        "2. SERVICIO DE REFERENCIA",
+        f"{'2.1' if planilla_nueva else '2'}. SERVICIO DE REFERENCIA",
         build_table(data),
         build_qr(f"SERVICIO DE REFERENCIA {cueanexos} {mes}/{anio}\n\n{qr_servref_data}")
     )
     
 
     # =========================================================
-    # 3. SERVICIO DE REFERENCIA VIRTUAL
+    # 2.2 SERVICIO DE REFERENCIA VIRTUAL
     # =========================================================
-    virtual = ServicioReferenciaVirtual.objects.filter(
-        cueanexo=cueanexo_activo,
-        mes=mes,
-        anio=anio
-    ).values(
-        "servicio__nom_servicio",
-        "turnos__nom_turno"
-    ).annotate(
-        varones=Sum("varones"),
-        total=Sum("total")
-    ).order_by("servicio__nom_servicio", "turnos__nom_turno")
+    virtual_legacy = not es_formato_referencia_virtual_nuevo(
+        mes,
+        anio,
+    )
+    campos_agrupacion_virtual = (
+        ("servicio__nom_servicio", "turnos__nom_turno")
+        if virtual_legacy
+        else ("servicio__nom_servicio", "servicio__cod_servicio", "turnos__nom_turno")
+    )
+    virtual = list(
+        ServicioReferenciaVirtual.objects.filter(
+            cueanexo=cueanexo_activo,
+            mes=mes,
+            anio=anio
+        ).values(
+            *campos_agrupacion_virtual
+        ).annotate(
+            varones=Sum("varones"),
+            total=Sum("total")
+        ).order_by("servicio__nom_servicio", "turnos__nom_turno")
+    )
 
-    data = [["SERVICIO", "TURNO", "VARONES", "TOTAL"]] + [
-        [r["servicio__nom_servicio"], r["turnos__nom_turno"], r["varones"], r["total"] or 0]
-        for r in virtual
-    ]
-    
-    qr_virtual_data = "\n".join([
-        f"{r['servicio__nom_servicio']} | {r['turnos__nom_turno']} | {r['varones']} | {r['total'] or 0}"
-        for r in virtual
-    ])
+    if virtual_legacy:
+        data = [["SERVICIO", "TURNO", "VARONES", "TOTAL"]] + [
+            [
+                r["servicio__nom_servicio"],
+                r["turnos__nom_turno"],
+                r["varones"] or 0,
+                r["total"] or 0,
+            ]
+            for r in virtual
+        ]
+        qr_virtual_data = "\n".join([
+            f"{r['servicio__nom_servicio']} | {r['turnos__nom_turno']} | {r['varones'] or 0} | {r['total'] or 0}"
+            for r in virtual
+        ])
+    else:
+        data = [["SERVICIO", "TURNO", "VISUALIZACIONES"]] + [
+            [
+                r["servicio__nom_servicio"],
+                r["turnos__nom_turno"],
+                r["total"] or 0,
+            ]
+            for r in virtual
+        ]
+        qr_virtual_data = "\n".join([
+            f"{r['servicio__nom_servicio']} | {r['turnos__nom_turno']} | VISUALIZACIONES: {r['total'] or 0}"
+            for r in virtual
+        ])
 
     engine.add_section(
-        "3. SERVICIO DE REFERENCIA VIRTUAL",
+        f"{'2.2' if planilla_nueva else '3'}. SERVICIO DE REFERENCIA VIRTUAL",
         build_table(data),
         build_qr(f"VIRTUAL {cueanexos} {mes}/{anio}\n\n{qr_virtual_data}")
     )
+
+    if not planilla_nueva:
+        prestamo = ServicioPrestamo.objects.filter(
+            cueanexo=cueanexo_activo,
+            mes=mes,
+            anio=anio,
+        ).values(
+            "servicio__nom_servicio",
+            "turnos__nom_turno",
+            "instalacion",
+            "total",
+        ).order_by(
+            "servicio__nom_servicio",
+            "turnos__nom_turno",
+            "instalacion",
+        )
+
+        data = [["SERVICIO", "TURNO", "INSTALACIÓN", "TOTAL"]] + [
+            [
+                r["servicio__nom_servicio"],
+                r["turnos__nom_turno"],
+                r["instalacion"],
+                r["total"] or 0,
+            ]
+            for r in prestamo
+        ]
+
+        qr_prestamo_data = "\n".join([
+            (
+                f"{r['servicio__nom_servicio']} | "
+                f"{r['turnos__nom_turno']} | "
+                f"{r['instalacion']} | {r['total'] or 0}"
+            )
+            for r in prestamo
+        ])
+
+        engine.add_section(
+            "4. SERVICIO DE PRÉSTAMO",
+            build_table(data),
+            build_qr(
+                f"PRÉSTAMO {cueanexos} {mes}/{anio}\n\n"
+                f"{qr_prestamo_data}"
+            ),
+        )
     
-    
-    # =========================
-    # 4.  SERVICIO DE PRÉSTAMO
-    # =========================
-    prestamo = ServicioPrestamo.objects.filter(
+    # ========================
+    # 3. INFORME PEDAGÓGICO
+    # ========================
+    ped_base = InformePedagogico.objects.filter(
         cueanexo=cueanexo_activo,
         mes=mes,
-        anio=anio
-    ).values(
-        "servicio__nom_servicio",
-        "turnos__nom_turno",
-        "instalacion",
-        "total"
-    ).order_by("servicio__nom_servicio", "turnos__nom_turno", "instalacion")
-    
-    data = [["SERVICIO", "TURNO", "INSTALACIÓN", "TOTAL"]] + [
-        [r["servicio__nom_servicio"], r["turnos__nom_turno"], r["instalacion"], r["total"] or 0]
-        for r in prestamo
-    ]
-    
-    qr_prestamo_data = "\n".join([
-        f"{r['servicio__nom_servicio']} | {r['turnos__nom_turno']} | {r['instalacion']} | {r['total'] or 0}"
-        for r in prestamo
-    ])
-    
-    engine.add_section(
-        "4. SERVICIO DE PRÉSTAMO",
-        build_table(data),
-        build_qr(f"PRÉSTAMO {cueanexos} {mes}/{anio}\n\n{qr_prestamo_data}")
+        anio=anio,
     )
-    
-    
-    # ========================
-    # 5.  INFORME PEDAGÓGICO
-    # ========================
-    ped = InformePedagogico.objects.filter(
-        cueanexo=cueanexo_activo,
-        mes=mes,
-        anio=anio
-    ).values(
-        "servicio__nom_servicio"
-    ).annotate(
-        varones=Sum("varones"),
-        total=Sum("total")
-    ).order_by("servicio__nom_servicio")
+
+    if planilla_nueva:
+        orden_pedagogico = Case(
+            When(servicio__cod_servicio=528, then=0),
+            When(servicio__cod_servicio=513, then=1),
+            When(servicio__cod_servicio=514, then=2),
+            When(servicio__cod_servicio=515, then=3),
+            When(servicio__cod_servicio=516, then=4),
+            When(servicio__cod_servicio=517, then=5),
+            When(servicio__cod_servicio=518, then=6),
+            When(servicio__cod_servicio=519, then=7),
+            When(servicio__cod_servicio=520, then=8),
+            When(servicio__cod_servicio=529, then=9),
+            When(servicio__cod_servicio=522, then=10),
+            When(servicio__cod_servicio=523, then=11),
+            When(servicio__cod_servicio=524, then=12),
+            When(servicio__cod_servicio=525, then=13),
+            When(servicio__cod_servicio=526, then=14),
+            When(servicio__cod_servicio=527, then=15),
+            default=16,
+            output_field=IntegerField(),
+        )
+        ped = (
+            ped_base
+            .annotate(_orden_pedagogico=orden_pedagogico)
+            .values(
+                "servicio__nom_servicio",
+                "_orden_pedagogico",
+            )
+            .annotate(
+                varones=Sum("varones"),
+                total=Sum("total"),
+            )
+            .order_by("_orden_pedagogico", "servicio__nom_servicio")
+        )
+    else:
+        ped = (
+            ped_base
+            .values("servicio__nom_servicio")
+            .annotate(
+                varones=Sum("varones"),
+                total=Sum("total"),
+            )
+            .order_by("servicio__nom_servicio")
+        )
 
     data = [["SERVICIO", "VARONES", "TOTAL"]] + [
         [r["servicio__nom_servicio"], r["varones"], r["total"] or 0]
@@ -406,14 +485,14 @@ def generar_pdf_material_bibliografico(request):
     ])
 
     engine.add_section(
-        "5. INFORME PEDAGÓGICO DE SERVICIOS",
+        f"{'3' if planilla_nueva else '5'}. INFORME PEDAGÓGICO DE SERVICIOS",
         build_table(data),
         build_qr(f"PEDAGÓGICO {cueanexos} {mes}/{anio}\n\n{qr_pedagogico_data}")
     )
     
 
     # ==========================
-    # 6. ASISTENCIA DE USUARIOS
+    # 4. ASISTENCIA DE USUARIOS
     # ==========================
     asi = AsistenciaUsuarios.objects.filter(
         cueanexo=cueanexo_activo,
@@ -438,14 +517,14 @@ def generar_pdf_material_bibliografico(request):
     ])
     
     engine.add_section(
-        "6. ASISTENCIA DE USUARIOS BIBLIOTECAS ESCOLARES",
+        f"{'4' if planilla_nueva else '6'}. ASISTENCIA DE USUARIOS BIBLIOTECAS ESCOLARES",
         build_table(data),
         build_qr(f"ASISTENCIA {cueanexos} {mes}/{anio}\n\n{qr_asistencia_data}")
     )
     
 
     # ============================================
-    # 7. INSTITUCIONES A LAS QUE PRESTA SERVICIOS
+    # 5. INSTITUCIONES A LAS QUE PRESTA SERVICIOS
     # ============================================
     inst = InstitucionesPrestaServicios.objects.filter(
         cueanexo=cueanexo_activo, mes=mes, anio=anio
@@ -459,14 +538,14 @@ def generar_pdf_material_bibliografico(request):
     ])
     
     engine.add_section(
-        "7. INSTITUCIONES A LAS QUE PRESTA SERVICIOS",
+        f"{'5' if planilla_nueva else '7'}. INSTITUCIONES A LAS QUE PRESTA SERVICIOS",
         build_table(data),
         build_qr(f"INSTITUCIONES {cueanexos} {mes}/{anio}\n\n{qr_material_data}")
     )
     
     
     # =========================================================
-    # 8. PROCESOS TÉCNICOS
+    # 6. PROCESOS TÉCNICOS
     # =========================================================
     registros = ProcesosTecnicos.objects.filter(
         cueanexo=cueanexo_activo, mes=mes, anio=anio
@@ -475,40 +554,84 @@ def generar_pdf_material_bibliografico(request):
     datos_agrupados = defaultdict(lambda: defaultdict(int))
     procesos_unicos = set()
 
-    for material, proceso, total in registros:
-        datos_agrupados[material][proceso] += total or 0
-        procesos_unicos.add(proceso)
+    if planilla_nueva:
+        inventario_total = {}
 
-    procesos_unicos = sorted(procesos_unicos)
+        for material, proceso, total in registros:
+            if proceso == 'INVENTARIO TOTAL':
+                inventario_total[material] = total or 0
+                datos_agrupados[material]
+                continue
 
-    data = [["MATERIAL"] + procesos_unicos + ["SUBTOTAL"]]
-    
-    qr_material_data = "\n".join([
-        f"{material} | " + " | ".join(f"{proceso}: {datos_agrupados[material].get(proceso, 0)}" for proceso in procesos_unicos) + f" | SUBTOTAL: {sum(datos_agrupados[material].get(proceso, 0) for proceso in procesos_unicos)}"
-        for material in datos_agrupados
-    ])
+            datos_agrupados[material][proceso] += total or 0
+            procesos_unicos.add(proceso)
 
-    for material, procesos in datos_agrupados.items():
-        fila = [material]
-        subtotal = 0
+        procesos_unicos = sorted(procesos_unicos)
+        data = [[
+            "MATERIAL",
+            *procesos_unicos,
+            "SUBTOTAL",
+            "INVENTARIO TOTAL",
+        ]]
 
-        for p in procesos_unicos:
-            v = procesos.get(p, 0)
-            fila.append(v)
-            subtotal += v
+        qr_material_data = "\n".join([
+            f"{material} | "
+            + " | ".join(
+                f"{proceso}: {datos_agrupados[material].get(proceso, 0)}"
+                for proceso in procesos_unicos
+            )
+            + f" | SUBTOTAL: {sum(datos_agrupados[material].get(proceso, 0) for proceso in procesos_unicos)}"
+            + f" | INVENTARIO TOTAL: {inventario_total.get(material, 0)}"
+            for material in datos_agrupados
+        ])
 
-        fila.append(subtotal)
-        data.append(fila)
+        for material, procesos in datos_agrupados.items():
+            fila = [material]
+            subtotal = 0
+            for proceso in procesos_unicos:
+                valor = procesos.get(proceso, 0)
+                fila.append(valor)
+                subtotal += valor
+            fila.append(subtotal)
+            fila.append(inventario_total.get(material, 0))
+            data.append(fila)
+    else:
+        for material, proceso, total in registros:
+            datos_agrupados[material][proceso] += total or 0
+            procesos_unicos.add(proceso)
+
+        procesos_unicos = sorted(procesos_unicos)
+        data = [["MATERIAL"] + procesos_unicos + ["SUBTOTAL"]]
+
+        qr_material_data = "\n".join([
+            f"{material} | "
+            + " | ".join(
+                f"{proceso}: {datos_agrupados[material].get(proceso, 0)}"
+                for proceso in procesos_unicos
+            )
+            + f" | SUBTOTAL: {sum(datos_agrupados[material].get(proceso, 0) for proceso in procesos_unicos)}"
+            for material in datos_agrupados
+        ])
+
+        for material, procesos in datos_agrupados.items():
+            fila = [material]
+            subtotal = 0
+            for proceso in procesos_unicos:
+                valor = procesos.get(proceso, 0)
+                fila.append(valor)
+                subtotal += valor
+            fila.append(subtotal)
+            data.append(fila)
 
     engine.add_section(
-        "8. SECTOR PROCESOS TÉCNICOS",
+        f"{'6' if planilla_nueva else '8'}. SECTOR PROCESOS TÉCNICOS",
         build_table(data),
         build_qr(f"PROCESOS {cueanexos} {mes}/{anio}\n\n{qr_material_data}")
     )   
     
 
     # ===========
-    # 9. AGUAPEY
+    # 7. AGUAPEY
     # ===========
     aguapey = Aguapey.objects.filter(cueanexo=cueanexo_activo, mes=mes, anio=anio).first()
 
@@ -522,14 +645,18 @@ def generar_pdf_material_bibliografico(request):
     qr_aguapey_data = f"BASE DE DATOS COMO RECURSO DE GESTION | MES: {getattr(aguapey, 'total_mes', 0)} | BASE: {getattr(aguapey, 'total_base', 0)} | USUARIOS: {getattr(aguapey, 'total_usuarios', 0)} | OBS: {getattr(aguapey, 'observaciones', '')}"
     
     engine.add_section(
-        "9. BASE DE DATOS COMO RECURSOS DE GESTION",
+        (
+            "7. BASE DE DATOS COMO RECURSO DE GESTIÓN"
+            if planilla_nueva
+            else "9. BASE DE DATOS COMO RECURSOS DE GESTION"
+        ),
         build_table(data),
         build_qr(qr_aguapey_data)
     )
     
 
     # =========================================================
-    # 10. REGISTRO DESTINO DE FONDO BIBLIOTECARIO CHAQUEÑO
+    # 8. COMPRAS REALIZADAS CON EL FBCH
     # =========================================================
     fondos = RegistroDestinoFondos.objects.filter(cueanexo=cueanexo_activo, mes=mes, anio=anio)
 
@@ -543,7 +670,11 @@ def generar_pdf_material_bibliografico(request):
     ])
 
     engine.add_section(
-        "10. COMPRAS REALIZADAS CON EL FONDO BIBLIOTECARIO CHAQUEÑO",
+        (
+            "8. COMPRAS REALIZADAS CON EL FBCH"
+            if planilla_nueva
+            else "10. COMPRAS REALIZADAS CON EL FONDO BIBLIOTECARIO CHAQUEÑO"
+        ),
         build_table(data),
         build_qr(qr_fondos_data)
     )

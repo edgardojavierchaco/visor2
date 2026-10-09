@@ -343,6 +343,148 @@
         }
     }
 
+    function obtenerDatosFilaEliminacion(accion) {
+        var table = document.getElementById('data');
+
+        if (!table || !$.fn.dataTable || !$.fn.dataTable.isDataTable(table)) {
+            return null;
+        }
+
+        var api = new $.fn.dataTable.Api(table);
+        var $fila = $(accion).closest('tr');
+        var fila = api.row($fila);
+        var datos = fila.data();
+
+        if (!datos && $fila.hasClass('child')) {
+            fila = api.row($fila.prev());
+            datos = fila.data();
+        }
+
+        return datos || null;
+    }
+
+    function obtenerConfiguracionEliminacion() {
+        var nodo = document.querySelector('[data-biblioteca-delete-config]');
+
+        if (!nodo) {
+            return {
+                sectionName: 'esta sección',
+                icon: 'table_rows',
+                primaryFields: [],
+                primarySeparator: ' · ',
+                fields: []
+            };
+        }
+
+        var campos = Array.prototype.map.call(
+            nodo.querySelectorAll('[data-biblioteca-delete-field]'),
+            function (campo) {
+                return {
+                    key: campo.getAttribute('data-biblioteca-delete-field') || '',
+                    label: campo.getAttribute('data-label') || '',
+                    full: campo.getAttribute('data-full') === 'true'
+                };
+            }
+        ).filter(function (campo) {
+            return campo.key;
+        });
+
+        return {
+            sectionName: (nodo.getAttribute('data-section-name') || 'esta sección').trim(),
+            icon: (nodo.getAttribute('data-section-icon') || 'table_rows').trim(),
+            primaryFields: (nodo.getAttribute('data-primary-fields') || '')
+                .split(',')
+                .map(function (campo) { return campo.trim(); })
+                .filter(Boolean),
+            primarySeparator: nodo.getAttribute('data-primary-separator') !== null
+                ? nodo.getAttribute('data-primary-separator')
+                : ' · ',
+            fields: campos
+        };
+    }
+
+    function valorRegistro(registro, campo) {
+        if (!registro || !campo) {
+            return '';
+        }
+
+        var valor = registro[campo];
+
+        if (valor === null || valor === undefined || valor === '' || valor === '—') {
+            return '';
+        }
+
+        return String(valor);
+    }
+
+    function renderizarContenidoEliminacion($modal, registro, registroId) {
+        var configuracion = obtenerConfiguracionEliminacion();
+        var valoresPrincipales = configuracion.primaryFields
+            .map(function (campo) {
+                return valorRegistro(registro, campo);
+            })
+            .filter(Boolean);
+        var principal = valoresPrincipales.length
+            ? valoresPrincipales.join(configuracion.primarySeparator)
+            : '';
+
+        if (!principal) {
+            if (configuracion.sectionName && configuracion.sectionName !== 'esta sección') {
+                principal = configuracion.sectionName;
+            } else if (registroId) {
+                principal = 'Registro N.° ' + registroId;
+            } else {
+                principal = 'Registro seleccionado';
+            }
+        }
+
+        $modal.find('[data-biblioteca-delete-icon]').text(configuracion.icon || 'table_rows');
+        $modal.find('[data-biblioteca-delete-primary]').text(principal);
+
+        var contenedor = $modal.find('[data-biblioteca-delete-fields]')[0];
+
+        if (contenedor) {
+            contenedor.textContent = '';
+
+            var campos = configuracion.fields.length
+                ? configuracion.fields
+                : [{key: 'id', label: 'Registro', full: false}];
+
+            campos.forEach(function (campo) {
+                var valor = valorRegistro(registro, campo.key);
+
+                if (!valor && campo.key === 'id' && registroId) {
+                    valor = registroId;
+                }
+
+                var bloque = document.createElement('div');
+                bloque.className = 'biblioteca-crud-delete-modal__record-field';
+
+                if (campo.full) {
+                    bloque.classList.add('biblioteca-crud-delete-modal__record-field--full');
+                }
+
+                var etiqueta = document.createElement('span');
+                etiqueta.className = 'biblioteca-crud-delete-modal__record-label';
+                etiqueta.textContent = campo.label || campo.key;
+
+                var contenido = document.createElement('span');
+                contenido.className = 'biblioteca-crud-delete-modal__record-value';
+                contenido.textContent = valor || '—';
+
+                bloque.appendChild(etiqueta);
+                bloque.appendChild(contenido);
+                contenedor.appendChild(bloque);
+            });
+        }
+
+        var advertencia = configuracion.sectionName && configuracion.sectionName !== 'esta sección'
+            ? 'El registro se eliminará de la sección ' + configuracion.sectionName + ' y no se puede deshacer.'
+            : 'El registro se eliminará de la sección actual y no se puede deshacer.';
+
+        $modal.find('[data-biblioteca-delete-warning]').text(advertencia);
+    }
+
     function mostrarErrorEliminacion(mensaje) {
         var $error = $('[data-biblioteca-delete-error]');
         $error.text(mensaje || 'No se pudo eliminar el registro. Intentá nuevamente.');
@@ -385,13 +527,12 @@
             }
 
             var registroId = obtenerRegistroId(deleteUrl);
+            var registro = obtenerDatosFilaEliminacion(this);
 
             limpiarErrorEliminacion();
             cambiarEstadoEliminacion(false);
             $modal.data('delete-url', deleteUrl);
-            $modal.find('[data-biblioteca-delete-record]').text(
-                registroId ? 'N.° ' + registroId : 'seleccionado'
-            );
+            renderizarContenidoEliminacion($modal, registro, registroId);
             $modal.modal('show');
         }
     );
@@ -655,12 +796,18 @@
         return Number.isFinite(numero) ? numero : 0;
     }
 
+    function obtenerResumenTotales(table) {
+        var contenedorTabla = table.closest('.biblioteca-crud__table-wrap');
+        var cuerpoPanel = contenedorTabla ? contenedorTabla.parentElement : null;
+
+        return cuerpoPanel
+            ? cuerpoPanel.querySelector('[data-biblioteca-section-totals]')
+            : null;
+    }
+
     function sincronizarResumenTotales(settings) {
         var table = settings.nTable;
-        var contenedor = table.closest('.biblioteca-crud__table-wrap');
-        var resumen = contenedor
-            ? contenedor.querySelector('[data-biblioteca-section-totals]')
-            : null;
+        var resumen = obtenerResumenTotales(table);
 
         if (!resumen) {
             return;
@@ -679,6 +826,27 @@
             }, 0);
 
             destino.textContent = total.toLocaleString('es-AR');
+        });
+
+        resumen.querySelectorAll('[data-biblioteca-total-group-field]').forEach(function (destino) {
+            var campoGrupo = destino.getAttribute('data-biblioteca-total-group-field');
+            var valorGrupo = destino.getAttribute('data-biblioteca-total-group-value');
+            var campoSuma = destino.getAttribute('data-biblioteca-total-group-sum');
+
+            var valorEsperado = String(valorGrupo || '').trim().toLocaleUpperCase('es-AR');
+            var totalGrupo = registros.reduce(function (acumulado, registro) {
+                var valorRegistro = registro && registro[campoGrupo] !== undefined
+                    ? String(registro[campoGrupo] || '').trim().toLocaleUpperCase('es-AR')
+                    : '';
+
+                if (valorRegistro !== valorEsperado) {
+                    return acumulado;
+                }
+
+                return acumulado + numeroTotalizable(registro ? registro[campoSuma] : 0);
+            }, 0);
+
+            destino.textContent = totalGrupo.toLocaleString('es-AR');
         });
 
         resumen.querySelectorAll('[data-biblioteca-total-count]').forEach(function (destino) {
@@ -778,34 +946,6 @@
     }
 
     function configurarResumenTotales(settings) {
-        var table = settings.nTable;
-        var contenedor = table.closest('.biblioteca-crud__table-wrap');
-        var resumen = contenedor
-            ? contenedor.querySelector('[data-biblioteca-section-totals]')
-            : null;
-
-        if (!resumen) {
-            return;
-        }
-
-        var wrapper = table.closest('.dataTables_wrapper');
-
-        if (wrapper) {
-            var meta = normalizarMetaTabla(settings);
-            var ancla = meta;
-
-            if (!ancla) {
-                var filas = Array.prototype.filter.call(wrapper.children, function (elemento) {
-                    return elemento.classList && elemento.classList.contains('row');
-                });
-                ancla = filas.length ? filas[filas.length - 1] : null;
-            }
-
-            if (resumen.parentNode !== wrapper || resumen.nextSibling !== ancla) {
-                wrapper.insertBefore(resumen, ancla);
-            }
-        }
-
         sincronizarResumenTotales(settings);
     }
 

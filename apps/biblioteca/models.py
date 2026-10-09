@@ -18,6 +18,27 @@ MESES_CHOICES = [
     ('DICIEMBRE', 'DICIEMBRE'),
 ]
 
+
+def es_planilla_biblioteca_nueva(mes, anio):
+    try:
+        anio = int(anio)
+    except (TypeError, ValueError):
+        return False
+
+    mes = str(mes or '').strip().upper()
+
+    if anio > 2026:
+        return True
+    if anio < 2026:
+        return False
+
+    return mes in ('NOVIEMBRE', 'DICIEMBRE')
+
+
+def es_formato_referencia_virtual_nuevo(mes, anio):
+    return es_planilla_biblioteca_nueva(mes, anio)
+
+
 INSTALACIONES_CHOICES=[
     ('SALA', 'SALA'),
     ('AULA', 'AULA'),
@@ -45,11 +66,12 @@ USUARIOS_CHOICES=[
 PROCESOS_CHOICES=[
     ('SELLADOS', 'SELLADOS'),
     ('INVENTARIADOS', 'INVENTARIADOS'),
-    ('CLASIFICADOS', 'CLASIFICADOS'),     
-    ('CATALOGADOS', 'CATALOGADOS'),   
+    ('CLASIFICADOS', 'CLASIFICADOS'),
+    ('CATALOGADOS', 'CATALOGADOS'),
     ('RESTAURADOS', 'RESTAURADOS'),
-    ('RESTAURADOS', 'RESTAURADOS'),
+    ('ETIQUETADOS', 'ETIQUETADOS'),
     ('BAJAS', 'BAJAS'),
+    ('INVENTARIO TOTAL', 'INVENTARIO TOTAL'),
 ]
 
 class ServiciosMatBiblio(models.Model):
@@ -157,8 +179,16 @@ class MaterialBibliografico(models.Model):
     def clean(self):
         super().clean()
 
-        # 🔴 VALIDACIÓN SERVICIO PERMITIDO
-        if self.servicio and self.servicio.cod_servicio not in [110, 111, 112, 113]:
+        # 🔴 VALIDACIÓN SERVICIO PERMITIDO SEGÚN VERSIÓN DE PLANILLA
+        servicios_permitidos = (
+            (111, 112, 113, 114)
+            if es_planilla_biblioteca_nueva(self.mes, self.anio)
+            else (110, 111, 112, 113)
+        )
+        if (
+            self.servicio
+            and self.servicio.cod_servicio not in servicios_permitidos
+        ):
             raise ValidationError({
                 'servicio': 'El servicio seleccionado no es válido.'
             })
@@ -373,8 +403,12 @@ class ServicioReferenciaVirtual(models.Model):
     def clean(self):
         super().clean()
 
-        # 🔴 VALIDACIÓN 1: total >= varones
-        if self.varones is not None and self.total is not None:
+        # 🔴 VALIDACIÓN 1: total >= varones solo en el formato anterior
+        if (
+            not es_formato_referencia_virtual_nuevo(self.mes, self.anio)
+            and self.varones is not None
+            and self.total is not None
+        ):
             if self.total < self.varones:
                 raise ValidationError({
                     'total': 'El Total no puede ser menor que Varones.'

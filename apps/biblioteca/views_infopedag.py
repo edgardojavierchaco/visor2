@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-from .models import InformePedagogico
+from .models import InformePedagogico, es_planilla_biblioteca_nueva
 from .forms import InformePedagogicoForm
 from django.views.generic import CreateView, UpdateView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -19,6 +19,11 @@ class InfoPedagoCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
     form_class = InformePedagogicoForm
     template_name = 'biblioteca/pem/infopedago/create.html'
     success_url = reverse_lazy('bibliotecas:infopedago_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['periodo'] = self.get_periodo_activo()
+        return kwargs
     
     # =========================
     # DISPATCH
@@ -83,6 +88,11 @@ class InfoPedagoUpdateView(LoginRequiredMixin, InformeBloqueoMixin,UpdateView):
     template_name = 'biblioteca/pem/infopedago/create.html'
     success_url = reverse_lazy('bibliotecas:infopedago_list')
     url_redirect = success_url
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['periodo'] = self.get_periodo_activo()
+        return kwargs
 
     # =========================
     # DISPATCH
@@ -240,8 +250,14 @@ class InfoPedagoListView(LoginRequiredMixin, InformeBloqueoMixin, ListView):
         context['list_url'] = reverse_lazy('bibliotecas:infopedago_list')
         context['update_url'] = reverse_lazy('bibliotecas:infopedago_update', args=[0]) 
         context['hide_lock_button'] = False     
-        context['generar_pdf_button'] = True,  
-        context['before_url'] = reverse_lazy('bibliotecas:servprestamo_list')
+        context['generar_pdf_button'] = True,
+
+        periodo = self.get_periodo_activo()
+        context['before_url'] = reverse_lazy(
+            'bibliotecas:servrefvirtual_list'
+            if es_planilla_biblioteca_nueva(periodo.meses, periodo.annos)
+            else 'bibliotecas:servprestamo_list'
+        )
         context['next_url'] = reverse_lazy('bibliotecas:asistusua_list')
         context['entity'] = 'Informe_Pedagógico'
         return context

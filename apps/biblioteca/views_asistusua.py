@@ -231,8 +231,57 @@ class AsistUsuaListView(LoginRequiredMixin, InformeBloqueoMixin, ListView):
 
         context = super().get_context_data(**kwargs)
 
+        niveles = list(self.model._meta.get_field('nivel').choices)
+        usuarios = list(self.model._meta.get_field('usuario').choices)
+        registros_por_nivel = {}
 
-        
+        for registro in context.get('object_list') or ():
+            varones = registro.varones or 0
+            total = registro.total or 0
+            if varones <= 0 and total <= 0:
+                continue
+
+            usuarios_nivel = registros_por_nivel.setdefault(
+                registro.nivel,
+                {},
+            )
+            usuario = usuarios_nivel.setdefault(
+                registro.usuario,
+                {
+                    'varones': 0,
+                    'total': 0,
+                },
+            )
+            usuario['varones'] += varones
+            usuario['total'] += total
+
+        context['resumen_asistencia_niveles'] = []
+        for indice, (codigo_nivel, nombre_nivel) in enumerate(niveles, 1):
+            registros_usuario = registros_por_nivel.get(codigo_nivel, {})
+            filas = []
+            total_varones = 0
+            total_nivel = 0
+
+            for codigo_usuario, nombre_usuario in usuarios:
+                registro = registros_usuario.get(codigo_usuario)
+                if not registro:
+                    continue
+
+                filas.append({
+                    'usuario': nombre_usuario,
+                    'varones': registro['varones'],
+                    'total': registro['total'],
+                })
+                total_varones += registro['varones']
+                total_nivel += registro['total']
+
+            context['resumen_asistencia_niveles'].append({
+                'id': indice,
+                'nombre': nombre_nivel,
+                'usuarios': filas,
+                'varones': total_varones,
+                'total': total_nivel,
+            })
 
         context['title'] = 'Listado de Asistencia de Usuarios'
         context['create_url'] = reverse_lazy('bibliotecas:asistusua_create')

@@ -14,6 +14,11 @@ from apps.consultasge.models import CapaUnicaOfertas
 
 DB_SGE = 'sge_nacion'
 
+# Alias que se arma en tiempo de ejecución cuando sge_nacion no está configurada
+# (ver conexion_sge). No existe en settings.
+DB_SGE_RESPALDO = 'sge_nacion_respaldo'
+NOMBRE_BASE_SGE = 'SGE-NACION'
+
 # Valores de anio_grado en trayectoria_alumnos_sge para este operativo.
 GRADOS_OPERATIVO = ['2do Año/Grado', '3er Año/Grado']
 
@@ -51,6 +56,29 @@ SQL_SECCIONES = """
 """
 
 
+def conexion_sge():
+    """
+    Conexión a la base de SGE, siempre de solo lectura en el respaldo.
+
+    Si settings tiene configurada sge_nacion (variables SGE_NACION_DB_*), se usa
+    tal cual. Si faltan, por ejemplo en un entorno local, se arma un alias
+    aparte con la base 'SGE-NACION' del mismo servidor y las credenciales de
+    'default'. Así no hace falta tocar settings ni el .env.
+    """
+    configurada = connections.databases[DB_SGE]
+    if configurada.get('HOST') and configurada.get('NAME'):
+        return connections[DB_SGE]
+
+    if DB_SGE_RESPALDO not in connections.databases:
+        respaldo = dict(connections.databases['default'])
+        respaldo['NAME'] = NOMBRE_BASE_SGE
+        respaldo['OPTIONS'] = {
+            'options': '-c search_path=sge,public -c default_transaction_read_only=on',
+        }
+        connections.databases[DB_SGE_RESPALDO] = respaldo
+    return connections[DB_SGE_RESPALDO]
+
+
 def cueanexos_region(region):
     """Cueanexos de las escuelas que ven los tabuladores de la región."""
     return sorted({
@@ -78,7 +106,7 @@ def secciones_region(region, id_seccion=None):
         filtro_seccion = 'AND id_seccion = %s'
         params.append(id_seccion)
 
-    with connections[DB_SGE].cursor() as cur:
+    with conexion_sge().cursor() as cur:
         cur.execute(SQL_SECCIONES.format(filtro_seccion=filtro_seccion), params)
         columnas = [c[0] for c in cur.description]
         secciones = [dict(zip(columnas, fila)) for fila in cur.fetchall()]

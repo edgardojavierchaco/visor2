@@ -1,0 +1,14 @@
+{% comment %}
+  Pie de la tarjeta de regional: qué le falta y la llamada a ver escuelas.
+  Uso: {% include 'monitoreo_personas_2026/_pie_region.html' with faltantes=f.faltantes estado=f.estado %}
+{% endcomment %}
+<div class="mon-card-foot">
+    {% if faltantes %}
+        <span class="mon-card-falta"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i><span>Faltan: {{ faltantes|join:" · " }}</span></span>
+    {% elif estado == 'completa' %}
+        <span class="mon-card-falta ok"><i class="bi bi-check2-all" aria-hidden="true"></i><span>Todo cargado</span></span>
+    {% else %}
+        <span class="mon-card-falta" style="color: var(--muted)"><i class="bi bi-info-circle" aria-hidden="true"></i><span>Sin datos para medir</span></span>
+    {% endif %}
+    <span class="mon-card-cta" aria-hidden="true">Ver escuelas <i class="bi bi-arrow-right"></i></span>
+</div>

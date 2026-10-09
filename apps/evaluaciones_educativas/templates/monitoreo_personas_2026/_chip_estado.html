@@ -1,0 +1,4 @@
+{% if estado == 'completa' %}<span class="chip chip-completa"><i class="bi bi-check-circle-fill"></i> Completa</span>
+{% elif estado == 'en_curso' %}<span class="chip chip-en_curso"><i class="bi bi-hourglass-split"></i> En curso</span>
+{% elif estado == 'sin_iniciar' %}<span class="chip chip-sin_iniciar"><i class="bi bi-x-circle-fill"></i> Sin iniciar</span>
+{% else %}<span class="chip chip-sin_meta"><i class="bi bi-dash-circle"></i> Sin datos</span>{% endif %}

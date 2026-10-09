@@ -1,0 +1,162 @@
+{% comment %}
+  Comportamiento de las grillas de tarjetas del monitoreo:
+  - búsqueda, filtro por estado y orden ([data-toolbar] ↔ [data-filtrable]);
+  - los filtros quedan en la URL, así al volver del detalle siguen aplicados;
+  - "/" enfoca el buscador visible; Escape lo limpia;
+  - botón para copiar el CUE con aviso accesible.
+  Cada tarjeta lleva data-item, data-texto, data-estado, data-nombre,
+  data-avance y (escuelas) data-peso.
+{% endcomment %}
+<div class="mon-toast" role="status" aria-live="polite" id="mon-toast"></div>
+<script>
+(function () {
+    const CLAVE_RESUMEN = 'monitoreo_personas_2026:resumen';
+    window.monGuardarResumen = function () {
+        guardar(CLAVE_RESUMEN, window.location.search);
+    };
+
+    function guardar(clave, valor) { try { sessionStorage.setItem(clave, valor); } catch (e) {} }
+    function leer(clave) { try { return sessionStorage.getItem(clave); } catch (e) { return null; } }
+
+    // ── Aviso flotante ──
+    const toast = document.getElementById('mon-toast');
+    let toastTimer;
+    function avisar(texto) {
+        toast.textContent = texto;
+        toast.classList.add('visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () { toast.classList.remove('visible'); }, 2200);
+    }
+
+    // ── Grillas filtrables ──
+    document.querySelectorAll('[data-filtrable]').forEach(function (grilla) {
+        const id = grilla.dataset.filtrable;
+        const toolbar = document.querySelector('[data-toolbar="' + id + '"]');
+        if (!toolbar) return;
+        const resultados = toolbar.nextElementSibling;
+        const buscador = toolbar.querySelector('[data-buscar]');
+        const orden = toolbar.querySelector('[data-ordenar]');
+        const filtros = Array.from(toolbar.querySelectorAll('.mon-filtro'));
+        const contador = resultados.querySelector('[data-contador]');
+        const limpiar = resultados.querySelector('[data-limpiar]');
+        const vacio = grilla.querySelector('[data-sin-resultados]');
+        const items = Array.from(grilla.querySelectorAll('[data-item]'));
+        const singular = grilla.dataset.singular, plural = grilla.dataset.plural;
+        let estado = 'todas';
+
+        // Estado inicial desde la URL
+        const params = new URLSearchParams(window.location.search);
+        buscador.value = params.get(id + '_q') || '';
+        if (params.get(id + '_estado') && filtros.some(function (b) { return b.dataset.estado === params.get(id + '_estado'); })) {
+            estado = params.get(id + '_estado');
+        }
+        if (params.get(id + '_orden') && orden.querySelector('option[value="' + params.get(id + '_orden') + '"]')) {
+            orden.value = params.get(id + '_orden');
+        }
+
+        function normalizar(t) {
+            return (t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        }
+
+        function persistir() {
+            const url = new URL(window.location);
+            const q = buscador.value.trim();
+            q ? url.searchParams.set(id + '_q', q) : url.searchParams.delete(id + '_q');
+            estado !== 'todas' ? url.searchParams.set(id + '_estado', estado) : url.searchParams.delete(id + '_estado');
+            orden.selectedIndex > 0 ? url.searchParams.set(id + '_orden', orden.value) : url.searchParams.delete(id + '_orden');
+            url.searchParams.delete('refrescar');
+            history.replaceState(null, '', url);
+            if (document.querySelector('.mon[data-pagina="resumen"]')) guardar(CLAVE_RESUMEN, url.search);
+        }
+
+        function aplicar() {
+            const texto = normalizar(buscador.value.trim());
+            let visibles = 0;
+            items.forEach(function (it) {
+                const ok = normalizar(it.dataset.texto).includes(texto) && (estado === 'todas' || it.dataset.estado === estado);
+                it.hidden = !ok;
+                if (ok) visibles++;
+            });
+            filtros.forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.estado === estado ? 'true' : 'false'); });
+            const filtrando = texto !== '' || estado !== 'todas';
+            contador.innerHTML = filtrando
+                ? 'Mostrando <strong>' + visibles + '</strong> de ' + items.length + ' ' + (items.length === 1 ? singular : plural)
+                : '<strong>' + items.length + '</strong> ' + (items.length === 1 ? singular : plural);
+            limpiar.hidden = !filtrando;
+            if (vacio) vacio.hidden = visibles > 0 || items.length === 0;
+            persistir();
+        }
+
+        function ordenar() {
+            const partes = orden.value.split(':');
+            const clave = partes[0], dir = partes[1] === 'desc' ? -1 : 1;
+            items.slice()
+                .sort(function (a, b) {
+                    const va = Number(a.dataset[clave]), vb = Number(b.dataset[clave]);
+                    return (va - vb) * dir || Number(a.dataset.nombre) - Number(b.dataset.nombre);
+                })
+                .forEach(function (it) { grilla.insertBefore(it, vacio); });
+            persistir();
+        }
+
+        function limpiarTodo() {
+            buscador.value = '';
+            estado = 'todas';
+            aplicar();
+            buscador.focus();
+        }
+
+        let debounce;
+        buscador.addEventListener('input', function () { clearTimeout(debounce); debounce = setTimeout(aplicar, 120); });
+        buscador.addEventListener('keydown', function (e) { if (e.key === 'Escape' && buscador.value) { e.preventDefault(); buscador.value = ''; aplicar(); } });
+        orden.addEventListener('change', ordenar);
+        filtros.forEach(function (b) { b.addEventListener('click', function () { estado = b.dataset.estado; aplicar(); }); });
+        limpiar.addEventListener('click', limpiarTodo);
+        grilla.querySelectorAll('[data-limpiar-vacio]').forEach(function (b) { b.addEventListener('click', limpiarTodo); });
+
+        if (orden.selectedIndex > 0) ordenar();
+        aplicar();
+    });
+
+    // ── "/" enfoca el buscador visible ──
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+        const t = e.target;
+        if (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+        const visible = Array.from(document.querySelectorAll('[data-buscar]')).find(function (i) { return i.offsetParent !== null; });
+        if (visible) { e.preventDefault(); visible.focus(); }
+    });
+
+    // ── Copiar CUE ──
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-copiar]');
+        if (!btn) return;
+        const valor = btn.dataset.copiar;
+        const ok = function () {
+            btn.classList.add('copiado');
+            setTimeout(function () { btn.classList.remove('copiado'); }, 1500);
+            avisar('CUE ' + valor + ' copiado');
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(valor).then(ok, function () { avisar('No se pudo copiar el CUE'); });
+        } else {
+            const tmp = document.createElement('textarea');
+            tmp.value = valor; tmp.setAttribute('readonly', ''); tmp.style.position = 'fixed'; tmp.style.opacity = '0';
+            document.body.appendChild(tmp); tmp.select();
+            try { document.execCommand('copy'); ok(); } catch (err) { avisar('No se pudo copiar el CUE'); }
+            tmp.remove();
+        }
+    });
+
+    // ── En el detalle, "volver" recupera los filtros del resumen ──
+    document.querySelectorAll('[data-volver-resumen]').forEach(function (a) {
+        const guardado = leer(CLAVE_RESUMEN);
+        if (!guardado) return;
+        const url = new URL(a.href, window.location.origin);
+        const previos = new URLSearchParams(guardado);
+        previos.set('tab', url.searchParams.get('tab') || previos.get('tab') || '');
+        url.search = previos.toString();
+        a.href = url.pathname + url.search;
+    });
+})();
+</script>

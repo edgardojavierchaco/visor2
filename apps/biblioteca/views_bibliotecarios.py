@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 
 from django.db import connection
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, UpdateView, DeleteView, ListView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -11,7 +11,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from apps.bnhpersonas.models import Personas
 
 from .mixins import InformeBloqueoMixin
-from .models import BibliotecariosCue
+from .models import BibliotecariosCue, es_planilla_biblioteca_nueva
 from .forms import BibliotecariosCueForm
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -91,6 +91,7 @@ def _obtener_actividades_bnh(persona_id, cueanexo):
             'turno': fila[7] or '',
             'estado': fila[8] or '',
             'validacion': fila[9] or '',
+            'disponible': (fila[9] or '') == 'VALIDADO',
         }
         for fila in filas
     ]
@@ -116,6 +117,38 @@ def _url_alta_personal_bnh(cuil, periodo):
 def _url_vincular_personal_bnh():
     # La ruta está confirmada; no se agregan parámetros no verificados.
     return '/bnh/personas/vincular/'
+
+
+def _url_ficha_personal_bnh(persona_id):
+    return f'/bnh/personas/{int(persona_id)}/detalle/'
+
+
+class PersonalBibliotecarioVigenciaMixin:
+    def dispatch(self, request, *args, **kwargs):
+        periodo = self.get_periodo_activo()
+        if (
+            periodo is not None
+            and es_planilla_biblioteca_nueva(
+                periodo.meses,
+                periodo.annos,
+            )
+        ):
+            if request.method == 'POST':
+                return JsonResponse({
+                    'error': True,
+                    'message': (
+                        'Personal bibliotecario no forma parte '
+                        'de este período.'
+                    ),
+                }, status=403)
+
+            return redirect(
+                self.get_periodo_url(
+                    reverse('bibliotecas:fondos_list')
+                )
+            )
+
+        return super().dispatch(request, *args, **kwargs)
 
 
 class BibliotecarioPersonaLookupView(
@@ -187,10 +220,15 @@ class BibliotecarioPersonaLookupView(
             'message': mensaje,
             'persona': persona_json,
             'actividades': actividades,
+            'accion': {
+                'label': 'Ver ficha en BNH',
+                'icon': 'open_in_new',
+                'url': _url_ficha_personal_bnh(persona['id']),
+            },
         })
 
 
-class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,CreateView):
+class BibliotecariosCueCreateView(LoginRequiredMixin, PersonalBibliotecarioVigenciaMixin, InformeBloqueoMixin, CreateView):
     model = BibliotecariosCue
     form_class = BibliotecariosCueForm
     template_name = 'biblioteca/pem/personal/create.html'
@@ -228,10 +266,15 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
                         'asociado a esta institución.'
                     )
                 else:
+                    actividades_disponibles = [
+                        actividad
+                        for actividad in actividades
+                        if actividad.get('disponible')
+                    ]
                     actividad_id = str(data.get('bnh_actividad_id') or '').strip()
 
                     if actividad_id:
-                        self.actividad_bnh = next(
+                        actividad_seleccionada = next(
                             (
                                 actividad
                                 for actividad in actividades
@@ -239,17 +282,36 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
                             ),
                             None,
                         )
-                        if self.actividad_bnh is None:
+                        if actividad_seleccionada is None:
                             self.actividad_bnh_error = (
                                 'El cargo de Biblioteca seleccionado ya no está disponible para '
                                 'esta persona en la institución. Reconsultá BNH.'
                             )
+                        elif not actividad_seleccionada.get('disponible'):
+                            self.actividad_bnh_error = (
+                                'El cargo de Biblioteca seleccionado está pendiente de validación '
+                                'en BNH. Validalo y reconsultá.'
+                            )
+                        else:
+                            self.actividad_bnh = actividad_seleccionada
                     elif len(actividades) == 1:
-                        self.actividad_bnh = actividades[0]
-                        data['bnh_actividad_id'] = str(self.actividad_bnh['id'])
+                        actividad_unica = actividades[0]
+                        if actividad_unica.get('disponible'):
+                            self.actividad_bnh = actividad_unica
+                            data['bnh_actividad_id'] = str(self.actividad_bnh['id'])
+                        else:
+                            self.actividad_bnh_error = (
+                                'El cargo de Biblioteca está pendiente de validación en BNH. '
+                                'Validalo y reconsultá.'
+                            )
+                    elif not actividades_disponibles:
+                        self.actividad_bnh_error = (
+                            'La persona tiene cargos de Biblioteca asociados a esta institución, '
+                            'pero todavía no hay ninguno validado. Validá el cargo en BNH y reconsultá.'
+                        )
                     else:
                         self.actividad_bnh_error = (
-                            'Seleccioná el cargo de Biblioteca que corresponde a este registro.'
+                            'Seleccioná un cargo de Biblioteca validado para este registro.'
                         )
 
                     if self.actividad_bnh is not None:
@@ -346,7 +408,7 @@ class BibliotecariosCueCreateView(LoginRequiredMixin, InformeBloqueoMixin,Create
 # =========================================================
 # UPDATE
 # =========================================================
-class BibliotecariosCueUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
+class BibliotecariosCueUpdateView(LoginRequiredMixin, PersonalBibliotecarioVigenciaMixin, InformeBloqueoMixin, UpdateView):
     model = BibliotecariosCue
     form_class = BibliotecariosCueForm
     template_name = 'biblioteca/pem/personal/create.html'
@@ -428,7 +490,7 @@ class BibliotecariosCueUpdateView(LoginRequiredMixin, InformeBloqueoMixin, Updat
 # =========================================================
 # DELETE
 # =========================================================
-class BibliotecariosCueDeleteView(LoginRequiredMixin, InformeBloqueoMixin, DeleteView):
+class BibliotecariosCueDeleteView(LoginRequiredMixin, PersonalBibliotecarioVigenciaMixin, InformeBloqueoMixin, DeleteView):
     model = BibliotecariosCue
     template_name = 'biblioteca/pem/personal/delete.html'
     success_url = reverse_lazy('bibliotecas:bibliotecario_list')
@@ -471,7 +533,7 @@ class BibliotecariosCueDeleteView(LoginRequiredMixin, InformeBloqueoMixin, Delet
 #=========================
 # LIST
 #=========================
-class BibliotecariosCueListView(LoginRequiredMixin, InformeBloqueoMixin, ListView):
+class BibliotecariosCueListView(LoginRequiredMixin, PersonalBibliotecarioVigenciaMixin, InformeBloqueoMixin, ListView):
     model = BibliotecariosCue
     template_name = 'biblioteca/pem/personal/list_bibliotecario.html'    
 

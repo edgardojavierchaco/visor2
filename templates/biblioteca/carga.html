@@ -22,7 +22,7 @@
                         Hay más de un período pendiente para el mismo CUE-Anexo.
                     </h2>
                     <p class="biblioteca-aviso__texto">
-                        Esos períodos no se seleccionan automáticamente. Elegí otro período disponible o revisá la situación.
+                        Completá y enviá uno de esos períodos para normalizar la situación. Mientras haya más de uno, no se seleccionará ninguno automáticamente.
                     </p>
                     <a href="{% url 'bibliotecas:periodos' %}" class="biblioteca-aviso__enlace">
                         Volver a Períodos
@@ -88,7 +88,7 @@
                 <span>CUE-Anexo {{ periodo_pendiente.cueanexo }}</span>
             </div>
             <div class="biblioteca-carga__avance">
-                <strong>{{ secciones_con_registros }} de 11</strong>
+                <strong>{{ secciones_con_registros }} de {{ total_secciones }}</strong>
                 <span>secciones con registros</span>
             </div>
             <span class="biblioteca-estado biblioteca-estado--pendiente">PENDIENTE DE ENVÍO</span>
@@ -104,7 +104,7 @@
         {% if todas_con_registros %}
             <p class="biblioteca-carga__todas" role="status">
                 <span class="biblioteca-symbol biblioteca-symbol--filled" aria-hidden="true">check_circle</span>
-                Las 11 secciones tienen registros.
+                Las {{ total_secciones }} secciones tienen registros.
             </p>
         {% endif %}
 
@@ -121,7 +121,7 @@
                 {% for seccion in secciones %}
                     <li>
                         <a class="biblioteca-seccion" href="{{ seccion.url }}">
-                            <span class="biblioteca-seccion__numero">{{ seccion.numero|stringformat:"02d" }}</span>
+                            <span class="biblioteca-seccion__numero">{{ seccion.numero_visible }}</span>
                             {% include 'biblioteca/includes/section_material_icon.html' with seccion=seccion only %}
                             <span class="biblioteca-seccion__contenido">
                                 <strong>{{ seccion.nombre }}</strong>
