@@ -1276,3 +1276,54 @@ def asignacion_aplicador(request, cuil_aplicador):
     return render(request, 'fluidez_octubre_2026/asignacion_aplicador.html', context)
 
 
+#---------------------------------descargar excel--------------------------
+@login_required
+def descargar_excel_personal_fluidez_octubre(request):
+    """Excel con los resultados de Fluidez 2026 de todas las escuelas de ámbito rural."""
+    nivel_acceso = request.user.nivelacceso_id
+    if nivel_acceso != "Regional":
+        messages.error(request, 'No tienes permiso para acceder a esta página.')
+        return redirect(reverse('evaluaciones_educativas:dashboard'))
+
+    region = request.user.nombre_region
+    # discapacidad = dict(AlumnoFluidez2026.OPCIONES_DISCAPACIDAD) | {'SI': 'Sí', 'NO': 'No'}
+    # comunidad = dict(AlumnoFluidez2026.OPCIONES_COMUNIDAD_INDIGENA)
+    # asistencia = dict(EvaluacionFluidezLectoraFluidez2026.OPCIONES_ASISTENCIA)
+
+    #est = 'alumno__seccion__grado__Establecimiento__'
+    #primero iterar en class TabuladoresFluidezOctubre2026(models.Model): oobtneiendo su lista de cueanexos  lista_cueanexos = models.JSONField(default=list, null=True, blank=True)
+    filas = TabuladoresFluidezOctubre2026.objects.values(region, apellido, nombre, cuil, lista_cueanexos)
+    datos_ids = []
+    datos_final=[]
+    for fila in filas:
+        #Obteneer los con los cueanexos de los aplicadores y sus datos en ids de escuelas secciones etc de la lsita que nos devuelve tabuladores
+        datos_ids.append(SeccionesAplicadorFluidezOctubre2026.objects.filter(cueanexo__in=fila['lista_cueanexos']))
+        for i in datos_ids:
+            # con este ultimo listado obtener los datos de los ids obtenidos de esta funcion  secciones_region(region, id_seccion=None) que nos deuvleve esta lista secciones.sort(key=lambda s: (s['escuela'] or '', s['grados'][0] if s['grados'] else '', str(s['nombre_seccion'] or '')))
+            #return secciones
+            datos_final.append(secciones_region(region, i['id_seccion']))
+    
+    wb = Workbook(write_only=True)
+    ws = wb.create_sheet('Datos Personal Fluidez 2026')
+    ws.append([
+        'Regional', 'Cueanexo', 'Escuela','Grados','Sección', 'Turno','Apellido y Nombres Tabulador','CUIL Tabulador', 'Apellido y Nombres Aplicador','CUIL Aplicador', 
+    ])
+    for f in datos_final.iterator(chunk_size=2000):
+        ws.append([
+            f['region'],
+            f['cueanexo'],
+            f['escuela'],
+            f['grados'],
+            f['seccion'],
+            f['turno'],
+            f['apellido_tabulador']+','+f['nombre_tabulador'],
+            f['cuil_tabulador'],
+            f['apellido_aplicador']+','+f['nombre_aplicador'],
+            f['cuil_aplicador'],])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = (
+        f'attachment; filename="datos_personal_fluidez_2026_{datetime.now():%Y%m%d_%H%M}.xlsx"'
+    )
+    wb.save(response)
+    return response
