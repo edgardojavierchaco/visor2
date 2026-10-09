@@ -9,7 +9,9 @@ from django.utils import timezone
 from ..models import DocenteSeccion, EspecialDocenteBanco, SeccionEspecial
 
 
-def dar_alta_docente_seccion(asignacion, user, rol=None, observaciones=None):
+def dar_alta_docente_seccion(
+    asignacion, user, rol=None, observaciones=None, cargo_relacionado=None
+):
     """
     Reactiva una asignación de docente que estaba en baja.
     Lanza ValidationError si ya existe otra asignación activa para ese rol.
@@ -26,6 +28,11 @@ def dar_alta_docente_seccion(asignacion, user, rol=None, observaciones=None):
             raise ValidationError("La asignación ya está activa.")
 
         rol_nuevo = rol or asignacion_bloqueada.rol
+        cargo_nuevo = cargo_relacionado or asignacion_bloqueada.cargo_relacionado
+        if cargo_nuevo is None:
+            raise ValidationError(
+                "Debe seleccionar un cargo BNH validado de modalidad Especial para asignar al docente."
+            )
         observaciones_nuevas = (
             asignacion_bloqueada.observaciones
             if observaciones is None
@@ -56,6 +63,7 @@ def dar_alta_docente_seccion(asignacion, user, rol=None, observaciones=None):
                     ).order_by("-pk").first()
                 ),
                 docente_cuil=asignacion_bloqueada.docente_cuil,
+                cargo_relacionado=cargo_nuevo,
                 rol=rol_nuevo,
                 estado=DocenteSeccion.Estado.ACTIVO,
                 fecha_desde=timezone.localdate(),

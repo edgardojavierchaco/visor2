@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import dotenv
 import psycopg2
 import asyncpg # type: ignore
@@ -136,7 +137,17 @@ def filter_matricula_views_directores_uegp(request):
         HttpResponse: Renderiza la plantilla 'directores/matricula.html'
                       con los detalles de matrícula obtenidos de la base de datos.
     """
-    cueanexo = request.user.username
+    # Cuando se llega desde el Inicio, el CUE-Anexo seleccionado viaja en la
+    # URL. El username del director es su CUIL y no debe usarse como CUE.
+    cueanexo = request.GET.get('cueanexo') or request.user.username
+    cueanexo = re.sub(r'\D', '', str(cueanexo))
+
+    if len(cueanexo) != 9:
+        return render(
+            request,
+            'error.html',
+            {'mensaje': 'El CUE-Anexo seleccionado no es válido.'},
+        )
     
     # Validar y sanitizar el valor de cueanexo
     if cueanexo is None:
@@ -177,8 +188,17 @@ def filter_matricula_views_directores_uegp(request):
     resulidest=cursor.fetchall()
     print('id_est:',resulidest)
     
-    cursor.execute(establecimiento,resulidest)
-    resulestab=cursor.fetchall()
+    ids_establecimientos = [fila[0] for fila in resulidest]
+    if ids_establecimientos:
+        placeholders = ','.join(['%s'] * len(ids_establecimientos))
+        establecimiento = f"""select distinct cueanexo
+                FROM public.padron_ofertas
+                WHERE id_establecimiento IN ({placeholders})
+                  AND est_oferta='Activo'"""
+        cursor.execute(establecimiento, ids_establecimientos)
+        resulestab = cursor.fetchall()
+    else:
+        resulestab = []
     print('est:',resulestab)
     
     cursor.execute(ofertascue,paramcue)
@@ -282,5 +302,3 @@ def filter_matricula_views_directores_uegp(request):
     # Transformar los resultados en una respuesta renderizada
     return render(request, 'directores/matriculauegp.html', {'resultados_detalle':resultados_detalle})
 
-
-    

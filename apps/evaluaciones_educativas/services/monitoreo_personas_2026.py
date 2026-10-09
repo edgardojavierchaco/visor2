@@ -208,13 +208,29 @@ def _tabulador_por_escuela():
     return asignadas
 
 
+def escuelas_del_operativo(secciones_sge):
+    """
+    Escuelas que entran al operativo de Fluidez: las del padrón que tienen al
+    menos una sección de 2º o 3º en SGE. Las bases y extensiones que solo
+    tienen otros grados (1º, 4º a 7º, nivel inicial) o que SGE no tiene quedan
+    afuera, porque no necesitan aplicador.
+
+    Si SGE no respondió (`secciones_sge` es None) no se puede filtrar y se
+    devuelven todas las del padrón.
+    """
+    escuelas = escuelas_fluidez()
+    if secciones_sge is None:
+        return escuelas
+    return {c: e for c, e in escuelas.items() if secciones_sge.get(c, 0) > 0}
+
+
 def resumen_fluidez(secciones_sge):
     """
     Una fila por regional. `secciones_sge` es el dict de
     secciones_sge_por_escuela, o None si SGE no respondió (en ese caso el
     indicador de aplicadores queda sin meta).
     """
-    escuelas = escuelas_fluidez()
+    escuelas = escuelas_del_operativo(secciones_sge)
     con_aplicador = _secciones_con_aplicador_por_escuela()
     tabulador_de = _tabulador_por_escuela()
 
@@ -282,7 +298,7 @@ def resumen_fluidez(secciones_sge):
 
 def detalle_fluidez(region, secciones_sge):
     """Escuelas de la regional con sus secciones cubiertas y su tabulador."""
-    escuelas = escuelas_fluidez()
+    escuelas = escuelas_del_operativo(secciones_sge)
     con_aplicador = _secciones_con_aplicador_por_escuela()
     tabulador_de = _tabulador_por_escuela()
 

@@ -3,7 +3,7 @@
 from collections import defaultdict
 
 from django.db.models import CharField
-from django.db.models.functions import Cast
+from django.db.models.functions import Cast, Lower, Trim
 
 from apps.consultasge.models_padron import CapaUnicaOfertas
 from apps.supervisa2.models import NivelModalidad
@@ -426,7 +426,19 @@ class SupervisorGeoService:
             # valida CapaUnicaOfertas.oferta__in=niveles del supervisor.
             # Por eso esta comparación exacta evita devolver otras ofertas.
             if nombre_nivel:
-                asignaciones = asignaciones.filter(oferta__iexact=nombre_nivel)
+                # ``oferta`` proviene de una vista externa y puede contener
+                # diferencias de mayúsculas o espacios laterales. La
+                # comparación normalizada evita que un nivel correctamente
+                # asignado termine devolviendo cero escuelas por ese detalle.
+                asignaciones = (
+                    asignaciones
+                    .annotate(
+                        oferta_normalizada=Lower(Trim("oferta"))
+                    )
+                    .filter(
+                        oferta_normalizada=nombre_nivel.strip().lower()
+                    )
+                )
 
             asignaciones = asignaciones.distinct()
 
@@ -703,7 +715,19 @@ class SupervisorGeoService:
             )
 
             if nombre_nivel:
-                asignaciones = asignaciones.filter(oferta__iexact=nombre_nivel)
+                # ``oferta`` proviene de una vista externa y puede contener
+                # diferencias de mayúsculas o espacios laterales. La
+                # comparación normalizada evita que un nivel correctamente
+                # asignado termine devolviendo cero escuelas por ese detalle.
+                asignaciones = (
+                    asignaciones
+                    .annotate(
+                        oferta_normalizada=Lower(Trim("oferta"))
+                    )
+                    .filter(
+                        oferta_normalizada=nombre_nivel.strip().lower()
+                    )
+                )
 
             asignaciones = asignaciones.distinct()
 

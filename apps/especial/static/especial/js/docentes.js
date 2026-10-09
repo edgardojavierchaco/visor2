@@ -379,8 +379,90 @@
             "[data-cef-asignar-docente-label]",
             (trigger.dataset.docenteNombre || "Profesor") + " - " + trigger.dataset.docenteCuil
         );
+        loadAssignmentCargos(modal, trigger);
         modal.classList.add("is-open");
         modal.setAttribute("aria-hidden", "false");
+        syncDocenteModalScroll();
+    }
+
+    function loadAssignmentCargos(modal, trigger) {
+        var cargoField = modal.querySelector("[name='cargo_relacionado']");
+        if (!cargoField || !trigger.dataset.cargosUrl) return;
+        var feedback = modal.querySelector("[data-cef-cargos-feedback]");
+        var cargosTable = modal.querySelector("[data-cef-cargos-table]");
+        var cargosTableBody = modal.querySelector("[data-cef-cargos-table-body]");
+        if (feedback) feedback.innerHTML = "";
+        if (cargosTableBody) cargosTableBody.innerHTML = "";
+        if (cargosTable) cargosTable.hidden = true;
+        cargoField.innerHTML = "";
+        var loading = document.createElement("option");
+        loading.value = "";
+        loading.textContent = "Cargando cargos...";
+        cargoField.appendChild(loading);
+        var params = new URLSearchParams({
+            cuil: trigger.dataset.docenteCuil || "",
+            seccion_id: trigger.dataset.grupoId || "",
+            cueanexo: trigger.dataset.cueanexo || "",
+            ciclo: trigger.dataset.ciclo || ""
+        });
+        fetch(trigger.dataset.cargosUrl + "?" + params.toString(), {
+            credentials: "same-origin",
+            headers: {"X-Requested-With": "XMLHttpRequest"}
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error("No se pudieron cargar los cargos.");
+                return response.json();
+            })
+            .then(function (data) {
+                cargoField.innerHTML = "";
+                var empty = document.createElement("option");
+                empty.value = "";
+                empty.textContent = "Seleccioná un cargo";
+                cargoField.appendChild(empty);
+                (data.cargos || []).forEach(function (cargo) {
+                    var option = document.createElement("option");
+                    option.value = cargo.id;
+                    option.textContent = cargo.label;
+                    cargoField.appendChild(option);
+                });
+                if (cargosTableBody && data.cargos && data.cargos.length) {
+                    data.cargos.forEach(function (cargo) {
+                        var row = document.createElement("tr");
+                        [cargo.nivel_curricular, cargo.ceic, cargo.situacion_revista, cargo.turno].forEach(function (value) {
+                            var cell = document.createElement("td");
+                            cell.textContent = value || "-";
+                            row.appendChild(cell);
+                        });
+                        cargosTableBody.appendChild(row);
+                    });
+                    cargosTable.hidden = false;
+                }
+                var primerCargo = (data.cargos || [])[0];
+                if (primerCargo) {
+                    cargoField.value = String(primerCargo.id);
+                    var roleField = modal.querySelector("[name='rol']");
+                    if (roleField && primerCargo.rol) roleField.value = primerCargo.rol;
+                }
+                if (feedback && data.cargos && data.cargos.length) {
+                    var alert = document.createElement("div");
+                    alert.className = "alert alert-success mb-2";
+                    alert.textContent = "El docente tiene cargos de modalidad Especial en este CUE-Anexo. Seleccioná el cargo que corresponda.";
+                    feedback.appendChild(alert);
+                }
+                if (!data.cargos || !data.cargos.length) {
+                    empty.textContent = "No hay cargos Especial disponibles";
+                }
+            })
+            .catch(function () {
+                cargoField.innerHTML = "";
+                var error = document.createElement("option");
+                error.value = "";
+                error.textContent = "No se pudieron cargar los cargos";
+                cargoField.appendChild(error);
+                if (feedback) {
+                    feedback.innerHTML = '<div class="alert alert-danger mb-2">No se pudieron consultar los cargos BNH del docente.</div>';
+                }
+            });
     }
 
     function replaceAssignmentModal(html) {
@@ -493,7 +575,33 @@
             var assignmentTrigger = event.target.closest("[data-cef-asignar-grupo-open]");
             if (assignmentTrigger) {
                 event.preventDefault();
+                event.stopPropagation();
+                if (assignmentTrigger.matches("[data-cef-asignar-seccion-desde-busqueda]")) {
+                    var searchPanel = assignmentTrigger.closest(".cef-edit-panel");
+                    var searchSelect = searchPanel && searchPanel.querySelector("[data-cef-seccion-selector]");
+                    var searchOption = searchSelect && searchSelect.options[searchSelect.selectedIndex];
+                    if (!searchOption || !searchOption.value) return;
+                    assignmentTrigger.dataset.grupoId = searchOption.value;
+                    assignmentTrigger.dataset.grupoLabel = searchOption.dataset.grupoLabel || searchOption.textContent.trim();
+                }
+                if (assignmentTrigger.closest("#modalBusquedaDocente")) {
+                    closeModal(document.getElementById("modalBusquedaDocente"));
+                }
                 openAssignmentModal(assignmentTrigger);
+                return;
+            }
+            var assignFromSearch = event.target.closest("[data-cef-asignar-seccion-desde-busqueda]");
+            if (assignFromSearch) {
+                event.preventDefault();
+                var sectionSelect = assignFromSearch.closest(".cef-edit-panel")
+                    && assignFromSearch.closest(".cef-edit-panel").querySelector("[data-cef-seccion-selector], select");
+                var selected = sectionSelect && sectionSelect.options[sectionSelect.selectedIndex];
+                if (!selected || !selected.value) return;
+                selected.dataset.grupoId = selected.value;
+                assignFromSearch.dataset.grupoId = selected.value;
+                assignFromSearch.dataset.grupoLabel = selected.dataset.grupoLabel || selected.textContent.trim();
+                closeModal(document.getElementById("modalBusquedaDocente"));
+                openAssignmentModal(selected);
                 return;
             }
             var closeAssignments = event.target.closest("[data-cef-asignaciones-modal-close]");
@@ -577,6 +685,12 @@
             }
         });
         document.addEventListener("change", function (event) {
+            if (event.target.matches("[data-cef-seccion-selector]")) {
+                var sectionPanel = event.target.closest(".cef-edit-panel");
+                var assignButton = sectionPanel && sectionPanel.querySelector("[data-cef-asignar-seccion-desde-busqueda]");
+                if (assignButton) assignButton.disabled = !event.target.value;
+                return;
+            }
             if (!event.target.matches("#modalBajaDocenteEspecial [name='motivo_baja']")) return;
             syncDocenteBajaTransfer(event.target.closest("#modalBajaDocenteEspecial"));
         });
@@ -615,6 +729,11 @@
             if (errorClose) errorClose.focus();
         }
         scheduleRoleNoChangeToast(scope.querySelector("[data-cef-asignaciones-modal].is-open"));
+        scope.querySelectorAll("[data-cef-seccion-selector]").forEach(function (select) {
+            var panel = select.closest(".cef-edit-panel");
+            var button = panel && panel.querySelector("[data-cef-asignar-seccion-desde-busqueda]");
+            if (button) button.disabled = !select.value;
+        });
     }
 
     window.EspecialDocentes = {
