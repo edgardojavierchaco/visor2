@@ -15,7 +15,7 @@
 <div class="col-12 mt-4"><hr><h3 class="h5 mb-0">Vigencia y funciones</h3></div>
 {% endif %}
 
-<div class="col-md-6" data-field="{{ field.name }}">
+<div class="col-md-6{% if field.errors %} bnh-field-has-error{% endif %}" data-field="{{ field.name }}"{% if field.errors %} data-server-error="1"{% endif %}>
   {% if field.widget_type == 'checkbox' %}
     <div class="form-check form-switch pt-2 bnh-switch">
       {{ field }}
@@ -29,7 +29,7 @@
     {{ field }}
   {% endif %}
   {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-  {% for error in field.errors %}<div class="text-danger" role="alert">{{ error }}</div>{% endfor %}
+  {% for error in field.errors %}<div class="invalid-feedback d-block bnh-server-error" role="alert">{{ error }}</div>{% endfor %}
 </div>
 {% if field.name == 'secciones' %}
 <div class="col-12" data-ubicaciones-extra hidden>

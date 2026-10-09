@@ -279,6 +279,11 @@
 
                 if (!text) return;
 
+                // Las respuestas informativas que requieren atención se reflejan también
+                // sobre el campo CUIL. Danger bloquea; warning sólo advierte.
+                if (inputCuil && kind === "warning") markField(inputCuil, "warning", text);
+                if (inputCuil && kind === "danger") markField(inputCuil, "danger", text);
+
                 const span = document.createElement("span");
                 span.textContent = text;
                 box.append(span);
@@ -528,6 +533,114 @@
                 status.textContent = text || "";
                 status.hidden = !text;
             };
+
+            // ============================================================
+            // VALIDACIÓN VISUAL DE CAMPOS
+            // Rojo: error/faltante que bloquea el guardado.
+            // Amarillo: advertencia no bloqueante.
+            // ============================================================
+            const fieldWrapper = input => input?.closest?.("[data-field]") || null;
+
+            function clientFeedback(wrapper) {
+                if (!wrapper) return null;
+                let box = wrapper.querySelector("[data-bnh-client-feedback]");
+                if (!box) {
+                    box = document.createElement("div");
+                    box.dataset.bnhClientFeedback = "1";
+                    box.className = "bnh-client-feedback";
+                    wrapper.appendChild(box);
+                }
+                return box;
+            }
+
+            function clearVisualState(input, { includeServer = false } = {}) {
+                const wrapper = fieldWrapper(input);
+                if (!wrapper) return;
+                wrapper.classList.remove("bnh-field-has-warning");
+                if (!wrapper.dataset.serverError || includeServer) {
+                    wrapper.classList.remove("bnh-field-has-error");
+                    input?.classList?.remove("is-invalid");
+                    input?.removeAttribute?.("aria-invalid");
+                }
+                const box = wrapper.querySelector("[data-bnh-client-feedback]");
+                if (box) box.remove();
+                if (includeServer && wrapper.dataset.serverError) {
+                    delete wrapper.dataset.serverError;
+                    wrapper.querySelectorAll(".bnh-server-error").forEach(el => el.remove());
+                    wrapper.classList.remove("bnh-field-has-error");
+                }
+            }
+
+            function markField(input, kind, text = "") {
+                const wrapper = fieldWrapper(input);
+                if (!wrapper || wrapper.hidden) return;
+                clearVisualState(input);
+                const box = clientFeedback(wrapper);
+
+                if (kind === "danger") {
+                    wrapper.classList.remove("bnh-field-has-warning");
+                    wrapper.classList.add("bnh-field-has-error");
+                    input?.classList?.add("is-invalid");
+                    input?.setAttribute?.("aria-invalid", "true");
+                    if (box) box.className = "bnh-client-feedback text-danger";
+                } else if (kind === "warning") {
+                    if (!wrapper.classList.contains("bnh-field-has-error")) {
+                        wrapper.classList.add("bnh-field-has-warning");
+                    }
+                    if (box) box.className = "bnh-client-feedback bnh-feedback-warning";
+                }
+                if (box) {
+                    box.textContent = text || (kind === "danger" ? "Revise este campo." : "Revise esta advertencia.");
+                    box.setAttribute("role", kind === "danger" ? "alert" : "status");
+                }
+            }
+
+            function visibleField(input) {
+                const wrapper = fieldWrapper(input);
+                return Boolean(input && !input.disabled && wrapper && !wrapper.hidden);
+            }
+
+            function validateVisibleFields() {
+                const invalid = [];
+                form.querySelectorAll("input, select, textarea").forEach(input => {
+                    if (!visibleField(input) || input.type === "hidden" || input.type === "submit" || input.type === "button") return;
+                    if (!input.checkValidity()) {
+                        const text = input.validity.valueMissing
+                            ? "Este campo es obligatorio."
+                            : (input.validationMessage || "El valor ingresado no es válido.");
+                        markField(input, "danger", text);
+                        invalid.push(input);
+                    }
+                });
+                return invalid;
+            }
+
+            // Los errores devueltos por Django ya llegan marcados desde fields.html.
+            // Al corregir un campo, limpiamos su marca para dar feedback inmediato.
+            form.querySelectorAll("[data-field] input, [data-field] select, [data-field] textarea").forEach(input => {
+                input.addEventListener("input", () => clearVisualState(input, { includeServer: true }));
+                input.addEventListener("change", () => clearVisualState(input, { includeServer: true }));
+                input.addEventListener("invalid", event => {
+                    event.preventDefault();
+                    const text = input.validity.valueMissing
+                        ? "Este campo es obligatorio."
+                        : (input.validationMessage || "El valor ingresado no es válido.");
+                    markField(input, "danger", text);
+                }, true);
+            });
+
+            form.querySelectorAll('button[type="submit"], button:not([type])').forEach(button => {
+                button.addEventListener("click", event => {
+                    const invalid = validateVisibleFields();
+                    if (invalid.length) {
+                        event.preventDefault();
+                        const first = invalid[0];
+                        first.focus({ preventScroll: true });
+                        fieldWrapper(first)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                        message(`Hay ${invalid.length} campo${invalid.length === 1 ? "" : "s"} con errores o datos faltantes. Revise los marcados en rojo.`);
+                    }
+                });
+            });
 
             const clear = name => fillOptions(field(name), [], "", "");
             const setDisabled = (name, state) => {
@@ -1122,11 +1235,12 @@
                     );
 
                     if (!condiciones.length) {
-                        message(
-                            data.warning
-                            || "No existen condiciones de actividad para la combinación seleccionada."
-                        );
+                        const warningText = data.warning
+                            || "No existen condiciones de actividad para la combinación seleccionada.";
+                        markField(conditionField, "warning", warningText);
+                        message(warningText);
                     } else {
+                        clearVisualState(conditionField);
                         message("");
                     }
                 } catch (error) {
@@ -1288,6 +1402,7 @@
                     && !validarYCompletarDni()
                 ) {
                     event.preventDefault();
+                    markField(cuil, "danger", "Revise el CUIL antes de guardar.");
                     cuil.focus();
                     message("Revise el CUIL antes de guardar.");
                     return;
@@ -1301,6 +1416,7 @@
 
                 if (form.dataset.personCheckUrl && duplicatePersonDetected) {
                     event.preventDefault();
+                    markField(cuil, "danger", "La persona ya está registrada. Utilice la acción indicada junto al CUIL.");
                     cuil?.focus();
                     message(
                         "La persona ya está registrada. Utilice la acción indicada junto al CUIL."
@@ -1310,6 +1426,7 @@
 
                 if (form.dataset.personLinkUrl && !linkPersonFound) {
                     event.preventDefault();
+                    markField(cuil, "danger", "Primero ingrese un CUIL correspondiente a una persona ya registrada.");
                     cuil?.focus();
                     message(
                         "Primero ingrese un CUIL correspondiente a una persona ya registrada."
