@@ -39,7 +39,7 @@
     document.addEventListener('click', function (e) {
         if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
         var a = e.target.closest('a[href]');
-        if (!a || a.target === '_blank') return;
+        if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
         var href = a.getAttribute('href') || '';
         if (href.charAt(0) === '#' || href.indexOf('javascript:') === 0) return;
         bloquearPantalla('Cargando...');

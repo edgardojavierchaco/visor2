@@ -1635,13 +1635,13 @@ def analisis_tercer_grado_grafico(grado_seleccionado, cueanexo, secciones, turno
 		),
 		debajo_del_basico=Count(
 			"alumno_id",
-			filter=Q(asistencia="PRESENTE", cantidad_palabras_leidas__lt=30),
+			filter=Q(asistencia="PRESENTE", cantidad_palabras_leidas__lte=30),
 		),
 		basico=Count(
 			"alumno_id",
 			filter=Q(
 				asistencia="PRESENTE",
-				cantidad_palabras_leidas__gte=30,
+				cantidad_palabras_leidas__gt=30,
 				cantidad_palabras_leidas__lte=60,
 			),
 		),
@@ -1649,7 +1649,7 @@ def analisis_tercer_grado_grafico(grado_seleccionado, cueanexo, secciones, turno
 			"alumno_id",
 			filter=Q(
 				asistencia="PRESENTE",
-				cantidad_palabras_leidas__gt=61,
+				cantidad_palabras_leidas__gt=60,
 				cantidad_palabras_leidas__lte=90,
 			),
 		),

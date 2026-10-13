@@ -1279,47 +1279,74 @@ def asignacion_aplicador(request, cuil_aplicador):
 #---------------------------------descargar excel--------------------------
 @login_required
 def descargar_excel_personal_fluidez_octubre(request):
-    """Excel con los resultados de Fluidez 2026 de todas las escuelas de ámbito rural."""
+    """Excel con las secciones de la región y su tabulador y aplicador asignados."""
     nivel_acceso = request.user.nivelacceso_id
     if nivel_acceso != "Regional":
         messages.error(request, 'No tienes permiso para acceder a esta página.')
         return redirect(reverse('evaluaciones_educativas:dashboard'))
 
-    region = request.user.nombre_region
-    # discapacidad = dict(AlumnoFluidez2026.OPCIONES_DISCAPACIDAD) | {'SI': 'Sí', 'NO': 'No'}
-    # comunidad = dict(AlumnoFluidez2026.OPCIONES_COMUNIDAD_INDIGENA)
-    # asistencia = dict(EvaluacionFluidezLectoraFluidez2026.OPCIONES_ASISTENCIA)
+    # Región: la que tiene seleccionada la pantalla (?region=), siempre que
+    # sea una de las regiones del usuario. Mismo criterio que las gestiones.
+    regiones = obtener_regional(str(request.user.username))
+    if not regiones:
+        messages.error(request, 'No se encontró una región asignada a tu usuario.')
+        return redirect(reverse('evaluaciones_educativas:dashboard'))
+    if 'R.E. 2' in regiones:
+        regiones = ['R.E. 2', 'SUB. R.E. 2-B']
+    region = request.GET.get('region')
+    if region not in regiones:
+        region = regiones[0]
 
-    #est = 'alumno__seccion__grado__Establecimiento__'
-    #primero iterar en class TabuladoresFluidezOctubre2026(models.Model): oobtneiendo su lista de cueanexos  lista_cueanexos = models.JSONField(default=list, null=True, blank=True)
-    filas = TabuladoresFluidezOctubre2026.objects.values(region, apellido, nombre, cuil, lista_cueanexos)
-    datos_ids = []
-    datos_final=[]
-    for fila in filas:
-        #Obteneer los con los cueanexos de los aplicadores y sus datos en ids de escuelas secciones etc de la lsita que nos devuelve tabuladores
-        datos_ids.append(SeccionesAplicadorFluidezOctubre2026.objects.filter(cueanexo__in=fila['lista_cueanexos']))
-        for i in datos_ids:
-            # con este ultimo listado obtener los datos de los ids obtenidos de esta funcion  secciones_region(region, id_seccion=None) que nos deuvleve esta lista secciones.sort(key=lambda s: (s['escuela'] or '', s['grados'][0] if s['grados'] else '', str(s['nombre_seccion'] or '')))
-            #return secciones
-            datos_final.append(secciones_region(region, i['id_seccion']))
-    
+    # Secciones de SGE de la región (una sola consulta), indexadas por cueanexo.
+    try:
+        secciones = secciones_region(region)
+    except DatabaseError:
+        logger.exception('Error consultando secciones en sge_nacion (región %s)', region)
+        messages.error(request, ERROR_SGE)
+        return redirect(reverse('evaluaciones_educativas:dashboard'))
+
+    secciones_por_cueanexo = {}
+    for s in secciones:
+        secciones_por_cueanexo.setdefault(s['cueanexo'], []).append(s)
+
+    # Aplicador de cada sección asignada, indexado por id_seccion.
+    aplicador_por_seccion = {
+        sa.id_seccion: sa.aplicador
+        for sa in SeccionesAplicadorFluidezOctubre2026.objects
+        .filter(aplicador__region=region)
+        .select_related('aplicador')
+    }
+
+    def nombre_completo(persona):
+        if not persona:
+            return ''
+        return f"{persona.apellido or ''}, {persona.nombre or ''}"
+
     wb = Workbook(write_only=True)
     ws = wb.create_sheet('Datos Personal Fluidez 2026')
     ws.append([
-        'Regional', 'Cueanexo', 'Escuela','Grados','Sección', 'Turno','Apellido y Nombres Tabulador','CUIL Tabulador', 'Apellido y Nombres Aplicador','CUIL Aplicador', 
+        'Regional', 'Cueanexo', 'Escuela', 'Grados', 'Sección', 'Turno',
+        'Apellido y Nombres Tabulador', 'CUIL Tabulador',
+        'Apellido y Nombres Aplicador', 'CUIL Aplicador',
     ])
-    for f in datos_final.iterator(chunk_size=2000):
-        ws.append([
-            f['region'],
-            f['cueanexo'],
-            f['escuela'],
-            f['grados'],
-            f['seccion'],
-            f['turno'],
-            f['apellido_tabulador']+','+f['nombre_tabulador'],
-            f['cuil_tabulador'],
-            f['apellido_aplicador']+','+f['nombre_aplicador'],
-            f['cuil_aplicador'],])
+
+    tabuladores = TabuladoresFluidezOctubre2026.objects.filter(region=region).order_by('apellido', 'nombre')
+    for tab in tabuladores:
+        for cueanexo in tab.lista_cueanexos or []:
+            for s in secciones_por_cueanexo.get(str(cueanexo).strip(), []):
+                aplicador = aplicador_por_seccion.get(s['id_seccion'])
+                ws.append([
+                    region,
+                    s['cueanexo'],
+                    s['escuela'],
+                    s['anio_grado'],
+                    str(s['nombre_seccion'] or ''),
+                    s['turno'] or '',
+                    nombre_completo(tab),
+                    tab.cuil,
+                    nombre_completo(aplicador),
+                    aplicador.cuil if aplicador else '',
+                ])
 
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = (
