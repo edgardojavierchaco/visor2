@@ -467,7 +467,17 @@ def resolver_contexto_operativo(request, scope="cargables"):
 def contexto_base(request, active_menu, title=None, subtitle=None):
     """Contexto base para todas las vistas de Especial."""
     with perf_phase(request, "context"):
-        scope = "visualizacion" if active_menu in {"localizaciones", "cueanexo"} else "cargables"
+        # Los roles visualizadores también navegan por alumnos, docentes y
+        # secciones, pero no deben quedar sin opciones por usar el alcance
+        # cargable. Ese alcance sólo corresponde a usuarios que realmente
+        # pueden operar (Administrador y Director).
+        permisos = get_permisos_especial_request(request)
+        scope = (
+            "visualizacion"
+            if active_menu in {"localizaciones", "cueanexo"}
+            or not permisos["puede_cargar"]
+            else "cargables"
+        )
         especial_context = resolver_contexto_operativo(request, scope=scope)
         metadata = metadata_menu_especial(active_menu)
         if title is not None:

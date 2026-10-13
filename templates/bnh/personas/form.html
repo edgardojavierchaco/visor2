@@ -1,4 +1,38 @@
 {% extends 'bnh/base.html' %}{% block content %}
+<style>
+/* Validación visual BNH: rojo = error bloqueante; amarillo = advertencia no bloqueante. */
+form[data-editor] [data-field].bnh-field-has-error .form-control,
+form[data-editor] [data-field].bnh-field-has-error .form-select,
+form[data-editor] [data-field].bnh-field-has-error input:not([type="checkbox"]):not([type="radio"]),
+form[data-editor] [data-field].bnh-field-has-error textarea,
+form[data-editor] [data-field].bnh-field-has-error .select2-selection {
+    border-color: var(--bs-danger) !important;
+    box-shadow: 0 0 0 .2rem rgba(var(--bs-danger-rgb), .12) !important;
+}
+form[data-editor] [data-field].bnh-field-has-error > .form-label,
+form[data-editor] [data-field].bnh-field-has-error .form-check-label {
+    color: var(--bs-danger-text-emphasis, #842029);
+    font-weight: 600;
+}
+form[data-editor] [data-field].bnh-field-has-warning .form-control,
+form[data-editor] [data-field].bnh-field-has-warning .form-select,
+form[data-editor] [data-field].bnh-field-has-warning input:not([type="checkbox"]):not([type="radio"]),
+form[data-editor] [data-field].bnh-field-has-warning textarea,
+form[data-editor] [data-field].bnh-field-has-warning .select2-selection {
+    border-color: var(--bs-warning) !important;
+    box-shadow: 0 0 0 .2rem rgba(var(--bs-warning-rgb), .18) !important;
+    background-color: var(--bs-warning-bg-subtle, #fff3cd) !important;
+}
+form[data-editor] [data-field].bnh-field-has-warning > .form-label,
+form[data-editor] [data-field].bnh-field-has-warning .form-check-label {
+    color: var(--bs-warning-text-emphasis, #664d03);
+    font-weight: 600;
+}
+.bnh-client-feedback { margin-top: .35rem; font-size: .875em; }
+.bnh-client-feedback.bnh-feedback-warning { color: var(--bs-warning-text-emphasis, #664d03); }
+.bnh-validation-summary a { font-weight: 600; }
+</style>
+
 <a href="{% url 'bnhpersonas:personas_list' %}">← Listado de personal</a>
 <h1 class="mt-3">{{ title }}</h1>{% if persona %}<p class="lead">{{ persona.apellido }}, {{ persona.nombre }}</p>{% endif %}
 {% if persona and not actividad %}<p class="alert alert-info">Los datos personales son compartidos por sus instituciones. Toda modificación queda registrada. Si la persona posee cargos en unidades de servicio fuera de su ámbito, los datos críticos de identidad sólo pueden ser corregidos por un usuario administrador/Estadística.</p>{% endif %}
@@ -17,6 +51,7 @@
     data-person-check-url="{% url 'bnhpersonas:verificar_persona_alta' %}"
     {% endif %}
 >{% csrf_token %}
+<div class="alert alert-light border small mb-3" role="note"><strong>Control de datos:</strong> los campos con <span class="text-danger fw-semibold">borde rojo</span> deben corregirse para guardar. Los campos con <span class="text-warning-emphasis fw-semibold">borde amarillo</span> contienen una advertencia que conviene revisar, pero no necesariamente impide guardar.</div>
 {% include 'bnh/personas/fields.html' with form=form %}
 {% if actividad_form %}<hr><h2>Primer cargo / nueva vinculación institucional</h2>{% include 'bnh/personas/fields.html' with form=actividad_form %}{% endif %}
 <div class="d-flex gap-3 mt-4"><button class="btn btn-primary" type="submit">Guardar</button><a class="btn btn-outline-secondary" href="{% url 'bnhpersonas:personas_list' %}">Cancelar</a></div></form>

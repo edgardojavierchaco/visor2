@@ -1,6 +1,16 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
+{% block delete_section_name %}Asistencia{% endblock %}
+{% block delete_section_icon %}groups{% endblock %}
+{% block delete_primary_fields %}nivel,usuario{% endblock %}
+{% block delete_section_fields %}
+    <span data-biblioteca-delete-field="nivel" data-label="Nivel"></span>
+    <span data-biblioteca-delete-field="usuario" data-label="Usuario"></span>
+    <span data-biblioteca-delete-field="varones" data-label="Varones"></span>
+    <span data-biblioteca-delete-field="total" data-label="Total"></span>
+{% endblock %}
+
 {% block section_header %}
     {% include 'biblioteca/includes/crud_section_header.html' with material_icon='groups' %}
 {% endblock %}
@@ -28,22 +38,71 @@
 {% endblock %}
 
 {% block section_totals %}
-    <div class="biblioteca-crud__totals" data-biblioteca-section-totals>
-        <div class="biblioteca-crud__totals-title">
-            <span class="biblioteca-symbol" aria-hidden="true">functions</span>
-            <span>Totales de la sección</span>
-        </div>
-        <div class="biblioteca-crud__totals-metrics">
-            <div class="biblioteca-crud__total-metric">
-                <span>Varones</span>
-                <strong data-biblioteca-total-field="varones">0</strong>
-            </div>
-            <div class="biblioteca-crud__total-metric">
-                <span>Total</span>
-                <strong data-biblioteca-total-field="total">0</strong>
-            </div>
+<section class="biblioteca-crud__section-summary biblioteca-asistencia-summary"
+         aria-label="Resumen de la sección">
+    <div class="biblioteca-crud__section-summary-head">
+        <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
+            <span class="biblioteca-symbol">open_run</span>
+        </span>
+        <div>
+            <strong>Resumen de la sección</strong>
+            <span>Totales registrados por nivel y tipo de usuario</span>
         </div>
     </div>
+
+    <div class="biblioteca-proctec-summary__grid">
+        {% for nivel in resumen_asistencia_niveles %}
+        <article class="biblioteca-proctec-summary__item">
+            <button type="button"
+                    class="biblioteca-proctec-summary__toggle collapsed"
+                    data-toggle="collapse"
+                    data-target="#asistencia-resumen-nivel-{{ nivel.id }}"
+                    aria-expanded="false"
+                    aria-controls="asistencia-resumen-nivel-{{ nivel.id }}">
+                <span>{{ nivel.nombre }}</span>
+                <span class="biblioteca-proctec-summary__chevron" aria-hidden="true">
+                    <span class="biblioteca-symbol">expand_more</span>
+                </span>
+            </button>
+
+            <div id="asistencia-resumen-nivel-{{ nivel.id }}"
+                 class="collapse biblioteca-proctec-summary__detalle">
+                {% if nivel.usuarios %}
+                <div class="biblioteca-matbibl-summary__table-wrap">
+                    <table class="biblioteca-matbibl-summary__table biblioteca-asistencia-summary__table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Usuario</th>
+                                <th scope="col">Varones</th>
+                                <th scope="col">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for usuario in nivel.usuarios %}
+                            <tr>
+                                <th scope="row">{{ usuario.usuario }}</th>
+                                <td>{{ usuario.varones }}</td>
+                                <td>{{ usuario.total }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="biblioteca-matbibl-summary__total">
+                                <th scope="row">Total nivel</th>
+                                <td>{{ nivel.varones }}</td>
+                                <td>{{ nivel.total }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <p class="biblioteca-proctec-summary__vacio">
+                        Sin cantidades registradas.
+                    </p>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
 {% endblock %}
 
 {% block javascript %}

@@ -2,10 +2,12 @@ from django.views.generic import TemplateView
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db import connections
 from django.db.models import CharField, Func, Value
 from django.db.models.functions import Cast
 from django.utils.decorators import method_decorator
 import psycopg2
+import logging
 import os
 import re
 
@@ -409,10 +411,159 @@ def filtrar_queryset_sge(queryset, contexto, campo_region, campo_cueanexo):
 
     return queryset.none()
 
+def _valor_padron_listado(valor):
+    texto = ' '.join(str(valor if valor is not None else '').split())
+    if texto.casefold() in {
+        '', '-', '.', '0', 'null', 'none', 's/inf.', 's/inf', 's/info',
+        's/info.', 's/datos', 's/i', 's/i.', 'sin dato', 'sin datos',
+        'sin dato-', 'no declara', 'sin información', 'sin informacion',
+    }:
+        return ''
+    return texto
+
+
+def _cueanexo_padron_listado(cue, anexo):
+    cue = str(cue if cue is not None else '').strip()
+    anexo = str(anexo if anexo is not None else '').strip()
+    if cue.isdigit() and anexo.isdigit() and len(anexo) <= 2:
+        return cue + anexo.zfill(2)
+    return ''
+
+
+def _region_listado_equivalente(valor):
+    texto = ' '.join(str(valor or '').upper().split())
+    region = re.fullmatch(r'(?:REGI[ÓO]N(?: EDUCATIVA)?|R\.?\s*E\.?)\s*(\d+)', texto)
+    if region:
+        return ('regional', int(region.group(1)))
+    subsede = re.fullmatch(r'(?:SUBSEDE|SUB\.?\s*R\.?\s*E\.?)\s*(\d+)', texto)
+    if subsede:
+        return ('subsede', int(subsede.group(1)))
+    return ('texto', texto)
+
+
+def completar_indicadores_sge_2026(registros):
+    """Enriquece el histórico autorizado sin cambiar sus identidades ni universo."""
+    registros = list(registros)
+    if not registros:
+        return registros
+    ofertas_comunes = {'Inicial - Común', 'Primario - Común', 'Secundario - Común'}
+    claves = []
+    for registro in registros:
+        cueanexo = str(registro.cueanexo or '').strip()
+        partes = re.fullmatch(r'(\d{7})[-\s]?(\d{1,2})', cueanexo)
+        clave = (
+            _cueanexo_padron_listado(*partes.groups()) if partes
+            else _cueanexo_padron_listado(registro.cue, registro.anexo)
+        )
+        claves.append(clave)
+    cueanexos = sorted({clave for clave in claves if clave})
+    campos_padron = (
+        'nombre', 'sector', 'ambito', 'regional', 'cue', 'anexo',
+        'escuela_cod_tel', 'escuela_tel', 'escuela_email',
+        'responsable_apellido', 'responsable_nombre', 'telefono_responsable',
+    )
+    padron = {}
+    incidencias = set()
+    if cueanexos:
+        with connections['default'].cursor() as cursor:
+            cursor.execute("""
+                SELECT vl.cue::text, vl.anexo::text, vl.nombre, ve.nombre,
+                       vl.sector, vl.ambito, vl.cp_esvat5,
+                       vl.telefono_cod_area, vl.telefono, vl.email,
+                       vl.responsable_apellido, r.apellido,
+                       vl.responsable_nombre, r.nombre, r.telefono
+                FROM padroninterno.mv_localizaciones vl
+                LEFT JOIN padroninterno.mv_establecimientos ve
+                  ON ve.id_establecimiento = vl.id_establecimiento
+                LEFT JOIN padroninterno.mv_responsables r
+                  ON r.id_responsable = vl.id_responsable
+                WHERE (BTRIM(vl.cue::text) ||
+                       CASE WHEN BTRIM(vl.anexo::text) ~ '^[0-9]{1,2}$'
+                            THEN LPAD(BTRIM(vl.anexo::text), 2, '0')
+                            ELSE '' END) = ANY(%s)
+            """, [cueanexos])
+            for fila in cursor.fetchall():
+                clave = _cueanexo_padron_listado(fila[0], fila[1])
+                if not clave or clave not in cueanexos:
+                    continue
+                valores = (
+                    _valor_padron_listado(fila[2]) or _valor_padron_listado(fila[3]),
+                    fila[4], fila[5], fila[6], str(fila[0]).strip(),
+                    str(fila[1]).strip().zfill(2), fila[7], fila[8], fila[9],
+                    _valor_padron_listado(fila[10]) or _valor_padron_listado(fila[11]),
+                    _valor_padron_listado(fila[12]) or _valor_padron_listado(fila[13]),
+                    fila[14],
+                )
+                candidatos = padron.setdefault(clave, {campo: set() for campo in campos_padron})
+                for campo, valor in zip(campos_padron, valores):
+                    texto = str(valor).strip() if campo in {'cue', 'anexo'} else _valor_padron_listado(valor)
+                    if texto:
+                        candidatos[campo].add(texto)
+
+    pares = sorted({
+        (clave, str(registro.tipo_oferta or '').strip())
+        for clave, registro in zip(claves, registros)
+        if clave and str(registro.tipo_oferta or '').strip() in ofertas_comunes
+    })
+    indicadores = {}
+    if pares:
+        with connections['sge_nacion'].cursor() as cursor:
+            cursor.execute("""
+                SELECT BTRIM(l.cueanexo::text), l.nivel, l.sge_2026, l.inscriptos_2026
+                FROM public.listado_sge_2026 l
+                JOIN unnest(%s::text[], %s::text[]) AS autorizadas(cueanexo, oferta)
+                  ON BTRIM(l.cueanexo::text) = autorizadas.cueanexo
+                 AND l.nivel = autorizadas.oferta
+                WHERE l.anio_ciclo = %s
+            """, [[clave for clave, oferta in pares], [oferta for clave, oferta in pares], 2026])
+            for clave, oferta, sge, inscriptos in cursor.fetchall():
+                indicadores.setdefault((clave, oferta), set()).add((sge, inscriptos))
+
+    for clave, registro in zip(claves, registros):
+        for campo, candidatos in padron.get(clave, {}).items():
+            # Sólo colapsar valores equivalentes; conservar cada campo ambiguo.
+            equivalentes = {
+                _region_listado_equivalente(valor) if campo == 'regional' else valor.casefold()
+                for valor in candidatos
+            }
+            if len(equivalentes) > 1:
+                incidencias.add((clave, campo))
+                continue
+            if not candidatos:
+                continue
+            valor = sorted(candidatos)[0]
+            if campo == 'regional' and _valor_padron_listado(registro.regional):
+                if _region_listado_equivalente(valor) != _region_listado_equivalente(registro.regional):
+                    incidencias.add((clave, 'regional'))
+                    continue
+                # Mantener la nomenclatura con la que se autorizó el registro.
+                valor = registro.regional
+            setattr(registro, campo, valor)
+
+        registro.sge_2026 = 'Sin Carga 2026'
+        registro.inscriptos_2026 = 'Sin Inscripciones 2026'
+        valores = indicadores.get((clave, str(registro.tipo_oferta or '').strip()), set())
+        if len(valores) == 1:
+            sge, inscriptos = next(iter(valores))
+            if sge is not None:
+                registro.sge_2026 = str(sge)
+            if inscriptos is not None:
+                registro.inscriptos_2026 = str(inscriptos)
+        elif len(valores) > 1:
+            incidencias.add((clave, 'indicadores_2026:' + str(registro.tipo_oferta)))
+
+    if incidencias:
+        logging.getLogger(__name__).warning(
+            'Listado SGE: datos ambiguos; se conserva el histórico o la leyenda de ausencia. '
+            'CUE-Anexo/campo: %s', sorted(incidencias),
+        )
+    return registros
+
+
 def get_escuelas_autorizadas(request):
     contexto = resolver_contexto_sge(request)
     return filtrar_queryset_sge(
-        InformeSGE.objects.all(),
+        InformeSGE.objects.using('sge_nacion').all(),
         contexto,
         campo_region="regional",
         campo_cueanexo="cueanexo",
@@ -442,8 +593,8 @@ class DashboardSeguimientoSIE2025View(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        escuelas = get_escuelas_autorizadas(self.request)
-        regiones_raw = escuelas.values_list('regional', flat=True).distinct()
+        escuelas = completar_indicadores_sge_2026(get_escuelas_autorizadas(self.request))
+        regiones_raw = {escuela.regional for escuela in escuelas}
         regiones_limpias = set()
         for r in regiones_raw:
             norm = normalizar_region_grafico(r)
@@ -457,7 +608,7 @@ class DashboardSeguimientoSIE2025View(TemplateView):
 
 @login_required
 def seguimiento_sie_json(request):     
-    escuelas = get_escuelas_autorizadas(request)
+    escuelas = completar_indicadores_sge_2026(get_escuelas_autorizadas(request))
     datos_agrupados = {}
     for esc in escuelas:
         region = normalizar_region_grafico(esc.regional)
@@ -484,7 +635,7 @@ def seguimiento_sie_json(request):
 @login_required
 def seguimiento_sie_niveles_json(request):
     requested_region = request.GET.get('region')
-    escuelas = get_escuelas_autorizadas(request)
+    escuelas = completar_indicadores_sge_2026(get_escuelas_autorizadas(request))
     datos_agrupados = {}
     for esc in escuelas:
         if normalizar_region_grafico(esc.regional) != requested_region: continue

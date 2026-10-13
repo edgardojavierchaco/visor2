@@ -12,6 +12,7 @@ from .access import (
 
 from .selectors import (
     apply_institution_filters,
+    apply_unit_state_filter,
     coverage_summary,
     enrich_institutions,
     institution_activities,
@@ -177,11 +178,23 @@ def dashboard(request):
     ]
 
     # --------------------------------------------------------
-    # Paginación
+    # Filtro LOCAL de Unidades de servicio
+    #
+    # No modifica KPI, cobertura ni Resumen territorial.
+    # Sólo refina la tabla de establecimientos.
+    # --------------------------------------------------------
+
+    unit_rows = apply_unit_state_filter(
+        rows,
+        request.GET,
+    )
+
+    # --------------------------------------------------------
+    # Paginación de Unidades de servicio
     # --------------------------------------------------------
 
     paginator = Paginator(
-        rows,
+        unit_rows,
         40,
     )
 
@@ -225,6 +238,9 @@ def dashboard(request):
 
         "result_count":
             len(rows),
+
+        "unit_result_count":
+            len(unit_rows),
     }
 
     return render(
@@ -489,6 +505,11 @@ def export_institutions_csv(
         request.GET,
     )
 
+    rows = apply_unit_state_filter(
+        rows,
+        request.GET,
+    )
+
     return export_institutions(
         rows
     )
@@ -508,6 +529,11 @@ def export_personnel_csv(
         enrich_institutions(
             request.user
         ),
+        request.GET,
+    )
+
+    rows = apply_unit_state_filter(
+        rows,
         request.GET,
     )
 

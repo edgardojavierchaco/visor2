@@ -367,7 +367,7 @@
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <span class="badge rounded-pill" id="comparativaSgeRaRefreshFloatingStep" style="background: #dbeafe; color: #1e40af; font-weight: 800; padding: 0.45rem 0.7rem;">0 / 7</span>
+            <span class="badge rounded-pill" id="comparativaSgeRaRefreshFloatingStep" style="background: #dbeafe; color: #1e40af; font-weight: 800; padding: 0.45rem 0.7rem;">0 / 8</span>
             <button id="comparativaSgeRaRefreshReloadBtn" type="button" class="btn btn-sm btn-primary d-none" style="font-weight: 800; box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);">Recargar ahora</button>
             <button id="comparativaSgeRaRefreshClearBtn" type="button" class="btn btn-sm btn-outline-secondary d-none" style="font-weight: 700;">Cerrar</button>
         </div>
@@ -536,7 +536,7 @@
                         <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Estado actual</strong>Estado vigente registrado para ese CUE-Anexo.</div></div>
                         <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Hallazgos</strong>Sin filtro por tipo muestra el total del CUE-Anexo. Con un Tipo de hallazgo seleccionado muestra “hallazgo filtrado” o “hallazgos filtrados” para indicar cuántos coinciden con ese filtro, seguido del total general del CUE-Anexo.</div></div>
                         <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Resultado</strong>Resume si el CUE-Anexo requiere revisión según la auditoría vigente.</div></div>
-                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Acción</strong><strong class="d-inline">Ver detalle</strong> abre la revisión dentro de la tabla y <strong class="d-inline">PDF</strong> genera el informe completo de ese CUE-Anexo.</div></div>
+                        <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Acción</strong>el <strong class="d-inline">ojito</strong> abre los registros RA 2026 y SGE 2026 en paralelo; <strong class="d-inline">Ver detalle</strong> abre la revisión de hallazgos dentro de la tabla y <strong class="d-inline">PDF</strong> genera el informe de auditoría de ese CUE-Anexo.</div></div>
                         <div class="col-md-6"><div class="ayuda-comparativa-card"><strong>Filas por página</strong>Permite mostrar 10, 25 o 50 registros por página. Esta opción sólo cambia la visualización de la tabla.</div></div>
                     </div>
                 </section>
@@ -544,7 +544,7 @@
                 <section class="ayuda-comparativa-section">
                     <h6><i class="fas fa-search-plus text-primary me-2" aria-hidden="true"></i>Ver detalle</h6>
                     <div class="ayuda-comparativa-card" style="border-left-color: #1d4ed8;">
-                        <p>El botón <strong class="d-inline">Ver detalle</strong> abre la revisión del CUE-Anexo sin salir de la tabla.</p>
+                        <p>El <strong class="d-inline">ojito</strong> muestra los registros completos RA 2026 y SGE 2026 en un modal, sin depender de que existan hallazgos. El botón <strong class="d-inline">Ver detalle</strong> mantiene la revisión de hallazgos dentro de la tabla.</p>
                         <div class="row g-3">
                             <div class="col-md-6"><div class="p-3 rounded-3 h-100" style="background: #fff7ed; border: 1px solid #fed7aa;"><strong style="color: #9a3412;">Sólo hallazgos</strong>Muestra el resumen de los hallazgos y la información necesaria para entenderlos y corregirlos. No muestra el detalle completo de la auditoría. Si hay un Tipo de hallazgo filtrado, esta vista se concentra en ese tipo.</div></div>
                             <div class="col-md-6"><div class="p-3 rounded-3 h-100" style="background: #eff6ff; border: 1px solid #bfdbfe;"><strong>Ver todo</strong>Mantiene el resumen y agrega el detalle completo de la auditoría RA/SGE del CUE-Anexo, incluyendo estructuras con diferencias y coincidencias.</div></div>
@@ -634,6 +634,7 @@
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+{% include 'indicadoresie/seguimiento/_detalle_ra_sge_modal.html' %}
 
 <script>
 $(function () {
@@ -2466,25 +2467,11 @@ $(function () {
     }
 
     function beginRefreshGuard() {
-        var hadPendingRequest = Boolean(currentRequest || loadingTimer);
         refreshInProgress = true;
         reloadRequestedAfterRefresh = true;
         postRefreshReloadScheduled = false;
-        requestId += 1;
-        cancelPostRefreshRetry();
-        if (textTimer) {
-            window.clearTimeout(textTimer);
-            textTimer = null;
-        }
-        clearDetailRequests();
-        abortBulkExportRequest();
-        if (currentRequest) {
-            var requestToAbort = currentRequest;
-            currentRequest = null;
-            requestToAbort.abort();
-        }
-        $('#requestError').hide().text('');
-        if (hadPendingRequest) endLoading(hasLoadedSnapshot, false);
+        // El refresh no debe cancelar las consultas ni ocultar la última carga.
+        if (hasLoadedSnapshot) endLoading(exportsEnabled, false);
     }
 
     function finishRefreshGuardSuccess(event) {
@@ -2522,24 +2509,9 @@ $(function () {
     }
 
     function finishRefreshGuardError() {
-        var hadPendingRequest = Boolean(currentRequest || loadingTimer);
         refreshInProgress = false;
         reloadRequestedAfterRefresh = false;
         postRefreshReloadScheduled = false;
-        requestId += 1;
-        cancelPostRefreshRetry();
-        if (textTimer) {
-            window.clearTimeout(textTimer);
-            textTimer = null;
-        }
-        clearDetailRequests();
-        abortBulkExportRequest();
-        if (currentRequest) {
-            var requestToAbort = currentRequest;
-            currentRequest = null;
-            requestToAbort.abort();
-        }
-        if (hadPendingRequest) endLoading(hasLoadedSnapshot, false);
     }
 
     document.addEventListener('comparativa:refresh-start', beginRefreshGuard);
@@ -3704,7 +3676,6 @@ $(function () {
     }
 
     function loadDetail(rowData, shell) {
-        if (refreshInProgress) return;
         var key = detailRequestKey(rowData);
         var request = detailRequests[key];
         if (!request) {
@@ -3731,7 +3702,7 @@ $(function () {
                 renderDetailError(shell, 'La respuesta recibida no contiene el detalle esperado. Intente nuevamente.');
             }
         }).fail(function (xhr, status) {
-            if (status === 'abort' || refreshInProgress || !shell || !shell.length) return;
+            if (status === 'abort' || !shell || !shell.length) return;
             renderDetailError(shell, 'Intente nuevamente.');
         });
     }
@@ -3764,10 +3735,7 @@ $(function () {
             window.clearTimeout(textTimer);
             textTimer = null;
         }
-        if (refreshInProgress) {
-            reloadRequestedAfterRefresh = true;
-            return;
-        }
+        if (refreshInProgress) reloadRequestedAfterRefresh = true;
         if (!isPostRefreshLoad) {
             cancelPostRefreshRetry();
             postRefreshReloadScheduled = false;
@@ -3779,7 +3747,7 @@ $(function () {
         var thisRequest = ++requestId;
         var reloadAfterRequest = false;
         var requestSucceeded = false;
-        var preserveSnapshot = loadOptions.preserveSnapshot === true && hasLoadedSnapshot;
+        var preserveSnapshot = (loadOptions.preserveSnapshot === true || refreshInProgress) && hasLoadedSnapshot;
         if (currentRequest) currentRequest.abort();
         if (!preserveSnapshot) beginLoading();
         $('#requestError').hide().text('');
@@ -3793,10 +3761,12 @@ $(function () {
             var validResponse = isRecord(response) && Array.isArray(response.data)
                 && isRecord(response.resumen) && isRecord(response.auditoria);
             if (!validResponse) {
-                hasLoadedSnapshot = false;
-                lastSuccessfulRequestKey = null;
-                table.clear().draw();
-                updateSummary(null);
+                if (!preserveSnapshot) {
+                    hasLoadedSnapshot = false;
+                    lastSuccessfulRequestKey = null;
+                    table.clear().draw();
+                    updateSummary(null);
+                }
                 $('#requestError').text('No fue posible cargar la auditoría: la respuesta recibida no tiene el formato esperado. Intente nuevamente.').show();
                 return;
             }
@@ -3812,10 +3782,6 @@ $(function () {
             }
         }).fail(function (xhr, status) {
             if (thisRequest !== requestId || status === 'abort') return;
-            if (refreshInProgress) {
-                reloadRequestedAfterRefresh = true;
-                return;
-            }
             var httpStatus = Number(xhr && xhr.status) || 0;
             var retryable = status === 'timeout'
                 || httpStatus === 0
@@ -3826,11 +3792,6 @@ $(function () {
                 retryScheduled = true;
                 postRefreshRetryTimer = window.setTimeout(function () {
                     postRefreshRetryTimer = null;
-                    if (refreshInProgress) {
-                        reloadRequestedAfterRefresh = true;
-                        postRefreshReloadScheduled = false;
-                        return;
-                    }
                     loadData({
                         postRefresh: isPostRefreshLoad,
                         retryRemaining: retryRemaining - 1,
@@ -3839,7 +3800,7 @@ $(function () {
                 }, 1000);
                 return;
             }
-            if (canKeepCurrentSnapshot) {
+            if (canKeepCurrentSnapshot || preserveSnapshot) {
                 $('#requestError').text('No fue posible actualizar la auditoría. Se mantiene la última carga disponible. Intente nuevamente.').show();
                 return;
             }
@@ -3882,6 +3843,7 @@ $(function () {
                 if (type !== 'display') return '';
                 var cue = escapeAttribute(row.cueanexo);
                 var actions = [];
+                actions.push('<button type="button" class="btn btn-sm btn-outline-primary btn-detalle-ra-sge" title="Ver registros RA 2026 y SGE 2026" aria-label="Ver registros RA 2026 y SGE 2026 del CUE-Anexo ' + cue + '" data-detalle-vista="comparativa" data-cueanexo="' + cue + '" data-establecimiento="' + escapeAttribute(row.establecimiento) + '"><i class="fas fa-eye" aria-hidden="true"></i></button>');
                 if (visibleSituationCount(row) > 0 || row.estado_codigo === 'sin_diferencias') {
                     actions.push('<button type="button" class="btn btn-sm btn-outline-primary detail-toggle" aria-expanded="false" aria-controls="' + escapeAttribute(detailId(row)) + '" aria-label="Ver detalle del CUE-Anexo ' + cue + '">Ver detalle</button>');
                 }
@@ -3939,7 +3901,6 @@ $(function () {
             return;
         }
 
-        if (refreshInProgress) return;
         row.child(detailShellMarkup(rowData), 'detalle-row').show();
         rowElement.addClass('shown');
         button.attr({
@@ -4024,6 +3985,7 @@ $(function () {
     'use strict';
     var STORAGE_KEY = 'comparativaSgeRaRefreshJobId';
     var STARTED_AT_STORAGE_KEY = 'comparativaSgeRaRefreshStartedAt';
+    var FECHA_STORAGE_KEY = 'comparativaSgeRaRefreshRequestedFecha';
 
     function getCsrfToken() {
         var tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
@@ -4143,7 +4105,7 @@ $(function () {
 
     function actualizarFloating(data) {
         lastProgressData = Object.assign({}, lastProgressData || {}, data || {});
-        var total = data.total || 7;
+        var total = data.total || 8;
         var step = data.step || 0;
         var percent = Math.max(0, Math.min(100, parseInt(data.percent || 0, 10)));
         mostrarFloating();
@@ -4189,6 +4151,7 @@ $(function () {
     function borrarEstadoRefreshStorage() {
         sessionStorage.removeItem(STORAGE_KEY);
         sessionStorage.removeItem(STARTED_AT_STORAGE_KEY);
+        sessionStorage.removeItem(FECHA_STORAGE_KEY);
     }
 
     function mostrarRecuperandoSeguimiento() {
@@ -4234,7 +4197,7 @@ $(function () {
             floatingBar.style.background = 'linear-gradient(90deg, #2563eb 0%, #06b6d4 55%, #22c55e 100%)';
             floatingBar.classList.remove('progress-bar-striped', 'progress-bar-animated', 'bg-danger');
         }
-        if (floatingStep) floatingStep.textContent = (data.step || 7) + ' / ' + (data.total || 7);
+        if (floatingStep) floatingStep.textContent = (data.step || 8) + ' / ' + (data.total || 8);
         if (floatingCurrent) floatingCurrent.textContent = '';
         if (floatingElapsed) floatingElapsed.textContent = formatearTiempoTranscurrido(data.elapsed_seconds);
         if (reloadBtn) reloadBtn.classList.remove('d-none');
@@ -4297,6 +4260,10 @@ $(function () {
             && refresh.estado_auditoria === 'OK'
             && (errorAt === null || errorAt <= successAt);
         if (successMatches) {
+            var requestedFecha = timestampValue(sessionStorage.getItem(FECHA_STORAGE_KEY));
+            var visibleFecha = timestampValue(data.fecha_iso);
+            // El OK de A/B/F por sí solo no confirma la actualización de fecha.
+            if (requestedFecha === null || visibleFecha !== requestedFecha) return null;
             return {
                 status: 'success',
                 message: 'Actualización completada correctamente.'
@@ -4318,8 +4285,8 @@ $(function () {
     function datosTerminalesRecuperados(result) {
         var data = Object.assign({}, lastProgressData || {}, result);
         if (result.status === 'success') {
-            data.step = 7;
-            data.total = 7;
+            data.step = 8;
+            data.total = 8;
             data.percent = 100;
             data.current_view = '';
         }
@@ -4474,6 +4441,7 @@ $(function () {
                         sessionStorage.setItem(STORAGE_KEY, data.job_id);
                         sessionStorage.removeItem(STARTED_AT_STORAGE_KEY);
                         guardarStartedAt(data.started_at, true);
+                        sessionStorage.setItem(FECHA_STORAGE_KEY, data.requested_fecha || '');
                         emitirEventoRefresh('comparativa:refresh-start', {
                             status: 'running',
                             job_id: data.job_id,
@@ -4481,7 +4449,7 @@ $(function () {
                         });
                         if (fechaModalBS) fechaModalBS.hide();
                         resetBotonGuardar();
-                        actualizarFloating({ status: 'running', step: 0, total: 4, percent: 0, current_view: 'Trayectoria SGE', message: 'Actualizando trayectoria de alumnos SGE...', started_at: data.started_at || '' });
+                        actualizarFloating({ status: 'running', step: 0, total: 8, percent: 0, current_view: 'Calificaciones Primaria', message: 'Actualizando calificaciones de Primaria...', started_at: data.started_at || '' });
                         consultarProgreso(data.job_id);
                         return;
                     }
@@ -4511,7 +4479,7 @@ $(function () {
             job_id: jobIdActivo,
             started_at: startedAtActivo || ''
         });
-        actualizarFloating({ status: 'running', step: 0, total: 4, percent: 0, current_view: '', message: 'Recuperando progreso del refresh...' });
+        actualizarFloating({ status: 'running', step: 0, total: 8, percent: 0, current_view: '', message: 'Recuperando progreso del refresh...' });
         consultarProgreso(jobIdActivo);
     }
 });

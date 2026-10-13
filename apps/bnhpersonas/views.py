@@ -6,7 +6,7 @@ import re
 
 from django.contrib import messages
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 
 from django.db import IntegrityError, OperationalError, transaction
 
@@ -45,6 +45,8 @@ from .services.crud import (
     add_schedule,
 
     archive_person,
+
+    restore_person,
 
     change_activity,
 
@@ -478,6 +480,9 @@ def eliminar_persona(request, pk):
 
             messages.success(request, "Ficha personal archivada; se conserva su historial.")
 
+            if is_admin(request.user):
+                return redirect("bnhpersonas:personas_detail", pk=pk)
+
             return redirect("bnhpersonas:personas_list")
 
         except (ValidationError, IntegrityError, OperationalError) as exc:
@@ -487,7 +492,45 @@ def eliminar_persona(request, pk):
     return render(request, "bnh/personas/confirm.html", {"form": form, "persona": obj, "title": "Archivar ficha personal", "archive": True})
 
 
+@operator_required
+@require_http_methods(["GET", "POST"])
+def reactivar_persona(request, pk):
+    """Reactiva una ficha archivada. Solo disponible para administradores BNH."""
+    if not is_admin(request.user):
+        raise PermissionDenied("Solo un administrador puede reactivar una ficha personal archivada.")
 
+    obj = get_object_or_404(Personas.objects, pk=pk, archivada=True)
+    form = ConfirmacionForm(
+        request.POST if request.method == "POST" else None,
+        initial={"version": obj.version},
+    )
+
+    if request.method == "POST" and form.is_valid():
+        try:
+            restore_person(
+                request.user,
+                pk,
+                form.cleaned_data["version"],
+                form.cleaned_data["motivo"],
+            )
+            messages.success(
+                request,
+                "Ficha personal reactivada. El historial se conserva y los cargos dados de baja permanecen cerrados.",
+            )
+            return redirect("bnhpersonas:personas_detail", pk=pk)
+        except (Conflict, ValidationError, IntegrityError, OperationalError) as exc:
+            errors_to_form(form, exc)
+
+    return render(
+        request,
+        "bnh/personas/confirm.html",
+        {
+            "form": form,
+            "persona": obj,
+            "title": "Reactivar ficha personal",
+            "restore": True,
+        },
+    )
 
 
 @operator_required

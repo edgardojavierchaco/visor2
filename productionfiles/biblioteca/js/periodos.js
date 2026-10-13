@@ -514,7 +514,7 @@
 
         var numero = document.createElement('span');
         numero.className = 'biblioteca-seccion__numero';
-        numero.textContent = ('0' + (indice + 1)).slice(-2);
+        numero.textContent = seccion.numero_visible || String(indice + 1);
         boton.appendChild(numero);
 
         var marcoIcono = document.createElement('span');

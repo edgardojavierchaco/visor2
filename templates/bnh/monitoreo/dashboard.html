@@ -1269,130 +1269,92 @@ Seguimiento y Monitoreo · BNH Personal Educativo
 
         <div class="col-12 col-xxl-4">
 
-            <div class="card monitoring-card h-100">
+            <div class="card monitoring-card">
 
+                <div class="card-header monitoring-card-header p-0">
 
-                <div class="card-header monitoring-card-header">
+                    <button
+                        class="btn w-100 border-0 bg-transparent text-start px-3 py-3 d-flex align-items-center justify-content-between"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#actividadRecienteCollapse"
+                        aria-expanded="false"
+                        aria-controls="actividadRecienteCollapse"
+                    >
+                        <span>
+                            <span class="monitoring-section-title mb-1 d-block">
+                                <i class="bi bi-clock-history me-2"></i>
+                                Actividad reciente
+                            </span>
 
-                    <div>
+                            <span class="monitoring-section-subtitle mb-0 d-block">
+                                Presione para ver los últimos movimientos auditados.
+                            </span>
+                        </span>
 
-                        <h2 class="monitoring-section-title mb-1">
-
-                            <i class="bi bi-clock-history me-2"></i>
-
-                            Actividad reciente
-
-                        </h2>
-
-
-                        <p class="monitoring-section-subtitle mb-0">
-
-                            Últimos movimientos auditados.
-
-                        </p>
-
-                    </div>
+                        <i class="bi bi-chevron-down ms-3"></i>
+                    </button>
 
                 </div>
 
+                <div class="collapse" id="actividadRecienteCollapse">
 
+                    <div class="card-body">
 
-                <div class="card-body">
+                        <div class="monitoring-timeline">
 
-                    <div class="monitoring-timeline">
+                            {% for event in audit %}
 
+                                <div class="monitoring-timeline-item">
 
-                        {% for event in audit %}
-
-                            <div class="monitoring-timeline-item">
-
-
-                                <div class="monitoring-timeline-marker">
-
-                                    <i class="bi bi-dot"></i>
-
-                                </div>
-
-
-
-                                <div class="monitoring-timeline-content">
-
-                                    <div class="fw-semibold">
-
-                                        {{ event.accion }}
-
+                                    <div class="monitoring-timeline-marker">
+                                        <i class="bi bi-dot"></i>
                                     </div>
 
+                                    <div class="monitoring-timeline-content">
 
-                                    <div class="small text-muted mt-1">
-
-                                        {% if event.cueanexo %}
-
-                                            <span class="font-monospace">
-
-                                                {{ event.cueanexo }}
-
-                                            </span>
-
-                                            ·
-
-                                        {% endif %}
-
-                                        {{ event.fecha|date:"d/m/Y H:i" }}
-
-                                    </div>
-
-
-                                    <div class="small mt-1">
-
-                                        {{ event.usuario }}
-
-                                    </div>
-
-
-                                    {% if event.motivo %}
-
-                                        <div class="small text-secondary mt-1">
-
-                                            {{ event.motivo|truncatechars:95 }}
-
+                                        <div class="fw-semibold">
+                                            {{ event.accion }}
                                         </div>
 
-                                    {% endif %}
+                                        <div class="small text-muted mt-1">
+                                            {% if event.cueanexo %}
+                                                <span class="font-monospace">
+                                                    {{ event.cueanexo }}
+                                                </span>
+                                                ·
+                                            {% endif %}
+                                            {{ event.fecha|date:"d/m/Y H:i" }}
+                                        </div>
+
+                                        <div class="small mt-1">
+                                            {{ event.usuario }}
+                                        </div>
+
+                                        {% if event.motivo %}
+                                            <div class="small text-secondary mt-1">
+                                                {{ event.motivo|truncatechars:95 }}
+                                            </div>
+                                        {% endif %}
+
+                                    </div>
 
                                 </div>
 
+                            {% empty %}
 
-                            </div>
+                                <div class="text-center text-muted py-4">
+                                    <i class="bi bi-clock-history display-6 d-block mb-2"></i>
+                                    Sin eventos recientes.
+                                </div>
 
+                            {% endfor %}
 
-                        {% empty %}
-
-
-                            <div class="text-center text-muted py-4">
-
-                                <i
-                                    class="
-                                        bi
-                                        bi-clock-history
-                                        display-6
-                                        d-block
-                                        mb-2
-                                    "
-                                ></i>
-
-                                Sin eventos recientes.
-
-                            </div>
-
-
-                        {% endfor %}
-
+                        </div>
 
                     </div>
 
                 </div>
-
 
             </div>
 
@@ -1470,6 +1432,88 @@ Seguimiento y Monitoreo · BNH Personal Educativo
 
 
         <div class="card-body p-0">
+
+            <div class="p-3 border-bottom bg-light-subtle">
+
+                <form
+                    method="get"
+                    class="row g-2 align-items-end"
+                    aria-label="Filtrar unidades de servicio por estado"
+                >
+
+                    {# Conserva los filtros generales del dashboard #}
+                    {% if query.q %}
+                        <input type="hidden" name="q" value="{{ query.q }}">
+                    {% endif %}
+                    {% if query.region %}
+                        <input type="hidden" name="region" value="{{ query.region }}">
+                    {% endif %}
+                    {% if query.estado %}
+                        <input type="hidden" name="estado" value="{{ query.estado }}">
+                    {% endif %}
+
+                    <div class="col-12 col-md-5 col-lg-4">
+
+                        <label
+                            for="id_estado_unidad"
+                            class="form-label fw-semibold mb-1"
+                        >
+                            Filtrar unidades por estado
+                        </label>
+
+                        <select
+                            id="id_estado_unidad"
+                            name="estado_unidad"
+                            class="form-select js-monitor-select"
+                            data-placeholder="Todos los estados"
+                        >
+                            <option value=""></option>
+
+                            {% for value, label in filters.estados %}
+                                <option
+                                    value="{{ value }}"
+                                    {% if query.estado_unidad == value %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+
+                    </div>
+
+                    <div class="col-12 col-md-auto">
+                        <button
+                            type="submit"
+                            class="btn btn-primary"
+                        >
+                            <i class="bi bi-funnel me-1"></i>
+                            Filtrar
+                        </button>
+                    </div>
+
+                    {% if query.estado_unidad %}
+                        <div class="col-12 col-md-auto">
+                            <a
+                                class="btn btn-light border"
+                                href="?{% if query.q %}q={{ query.q|urlencode }}&{% endif %}{% if query.region %}region={{ query.region|urlencode }}&{% endif %}{% if query.estado %}estado={{ query.estado|urlencode }}&{% endif %}"
+                            >
+                                <i class="bi bi-x-circle me-1"></i>
+                                Quitar filtro
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    <div class="col-12 col-md ms-md-auto text-md-end">
+                        <span class="badge rounded-pill text-bg-light border px-3 py-2">
+                            {{ unit_result_count|default:0 }} unidades
+                        </span>
+                    </div>
+
+                </form>
+
+            </div>
 
             <div class="table-responsive">
 

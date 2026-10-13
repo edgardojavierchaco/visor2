@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import View
-from .models import RegistroDestinoFondos, DestinoFondos
+from .models import RegistroDestinoFondos, DestinoFondos, es_planilla_biblioteca_nueva
 from .forms import RegistroDestinoFondosForm
 from django.views.generic import CreateView, UpdateView, ListView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -66,8 +66,26 @@ class RegistroDestinoFondosCreateView(LoginRequiredMixin, InformeBloqueoMixin, C
 
 
         
-        context['title'] = 'Registro Destino de Fondos'
-        context['entity'] = 'Servicios_Referencia'
+        periodo = self.get_periodo_activo()
+        planilla_nueva = es_planilla_biblioteca_nueva(
+            periodo.meses,
+            periodo.annos,
+        )
+        context['title'] = (
+            'Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Registro Destino de Fondos'
+        )
+        context['entity'] = (
+            'Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Destino de fondos'
+        )
+        context['section_return_label'] = (
+            'Volver a Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Volver a Destino de fondos'
+        )
         context['list_url'] = self.success_url
         context['action'] = 'add'
         
@@ -130,8 +148,26 @@ class RegistroDestinoFondosUpdateView(LoginRequiredMixin, InformeBloqueoMixin, U
 
 
         
-        context['title'] = 'Edición Registro Destino de Fondos'
-        context['entity'] = 'Registro Destino de Fondos'
+        periodo = self.get_periodo_activo()
+        planilla_nueva = es_planilla_biblioteca_nueva(
+            periodo.meses,
+            periodo.annos,
+        )
+        context['title'] = (
+            'Edición de Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Edición Registro Destino de Fondos'
+        )
+        context['entity'] = (
+            'Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Destino de fondos'
+        )
+        context['section_return_label'] = (
+            'Volver a Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Volver a Destino de fondos'
+        )
         context['list_url'] = self.success_url
         context['action'] = 'edit'
         
@@ -178,8 +214,21 @@ class RegistroDestinoFondosDeleteView(LoginRequiredMixin, InformeBloqueoMixin, D
         context = super().get_context_data(**kwargs)
 
     
-        context['title'] = 'Eliminación Registro Destino de Fondos'
-        context['entity'] = 'Registro Destino de Fondos'
+        periodo = self.get_periodo_activo()
+        planilla_nueva = es_planilla_biblioteca_nueva(
+            periodo.meses,
+            periodo.annos,
+        )
+        context['title'] = (
+            'Eliminación de Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Eliminación Registro Destino de Fondos'
+        )
+        context['entity'] = (
+            'Compras realizadas con el FBCH'
+            if planilla_nueva
+            else 'Destino de fondos'
+        )
         context['list_url'] = self.success_url
         return context
 
@@ -237,14 +286,24 @@ class RegistroDestinoFondosListView(LoginRequiredMixin, InformeBloqueoMixin, Lis
 
         
 
-        context['title'] = 'Listado de Registro Destino de Fondos'
+        context['title'] = 'Listado de Compras realizadas con el FBCH'
         context['create_url'] = reverse_lazy('bibliotecas:fondos_create')
         context['list_url'] = reverse_lazy('bibliotecas:fondos_list')
         context['update_url'] = reverse_lazy('bibliotecas:fondos_update', args=[0])
         context['hide_lock_button'] = False      
         context['generar_pdf_button'] = True,   
         context['before_url'] = reverse_lazy('bibliotecas:aguapey_list')
-        context['next_url'] = reverse_lazy('bibliotecas:bibliotecario_list')
-        context['entity'] = 'Registro Destino de Fondos'
+
+        periodo = self.get_periodo_activo()
+        planilla_nueva = es_planilla_biblioteca_nueva(
+            periodo.meses,
+            periodo.annos,
+        )
+        if not planilla_nueva:
+            context['next_url'] = reverse_lazy('bibliotecas:bibliotecario_list')
+            context['title'] = 'Listado de Registro Destino de Fondos'
+            context['entity'] = 'Destino de fondos'
+        else:
+            context['entity'] = 'Compras realizadas con el FBCH'
         return context
         

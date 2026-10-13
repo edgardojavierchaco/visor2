@@ -255,10 +255,14 @@ def resolver_periodo_activo(request: HttpRequest):
         except GenerarInforme.DoesNotExist:
             periodo = None
 
-        if periodo is not None and GenerarInforme.objects.filter(
-            cueanexo=periodo.cueanexo,
-            estado="GENERADO",
-        ).exclude(pk=periodo.pk).exists():
+        if (
+            periodo is not None
+            and not periodo_explicito
+            and GenerarInforme.objects.filter(
+                cueanexo=periodo.cueanexo,
+                estado="GENERADO",
+            ).exclude(pk=periodo.pk).exists()
+        ):
             periodo = None
 
     request._biblioteca_periodo_explicito_invalido = (

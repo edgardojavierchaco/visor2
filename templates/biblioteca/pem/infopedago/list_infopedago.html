@@ -1,6 +1,15 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
+{% block delete_section_name %}Informe pedagógico{% endblock %}
+{% block delete_section_icon %}school{% endblock %}
+{% block delete_primary_fields %}servicio{% endblock %}
+{% block delete_section_fields %}
+    <span data-biblioteca-delete-field="servicio" data-label="Servicio" data-full="true"></span>
+    <span data-biblioteca-delete-field="varones" data-label="Varones"></span>
+    <span data-biblioteca-delete-field="total" data-label="Total"></span>
+{% endblock %}
+
 {% block section_header %}
     {% include 'biblioteca/includes/crud_section_header.html' with material_icon='school' %}
 {% endblock %}
@@ -31,22 +40,38 @@
 {% endblock %}
 
 {% block section_totals %}
-    <div class="biblioteca-crud__totals" data-biblioteca-section-totals>
-        <div class="biblioteca-crud__totals-title">
-            <span class="biblioteca-symbol" aria-hidden="true">functions</span>
-            <span>Totales de la sección</span>
-        </div>
-        <div class="biblioteca-crud__totals-metrics">
-            <div class="biblioteca-crud__total-metric">
-                <span>Varones</span>
-                <strong data-biblioteca-total-field="varones">0</strong>
-            </div>
-            <div class="biblioteca-crud__total-metric">
-                <span>Total</span>
-                <strong data-biblioteca-total-field="total">0</strong>
+    <section class="biblioteca-crud__section-summary"
+             aria-label="Resumen de la sección"
+             data-biblioteca-section-totals>
+        <div class="biblioteca-crud__section-summary-head">
+            <span class="biblioteca-crud__section-summary-icon" aria-hidden="true">
+                <span class="biblioteca-symbol">open_run</span>
+            </span>
+            <div>
+                <strong>Resumen de la sección</strong>
+                <span>Totales de participación registrados</span>
             </div>
         </div>
-    </div>
+
+        <div class="biblioteca-crud__section-summary-table-wrap">
+            <table class="biblioteca-crud__section-summary-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Concepto</th>
+                        <th scope="col">Varones</th>
+                        <th scope="col">Total general</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">Participación</th>
+                        <td data-biblioteca-total-field="varones">0</td>
+                        <td data-biblioteca-total-field="total">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
 {% endblock %}
 
 {% block javascript %}

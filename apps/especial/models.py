@@ -1442,14 +1442,11 @@ class DocenteSeccion(EspecialAuditoriaMixin):
             cargo = self.cargo_relacionado
             cargo_cuil = solo_digitos(getattr(cargo.persona, "cuil", ""))
             modalidad = str(getattr(cargo.modalidad, "descrip_modalidad", "") or "").strip()
-            requiere_validacion = getattr(
-                settings, "ESPECIAL_REQUIERE_CARGO_VALIDADO", True
-            )
             if cargo_cuil != self.docente_cuil:
                 errors["cargo_relacionado"] = "El cargo seleccionado no pertenece al CUIL del docente."
             elif solo_digitos(cargo.cueanexo) != solo_digitos(self.seccion.cueanexo):
                 errors["cargo_relacionado"] = "El cargo seleccionado no pertenece al CUE-Anexo de la sección."
-            elif cargo.eliminado or (requiere_validacion and cargo.validacion != "VALIDADO") or modalidad.casefold() != "especial":
+            elif cargo.eliminado or cargo.validacion != "VALIDADO" or modalidad.casefold() != "especial":
                 errors["cargo_relacionado"] = "El cargo debe estar validado, vigente y ser de modalidad Especial."
 
         if errors:

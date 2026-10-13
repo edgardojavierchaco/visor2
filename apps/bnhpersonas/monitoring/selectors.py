@@ -1197,7 +1197,52 @@ def enrich_institutions(
 
 
 # ============================================================
-# FILTROS
+# FILTRO LOCAL: UNIDADES DE SERVICIO
+# ============================================================
+
+def apply_unit_state_filter(
+    items,
+    params,
+):
+    """
+    Filtra únicamente el bloque "Unidades de servicio" por estado
+    de carga, sin alterar los KPI ni el Resumen territorial.
+
+    El parámetro independiente es ``estado_unidad`` para no interferir
+    con el filtro general ``estado`` del dashboard.
+    """
+
+    estado = (
+        params.get(
+            "estado_unidad"
+        )
+        or ""
+    ).strip().upper()
+
+    if not estado:
+        return list(items)
+
+    estados_validos = {
+        "SIN_CARGA",
+        "EN_PROCESO",
+        "OBSERVADO",
+        "VALIDADO",
+    }
+
+    if estado not in estados_validos:
+        return list(items)
+
+    return [
+        item
+        for item in items
+        if item.get(
+            "estado_carga"
+        ) == estado
+    ]
+
+
+# ============================================================
+# FILTROS GENERALES
 # ============================================================
 
 def apply_institution_filters(

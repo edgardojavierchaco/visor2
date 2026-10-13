@@ -45,11 +45,15 @@ from .models import (
 # FILTRADO DE ACTIVIDADES
 # ============================================================
 
-def filtered_activities(request):
+def filtered_activities(request, *, include_deleted=False, archived=False):
 
     qs = activity_scope(
-        request.user
+        request.user,
+        include_deleted=include_deleted,
     )
+
+    if archived is not None:
+        qs = qs.filter(persona__archivada=archived)
 
     for param, field in (
         (
@@ -140,14 +144,23 @@ class PersonasListView(View):
         request,
     ):
 
+        show_archived = bool(
+            is_admin(request.user)
+            and request.GET.get("archivadas") == "1"
+        )
+
         activities = (
             filtered_activities(
-                request
+                request,
+                include_deleted=show_archived,
+                archived=True if show_archived else False,
             )
         )
 
-        people = person_scope(
-            request.user
+        people = (
+            Personas.objects.filter(archivada=True)
+            if show_archived
+            else person_scope(request.user)
         )
 
         filters = any(
@@ -297,6 +310,12 @@ class PersonasListView(View):
 
                 "filters":
                     request.GET,
+
+                "show_archived":
+                    show_archived,
+
+                "can_view_archived":
+                    is_admin(request.user),
             },
         )
 
@@ -396,10 +415,14 @@ class PersonaDetailView(View):
         # PERSONA
         # ====================================================
 
+        person_queryset = (
+            Personas.objects.all()
+            if is_admin(request.user)
+            else person_scope(request.user)
+        )
+
         person = get_object_or_404(
-            person_scope(
-                request.user
-            )
+            person_queryset
             .select_related(
                 "sexo",
                 "provincia",
@@ -647,15 +670,20 @@ class PersonaDetailView(View):
             in activities
         ]
 
+        audit_filter = Q(
+            entidad="personas",
+            objeto_id=person.pk,
+        )
+
+        if activity_ids:
+            audit_filter |= Q(
+                entidad="registroactividades",
+                objeto_id__in=activity_ids,
+            )
+
         events = list(
             EventoAuditoria.objects
-            .filter(
-                entidad=
-                    "registroactividades",
-
-                objeto_id__in=
-                    activity_ids,
-            )
+            .filter(audit_filter)
             .select_related(
                 "usuario"
             )
@@ -702,6 +730,12 @@ class PersonaDetailView(View):
                         is_regional(
                             request.user
                         )
+                    ),
+
+                "can_restore":
+                    (
+                        is_admin(request.user)
+                        and person.archivada
                     ),
             },
         )

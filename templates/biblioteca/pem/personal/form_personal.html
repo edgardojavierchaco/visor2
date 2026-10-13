@@ -5,7 +5,7 @@
 {% block head %}
     <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2.min.css' %}">
     <link rel="stylesheet" href="{% static 'lib/select2-4.0.13/css/select2-bootstrap4.min.css' %}">
-    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20260923-personal-responsive-2">
+    <link rel="stylesheet" href="{% static 'biblioteca/css/crud.css' %}?v=20261005-personal-cargos-3">
 {% endblock %}
 
 {% block content_header %}{% endblock %}
@@ -211,14 +211,28 @@
                     </div>
 
                     <div class="biblioteca-personal__block-body">
-                        <div id="biblioteca_personal_actividad_selector" class="d-none">
-                            <label for="biblioteca_personal_actividad_select">Seleccioná el cargo de Biblioteca</label>
-                            <div class="biblioteca-personal__select-wrap">
-                                <select id="biblioteca_personal_actividad_select" class="form-control">
-                                    <option value="">Seleccioná un cargo de Biblioteca</option>
-                                </select>
-                                <span class="biblioteca-symbol biblioteca-personal__select-icon" aria-hidden="true">expand_more</span>
-                            </div>
+                        <div id="biblioteca_personal_actividad_selector" class="biblioteca-personal__activity-groups d-none">
+                            <section id="biblioteca_personal_actividad_disponibles_grupo"
+                                     class="biblioteca-personal__activity-group d-none"
+                                     aria-labelledby="biblioteca_personal_actividad_disponibles_titulo">
+                                <div class="biblioteca-personal__activity-group-head">
+                                    <h5 id="biblioteca_personal_actividad_disponibles_titulo">Disponibles</h5>
+                                    <span>Se pueden seleccionar</span>
+                                </div>
+                                <div id="biblioteca_personal_actividad_disponibles"
+                                     class="biblioteca-personal__activity-list"></div>
+                            </section>
+
+                            <section id="biblioteca_personal_actividad_pendientes_grupo"
+                                     class="biblioteca-personal__activity-group d-none"
+                                     aria-labelledby="biblioteca_personal_actividad_pendientes_titulo">
+                                <div class="biblioteca-personal__activity-group-head">
+                                    <h5 id="biblioteca_personal_actividad_pendientes_titulo">Pendientes</h5>
+                                    <span>No se pueden seleccionar todavía</span>
+                                </div>
+                                <div id="biblioteca_personal_actividad_pendientes"
+                                     class="biblioteca-personal__activity-list"></div>
+                            </section>
                         </div>
 
                         <div id="biblioteca_personal_actividad_detalle"
@@ -360,7 +374,10 @@
     const bloqueActividad = document.getElementById('biblioteca_personal_actividad');
     const actividadSubtitulo = document.getElementById('biblioteca_personal_actividad_subtitulo');
     const actividadSelector = document.getElementById('biblioteca_personal_actividad_selector');
-    const actividadSelect = document.getElementById('biblioteca_personal_actividad_select');
+    const actividadDisponiblesGrupo = document.getElementById('biblioteca_personal_actividad_disponibles_grupo');
+    const actividadPendientesGrupo = document.getElementById('biblioteca_personal_actividad_pendientes_grupo');
+    const actividadDisponiblesLista = document.getElementById('biblioteca_personal_actividad_disponibles');
+    const actividadPendientesLista = document.getElementById('biblioteca_personal_actividad_pendientes');
     const actividadDetalle = document.getElementById('biblioteca_personal_actividad_detalle');
 
     let personaBnhConfirmada = accionFormulario === 'edit';
@@ -519,15 +536,87 @@
         actividadDetalle.classList.remove('d-none');
     }
 
+    function resumenActividadBnh(actividad) {
+        const partes = [];
+        if (actividad.situacion_revista) partes.push(actividad.situacion_revista);
+        if (actividad.turno) partes.push(actividad.turno);
+        if (actividad.f_desde) partes.push('Desde ' + formatearFechaBnh(actividad.f_desde));
+        return partes.join(' · ') || 'Sin detalle adicional';
+    }
+
+    function crearOpcionActividadBnh(actividad) {
+        const disponible = actividad.disponible === true;
+        const opcion = document.createElement(disponible ? 'label' : 'div');
+        opcion.className = 'biblioteca-personal__activity-option ' +
+            (disponible ? 'is-available' : 'is-pending');
+        opcion.dataset.actividadId = String(actividad.id);
+
+        if (!disponible) {
+            opcion.setAttribute('aria-disabled', 'true');
+        }
+
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'biblioteca_personal_actividad_radio';
+        radio.className = 'biblioteca-personal__activity-radio';
+
+        if (disponible) {
+            radio.value = String(actividad.id);
+            radio.addEventListener('change', function () {
+                seleccionarActividadBnh(this.value);
+            });
+        } else {
+            radio.disabled = true;
+            radio.tabIndex = -1;
+        }
+
+        const icono = document.createElement('span');
+        icono.className = 'biblioteca-personal__activity-icon';
+        icono.setAttribute('aria-hidden', 'true');
+
+        const simbolo = document.createElement('span');
+        simbolo.className = 'biblioteca-symbol';
+        simbolo.textContent = 'work';
+        icono.appendChild(simbolo);
+
+        const contenido = document.createElement('span');
+        contenido.className = 'biblioteca-personal__activity-copy';
+
+        const cargo = document.createElement('strong');
+        cargo.textContent = actividad.cargo || (
+            actividad.ceic_id ? 'Cargo CEIC ' + actividad.ceic_id : 'Cargo sin descripción'
+        );
+
+        const detalle = document.createElement('small');
+        detalle.textContent = resumenActividadBnh(actividad);
+
+        contenido.appendChild(cargo);
+        contenido.appendChild(detalle);
+
+        const estado = document.createElement('span');
+        estado.className = 'biblioteca-personal__activity-status ' +
+            (disponible ? 'is-available' : 'is-pending');
+        estado.textContent = disponible ? 'Disponible' : 'Pendiente de validación';
+
+        opcion.appendChild(radio);
+        opcion.appendChild(icono);
+        opcion.appendChild(contenido);
+        opcion.appendChild(estado);
+
+        return opcion;
+    }
+
     function limpiarActividadBnh() {
         actividadesBnh = [];
         if (actividadInput) actividadInput.value = '';
         if (bloqueActividad) bloqueActividad.classList.add('d-none');
         if (actividadSelector) actividadSelector.classList.add('d-none');
-        if (actividadSelect) {
-            actividadSelect.innerHTML = '<option value="">Seleccioná un cargo de Biblioteca</option>';
-            actividadSelect.value = '';
-        }
+
+        if (actividadDisponiblesLista) actividadDisponiblesLista.innerHTML = '';
+        if (actividadPendientesLista) actividadPendientesLista.innerHTML = '';
+        if (actividadDisponiblesGrupo) actividadDisponiblesGrupo.classList.add('d-none');
+        if (actividadPendientesGrupo) actividadPendientesGrupo.classList.add('d-none');
+
         if (actividadDetalle) {
             actividadDetalle.innerHTML = '';
             actividadDetalle.classList.add('d-none');
@@ -540,7 +629,7 @@
             return String(item.id) === id;
         });
 
-        if (!actividad) {
+        if (!actividad || actividad.disponible !== true) {
             if (actividadInput) actividadInput.value = '';
             if (actividadDetalle) {
                 actividadDetalle.innerHTML = '';
@@ -549,13 +638,21 @@
             personaBnhConfirmada = false;
             if (bloqueManual) bloqueManual.classList.add('d-none');
             if (footerFormulario) footerFormulario.classList.add('d-none');
-            if (actividadesBnh.length > 1) {
-                mostrarEstadoBusqueda('info', 'Seleccioná el cargo de Biblioteca que corresponde a este registro.');
-            }
+            mostrarEstadoBusqueda('info', 'Seleccioná un cargo disponible para continuar.');
             return;
         }
 
         if (actividadInput) actividadInput.value = String(actividad.id);
+
+        if (actividadSelector) {
+            actividadSelector.querySelectorAll('.biblioteca-personal__activity-option').forEach(function (opcion) {
+                const seleccionada = opcion.dataset.actividadId === String(actividad.id);
+                opcion.classList.toggle('is-selected', seleccionada);
+                const radio = opcion.querySelector('.biblioteca-personal__activity-radio');
+                if (radio && !radio.disabled) radio.checked = seleccionada;
+            });
+        }
+
         renderizarActividadBnh(actividad);
         personaBnhConfirmada = true;
         if (bloqueManual) bloqueManual.classList.remove('d-none');
@@ -568,32 +665,69 @@
         actividadesBnh = Array.isArray(actividades) ? actividades : [];
         if (!actividadesBnh.length || !bloqueActividad) return;
 
+        const disponibles = actividadesBnh.filter(function (actividad) {
+            return actividad.disponible === true;
+        });
+        const pendientes = actividadesBnh.filter(function (actividad) {
+            return actividad.disponible !== true;
+        });
+
         bloqueActividad.classList.remove('d-none');
 
-        if (actividadesBnh.length === 1) {
-            if (actividadSubtitulo) {
-                actividadSubtitulo.textContent = 'Cargo de Biblioteca informado por BNH para esta institución.';
+        if (actividadSubtitulo) {
+            if (disponibles.length && pendientes.length) {
+                actividadSubtitulo.textContent =
+                    'Seleccioná un cargo disponible. Los pendientes se muestran sólo como referencia.';
+            } else if (disponibles.length) {
+                actividadSubtitulo.textContent =
+                    'Seleccioná el cargo de Biblioteca que corresponde a este registro.';
+            } else {
+                actividadSubtitulo.textContent =
+                    'Los cargos encontrados todavía están pendientes de validación en BNH.';
             }
-            seleccionarActividadBnh(actividadesBnh[0].id);
-            return;
         }
 
-        if (actividadSubtitulo) {
-            actividadSubtitulo.textContent = 'La persona tiene varios cargos de Biblioteca en BNH. Elegí el que corresponde a este registro.';
-        }
         if (actividadSelector) actividadSelector.classList.remove('d-none');
-        if (actividadSelect) {
-            actividadesBnh.forEach(function (actividad) {
-                const option = document.createElement('option');
-                option.value = String(actividad.id);
-                option.textContent = etiquetaActividadBnh(actividad);
-                actividadSelect.appendChild(option);
+
+        if (disponibles.length && actividadDisponiblesLista && actividadDisponiblesGrupo) {
+            disponibles.forEach(function (actividad) {
+                actividadDisponiblesLista.appendChild(crearOpcionActividadBnh(actividad));
             });
+            actividadDisponiblesGrupo.classList.remove('d-none');
+        }
+
+        if (pendientes.length && actividadPendientesLista && actividadPendientesGrupo) {
+            pendientes.forEach(function (actividad) {
+                actividadPendientesLista.appendChild(crearOpcionActividadBnh(actividad));
+            });
+            actividadPendientesGrupo.classList.remove('d-none');
         }
 
         personaBnhConfirmada = false;
         if (bloqueManual) bloqueManual.classList.add('d-none');
         if (footerFormulario) footerFormulario.classList.add('d-none');
+
+        if (!disponibles.length) {
+            mostrarEstadoBusqueda(
+                'info',
+                'Los cargos de Biblioteca encontrados están pendientes de validación.'
+            );
+        } else {
+            mostrarEstadoBusqueda(
+                'info',
+                'Seleccioná un cargo disponible para continuar.'
+            );
+        }
+    }
+
+    function enfocarActividadDisponibleBnh() {
+        if (!actividadSelector) return false;
+        const radioDisponible = actividadSelector.querySelector(
+            '.biblioteca-personal__activity-radio:not(:disabled)'
+        );
+        if (!radioDisponible) return false;
+        radioDisponible.focus();
+        return true;
     }
 
     function limpiarPersonaBnh() {
@@ -698,17 +832,17 @@
 
             if (data.estado === 'persona_vinculada') {
                 aplicarPersonaBnh(data.persona, false);
-                ocultarAccionBnh();
 
                 if (!Array.isArray(data.actividades) || !data.actividades.length) {
                     throw new Error('BNH no devolvió cargos de Biblioteca válidos para la persona.');
                 }
 
-                mostrarEstadoBusqueda(
-                    data.actividades.length === 1 ? 'success' : 'info',
-                    data.message || 'Personal encontrado'
-                );
                 mostrarActividadesBnh(data.actividades);
+                mostrarAccionBnh(
+                    data.accion,
+                    '¿No encontrás el cargo que necesitás?',
+                    'Revisá la ficha en BNH para agregar o validar un cargo y después reconsultá.'
+                );
                 return;
             }
 
@@ -740,12 +874,6 @@
     if (btnBuscarPersona) {
         btnBuscarPersona.addEventListener('click', function () {
             buscarPersonaBnh(false);
-        });
-    }
-
-    if (actividadSelect) {
-        actividadSelect.addEventListener('change', function () {
-            seleccionarActividadBnh(this.value);
         });
     }
 
@@ -788,9 +916,7 @@
                     ? 'Seleccioná el cargo de Biblioteca que corresponde a este registro.'
                     : 'Buscá y confirmá el personal por CUIL antes de guardar.'
             );
-            if (requiereCargo && actividadSelect && !actividadSelector.classList.contains('d-none')) {
-                actividadSelect.focus();
-            } else if (cuilBusqueda) {
+            if (!(requiereCargo && enfocarActividadDisponibleBnh()) && cuilBusqueda) {
                 cuilBusqueda.focus();
             }
             return;
@@ -830,9 +956,7 @@
                                         if (footerFormulario) footerFormulario.classList.add('d-none');
                                         mostrarEstadoBusqueda('error', message);
                                         actualizarBotonBusqueda();
-                                        if (actividadSelect && !actividadSelector.classList.contains('d-none')) {
-                                            actividadSelect.focus();
-                                        } else if (cuilBusqueda) {
+                                        if (!enfocarActividadDisponibleBnh() && cuilBusqueda) {
                                             cuilBusqueda.focus();
                                         }
                                     } else if (input.length) {

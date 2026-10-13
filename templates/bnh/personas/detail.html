@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<a href="{% url 'bnhpersonas:personas_list' %}">
+<a href="{% url 'bnhpersonas:personas_list' %}{% if persona.archivada %}?archivadas=1{% endif %}">
     ← Listado
 </a>
 
@@ -38,15 +38,30 @@
     </div>
 
 
-    <a
-        class="btn btn-outline-primary"
-        href="{% url 'bnhpersonas:carga_personal_edit' persona.pk %}"
-    >
-        Editar datos personales
-    </a>
+    {% if not persona.archivada %}
+        <a
+            class="btn btn-outline-primary"
+            href="{% url 'bnhpersonas:carga_personal_edit' persona.pk %}"
+        >
+            Editar datos personales
+        </a>
+    {% endif %}
 
 </div>
 
+{% if persona.archivada %}
+<div class="alert alert-warning my-4" role="alert">
+    <div class="fw-bold mb-1">Ficha personal archivada</div>
+    <div>La ficha se conserva para consulta y auditoría. Mientras permanezca archivada no se pueden crear, editar, validar ni restaurar cargos.</div>
+    {% if can_restore %}
+        <div class="mt-3">
+            <a class="btn btn-success" href="{% url 'bnhpersonas:reactivar_persona' persona.pk %}">
+                Reactivar ficha personal
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endif %}
 
 <div class="card p-4 my-4">
 
@@ -232,12 +247,14 @@
         Cargos en su ámbito
     </h2>
 
-    <a
-        class="btn btn-primary"
-        href="{% url 'bnhpersonas:nueva_actividad' persona.pk %}"
-    >
-        + Agregar cargo
-    </a>
+    {% if not persona.archivada %}
+        <a
+            class="btn btn-primary"
+            href="{% url 'bnhpersonas:nueva_actividad' persona.pk %}"
+        >
+            + Agregar cargo
+        </a>
+    {% endif %}
 
 </div>
 
@@ -301,31 +318,6 @@
 
 
 
-        {% if a.tipo_personal.c_tpersonal != 2 %}
-        <div class="border rounded-3 p-3 mb-3 bg-light">
-            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-                <strong>Ubicación curricular</strong>
-                <span class="badge text-bg-secondary">{{ a.get_tipo_ubicacion_display }}</span>
-                {% if a.multiplan %}<span class="badge text-bg-info">Multiplan</span>{% endif %}
-            </div>
-            {% if a.titulaciones_ui %}
-                <div class="small mb-2"><strong>Titulación{% if a.titulaciones_ui|length > 1 %}es{% endif %}:</strong>
-                    {% for t in a.titulaciones_ui %}{{ t.label }}{% if not forloop.last %} · {% endif %}{% endfor %}
-                </div>
-            {% endif %}
-            {% if a.espacio_curricular %}
-                <div class="small mb-2"><strong>Espacio curricular:</strong> {{ a.espacio_curricular }}</div>
-            {% endif %}
-            {% if a.ubicaciones_ui %}
-                <div class="small"><strong>Grado/Año · Sección · Turno:</strong><br>
-                    {% for u in a.ubicaciones_ui %}
-                        {{ u.grado_anio }} · {{ u.seccion }} · {{ u.turno }}{% if not forloop.last %}<br>{% endif %}
-                    {% endfor %}
-                </div>
-            {% endif %}
-        </div>
-        {% endif %}
-
         <p class="text-muted">
 
             {{ a.modalidad }}
@@ -352,7 +344,9 @@
 
         <div class="d-flex flex-wrap gap-3">
 
-            {% if a.eliminado %}
+            {% if persona.archivada %}
+                <span class="text-muted">Cargo histórico · solo consulta</span>
+            {% elif a.eliminado %}
 
                 <a
                     href="{% url 'bnhpersonas:accion_actividad' a.pk 'restaurar' %}"
@@ -453,11 +447,22 @@
 </section>
 
 
-<a
-    class="btn btn-outline-danger mt-4"
-    href="{% url 'bnhpersonas:eliminar_persona' persona.pk %}"
->
-    Archivar ficha personal
-</a>
+{% if persona.archivada %}
+    {% if can_restore %}
+        <a
+            class="btn btn-success mt-4"
+            href="{% url 'bnhpersonas:reactivar_persona' persona.pk %}"
+        >
+            Reactivar ficha personal
+        </a>
+    {% endif %}
+{% else %}
+    <a
+        class="btn btn-outline-danger mt-4"
+        href="{% url 'bnhpersonas:eliminar_persona' persona.pk %}"
+    >
+        Archivar ficha personal
+    </a>
+{% endif %}
 
 {% endblock %}
