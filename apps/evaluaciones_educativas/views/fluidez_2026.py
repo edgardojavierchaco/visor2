@@ -56,6 +56,17 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 #MODIFICACION PARA QUE ESTO FUNCIONE SOLO CON RURALES
 OFERTA_SUPERVISOR = 'Común - Primaria de 7 años'
 
+# NOTA CORTES FLUIDEZ 3er GRADO (corregir en los próximos operativos)
+# Criterio oficial: Debajo del Básico 0 a 29 · Básico 30 a 60 · Satisfactorio 61 a 90 · Avanzado 91 o más.
+# En Fluidez 2025 y Fluidez 2026 (junio) el sistema usa "<= 30" para Debajo del Básico (30 palabras figura como
+# Debajo del Básico y Básico va de 31 a 60). Se mantuvo así para que los gráficos coincidan con las tablas, PDF y
+# fichas ya entregados. Dónde está el corte de 3er grado (cambiarlo en todos a la vez):
+#   - fluidez_2026.py: analisis_tercer_grado_grafico (debajo_del_basico / basico) -> lt=30 y gte=30
+#   - fluidez_2026.py: descargar_listado_fluidez y descargar_examen_individual_fluidez -> cortes (29, 60, 90)
+#   - fluidez_2025.py: analisis_tercer_grado_grafico (debajo_del_basico / basico) -> lt=30 y gte=30
+#   - plantillas: fluidez_2026/analisis_evaluaciones_junio_2026.html y
+#     fluidez_2025/analisis_evaluaciones_noviembre_2025.html -> "<= 30" pasa a "< 30"
+
 
 def _es_supervisor(usuario):
     return (
@@ -1633,6 +1644,7 @@ def analisis_tercer_grado_grafico(grado_seleccionado, cueanexo, secciones, turno
 		promedio_general=Avg(
 			"cantidad_palabras_leidas", filter=Q(asistencia="PRESENTE")
 		),
+		# CORTE 3er GRADO: ver "NOTA CORTES FLUIDEZ 3er GRADO" al inicio del archivo (oficial: Debajo < 30, Básico 30-60).
 		debajo_del_basico=Count(
 			"alumno_id",
 			filter=Q(asistencia="PRESENTE", cantidad_palabras_leidas__lte=30),
@@ -1916,6 +1928,7 @@ def descargar_listado_fluidez(request):
 
 	def nivel_fluidez(palabras, grado):
 		if palabras is None: return "-"
+		# CORTE 3er GRADO: ver "NOTA CORTES FLUIDEZ 3er GRADO" al inicio del archivo (oficial: usar (29, 60, 90)).
 		cortes = (20, 46, 70) if grado == 'segundo' else (30, 60, 90)
 		if palabras <= cortes[0]: return "Deb. del Bás."
 		elif palabras <= cortes[1]: return "Básico"
@@ -2052,6 +2065,7 @@ def descargar_examen_individual_fluidez(request):
 
 	def nivel_fluidez(palabras, nombre_grado):
 		if palabras is None: return "Ausente"
+		# CORTE 3er GRADO: ver "NOTA CORTES FLUIDEZ 3er GRADO" al inicio del archivo (oficial: usar (29, 60, 90)).
 		cortes = (20, 46, 70) if '2do' in nombre_grado else (30, 60, 90)
 		if palabras <= cortes[0]: return "Debajo del Básico"
 		elif palabras <= cortes[1]: return "Básico"
