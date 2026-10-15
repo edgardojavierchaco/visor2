@@ -4,7 +4,8 @@ import re
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .domain.access import scoped_offers, user_has_cueanexo_access
+from .domain.access import user_has_cueanexo_access
+from .domain.institutions import institution_catalog
 from .domain.catalogs import (
     activity_catalogs,
     available_curricular_levels,
@@ -236,15 +237,11 @@ class ActividadDirectorForm(StyledForm):
         # ----------------------------------------------------
         # CUEANEXOS autorizados
         # ----------------------------------------------------
-        choices = {}
-        ofertas = (
-            scoped_offers(user)
-            .order_by("cueanexo_str", "nom_est")
-            .values_list("cueanexo_str", "nom_est")
-        )
-        for cue, name in ofertas:
-            choices.setdefault(cue, f"{cue} — {name}")
-        self.fields["cueanexo"].choices = [("", "Seleccione institución")] + list(choices.items())
+        choices = [
+            (cue, f"{cue} — {name}")
+            for cue, name in institution_catalog(user)
+        ]
+        self.fields["cueanexo"].choices = [("", "Seleccione institución"), *choices]
         if self.instance.pk:
             self.fields["cueanexo"].disabled = True
 

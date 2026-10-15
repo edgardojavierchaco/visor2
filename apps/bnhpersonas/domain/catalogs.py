@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
@@ -1000,75 +1001,19 @@ def titulacion_label(
     fuente,
     titulacion,
 ):
-    """
-    Obtiene la descripción de una titulación
-    independientemente de la tabla de origen.
-    """
-
-    if (
-        not fuente
-        or not titulacion
-    ):
+    """Obtiene la etiqueta de titulación con caché para evitar N+1."""
+    if not fuente or not titulacion:
         return ""
-
-    # ========================================================
-    # TITULACION_NOMBRE
-    # ========================================================
-
+    cache_key = f"bnh:v1:titulacion-label:{fuente}:{titulacion}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return cached
+    label = ""
     if fuente == TITULACION_NOMBRE:
-
-        obj = (
-            TitulacionNombre.objects
-            .filter(
-                id_titulacion=titulacion
-            )
-            .first()
-        )
-
-        return (
-            obj.nombre
-            if obj
-            else ""
-        )
-
-    # ========================================================
-    # TITULACION_SUPERIOR
-    # ========================================================
-
-    if fuente == TITULACION_SUPERIOR:
-
-        obj = (
-            TitulacionSuperior.objects
-            .filter(
-                id_titulacion=titulacion
-            )
-            .first()
-        )
-
-        return (
-            obj.descripcion
-            if obj
-            else ""
-        )
-
-    # ========================================================
-    # TITULACION_FP
-    # ========================================================
-
-    if fuente == TITULACION_FP:
-
-        obj = (
-            TitulacionFP.objects
-            .filter(
-                id_titulacion=titulacion
-            )
-            .first()
-        )
-
-        return (
-            obj.descripcion
-            if obj
-            else ""
-        )
-
-    return ""
+        label = TitulacionNombre.objects.filter(id_titulacion=titulacion).values_list("nombre", flat=True).first() or ""
+    elif fuente == TITULACION_SUPERIOR:
+        label = TitulacionSuperior.objects.filter(id_titulacion=titulacion).values_list("descripcion", flat=True).first() or ""
+    elif fuente == TITULACION_FP:
+        label = TitulacionFP.objects.filter(id_titulacion=titulacion).values_list("descripcion", flat=True).first() or ""
+    cache.set(cache_key, label, 60 * 30)
+    return label

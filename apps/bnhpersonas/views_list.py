@@ -27,10 +27,11 @@ from .domain.access import (
     is_regional,
     operator_required,
     person_scope,
-    scoped_offers,
+    user_has_cueanexo_access,
 )
 
 from .domain.catalogs import titulacion_label
+from .domain.institutions import institution_map, institution_name, institution_rows
 
 from .models import (
     EventoAuditoria,
@@ -288,19 +289,7 @@ class PersonasListView(View):
                     params.urlencode(),
 
                 "instituciones":
-                    (
-                        scoped_offers(
-                            request.user
-                        )
-                        .order_by(
-                            "cueanexo_str"
-                        )
-                        .values(
-                            "cueanexo_str",
-                            "nom_est",
-                        )
-                        .distinct()
-                    ),
+                    institution_rows(request.user),
 
                 "tipos_personal":
                     TipoPersonal.objects
@@ -340,76 +329,15 @@ class PersonaDetailView(View):
         # DEBUG TEMPORAL
         # ====================================================
 
-        print(
-            "\n========== DEBUG PERSONA DETAIL =========="
-        )
 
-        print(
-            "PK:",
-            pk,
-        )
 
-        print(
-            "USER:",
-            request.user,
-        )
 
-        print(
-            "USERNAME:",
-            request.user.username,
-        )
 
-        print(
-            "AUTH:",
-            request.user.is_authenticated,
-        )
 
-        print(
-            "CUES:",
-            list(
-                get_user_cueanexos(
-                    request.user
-                )
-            )
-        )
 
-        print(
-            "PERSONA EXISTE GLOBAL:",
-            Personas.objects.filter(
-                pk=pk
-            ).exists()
-        )
 
-        print(
-            "PERSONA EN SCOPE:",
-            person_scope(
-                request.user
-            )
-            .filter(
-                pk=pk
-            )
-            .exists()
-        )
 
-        print(
-            "ACTIVIDADES GLOBALES:",
-            list(
-                RegistroActividades.objects
-                .filter(
-                    persona_id=pk
-                )
-                .values(
-                    "id",
-                    "cueanexo",
-                    "estado",
-                    "eliminado",
-                )
-            )
-        )
 
-        print(
-            "=========================================="
-        )
 
         # ====================================================
         # PERSONA
@@ -432,10 +360,6 @@ class PersonaDetailView(View):
             pk=pk,
         )
 
-        print(
-            "DEBUG 1 - PERSONA OBTENIDA:",
-            person,
-        )
 
         # ====================================================
         # ACTIVIDADES
@@ -490,19 +414,6 @@ class PersonaDetailView(View):
                 for item in actividad.titulaciones_curriculares.all()
             ]
 
-        print(
-            "DEBUG 2 - ACTIVITIES:",
-            len(activities),
-            [
-                (
-                    actividad.pk,
-                    actividad.cueanexo,
-                    actividad.eliminado,
-                )
-                for actividad
-                in activities
-            ],
-        )
 
         # ====================================================
         # CONSTANCIAS POR INSTITUCIÓN
@@ -553,82 +464,15 @@ class PersonaDetailView(View):
             constancias_map.keys()
         )
 
-        print(
-            "DEBUG 3 - CUES CONSTANCIAS:",
-            cues,
-        )
 
         # ====================================================
         # NOMBRE DE LOS ESTABLECIMIENTOS
         # ====================================================
 
         if cues:
-
-            print(
-                "DEBUG 4 - ANTES DE SCOPED_OFFERS"
-            )
-
-            ofertas = list(
-                scoped_offers(
-                    request.user
-                )
-                .filter(
-                    cueanexo_str__in=
-                        cues
-                )
-                .exclude(
-                    nom_est__isnull=True
-                )
-                .exclude(
-                    nom_est=""
-                )
-                .order_by(
-                    "cueanexo_str",
-                    "nom_est",
-                )
-                .values(
-                    "cueanexo_str",
-                    "nom_est",
-                )
-            )
-
-            print(
-                "DEBUG 5 - OFERTAS:",
-                ofertas,
-            )
-
-            for oferta in ofertas:
-
-                cue = str(
-                    oferta[
-                        "cueanexo_str"
-                    ]
-                    or ""
-                ).strip()
-
-                if (
-                    cue
-                    in constancias_map
-
-                    and
-
-                    not
-                    constancias_map[
-                        cue
-                    ][
-                        "nom_est"
-                    ]
-                ):
-
-                    constancias_map[
-                        cue
-                    ][
-                        "nom_est"
-                    ] = (
-                        oferta[
-                            "nom_est"
-                        ]
-                    )
+            nombres_instituciones = institution_map(request.user)
+            for cue in cues:
+                constancias_map[cue]["nom_est"] = nombres_instituciones.get(cue) or ""
 
         # ====================================================
         # ARMADO DE CONSTANCIAS
@@ -654,10 +498,6 @@ class PersonaDetailView(View):
                 item
             )
 
-        print(
-            "DEBUG 6 - CONSTANCIAS:",
-            constancias_instituciones,
-        )
 
         # ====================================================
         # AUDITORÍA
@@ -690,18 +530,11 @@ class PersonaDetailView(View):
             [:40]
         )
 
-        print(
-            "DEBUG 7 - EVENTOS:",
-            len(events),
-        )
 
         # ====================================================
         # RENDER
         # ====================================================
 
-        print(
-            "DEBUG 8 - ANTES DEL RENDER"
-        )
 
         response = render(
             request,
@@ -740,9 +573,6 @@ class PersonaDetailView(View):
             },
         )
 
-        print(
-            "DEBUG 9 - RENDER OK"
-        )
 
         return response
 
@@ -781,15 +611,8 @@ def constancia_servicio_pdf(request, persona_id, cueanexo):
             'No existen servicios accesibles para esta persona en la institución indicada.'
         )
 
-    nom_est = (
-        scoped_offers(request.user)
-        .filter(cueanexo_str=cue)
-        .exclude(nom_est__isnull=True)
-        .exclude(nom_est='')
-        .order_by('nom_est')
-        .values_list('nom_est', flat=True)
-        .first()
-        or 'Establecimiento educativo'
+    nom_est = institution_name(
+        request.user, cue, "Establecimiento educativo"
     )
 
     from .services.constancia_servicio import generar_constancia_servicio_pdf
@@ -863,9 +686,9 @@ def verificar_constancia(request, token):
     can_anular = False
     if request.user.is_authenticated:
         try:
-            can_anular = is_admin(request.user) or scoped_offers(request.user).filter(
-                cueanexo_str=constancia.cueanexo
-            ).exists()
+            can_anular = is_admin(request.user) or user_has_cueanexo_access(
+                request.user, constancia.cueanexo
+            )
         except Exception:
             can_anular = False
 
@@ -898,9 +721,9 @@ def anular_constancia(request, token):
     from .services.constancia_verificacion import anular_constancia as service_anular
 
     constancia = get_object_or_404(ConstanciaServicio, token=token)
-    autorizado = is_admin(request.user) or scoped_offers(request.user).filter(
-        cueanexo_str=constancia.cueanexo
-    ).exists()
+    autorizado = is_admin(request.user) or user_has_cueanexo_access(
+        request.user, constancia.cueanexo
+    )
     if not autorizado:
         raise Http404
 
