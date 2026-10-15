@@ -13,6 +13,10 @@ from apps.usuarios.services.user_context import get_user_rol
 logger = logging.getLogger(__name__)
 
 TABS = ('fluidez', 'aprender')
+
+# Usuarios (username = CUIL) que ven el monitoreo igual que Evaluación sin
+# tener ese nivel de acceso.
+CUILES_MONITOREO = {'20332285700'}
 ERROR_SGE = (
     'No se pudieron consultar las secciones en SGE. Los aplicadores de Fluidez '
     'se muestran sin el total esperado; intentá de nuevo en unos minutos.'
@@ -25,6 +29,7 @@ ERROR_SGE = (
 def _es_evaluacion(usuario):
     return (
         usuario.is_superuser
+        or str(usuario.username).strip() in CUILES_MONITOREO
         or getattr(usuario, 'nivelacceso_id', None) == 'Evaluacion'
         or get_user_rol(usuario) == 'Evaluacion'
     )

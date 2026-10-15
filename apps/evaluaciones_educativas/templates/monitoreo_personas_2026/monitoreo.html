@@ -100,7 +100,7 @@
             {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Escuelas que participan' icono='bi-buildings' color='#1565c0' valor=t.escuelas sub='Con participación validada en Aprender' %}
             {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Secciones con aplicador' icono='bi-person-badge' color='#00bcd4' ind=t.aplicadores sub='de las secciones habilitadas' %}
             {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Escuelas con veedor' icono='bi-eye' color='#6366f1' ind=t.veedores sub='de las escuelas' %}
-            {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Asistentes de veedor' icono='bi-person-plus' color='#10b981' valor=t.asistentes sub='Opcional en escuelas con 2 o más secciones' %}
+            {% include 'monitoreo_personas_2026/_kpi.html' with titulo='Asistentes de veedor' icono='bi-person-plus' color='#10b981' ind=t.asistentes sub='de las escuelas con 2 o más secciones (opcional)' vacio='Sin escuelas con 2 o más secciones' %}
         </div>
 
         {% include 'monitoreo_personas_2026/_toolbar.html' with grilla='aprender' modo='regiones' estados=t.estados total=aprender.filas|length %}
@@ -126,12 +126,7 @@
                 <div class="mon-card-metricas">
                     {% include 'monitoreo_personas_2026/_metrica.html' with ind=f.aplicadores etiqueta='Secciones con aplicador' icono='bi-person-badge' vacio='Sin secciones habilitadas' nota='' %}
                     {% include 'monitoreo_personas_2026/_metrica.html' with ind=f.veedores etiqueta='Escuelas con veedor' icono='bi-eye' vacio='Sin escuelas que participen' nota='' %}
-                    <div class="met">
-                        <div class="met-top">
-                            <span class="met-label"><i class="bi bi-person-plus" aria-hidden="true"></i>Asistentes de veedor</span>
-                            <span class="met-val">{{ f.asistentes }}</span>
-                        </div>
-                    </div>
+                    {% include 'monitoreo_personas_2026/_metrica.html' with ind=f.asistentes etiqueta='Asistentes de veedor' icono='bi-person-plus' vacio='Sin escuelas con 2 o más secciones' nota='' %}
                 </div>
                 {% include 'monitoreo_personas_2026/_pie_region.html' with faltantes=f.faltantes estado=f.estado %}
             </article>
