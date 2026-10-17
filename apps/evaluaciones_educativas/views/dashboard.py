@@ -2,6 +2,7 @@ from apps.usuarios.services.user_context import get_user_rol
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse, NoReverseMatch
+from apps.evaluaciones_educativas.views.monitoreo_personas_2026 import CUILES_MONITOREO
 
 
 def _es_supervisor(usuario):
@@ -333,6 +334,8 @@ def dashboard(request):
     monitoreos_visibles = []
     for link in monitoreos:
         rol_autorizado = (rol in link['roles']) or (
+            str(usuario.username).strip() in CUILES_MONITOREO
+        ) or (
             usuario.is_superuser and any(r in ['Funcionario', 'Evaluacion', 'Ministro', 'Subse'] for r in link['roles'])
         )
         if not rol_autorizado:

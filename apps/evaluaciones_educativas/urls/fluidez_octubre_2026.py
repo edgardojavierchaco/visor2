@@ -33,4 +33,7 @@ urlpatterns = [
     path('aplicadores/<str:cuil_aplicador>/editar/',   fluidez_octubre_2026.carga_aplicador,      name='editar_aplicador'),
     path('aplicadores/<str:cuil_aplicador>/asignar/',  fluidez_octubre_2026.asignacion_aplicador, name='asignacion_aplicador'),
     path('aplicadores/<str:cuil_aplicador>/eliminar/', fluidez_octubre_2026.eliminar_aplicador,   name='eliminar_aplicador'),
+
+    # Excel con tabuladores y aplicadores por sección
+    path('personal/excel/', fluidez_octubre_2026.descargar_excel_personal_fluidez_octubre, name='descargar_excel_personal'),
 ]

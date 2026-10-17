@@ -107,6 +107,7 @@
                 {% include 'monitoreo_personas_2026/_metrica.html' with ind=e.aplicadores etiqueta='Secciones con aplicador' icono='bi-person-badge' vacio='Sin secciones de 2º y 3º en SGE' nota='' %}
             {% else %}
                 {% include 'monitoreo_personas_2026/_metrica.html' with ind=e.aplicadores etiqueta='Secciones con aplicador' icono='bi-person-badge' vacio='Sin secciones habilitadas' nota='' %}
+                {% include 'monitoreo_personas_2026/_metrica.html' with ind=e.asistentes etiqueta='Asistentes de veedor (opcional)' icono='bi-person-plus' vacio='No corresponde: menos de 2 secciones' nota='' %}
             {% endif %}
 
             <ul class="checks" aria-label="Personas asignadas">
@@ -121,11 +122,6 @@
                         <i class="bi {% if e.tiene_veedor %}bi-check-circle-fill{% else %}bi-x-circle-fill{% endif %}" aria-hidden="true"></i>
                         Veedor
                         <span class="chk-estado">{% if e.tiene_veedor %}Asignado{% else %}Sin asignar{% endif %}</span>
-                    </li>
-                    <li class="{% if e.tiene_asistente %}ok{% else %}neutro{% endif %}">
-                        <i class="bi {% if e.tiene_asistente %}bi-check-circle-fill{% else %}bi-dash-circle{% endif %}" aria-hidden="true"></i>
-                        Asistente de veedor
-                        <span class="chk-estado">{% if e.tiene_asistente %}Asignado{% elif e.admite_asistente %}Opcional{% else %}No corresponde{% endif %}</span>
                     </li>
                 {% endif %}
             </ul>

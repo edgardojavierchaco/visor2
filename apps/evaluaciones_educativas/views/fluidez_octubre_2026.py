@@ -1276,3 +1276,81 @@ def asignacion_aplicador(request, cuil_aplicador):
     return render(request, 'fluidez_octubre_2026/asignacion_aplicador.html', context)
 
 
+#---------------------------------descargar excel--------------------------
+@login_required
+def descargar_excel_personal_fluidez_octubre(request):
+    """Excel con las secciones de la región y su tabulador y aplicador asignados."""
+    nivel_acceso = request.user.nivelacceso_id
+    if nivel_acceso != "Regional":
+        messages.error(request, 'No tienes permiso para acceder a esta página.')
+        return redirect(reverse('evaluaciones_educativas:dashboard'))
+
+    # Región: la que tiene seleccionada la pantalla (?region=), siempre que
+    # sea una de las regiones del usuario. Mismo criterio que las gestiones.
+    regiones = obtener_regional(str(request.user.username))
+    if not regiones:
+        messages.error(request, 'No se encontró una región asignada a tu usuario.')
+        return redirect(reverse('evaluaciones_educativas:dashboard'))
+    if 'R.E. 2' in regiones:
+        regiones = ['R.E. 2', 'SUB. R.E. 2-B']
+    region = request.GET.get('region')
+    if region not in regiones:
+        region = regiones[0]
+
+    # Secciones de SGE de la región (una sola consulta), indexadas por cueanexo.
+    try:
+        secciones = secciones_region(region)
+    except DatabaseError:
+        logger.exception('Error consultando secciones en sge_nacion (región %s)', region)
+        messages.error(request, ERROR_SGE)
+        return redirect(reverse('evaluaciones_educativas:dashboard'))
+
+    secciones_por_cueanexo = {}
+    for s in secciones:
+        secciones_por_cueanexo.setdefault(s['cueanexo'], []).append(s)
+
+    # Aplicador de cada sección asignada, indexado por id_seccion.
+    aplicador_por_seccion = {
+        sa.id_seccion: sa.aplicador
+        for sa in SeccionesAplicadorFluidezOctubre2026.objects
+        .filter(aplicador__region=region)
+        .select_related('aplicador')
+    }
+
+    def nombre_completo(persona):
+        if not persona:
+            return ''
+        return f"{persona.apellido or ''}, {persona.nombre or ''}"
+
+    wb = Workbook(write_only=True)
+    ws = wb.create_sheet('Datos Personal Fluidez 2026')
+    ws.append([
+        'Regional', 'Cueanexo', 'Escuela', 'Grados', 'Sección', 'Turno',
+        'Apellido y Nombres Tabulador', 'CUIL Tabulador',
+        'Apellido y Nombres Aplicador', 'CUIL Aplicador',
+    ])
+
+    tabuladores = TabuladoresFluidezOctubre2026.objects.filter(region=region).order_by('apellido', 'nombre')
+    for tab in tabuladores:
+        for cueanexo in tab.lista_cueanexos or []:
+            for s in secciones_por_cueanexo.get(str(cueanexo).strip(), []):
+                aplicador = aplicador_por_seccion.get(s['id_seccion'])
+                ws.append([
+                    region,
+                    s['cueanexo'],
+                    s['escuela'],
+                    s['anio_grado'],
+                    str(s['nombre_seccion'] or ''),
+                    s['turno'] or '',
+                    nombre_completo(tab),
+                    tab.cuil,
+                    nombre_completo(aplicador),
+                    aplicador.cuil if aplicador else '',
+                ])
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = (
+        f'attachment; filename="datos_personal_fluidez_2026_{datetime.now():%Y%m%d_%H%M}.xlsx"'
+    )
+    wb.save(response)
+    return response

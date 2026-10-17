@@ -235,6 +235,7 @@
                             <td>{{ registro.cantidad_palabras_leidas|default:"-" }}</td>
                             <td>
                                 {% if registro.asistencia == 'AUSENTE' %}<span class="badge" style="color: #95a5a6;">Ausente</span>
+                                {# CORTE 3er GRADO: lo oficial es "< 30" para Debajo del Básico (ver NOTA CORTES al inicio de views/fluidez_2026.py) #}
                                 {% elif registro.cantidad_palabras_leidas <= 30 %}<span class="badge" style="color: #e74c3c;">Debajo del Básico</span>
                                 {% elif registro.cantidad_palabras_leidas <= 60 %}<span class="badge" style="color: #e67e22;">Básico</span>
                                 {% elif registro.cantidad_palabras_leidas <= 90 %}<span class="badge" style="color: #f1c40f;">Satisfactorio</span>

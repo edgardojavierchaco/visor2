@@ -364,7 +364,28 @@ def resumen_aprender():
     escuelas_con_veedor = dict(
         veedores.filter(asistente_veedor=False).annotate(n=Count('establecimiento', distinct=True))
     )
-    asistentes = dict(veedores.filter(asistente_veedor=True).annotate(n=Count('pk')))
+    # El asistente es opcional y solo corresponde en escuelas con 2 o más
+    # secciones habilitadas: ese es el total esperado. Como máximo hay uno por
+    # escuela (restricción del modelo).
+    admiten_asistente = {
+        (region, cueanexo)
+        for region, cueanexo, n in (
+            _secciones_habilitadas()
+            .values_list('grado__establecimiento__region', 'grado__establecimiento')
+            .annotate(n=Count('pk'))
+        )
+        if n >= 2
+    }
+    esperados_asistentes = Counter(region for region, _ in admiten_asistente)
+    cargados_asistentes = Counter(
+        region
+        for region, cueanexo in (
+            ValVeedor.objects
+            .filter(asistente_veedor=True, establecimiento__participa_aprender__iexact='participa')
+            .values_list('establecimiento__region', 'establecimiento')
+        )
+        if (region, cueanexo) in admiten_asistente
+    )
 
     regiones = set(escuelas_por_region) | set(
         ValEstablecimiento.objects.values_list('region', flat=True).distinct()
@@ -379,7 +400,7 @@ def resumen_aprender():
             'escuelas': escuelas_por_region.get(region, 0),
             'aplicadores': aplicadores,
             'veedores': veedores_ind,
-            'asistentes': asistentes.get(region, 0),
+            'asistentes': _indicador(cargados_asistentes.get(region, 0), esperados_asistentes.get(region, 0)),
             'estado': _estado_general(aplicadores, veedores_ind),
             'avance': _avance(aplicadores, veedores_ind),
             'faltantes': _faltantes_region([
@@ -388,9 +409,8 @@ def resumen_aprender():
             ]),
         })
 
-    totales = _totales(filas, ['aplicadores', 'veedores'])
+    totales = _totales(filas, ['aplicadores', 'veedores', 'asistentes'])
     totales['escuelas'] = sum(f['escuelas'] for f in filas)
-    totales['asistentes'] = sum(f['asistentes'] for f in filas)
     return {'filas': filas, 'totales': totales}
 
 
@@ -439,6 +459,7 @@ def detalle_aprender(region):
             'tiene_asistente': bool(v.get('asistente')),
             # El asistente solo se admite con 2 o más secciones habilitadas.
             'admite_asistente': cant_secciones >= 2,
+            'asistentes': _indicador(1 if v.get('asistente') else 0, 1 if cant_secciones >= 2 else 0),
             'pendiente': bool(faltantes),
             'faltantes': faltantes,
             'peso_pendiente': aplicadores['faltan'] + (0 if tiene_veedor else 1),

@@ -914,9 +914,13 @@ def analisis_tercer_grado_grafico(grado_seleccionado,cueanexo,secciones,turno):
 	
 	# Desempeño
 	promedio_general=Avg('cantidad_palabras_leidas',filter=Q(asistencia='PRESENTE')),
-	debajo_del_basico=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__lt=30)),
-	basico=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__gte=30, cantidad_palabras_leidas__lte=60)),
-	satisfactorio=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__gt=61, cantidad_palabras_leidas__lte=90)),
+	# NOTA CORTES 3er GRADO (corregir en los próximos operativos):
+	# criterio oficial = Debajo del Básico 0-29, Básico 30-60, Satisfactorio 61-90, Avanzado 91 o más.
+	# En este operativo se trabajó con "<= 30" para Debajo del Básico, igual que el gráfico de Fluidez 2026,
+	# las tablas, PDF y fichas ya entregados. En los próximos: debajo_del_basico -> lt=30 y basico -> gte=30.
+	debajo_del_basico=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__lte=30)),
+	basico=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__gt=30, cantidad_palabras_leidas__lte=60)),
+	satisfactorio=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__gt=60, cantidad_palabras_leidas__lte=90)),
 	avanzado=Count('alumno_id', filter=Q(asistencia='PRESENTE',cantidad_palabras_leidas__gt=90))
 	)
 	alumnos_presentes=datos['presentes']
