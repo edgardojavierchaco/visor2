@@ -10,15 +10,24 @@ from apps.consultasge.models_padron import CapaUnicaOfertas
 CACHE_TTL = 60 * 5
 
 
-def get_menu_cache_key(rol, categoria, flags):
+def get_menu_cache_key(user, rol, categoria, flags):
+
     if not flags:
         flags_str = "no_flags"
     else:
-        flags_str = "|".join(sorted(list(flags)))
+        flags_str = "|".join(
+            sorted(str(flag) for flag in flags)
+        )
 
-    key = f"menu:{rol}:{categoria}:{flags_str}"
+    key = (
+        f"menu:v2:"
+        f"{user.pk}:"
+        f"{rol}:"
+        f"{categoria}:"
+        f"{flags_str}"
+    )
 
-    print("🧠 CACHE KEY:", key)  # debug
+    print("🧠 CACHE KEY:", key)
 
     return key
 
@@ -28,31 +37,47 @@ REGLAS_MENU = {
         getattr(user.perfil.rol, "nombre", None) == "Director"
     ),
     "no_regional_total": lambda user: (
-        (rol := getattr(getattr(user, "perfil", None), "rol", None)) and
-        rol.nombre not in ["Regional", "Director"] and
-        rol.categoria_acceso not in ["regional", "propio"]
+        (rol := getattr(getattr(user, "perfil", None), "rol", None))
+        and rol.nombre not in ["Regional", "Director"]
+        and rol.categoria_acceso not in [
+            "regional",
+            "propio",
+            "refestadistica",
+        ]
     ),
+
     "no_director_total": lambda user: (
-        (rol := getattr(getattr(user, "perfil", None), "rol", None)) and
-        rol.nombre != "Director" and
-        rol.categoria_acceso != "propio"
+        (rol := getattr(getattr(user, "perfil", None), "rol", None))
+        and rol.nombre != "Director"
+        and rol.categoria_acceso not in [
+            "propio",
+            "refestadistica",
+        ]
     ),
+
     "no_supervisor_total": lambda user: (
-        (rol := getattr(getattr(user, "perfil", None), "rol", None)) and
-        rol.nombre != "Supervisor" and
-        rol.categoria_acceso != "supervisor"
+        (rol := getattr(getattr(user, "perfil", None), "rol", None))
+        and rol.nombre != "Supervisor"
+        and rol.categoria_acceso not in [
+            "supervisor",
+            "refestadistica",
+        ]
     ),
-    "ocultar_ministro_subsecretario": lambda user: not (
-    getattr(getattr(user, "perfil", None), "rol", None) and
-    getattr(user.perfil.rol, "nombre", None) in ["Ministro", "Subsecretario"]
-),
-    "ocultar_evaluacion": lambda user: not (
-    getattr(getattr(user, "perfil", None), "rol", None) and
-    getattr(user.perfil.rol, "nombre", None) in ["Evaluacion"]
-),
+    "solo_refestadistica": lambda user: (
+        (rol := getattr(getattr(user, "perfil", None), "rol", None))
+        and rol.categoria_acceso == "refestadistica"
+        ),
+        "ocultar_ministro_subsecretario": lambda user: not (
+            getattr(getattr(user, "perfil", None), "rol", None) and
+            getattr(user.perfil.rol, "nombre", None) in ["Ministro", "Subsecretario"]
+        ),
+        "ocultar_evaluacion": lambda user: not (
+        getattr(getattr(user, "perfil", None), "rol", None) and
+        getattr(user.perfil.rol, "nombre", None) in ["Evaluacion"]
+    ),
     "evaluacion": lambda user: (
         getattr(user.perfil.rol, "nombre", None) == "Evaluacion"
-),
+    ),
     "aplicador": lambda user: (
         getattr(user.perfil.rol, "nombre", None) == "Aplicador"
     ),
@@ -252,34 +277,114 @@ def build_menu_tree(items, ctx, user, request, parent=None):
 
 def get_menu_for_user(user, request):
 
+    # ======================================
+    # 1. VALIDAR USUARIO
+    # ======================================
+
+    if not user.is_authenticated:
+        return []
+
+    if not user.is_active:
+        return []
+
+    # ======================================
+    # 2. OBTENER CONTEXTO
+    # ======================================
+
     ctx = get_user_context(user)
+
     rol = ctx.rol
     categoria = ctx.categoria
 
     if not rol:
         return []
 
-    flags = getattr(request, "flags_menu", set())
-    
+    # ======================================
+    # 3. VALIDAR REFERENTE DE ESTADÍSTICA
+    # ======================================
+
+    if categoria == "refestadistica":
+
+        from apps.usuarios.services.acceso_referentes import (
+            obtener_referente
+        )
+
+        referente = obtener_referente(user)
+
+        if not referente:
+            return []
+
+        if not referente.obtener_regiones():
+            return []
+
+    # ======================================
+    # 4. OBTENER FLAGS
+    # ======================================
+
+    flags = set(
+        getattr(request, "flags_menu", set())
+    )
+
     # Flags según ofertas del Director
     flags.update(
         get_flags_ofertas_director(user)
     )
-    
+
     request.flags_menu = flags
-    
-    cache_key = get_menu_cache_key(rol, categoria, flags)
-    
-    print("🧠 CACHE KEY:", cache_key)  # ✅ ACÁ
+
+    # ======================================
+    # 5. GENERAR CACHE KEY POR USUARIO
+    # ======================================
+
+    cache_key = get_menu_cache_key(
+        user,
+        rol,
+        categoria,
+        flags
+    )
+
+    print("🧠 CACHE KEY:", cache_key)
+
+    # ======================================
+    # 6. CONSULTAR CACHE
+    # ======================================
 
     menu = cache.get(cache_key)
-    if menu:
+
+    if menu is not None:
+
+        print("✅ MENÚ RECUPERADO DEL CACHE")
+
         return menu
 
-    items = MenuItem.objects.filter(activo=True).select_related("parent")
-    menu = build_menu_tree(items, ctx, user, request)
+    # ======================================
+    # 7. CONSTRUIR MENÚ
+    # ======================================
 
-    cache.set(cache_key, menu, CACHE_TTL)
+    items = (
+        MenuItem.objects
+        .filter(activo=True)
+        .select_related("parent")
+    )
+
+    menu = build_menu_tree(
+        items,
+        ctx,
+        user,
+        request
+    )
+
+    # ======================================
+    # 8. GUARDAR CACHE
+    # ======================================
+
+    cache.set(
+        cache_key,
+        menu,
+        CACHE_TTL
+    )
+
+    print("✅ MENÚ GENERADO Y GUARDADO EN CACHE")
 
     return menu
 

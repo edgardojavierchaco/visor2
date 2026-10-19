@@ -48,6 +48,7 @@ class LoginFormView(LoginView):
         #'DirGral_Privada': 'privada:dashboard',
         'Infraestructura': 'archivos:portada_gestor',
         'Pof': 'archivos:portada_gestor',
+        'refestadistica': 'archivos:portada_gestor',
 
     }
 
@@ -59,7 +60,8 @@ class LoginFormView(LoginView):
         'regional': 'archivos:portada_gestor',
         'propio': 'directores:institucional',
         'nivel': 'archivos:portada_gestor',
-        'supervisor': 'archivos:portada_gestor',        
+        'supervisor': 'archivos:portada_gestor',  
+        'refestadistica': 'archivos:portada_gestor',      
     }
 
     def get_context_data(self, **kwargs):
@@ -97,7 +99,7 @@ class LoginFormView(LoginView):
         request = self.request
         user = request.user
 
-        if not user.is_authenticated or not user.is_staff:
+        if not user.is_authenticated or not user.is_active:
             return reverse('logueo:login')       
         
         

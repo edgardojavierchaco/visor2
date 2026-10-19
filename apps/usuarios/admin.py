@@ -273,3 +273,19 @@ admin.site.register(UsuariosVisualizador, UsuariosVisualizadorAdmin)
 admin.site.register(PerfilUsuario)
 admin.site.register(Rol, RolAdmin)
 admin.site.register(NivelAcceso, NivelAccesoAdmin)
+
+
+# Administración de los referentes con regionales ingresadas manualmente
+from .models import Referentes
+
+@admin.register(Referentes)
+class ReferentesAdmin(admin.ModelAdmin):
+    list_display = ("cuil", "region", "estado")
+    list_filter = ("estado",)
+    search_fields = ("cuil", "region")
+    list_editable = ("estado",)
+    ordering = ("cuil",)
+    fieldsets = (
+        ("Datos del referente", {"fields": ("cuil", "estado")}),
+        ("Regionales (escritura manual)", {"fields": ("region",)}),
+    )

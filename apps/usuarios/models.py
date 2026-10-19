@@ -3,7 +3,8 @@ from django.conf import settings
 from django.db import models, connection
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from typing import TYPE_CHECKING
-
+from django.core.validators import RegexValidator
+from django.core.exceptions import ValidationError
 
 if TYPE_CHECKING:
     from .models import PerfilUsuario
@@ -49,6 +50,7 @@ class Rol(models.Model):
         ('propio', 'Propio'),
         ('nivel', 'Nivel'),
         ('supervisor', 'Supervisor'),
+        ('refestadistica', 'Referente de Estadística Educativa'),
     )
     categoria_acceso = models.CharField(max_length=20, choices=CATEGORIAS, default='propio')
 
@@ -127,6 +129,21 @@ class UsuariosVisualizador(AbstractBaseUser, PermissionsMixin):
                     FROM v_capa_unica_ofertas_ant
                     WHERE REGEXP_REPLACE(resploc_cuitcuil, '[^0-9]', '', 'g') =
                           REGEXP_REPLACE(%s, '[^0-9]', '', 'g')
+                """, [self.username])
+            elif categoria == 'refestadistica':
+                cursor.execute("""
+                    SELECT DISTINCT v.*
+                    FROM public.v_capa_unica_ofertas_ant v
+                    INNER JOIN public.usuarios_referentes r
+                        ON r.cuil = %s
+                    WHERE r.estado = TRUE
+                    AND TRIM(v.region_loc) = ANY(
+                        STRING_TO_ARRAY(
+                            REGEXP_REPLACE(r.region, '\\s+', '', 'g'),
+                            ','
+                        )
+                    )
+                    AND v.cueanexo IS NOT NULL
                 """, [self.username])
             elif categoria == 'nivel':
                 cursor.execute("""
@@ -334,3 +351,63 @@ class UsuarioIntermedia(models.Model):
 
     def __str__(self):
         return self.cuil
+
+
+class Referentes(models.Model):
+
+    cuil = models.CharField(
+        max_length=11,
+        unique=True,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{11}$',
+                message='El CUIL debe contener 11 dígitos.'
+            )
+        ],
+        verbose_name='CUIL'
+    )    
+
+    estado = models.BooleanField(default=True)
+
+    region = models.CharField(
+        max_length=255,
+        verbose_name='Regionales Educativas',
+        help_text='Ingrese las regionales separadas por comas. Ejemplo: 1, 2, 3, 5'
+    )
+
+    class Meta:
+        db_table = 'usuarios_referentes'
+        verbose_name = 'Referente de Estadística'
+        verbose_name_plural = 'Referentes de Estadística'
+        ordering = ['region']
+
+    def __str__(self):
+        return (
+            f'{self.cuil}, {self.region} '
+        )
+    
+    def obtener_regiones(self):
+        """
+        Devuelve las regionales como una lista.
+        Ejemplo: '1, 2, 3' -> ['1', '2', '3']
+        """
+        return [
+            region.strip()
+            for region in self.region.split(',')
+            if region.strip()
+        ]
+
+    def clean(self):
+        super().clean()
+
+        if self.cuil and (
+            len(self.cuil) != 11 or not self.cuil.isdigit()
+        ):
+            raise ValidationError({
+                'cuil': 'El CUIL debe contener exactamente 11 números.'
+            })
+
+        if not self.obtener_regiones():
+            raise ValidationError({
+                'region': 'Debe ingresar al menos una regional.'
+            })

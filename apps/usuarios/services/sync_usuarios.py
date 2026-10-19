@@ -132,6 +132,21 @@ def sync_usuarios_directores():
                 username = cuil.replace("-", "")
                 usernames_vistos.add(username)
 
+                # No convertir referentes estadísticos en directores.
+                # La validación se realiza antes de modificar datos o perfiles.
+                if PerfilUsuario.objects.filter(
+                    usuario__username=username,
+                    rol__categoria_acceso="refestadistica",
+                ).exists():
+                    procesados = i
+                    yield {
+                        "tipo": "fila",
+                        "username": username,
+                        "estado": "omitido_refestadistica",
+                        "n": i,
+                    }
+                    continue
+
                 with transaction.atomic():
 
                     obj = UsuariosVisualizador.objects.filter(username=username).first()

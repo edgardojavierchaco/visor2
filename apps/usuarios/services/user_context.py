@@ -94,6 +94,9 @@ def get_redirect_url(user):
     if ctx.rol == 'Director':
         return 'directores:institucional'
 
+    if ctx.categoria == 'refestadistica':
+        return 'archivos:portada_gestor'
+
     if ctx.categoria == 'regional':
         return 'oplectura:portada_regional'
 
