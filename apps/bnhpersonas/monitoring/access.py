@@ -49,7 +49,22 @@ def regional_names(user):
     return tuple(sorted({str(value).strip() for value in values if value}))
 
 def resolve_scope(user):
-    if not user or not getattr(user, "is_authenticated", False): return MonitoringScope(kind="none", role="")
+    if not user or not getattr(user, "is_authenticated", False):
+        return MonitoringScope(kind="none", role="")
+
+    # Referentes de Estadística: autorización independiente del nivelacceso.
+    # No almacenar en caché para respetar inmediatamente cambios de estado/región.
+    perfil = getattr(user, "perfil", None)
+    categoria = getattr(getattr(perfil, "rol", None), "categoria_acceso", None)
+    if categoria == "refestadistica":
+        from apps.usuarios.services.acceso_referentes import obtener_regiones_referente
+        regiones = tuple(obtener_regiones_referente(user)) if getattr(user, "is_active", False) else ()
+        return MonitoringScope(
+            kind="regional" if regiones else "none",
+            role="refestadistica",
+            regiones=regiones,
+        )
+
     key = _scope_cache_key(user); cached = cache.get(key)
     if cached is not None: return MonitoringScope(**cached)
     kind = role_kind(user); role = user_role(user)
@@ -98,3 +113,4 @@ def monitoring_required(view):
         response["X-Robots-Tag"] = "noindex, nofollow"
         return response
     return wrapped
+
