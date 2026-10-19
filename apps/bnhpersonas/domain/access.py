@@ -31,6 +31,27 @@ def is_admin(user):
 def is_regional(user):
     return authenticated(user) and role(user) in getattr(settings, "BNH_REGIONAL_ROLES", ("Regional",))
 
+def is_refestadistica(user):
+    """Referente habilitado mediante rol y registro propio (sin caché)."""
+    if not authenticated(user):
+        return False
+    perfil = getattr(user, "perfil", None)
+    if not perfil or not perfil.rol or perfil.rol.categoria_acceso != "refestadistica":
+        return False
+    from apps.usuarios.models import Referentes
+    return Referentes.objects.filter(cuil=get_user_cuil(user), estado=True).exists()
+
+
+def regiones_refestadistica(user):
+    if not is_refestadistica(user):
+        return ()
+    from apps.usuarios.models import Referentes
+    region_text = Referentes.objects.filter(
+        cuil=get_user_cuil(user), estado=True
+    ).values_list("region", flat=True).first() or ""
+    return tuple(dict.fromkeys(r.strip() for r in region_text.split(",") if r.strip()))
+
+
 def is_director(user):
     return authenticated(user) and role(user) in getattr(settings, "BNH_DIRECTOR_ROLES", ("Director/a", "Director"))
 
@@ -44,6 +65,9 @@ def scoped_offers(user):
         from ..models import AccesoRegional
         regiones = AccesoRegional.objects.filter(usuario=user, activo=True).values("region")
         return qs.filter(region_loc__in=regiones)
+    if is_refestadistica(user):
+        regiones = regiones_refestadistica(user)
+        return qs.filter(region_loc__in=regiones) if regiones else qs.none()
     if is_director(user):
         cueanexos = get_user_cueanexos(user)
         return qs.filter(cueanexo_str__in=cueanexos) if cueanexos else qs.none()
@@ -58,6 +82,11 @@ def get_user_cueanexos(user):
     if is_director(user):
         cuil = get_user_cuil(user)
         return get_cueanexos_by_cuil(cuil) if len(cuil) == 11 else tuple()
+    if is_refestadistica(user):
+        # Sin caché para que los cambios de regiones o estado sean inmediatos.
+        return tuple(str(c).strip() for c in scoped_offers(user).order_by().values_list(
+            "cueanexo_str", flat=True
+        ).distinct() if c)
     if is_regional(user):
         key = _regional_cache_key(user)
         cached = cache.get(key)
@@ -84,7 +113,7 @@ def user_has_cueanexo_access(user, cueanexo):
         return True
     if is_director(user):
         return user_has_cueanexo(user, cueanexo)
-    if is_regional(user):
+    if is_regional(user) or is_refestadistica(user):
         return cueanexo in get_user_cueanexos(user)
     return False
 
@@ -123,6 +152,8 @@ def operator_required(view):
             raise PermissionDenied("No tiene instituciones habilitadas para BNH Personal.")
         if not (is_admin(request.user) or bool(get_user_cueanexos(request.user))):
             raise PermissionDenied("No tiene instituciones habilitadas para BNH Personal.")
+        if is_refestadistica(request.user) and request.method not in ("GET", "HEAD", "OPTIONS"):
+            raise PermissionDenied("Los referentes de Estadística disponen de acceso de consulta únicamente.")
         response = view(request, *args, **kwargs)
         response["Cache-Control"] = "private, no-store"
         return response
