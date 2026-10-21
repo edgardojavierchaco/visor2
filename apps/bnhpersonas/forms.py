@@ -353,14 +353,21 @@ class ActividadDirectorForm(StyledForm):
         })
 
         if self.instance.pk and not self.is_bound:
-            saved_titles = list(
-                self.instance.titulaciones_curriculares
-                .order_by("orden", "pk")
-                .values_list("titulacion", flat=True)
-            )
-            if not saved_titles and self.instance.titulacion:
-                saved_titles = [self.instance.titulacion]
-            self.initial["titulaciones_multiplan"] = [str(v) for v in saved_titles]
+            # ``titulaciones_multiplan`` es exclusivamente un campo auxiliar
+            # para cargos con Multiplan. En un cargo simple la titulación
+            # (incluido el valor técnico -2 = NO CORRESPONDE) debe permanecer
+            # únicamente en ``titulacion`` y nunca copiarse al selector múltiple.
+            if self.instance.multiplan:
+                saved_titles = list(
+                    self.instance.titulaciones_curriculares
+                    .order_by("orden", "pk")
+                    .values_list("titulacion", flat=True)
+                )
+                if not saved_titles and self.instance.titulacion:
+                    saved_titles = [self.instance.titulacion]
+                self.initial["titulaciones_multiplan"] = [str(v) for v in saved_titles]
+            else:
+                self.initial["titulaciones_multiplan"] = []
 
             saved_locations = list(
                 self.instance.ubicaciones_curriculares

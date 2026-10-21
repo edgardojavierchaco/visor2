@@ -163,15 +163,21 @@ def _activity_form_data_from_instance(obj):
             continue
         data[name] = getattr(obj, field.attname, None)
 
-    # Multiplan: recuperar las titulaciones persistidas en la tabla detalle.
-    titles = list(
-        obj.titulaciones_curriculares
-        .order_by("orden", "pk")
-        .values_list("titulacion", flat=True)
-    )
-    if not titles and obj.titulacion:
-        titles = [obj.titulacion]
-    data["titulaciones_multiplan"] = [str(value) for value in titles]
+    # Multiplan: el selector múltiple se reconstruye únicamente cuando el
+    # cargo realmente es Multiplan. Para un cargo simple, ``obj.titulacion``
+    # puede ser -2 (NO CORRESPONDE) y ese valor NO debe enviarse a
+    # ``titulaciones_multiplan``, cuyas opciones excluyen deliberadamente -2.
+    if obj.multiplan:
+        titles = list(
+            obj.titulaciones_curriculares
+            .order_by("orden", "pk")
+            .values_list("titulacion", flat=True)
+        )
+        if not titles and obj.titulacion:
+            titles = [obj.titulacion]
+        data["titulaciones_multiplan"] = [str(value) for value in titles]
+    else:
+        data["titulaciones_multiplan"] = []
 
     # Sección múltiple / ubicación única: recuperar las ubicaciones persistidas.
     locations = list(
@@ -455,7 +461,10 @@ def _save_activity_impl(user, form, persona, *, operation_id=None):
     _sync_curricular_details(
         obj,
         ubicaciones=ubicaciones[:1] if tipo_ubicacion == "UNICA" else ubicaciones,
-        titulaciones=titulaciones,
+        # La tabla detalle de titulaciones representa exclusivamente el
+        # Multiplan. En cargos simples la titulación queda en obj.titulacion.
+        # Esto evita persistir -2 (NO CORRESPONDE) como si fuese un plan.
+        titulaciones=titulaciones if obj.multiplan else [],
     )
     audit(
         user,
@@ -775,3 +784,4 @@ def restore_person(user, pk, version, reason):
         operation_id=uuid.uuid4(),
     )
     return obj
+
