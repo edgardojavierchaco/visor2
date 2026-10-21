@@ -22,6 +22,7 @@ GLOBAL_ROLES = {
     "ministro",
     "subsecretario",
     "director general",
+    "funcionario",
 }
 
 
