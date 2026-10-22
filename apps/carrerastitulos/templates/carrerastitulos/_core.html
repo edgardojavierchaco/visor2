@@ -1,0 +1,44 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'carrerastitulos/css/carreras.css' %}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<div class="ct-app ct-redesign {% if modo == 'ministerial' %}ct-is-ministerial{% else %}ct-is-public{% endif %}" id="ct-app"
+ data-modo="{{ modo }}" data-carto-key="{{ carto_api_key|default:'' }}"
+ data-resultados="{% url 'carrerastitulos:resultados' %}" data-resumen="{% url 'carrerastitulos:resumen' %}"
+ data-analisis="{% url 'carrerastitulos:analisis' %}" data-mapa="{% url 'carrerastitulos:mapa' %}"
+ data-institucion="{% url 'carrerastitulos:institucion' 'CUEPLACEHOLDER' %}"
+ data-exportar="{% url 'carrerastitulos:exportar' %}">
+ {% if modo == 'publico' %}
+ <div class="ct-hero"><span class="ct-hero-chip">EDUCACIÓN SUPERIOR NO UNIVERSITARIA · CHACO</span><h1>¿Qué estudiar en Chaco?</h1><p>Encontrá carreras, títulos y establecimientos de Educación Superior No Universitaria en la provincia.</p><a class="ct-hero-action" href="#ct-filter-form">Explorar la oferta educativa ↓</a></div>
+ {% else %}
+ <div class="ct-heading ct-ministerial-heading"><div><p class="ct-eyebrow">Inicio / Observatorio / Educación Superior No Universitaria</p><h1><i class="fas fa-graduation-cap" aria-hidden="true"></i> Observatorio de Carreras y Títulos</h1><p>Análisis de la oferta educativa SNU de la provincia del Chaco</p></div><span class="ct-tag">Acceso ministerial {% if es_regional %}· alcance territorial asignado{% endif %}</span></div>
+ {% endif %}
+ <section class="ct-kpis" aria-label="Indicadores de la oferta SNU">
+  <article class="ct-kpi"><i class="fas fa-school" aria-hidden="true"></i><div><span>Establecimientos</span><strong data-kpi="establecimientos">—</strong></div></article>
+  <article class="ct-kpi"><i class="fas fa-book-open" aria-hidden="true"></i><div><span>Ofertas académicas</span><strong data-kpi="ofertas">—</strong></div></article>
+  <article class="ct-kpi"><i class="fas fa-graduation-cap" aria-hidden="true"></i><div><span>Carreras distintas</span><strong data-kpi="carreras">—</strong></div></article>
+  <article class="ct-kpi"><i class="fas fa-certificate" aria-hidden="true"></i><div><span>Títulos distintos</span><strong data-kpi="titulos">—</strong></div></article>
+  <article class="ct-kpi"><i class="fas fa-map-marker-alt" aria-hidden="true"></i><div><span>Localidades</span><strong data-kpi="localidades">—</strong></div></article>
+  {% if modo == 'ministerial' %}<article class="ct-kpi"><i class="fas fa-map-marked-alt" aria-hidden="true"></i><div><span>Georreferenciados</span><strong data-kpi="georreferenciados">—</strong></div></article>{% endif %}
+ </section>
+ <div class="ct-layout">
+ <aside class="ct-filter-rail">
+ <section class="ct-card ct-filters"><h2><i class="fas fa-filter" aria-hidden="true"></i> Filtros de búsqueda</h2>
+ <form id="ct-filter-form"><label for="ct-q">Búsqueda libre</label><input id="ct-q" name="q" type="search" placeholder="Carrera, título, CUE, institución..." autocomplete="off">
+ {% for field in filtros %}<label for="ct-{{ field.key }}">{{ field.label }}</label><select id="ct-{{ field.key }}" name="{{ field.key }}" multiple size="1" aria-label="{{ field.label }}">{% for item in field.options %}<option value="{{ item }}">{{ item }}</option>{% endfor %}</select>{% endfor %}
+ <div class="ct-actions"><button class="ct-btn ct-primary" type="submit"><i class="fas fa-search" aria-hidden="true"></i> Buscar</button><button class="ct-btn" type="button" id="ct-clear">Limpiar</button></div></form>
+ <p class="ct-hint">Para seleccionar varias opciones utilizá Ctrl (o Cmd). Los filtros se combinan.</p></section>
+ <section class="ct-card ct-help-card"><h2><i class="fas fa-link" aria-hidden="true"></i> Enlaces de interés</h2><a href="#ct-map-panel">Mapa de establecimientos</a><a href="#ct-results-panel">Listado de ofertas SNU</a><a id="ct-csv-side" href="#">Descargar resultados CSV</a></section>
+ {% if modo == 'publico' %}<section class="ct-card ct-help-callout"><strong>Elegí tu futuro</strong><p>Explorá la oferta SNU y consultá directamente con cada institución sobre inscripciones y cupos.</p></section>{% endif %}
+ </aside>
+ <main class="ct-main">
+ {% if modo == 'ministerial' %}<nav class="ct-tabs" aria-label="Secciones del observatorio"><a href="#ct-map-panel" class="ct-tab is-active">Distribución territorial</a><a href="#ct-analisis-panel" class="ct-tab">Análisis por sector, carrera y título</a><a href="#ct-results-panel" class="ct-tab">Listado de ofertas</a></nav>{% endif %}
+ <div class="ct-dashboard-panels">
+ <section id="ct-map-panel" class="ct-card ct-map-panel"><div class="ct-section-head"><h2><i class="fas fa-map-marked-alt" aria-hidden="true"></i> Mapa territorial SNU</h2><span id="ct-map-count"></span></div><div id="ct-map" class="ct-map" role="region" aria-label="Mapa de establecimientos SNU"></div><small>Ubicaciones provenientes del padrón educativo; solo oferta Común - SNU.</small></section>
+ {% if modo == 'ministerial' %}<section id="ct-analisis-panel" class="ct-card ct-analysis-panel"><div class="ct-section-head"><h2><i class="fas fa-chart-bar" aria-hidden="true"></i> Distribución de la oferta</h2></div><div id="ct-analisis" class="ct-analysis"><p>Consultando estadísticas…</p></div></section>{% endif %}
+ </div>
+ <section id="ct-results-panel" class="ct-card ct-results-panel"><div class="ct-section-head"><h2><i class="fas fa-list" aria-hidden="true"></i> Oferta educativa SNU</h2><a id="ct-csv" class="ct-btn" href="#">Exportar CSV</a></div><p id="ct-status" role="status" aria-live="polite">Cargando resultados…</p><div class="ct-table-wrap"><table class="ct-table"><thead><tr><th>CUEANEXO</th><th>Establecimiento</th><th>Localidad</th><th>Nivel</th><th>Carrera</th><th>Título</th><th>Detalle</th></tr></thead><tbody id="ct-rows"></tbody></table></div><div class="ct-pagination"><button class="ct-btn" id="ct-prev" type="button">← Anterior</button><span id="ct-page"></span><button class="ct-btn" id="ct-next" type="button">Siguiente →</button></div></section>
+ </main></div>
+ <dialog id="ct-dialog" class="ct-dialog"><button class="ct-close" id="ct-close" type="button" aria-label="Cerrar">×</button><div id="ct-detail"></div></dialog>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+<script src="{% static 'carrerastitulos/js/carreras.js' %}" defer></script>

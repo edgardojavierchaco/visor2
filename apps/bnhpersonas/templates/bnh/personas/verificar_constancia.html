@@ -57,7 +57,7 @@
         <h2>Servicios incluidos al momento de emisión</h2>
         <div class="table-wrap">
         <table>
-            <thead><tr><th>#</th><th>Cargo / CEIC</th><th>Tipo</th><th>Situación</th><th>Turno</th><th>Carga</th><th>Desde</th><th>Hasta</th></tr></thead>
+            <thead><tr><th>#</th><th>Cargo / CEIC</th><th>Tipo</th><th>Situación</th><th>Espacio curricular / Asignatura</th><th>Grado / Año</th><th>Sección</th><th>Turno</th><th>Carga</th><th>Desde</th><th>Hasta</th></tr></thead>
             <tbody>
             {% for s in servicios_snapshot %}
                 <tr>
@@ -65,13 +65,16 @@
                     <td>{{ s.cargo_ceic }}</td>
                     <td>{{ s.tipo_personal }}</td>
                     <td>{{ s.situacion_revista }}</td>
+                    <td>{{ s.espacio_curricular|default:"—" }}</td>
+                    <td>{{ s.grado_anio|default:"—" }}</td>
+                    <td>{{ s.seccion|default:"—" }}</td>
                     <td>{{ s.turno|default:"—" }}</td>
                     <td>{{ s.carga_horaria|default:"—" }}</td>
                     <td>{{ s.fecha_inicio|default:"—" }}</td>
                     <td>{{ s.fecha_fin|default:"—" }}</td>
                 </tr>
             {% empty %}
-                <tr><td colspan="8">No hay servicios en el snapshot.</td></tr>
+                <tr><td colspan="11">No hay servicios en el snapshot.</td></tr>
             {% endfor %}
             </tbody>
         </table>

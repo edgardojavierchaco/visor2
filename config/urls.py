@@ -14,6 +14,7 @@ from apps.unidadgestion import views_pers_doc_central
 from apps.operativoschaco.views import guardar_examen, examen_guardado
 from apps.bnhpersonas.views import filtrar_ceic
 
+
 urlpatterns = [    
     path('admin/', admin.site.urls),
     path('chaining/', include('smart_selects.urls')),
@@ -81,13 +82,9 @@ urlpatterns = [
     path('sirtee/', include('apps.sirtee.urls', namespace='sirtee')),
     path('bnhalumnos/', include('apps.bnhalumnos.urls', namespace='bnhalumnos')),
     path("pof/", include("apps.reunidas_pof.urls")),
-    path(
-    "asistencia/",
-    include(
-        "apps.asistencia_dashboard.urls",
-        namespace="asistencia_dashboard",
-    ),
-),
+    path("asistencia/", include("apps.asistencia_dashboard.urls",
+        namespace="asistencia_dashboard")),
+    path('carreras/', include('apps.carrerastitulos.urls', namespace='carrerastitulos')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:
