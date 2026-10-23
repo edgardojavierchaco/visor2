@@ -15,3 +15,31 @@
 .ct-ministerial-body .ct-app { max-width:100%; }
 .ct-ministerial-body .content-wrapper { overflow-x:hidden; }
 @media(max-width:991px){.ct-ministerial-body .ct-map{min-height:320px}}
+
+/* Rediseño SNU 2026: encapsulado; no altera BNH ni dashboard global */
+.ct-redesign{--ct-navy:#0b3352;--ct-blue:#0878cd;--ct-line:#dce7f0;color:#233d57;max-width:100%}
+.ct-redesign .ct-hero{background:linear-gradient(115deg,#0c3657,#096baf);border-radius:13px;color:white;padding:38px clamp(20px,4vw,52px);margin-bottom:18px;min-height:180px}
+.ct-redesign .ct-hero h1{color:white;font-size:clamp(28px,3.3vw,40px);margin:12px 0 8px}.ct-redesign .ct-hero p{color:#e5f3ff;font-size:16px;max-width:650px}
+.ct-redesign .ct-hero-chip{font-size:11px;font-weight:800;letter-spacing:.1em;color:#d4f0ff}.ct-redesign .ct-hero-action{color:white;border:1px solid #ffffff75;border-radius:7px;display:inline-block;text-decoration:none;padding:8px 14px}
+.ct-redesign .ct-ministerial-heading{padding:10px 0}.ct-redesign .ct-ministerial-heading h1 i{color:#067ad0;margin-right:8px}
+.ct-redesign .ct-kpis{grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px;margin-bottom:16px}
+.ct-redesign .ct-kpi{border:1px solid #dce9f2;border-top:0;box-shadow:0 4px 12px #1644650a;min-height:94px;padding:15px 12px;display:flex;align-items:center;gap:12px;background:#f2faff}
+.ct-redesign .ct-kpi i{font-size:24px;color:#0980d1;background:#e1efff;padding:12px;border-radius:10px}
+.ct-redesign .ct-kpi:nth-child(2){background:#edf9f4}.ct-redesign .ct-kpi:nth-child(2) i,.ct-redesign .ct-kpi:nth-child(2) strong{color:#0b9b68}
+.ct-redesign .ct-kpi:nth-child(3){background:#f4f0ff}.ct-redesign .ct-kpi:nth-child(3) i,.ct-redesign .ct-kpi:nth-child(3) strong{color:#6a37d6}
+.ct-redesign .ct-kpi:nth-child(4){background:#fff1f4}.ct-redesign .ct-kpi:nth-child(4) i,.ct-redesign .ct-kpi:nth-child(4) strong{color:#d82c56}
+.ct-redesign .ct-kpi:nth-child(5){background:#fff8e9}.ct-redesign .ct-kpi:nth-child(5) i,.ct-redesign .ct-kpi:nth-child(5) strong{color:#c9790c}
+.ct-redesign .ct-kpi strong{display:block;color:#0871b9;font-size:25px;line-height:1.1;margin-top:5px}.ct-redesign .ct-kpi span{font-size:11px;line-height:1.2}
+.ct-redesign .ct-layout{grid-template-columns:minmax(220px,260px) minmax(0,1fr);align-items:start;gap:13px}.ct-redesign .ct-filter-rail{display:grid;gap:12px}.ct-redesign .ct-main{gap:12px}
+.ct-redesign .ct-card{border-radius:10px;padding:14px;box-shadow:0 3px 13px #0d38500b}.ct-redesign .ct-filters h2 i,.ct-redesign .ct-section-head i{color:#0579cf;margin-right:6px}
+.ct-redesign .ct-filters label{margin-top:11px}.ct-redesign .ct-filters select{height:61px}.ct-redesign .ct-filters input{min-height:38px}
+.ct-redesign .ct-help-card{display:grid;gap:7px}.ct-redesign .ct-help-card a{font-size:12px;color:#1169ab}.ct-redesign .ct-help-callout{background:#e5f3ff}.ct-redesign .ct-help-callout strong{color:#006fbe}
+.ct-redesign .ct-tabs{display:flex;flex-wrap:wrap;gap:3px;background:white;border:1px solid #dce7f0;border-radius:8px;overflow:hidden}.ct-redesign .ct-tab{padding:10px 13px;color:#2c5877;text-decoration:none;font-size:12px;border-right:1px solid #e7eff6}.ct-redesign .ct-tab.is-active,.ct-redesign .ct-tab:hover{background:#087acb;color:white;text-decoration:none}
+.ct-redesign .ct-dashboard-panels{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr);gap:12px;align-items:start}
+.ct-redesign .ct-map{height:440px;width:100%;border:1px solid #edf2f7;margin:10px 0;background:#e8f3f8}
+.ct-redesign .ct-analysis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ct-redesign .ct-analysis article{padding:10px;min-width:0}.ct-redesign .ct-analysis h3{font-size:13px}.ct-redesign .ct-analysis .ct-bar-label{overflow-wrap:anywhere}
+.ct-redesign .ct-table th{background:#eaf3fb}.ct-redesign .ct-table tbody tr:nth-child(even){background:#f9fcff}.ct-redesign .ct-section-head h2{margin:0 0 6px}
+.ct-redesign .ct-dialog{max-height:82vh;overflow:auto}
+@media(max-width:1550px){.ct-redesign .ct-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.ct-redesign .ct-dashboard-panels{grid-template-columns:1fr}.ct-redesign .ct-analysis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.ct-redesign .ct-layout{grid-template-columns:1fr}.ct-redesign .ct-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ct-redesign .ct-analysis{grid-template-columns:repeat(2,minmax(0,1fr))}.ct-redesign .ct-map{height:350px}}
+@media(max-width:520px){.ct-redesign .ct-kpi{gap:6px;padding:9px}.ct-redesign .ct-kpi i{font-size:18px;padding:6px}.ct-redesign .ct-kpi strong{font-size:21px}.ct-redesign .ct-analysis{grid-template-columns:1fr}}

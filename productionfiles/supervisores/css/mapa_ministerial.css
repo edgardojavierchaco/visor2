@@ -1,0 +1,13 @@
+.sigse-map-page #mapaSupervisores{height: min(72vh,750px);min-height:480px;width:100%;border-radius:12px;background:#e6edf4;z-index:1}.sigse-map-page .sigse-filterbar input{background:#101b2c;color:white;border:1px solid #466180;border-radius:9px;padding:11px;width:100%}.sigse-map-help{margin-top:12px}.marcador-escuela-pin{width:26px;height:26px;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 9px #0006}.marcador-escuela-pin span{display:block;width:7px;height:7px;border-radius:50%;background:white;margin:7px}.sigse-map-page .leaflet-popup-content{color:#152238}@media(max-width:640px){.sigse-map-page #mapaSupervisores{min-height:400px;height:58vh}}
+/* Leyenda SIGSE: visible, desplegada inicialmente, con scroll y contraste alto. */
+.sigse-map-page .mapa-leyenda-control{background:#132238;color:#f1f5f9;border:1px solid #59718e!important;border-radius:12px;box-shadow:0 8px 22px #0006;max-width:min(330px,calc(100vw - 65px));font:13px/1.45 system-ui,sans-serif;overflow:hidden}
+.sigse-map-page .mapa-leyenda-toggle{display:flex;align-items:center;gap:10px;width:100%;border:0;padding:12px 14px;background:#1c344d;color:#f8fafc;text-align:left;cursor:pointer;font-weight:700}
+.sigse-map-page .mapa-leyenda-chevron{margin-left:auto}.sigse-map-page .mapa-leyenda-contenido{display:none;padding:12px 14px;max-height:290px;overflow:auto;min-width:215px}
+.sigse-map-page .mapa-leyenda-control.abierta .mapa-leyenda-contenido{display:block}
+.sigse-map-page .mapa-leyenda-seccion+.mapa-leyenda-seccion{margin-top:13px;border-top:1px solid #405673;padding-top:12px}
+.sigse-map-page .mapa-leyenda-titulo{font-weight:750;color:#bfe6ff;margin-bottom:8px}
+.sigse-map-page .mapa-leyenda-item{display:flex;align-items:center;gap:9px;margin:6px 0;white-space:normal;color:#f1f5f9}
+.sigse-map-page .mapa-leyenda-muestra{display:inline-block;flex:0 0 14px;width:14px;height:14px;border:1px solid #fff;border-radius:3px}
+.sigse-map-page .mapa-leyenda-muestra-marcador{border-radius:50%}
+.sigse-map-page .mapa-leyenda-vacia{color:#c4cfde}
+@media(max-width:640px){.sigse-map-page .mapa-leyenda-contenido{max-height:180px}.sigse-map-page .mapa-leyenda-control{max-width:245px}}
