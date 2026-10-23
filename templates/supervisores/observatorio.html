@@ -1,0 +1,34 @@
+{% extends "archivos/base/dashboard.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'supervisores/css/sigse.css' %}">
+<div class="sigse-shell" id="sigse" data-api="{% url 'supervisor_registro:observatorio_indicadores' %}">
+  <div class="sigse-top"><div><span class="sigse-eyebrow">VISOR EDUCATIVO CHACO · INTELIGENCIA TERRITORIAL</span>
+    <h1>Observatorio de Supervisión Educativa</h1><p>Panel de control jurisdiccional · Provincia del Chaco</p></div>
+    <div class="sigse-actions">{% if puede_administrar %}<a class="sigse-btn" href="{% url 'supervisor_registro:central_inicio' %}">Administración central ↗</a>{% endif %}<a class="sigse-btn" href="{% url 'supervisor_registro:mapa_territorial' %}">Mapa territorial ↗</a>
+    <button class="sigse-btn" id="sigse-refresh" type="button">↻ Actualizar</button></div></div>
+  <div class="sigse-note">Los indicadores describen <strong>asignaciones registradas</strong>, no la cobertura total del padrón. La medición de ofertas sin supervisión requiere conciliación con el universo oficial vigente.</div>
+  <div class="sigse-filterbar">
+    <label>Regional<select id="sigse-region"><option value="">Todas las regionales</option>{% for region in regiones %}<option value="{{ region.pk }}">{{ region.nombre }}</option>{% endfor %}</select></label>
+    <label>Nivel / modalidad<select id="sigse-nivel"><option value="">Todos</option>{% for nivel in niveles %}<option value="{{ nivel.pk }}">{{ nivel }}</option>{% endfor %}</select></label>
+    <label>Situación de revista<select id="sigse-situacion"><option value="">Todas</option>{% for situacion in situaciones %}<option value="{{ situacion.pk }}">{{ situacion }}</option>{% endfor %}</select></label>
+    <button id="sigse-clear" class="sigse-btn" type="button">Limpiar filtros</button>
+  </div>
+  <div class="sigse-message" id="sigse-status" role="status" aria-live="polite">Consultando indicadores…</div>
+  <section class="sigse-grid" aria-label="Indicadores ejecutivos">
+    <article class="sigse-kpi"><span>Supervisores con asignación</span><strong id="k-supervisores">—</strong><small>Personas distintas</small></article>
+    <article class="sigse-kpi"><span>CUEANEXO asignados</span><strong id="k-cueanexos">—</strong><small>Establecimientos distintos</small></article>
+    <article class="sigse-kpi"><span>Ofertas asignadas</span><strong id="k-ofertas_registradas">—</strong><small>Pares CUEANEXO + oferta</small></article>
+    <article class="sigse-kpi"><span>Regionales representadas</span><strong id="k-regionales">—</strong><small>Con asignaciones vigentes</small></article>
+    <article class="sigse-kpi"><span>Asignaciones regionales</span><strong id="k-asignaciones">—</strong><small>Registros activos</small></article>
+  </section>
+  <div class="sigse-columns"><section class="sigse-panel"><h2>Supervisores por regional</h2><p>Distribución de personas con asignaciones activas.</p><div id="sigse-bars" class="sigse-bars" aria-label="Gráfico por regional"></div></section>
+  <section class="sigse-panel"><h2>Accesos de gestión</h2><p>Consultas en el entorno ministerial SIGSE.</p>
+    <a class="sigse-link" href="{% url 'supervisor_registro:mapa_territorial' %}">Mapa territorial y filtros ↗</a>
+    <a class="sigse-link" href="{% url 'supervisor_registro:nomina_ministerial' %}">Listado nominal de supervisores ↗</a>
+    {% if puede_administrar %}<a class="sigse-link" href="{% url 'supervisor_registro:central_exportar' %}">Exportar asignaciones ↗</a>{% endif %}
+    <div class="sigse-note">El acceso a cada registro permanece sujeto al alcance del usuario.</div></section></div>
+  <footer class="sigse-footer">SIGSE · Panel de indicadores de asignación · Departamento de Estadística Educativa</footer>
+</div>
+<script src="{% static 'supervisores/js/observatorio.js' %}" defer></script>
+{% endblock %}

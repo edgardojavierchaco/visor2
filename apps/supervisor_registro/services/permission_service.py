@@ -14,7 +14,6 @@ from ..models import ResponsableRegional
 # ÚNICOS que pueden hacer CRUD
 ROLES_CRUD = {
     "administrador",
-    "gestor",
 }
 
 
@@ -29,6 +28,7 @@ ROLES_VISUALIZACION_GLOBAL = {
 # Visualización restringida territorialmente
 ROLES_REGIONALES = {
     "regional",
+    "refestadistica",
 }
 
 
@@ -309,23 +309,11 @@ def get_ids_regiones_responsable(user):
 # ============================================================
 
 def puede_ver_supervisores(user):
-    """
-    Todos los usuarios autenticados pueden ingresar
-    a las funciones de consulta.
-
-    El alcance territorial se controla por separado.
-    """
-
-    if not user:
+    """Denegación por defecto: nunca ofrecer acceso provincial a roles desconocidos."""
+    if not user or not getattr(user, "is_authenticated", False):
         return False
-
-    return bool(
-        getattr(
-            user,
-            "is_authenticated",
-            False,
-        )
-    )
+    return bool(getattr(user, "is_superuser", False) or
+                get_rol_usuario(user) in (ROLES_VISUALIZACION_GLOBAL | ROLES_REGIONALES))
 
 
 # ============================================================
@@ -421,10 +409,10 @@ def get_regiones_usuario(user):
     # --------------------------------------------------------
     # RESTO DE USUARIOS
     #
-    # Sólo lectura provincial.
+    # Sin permisos: denegación por defecto.
     # --------------------------------------------------------
 
-    return None
+    return []
 
 
 # ============================================================
