@@ -8,14 +8,39 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 
 from .mixins import InformeBloqueoMixin
 
-from .models import Aguapey
+from .models import Aguapey, es_planilla_biblioteca_nueva
 from .forms import AguapeyForm
+
+
+class AguapeyVersionadoMixin:
+    """Presentación por período sin modificar los registros históricos."""
+
+    def es_planilla_nueva(self):
+        periodo = self.get_periodo_activo()
+        return es_planilla_biblioteca_nueva(periodo.meses, periodo.annos)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        planilla_nueva = self.es_planilla_nueva()
+        nombre = 'Base de datos utilizada' if planilla_nueva else 'Aguapey'
+        context['planilla_nueva'] = planilla_nueva
+        context['nombre_seccion_periodo'] = nombre
+        context['section_return_label'] = f'Volver a {nombre}'
+        return context
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        if not self.es_planilla_nueva():
+            # Excluir el campo también del ModelForm: ni siquiera un POST
+            # con ese dato debe alterar un registro del formato anterior.
+            form.fields.pop('nombre_base_datos', None)
+        return form
 
 
 # =========================
 # 🔹 UTIL
 # =========================
-class AguapeyCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
+class AguapeyCreateView(LoginRequiredMixin, InformeBloqueoMixin, AguapeyVersionadoMixin, CreateView):
     model = Aguapey
     form_class = AguapeyForm
     template_name = 'biblioteca/pem/aguapey/create.html'
@@ -67,8 +92,8 @@ class AguapeyCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
 
 
 
-        context['title'] = 'Carga de Aguapey'
-        context['entity'] = 'Aguapey'
+        context['title'] = context['nombre_seccion_periodo']
+        context['entity'] = context['nombre_seccion_periodo']
         context['list_url'] = self.success_url
         context['action'] = 'add'
         
@@ -78,7 +103,7 @@ class AguapeyCreateView(LoginRequiredMixin, InformeBloqueoMixin, CreateView):
 #===========================
 # UPDATE
 #===========================
-class AguapeyUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
+class AguapeyUpdateView(LoginRequiredMixin, InformeBloqueoMixin, AguapeyVersionadoMixin, UpdateView):
     model = Aguapey
     form_class = AguapeyForm
     template_name = 'biblioteca/pem/aguapey/create.html'
@@ -129,8 +154,8 @@ class AguapeyUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
 
 
 
-        context['title'] = 'Edición de Aguapey'
-        context['entity'] = 'Aguapey'
+        context['title'] = context['nombre_seccion_periodo']
+        context['entity'] = context['nombre_seccion_periodo']
         context['list_url'] = self.success_url
         context['action'] = 'edit'        
 
@@ -142,7 +167,7 @@ class AguapeyUpdateView(LoginRequiredMixin, InformeBloqueoMixin, UpdateView):
 #=====================
 # DELETE
 #=====================
-class AguapeyDeleteView(LoginRequiredMixin, InformeBloqueoMixin,DeleteView):
+class AguapeyDeleteView(LoginRequiredMixin, InformeBloqueoMixin, AguapeyVersionadoMixin, DeleteView):
     model = Aguapey
     template_name = 'biblioteca/pem/aguapey/delete.html'
     success_url = reverse_lazy('bibliotecas:aguapey_list')
@@ -175,8 +200,8 @@ class AguapeyDeleteView(LoginRequiredMixin, InformeBloqueoMixin,DeleteView):
         context = super().get_context_data(**kwargs)
 
     
-        context['title'] = 'Eliminación de Aguapey'
-        context['entity'] = 'Aguapey'
+        context['title'] = context['nombre_seccion_periodo']
+        context['entity'] = context['nombre_seccion_periodo']
         context['list_url'] = self.success_url
         return context
 
@@ -184,7 +209,7 @@ class AguapeyDeleteView(LoginRequiredMixin, InformeBloqueoMixin,DeleteView):
 #=========================
 # LIST
 #=========================
-class AguapeyListView(LoginRequiredMixin, InformeBloqueoMixin, ListView):
+class AguapeyListView(LoginRequiredMixin, InformeBloqueoMixin, AguapeyVersionadoMixin, ListView):
     model = Aguapey
     template_name = 'biblioteca/pem/aguapey/list_aguapey.html'
 
@@ -232,11 +257,17 @@ class AguapeyListView(LoginRequiredMixin, InformeBloqueoMixin, ListView):
 
         
 
-        context['title'] = 'Listado de Aguapey'
+        context['title'] = context['nombre_seccion_periodo']
         context['create_url'] = reverse_lazy('bibliotecas:aguapey_create')
         context['list_url'] = reverse_lazy('bibliotecas:aguapey_list')
         context['update_url'] = reverse_lazy('bibliotecas:aguapey_update', args=[0])
-        context['entity'] = 'Aguapey'
+        context['entity'] = context['nombre_seccion_periodo']
+        if context['planilla_nueva']:
+            nombre = self.get_queryset().values_list(
+                'nombre_base_datos', flat=True,
+            ).first()
+            context['tiene_registro_base_datos'] = nombre is not None
+            context['nombre_base_datos'] = nombre or 'No informado'
         context['hide_lock_button'] = False
         context['generar_pdf_button'] = True
         context['before_url'] = reverse_lazy('bibliotecas:proctec_list')

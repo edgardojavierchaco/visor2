@@ -727,7 +727,7 @@ class ProcesosTecnicosForm(forms.ModelForm):
         return cleaned_data
 
 
-# Formulario para Aguapey
+# Formulario para base de datos utilizada (modelo histórico Aguapey)
 class AguapeyForm(forms.ModelForm):
 
     class Meta:
@@ -748,6 +748,12 @@ class AguapeyForm(forms.ModelForm):
                 'class': 'form-control',
                 'style': 'width: 100px; text-align: center;',
                 'readonly': 'readonly'
+            }),
+            'nombre_base_datos': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej.: Aguapey',
+                'maxlength': '120',
+                'aria-describedby': 'biblioteca-base-datos-ayuda',
             }),
             'total_mes': forms.NumberInput(attrs={
                 'class': 'form-control',

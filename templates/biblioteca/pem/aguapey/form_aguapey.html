@@ -12,7 +12,7 @@
 
 {% block content %}
 <main class="biblioteca-crud biblioteca-crud--formulario biblioteca-form-standard">
-    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='dns' section_return_url=list_url section_return_label='Volver a Aguapey' %}
+    {% include 'biblioteca/includes/crud_section_header.html' with material_icon='dns' section_return_url=list_url section_return_label=section_return_label %}
     <form id="formulario" method="post" action="?periodo={{ periodo_activo_id }}" enctype="multipart/form-data" class="biblioteca-crud__form">
         <div class="card biblioteca-crud__panel">
             <div class="card-header">
@@ -45,9 +45,20 @@
                 {% endif %}
 
                 <section class="biblioteca-form__block" aria-labelledby="biblioteca-form-datos">
-                    {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' block_subtitle='AGUAPEY u otra base de datos' show_info=1 info_title='Aguapey' info_section_icon='dns' info_text='Registrá los datos de uso de la base durante el período.' info_item_1='Total del mes' info_icon_1='calendar_month' info_item_2='Total de la base' info_icon_2='database' info_item_3='Total de usuarios' info_icon_3='groups' info_item_4='Observaciones' info_icon_4='notes' only %}
+                    {% if planilla_nueva %}
+                        {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' block_subtitle='Identificá la base utilizada y registrá su actividad' show_info=1 info_title='Base de datos utilizada' info_section_icon='dns' info_text='Podés indicar el nombre de la base de datos y registrar su uso durante el período.' info_item_1='Total del mes' info_icon_1='calendar_month' info_item_2='Total de la base' info_icon_2='database' info_item_3='Total de usuarios' info_icon_3='groups' info_item_4='Observaciones' info_icon_4='notes' only %}
+                    {% else %}
+                        {% include 'biblioteca/includes/form_block_header.html' with block_id='biblioteca-form-datos' block_icon='edit_square' block_title='Datos a completar' block_subtitle='AGUAPEY u otra base de datos' show_info=1 info_title='Aguapey' info_section_icon='dns' info_text='Registrá los datos de uso de la base durante el período.' info_item_1='Total del mes' info_icon_1='calendar_month' info_item_2='Total de la base' info_icon_2='database' info_item_3='Total de usuarios' info_icon_3='groups' info_item_4='Observaciones' info_icon_4='notes' only %}
+                    {% endif %}
                     <div class="biblioteca-form__block-body">
                         <div class="biblioteca-form__grid">
+                            {% if planilla_nueva %}
+                                <div class="biblioteca-form__span-4">
+                                    <label for="id_nombre_base_datos">Base de datos utilizada</label>
+                                    {{ form.nombre_base_datos|add_class:"form-control" }}
+                                    <small id="biblioteca-base-datos-ayuda" class="form-text text-muted">Si no utilizás ninguna base de datos, escribí «No utiliza». Si dejás el campo vacío, se mostrará «No informado».</small>
+                                </div>
+                            {% endif %}
                             <div>
                                 <label for="id_total_mes">Total del mes</label>
                                 {{ form.total_mes|add_class:"form-control text-center" }}
