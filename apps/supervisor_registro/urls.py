@@ -8,6 +8,7 @@ from .api import (
     regionales, 
     supervisor,
     mapa,
+    sin_supervisor,
     observatorio as api_observatorio,
 )
 
@@ -47,6 +48,7 @@ urlpatterns = [
     path("observatorio/", observatorio, name="observatorio"),
     path("observatorio/mapa/", mapa_territorial, name="mapa_territorial"),
     path("observatorio/nomina/", nomina_supervisores, name="nomina_ministerial"),
+    path("api/observatorio/sin-supervisor/", sin_supervisor.consultar, name="sin_supervisor"),
     path("api/observatorio/indicadores/", api_observatorio.indicadores, name="observatorio_indicadores"),
     path("", dashboard, name="dashboard"),
 

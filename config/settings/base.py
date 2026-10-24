@@ -96,7 +96,7 @@ LOCAL_APPS = [
     'apps.reunidas_pof.apps.ReunidasPofConfig',
     'apps.asistencia_dashboard',
     'apps.carrerastitulos',
-
+    'apps.tablero_trayectorias',
 ]
 
 

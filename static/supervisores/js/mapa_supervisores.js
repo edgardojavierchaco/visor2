@@ -234,6 +234,7 @@ async function cargarMapaSupervisores(supervisorId = null) {
         actualizarKpis(data.estadisticas || {});
         actualizarTituloMapa(data);
         actualizarLeyendaMapa(data.regionales || null, data.escuelas || []);
+        window.sigseSinSupervisorActualizar?.();
 
         if (!Array.isArray(data.escuelas) || data.escuelas.length === 0) {
             actualizarEstadoMapa("No se encontraron establecimientos.");
@@ -638,3 +639,5 @@ window.cargarMapaSupervisores = cargarMapaSupervisores;
 window.mostrarCoberturaGeneral = mostrarCoberturaGeneral;
 window.mostrarCoberturaSupervisor = mostrarCoberturaSupervisor;
 window.mostrarMapaSupervisorPorCuil = mostrarMapaSupervisorPorCuil;
+
+window.sigseMapaLeaflet = () => mapaSupervisores;
