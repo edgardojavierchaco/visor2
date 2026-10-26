@@ -1,10 +1,13 @@
 {% extends 'biblioteca/list.html' %}
 {% load static %}
 
-{% block delete_section_name %}Aguapey{% endblock %}
+{% block delete_section_name %}{{ nombre_seccion_periodo }}{% endblock %}
 {% block delete_section_icon %}dns{% endblock %}
 {% block delete_primary_fields %}{% endblock %}
 {% block delete_section_fields %}
+    {% if planilla_nueva %}
+        <span data-biblioteca-delete-field="nombre_base_datos" data-label="Base de datos utilizada" data-full="true"></span>
+    {% endif %}
     <span data-biblioteca-delete-field="total_mes" data-label="Total del mes"></span>
     <span data-biblioteca-delete-field="total_base" data-label="Total de la base"></span>
     <span data-biblioteca-delete-field="total_usuarios" data-label="Total de usuarios" data-full="true"></span>
@@ -50,7 +53,14 @@
             </span>
             <div>
                 <strong>Resumen de la sección</strong>
-                <span>Totales registrados en Aguapey</span>
+                {% if planilla_nueva %}
+                    <span>Totales registrados en la sección</span>
+                {% else %}
+                    <span>Totales registrados en Aguapey</span>
+                {% endif %}
+                {% if planilla_nueva and tiene_registro_base_datos %}
+                    <span class="text-break">Base de datos utilizada: <b>{{ nombre_base_datos }}</b></span>
+                {% endif %}
             </div>
         </div>
 

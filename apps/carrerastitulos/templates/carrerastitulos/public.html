@@ -1,0 +1,59 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Qué estudiar en Chaco | Visor Educativo</title>
+</head>
+
+<body style="
+    margin:0;
+    background:#f2f5f9;
+    font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+    color:#18334b;
+">
+
+    <header style="
+        background:#07344f;
+        color:#fff;
+        padding:16px 5%;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:20px;
+    ">
+        <b style="font-size:19px">
+            Visor Educativo Chaco
+        </b>
+
+        <span>
+            Ministerio de Educación · Información pública
+        </span>
+    </header>
+
+    <main style="
+        max-width:1500px;
+        margin:auto;
+        padding:22px 18px;
+    ">
+
+        {% with modo='publico' %}
+            {% include 'carrerastitulos/_core.html' %}
+        {% endwith %}
+
+    </main>
+
+    <footer style="
+        text-align:center;
+        padding:20px;
+        color:#536579;
+        font-size:13px;
+    ">
+        Datos informativos de oferta activa.
+        Consultá con cada institución la vigencia de inscripciones y cupos.
+    </footer>
+
+</body>
+</html>

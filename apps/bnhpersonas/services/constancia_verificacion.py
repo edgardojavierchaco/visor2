@@ -32,12 +32,51 @@ def _decimal(value):
     return str(value)
 
 
+def iterar_servicios_constancia(actividades):
+    """
+    Expande cada actividad en las ubicaciones curriculares realmente registradas.
+
+    No agrupa, no aplica distinct() y no elimina duplicados entre actividades.
+    Si una actividad posee varias ubicaciones (sección múltiple), cada componente
+    se emite como una fila independiente. Si no posee detalles de ubicación, se
+    conserva una fila basada en los campos históricos de RegistroActividades.
+    """
+    for actividad in actividades:
+        manager = getattr(actividad, 'ubicaciones_curriculares', None)
+        ubicaciones = list(manager.all()) if manager is not None else []
+
+        if ubicaciones:
+            for ubicacion in ubicaciones:
+                yield actividad, ubicacion
+        else:
+            yield actividad, None
+
+
 def construir_snapshot_constancia(*, persona, cueanexo, nom_est, actividades, emitida_en):
     servicios = []
-    for a in actividades:
+
+    for a, ubicacion in iterar_servicios_constancia(actividades):
+        grado_obj = (
+            getattr(ubicacion, 'grado_anio', None)
+            if ubicacion is not None
+            else getattr(a, 'grado_anio', None)
+        )
+        seccion_obj = (
+            getattr(ubicacion, 'seccion', None)
+            if ubicacion is not None
+            else getattr(a, 'secciones', None)
+        )
+        turno = (
+            getattr(ubicacion, 'turno', '')
+            if ubicacion is not None
+            else getattr(a, 'turno', '')
+        )
+
         servicios.append({
             'id_actividad': a.pk,
+            'id_ubicacion': getattr(ubicacion, 'pk', None),
             'id_puesto': _texto(getattr(a, 'id_puesto', '')),
+            'tipo_ubicacion': _texto(getattr(a, 'tipo_ubicacion', '')),
             'tipo_personal': _descripcion(getattr(a, 'tipo_personal', None), 'descripcion'),
             'modalidad': _descripcion(getattr(a, 'modalidad', None), 'descrip_modalidad'),
             'nivel': _descripcion(getattr(a, 'niveles', None), 'descrip_nivel'),
@@ -45,11 +84,11 @@ def construir_snapshot_constancia(*, persona, cueanexo, nom_est, actividades, em
             'situacion_revista': _descripcion(getattr(a, 'sit_revista', None), 'descrip_sitrev'),
             'condicion_actividad': _descripcion(getattr(a, 'cond_actividad', None), 'denominacion'),
             'tipo_designacion': _descripcion(getattr(a, 't_designacion', None), 'desigfunc_descripcion'),
-            'turno': _texto(getattr(a, 'turno', '')),
+            'turno': _texto(turno),
             'espacio_curricular': _descripcion(getattr(a, 'espacio_curricular', None), 'nombre')
                 or _descripcion(getattr(a, 'espacios', None), 'descrip_titulo'),
-            'grado_anio': _descripcion(getattr(a, 'grado_anio', None), 'nombre_grado_anio'),
-            'seccion': _descripcion(getattr(a, 'secciones', None), 'nombre_seccion'),
+            'grado_anio': _descripcion(grado_obj, 'nombre_grado_anio'),
+            'seccion': _descripcion(seccion_obj, 'nombre_seccion'),
             'carga_horaria': _decimal(getattr(a, 'carga_horaria', None)),
             'fecha_inicio': _fecha(getattr(a, 'f_desde', None)),
             'fecha_fin': _fecha(getattr(a, 'f_hasta', None)),
@@ -58,7 +97,7 @@ def construir_snapshot_constancia(*, persona, cueanexo, nom_est, actividades, em
         })
 
     return {
-        'version_snapshot': 1,
+        'version_snapshot': 2,
         'emitida_en': emitida_en.isoformat(),
         'persona': {
             'id': persona.pk,

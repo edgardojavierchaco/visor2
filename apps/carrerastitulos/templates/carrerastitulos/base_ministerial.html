@@ -1,0 +1,28 @@
+{% extends 'dashboard/home.html' %}
+{% load static %}
+{% block body %}
+<body class="hold-transition sidebar-mini layout-fixed ct-ministerial-body">
+  <div class="wrapper">
+    {# Menú del proyecto: menú dinámico desde context_processor de apps.menus #}
+    {% include 'includes/sidebar.html' %}
+    <div class="content-wrapper ct-ministerial-content">
+      <section class="content pt-3 pb-4">
+        <div class="container-fluid">
+          <div class="ct-ministerial-topbar mb-3 d-flex align-items-center justify-content-between flex-wrap">
+            <div>
+              <span class="text-muted small">Visor Educativo Chaco / Gestión ministerial</span>
+              <div class="h5 font-weight-bold mb-0">Educación Superior No Universitaria</div>
+            </div>
+            <a class="btn btn-outline-primary btn-sm mt-2 mt-md-0" href="{% url 'carrerastitulos:publico' %}">
+              <i class="fas fa-external-link-alt mr-1"></i> Portal público
+            </a>
+          </div>
+          {% block ministerial_content %}{% endblock %}
+        </div>
+      </section>
+    </div>
+    {% include 'dashboard/footer.html' %}
+  </div>
+  {% block javascript %}{% endblock %}
+</body>
+{% endblock %}

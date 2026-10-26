@@ -95,7 +95,8 @@ LOCAL_APPS = [
     'apps.especial',
     'apps.reunidas_pof.apps.ReunidasPofConfig',
     'apps.asistencia_dashboard',
-
+    'apps.carrerastitulos',
+    'apps.tablero_trayectorias',
 ]
 
 
@@ -382,3 +383,9 @@ CELERY_TASK_TIME_LIMIT = 600
 
 # Geolocalización de Usuarios
 GEOIP_PATH = os.path.join(BASE_DIR, "geoip")
+
+
+CARTO_BASEMAPS_API_KEY = os.environ.get(
+    'CARTO_BASEMAPS_API_KEY',
+    ''
+)

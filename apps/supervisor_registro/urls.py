@@ -8,6 +8,8 @@ from .api import (
     regionales, 
     supervisor,
     mapa,
+    sin_supervisor,
+    observatorio as api_observatorio,
 )
 
 from .views import (
@@ -18,10 +20,36 @@ from .views import (
     exportar_excel,
 )
 from .views_ajax import supervisores_datatable
+from .views_observatorio import observatorio, mapa_territorial, nomina_supervisores
+from . import views_central
 
 app_name = "supervisor_registro"
 
 urlpatterns = [
+    path("central/", views_central.inicio, name="central_inicio"),
+    path("central/supervisores/", views_central.listado, name="central_listado"),
+    path("central/supervisores/nuevo/", views_central.alta_supervisor, name="central_alta"),
+    path("central/api/usuario-cuil/", views_central.buscar_usuario_alta, name="central_usuario_cuil"),
+    path("central/supervisores/<int:pk>/asignaciones/", views_central.gestor, name="central_gestor"),
+    path("central/api/asignacion/<int:sr_id>/", views_central.detalle_asignacion, name="central_asignacion"),
+    path("central/api/asignacion/<int:sr_id>/disponibles/", views_central.buscar_disponibles, name="central_disponibles"),
+    path("central/api/asignacion/<int:sr_id>/cambios/", views_central.cambios_masivos, name="central_cambios"),
+    path("central/supervisores/<int:pk>/regionales/agregar/", views_central.agregar_regional, name="central_agregar_regional"),
+    path("central/supervisores/<int:pk>/competencias/agregar/", views_central.agregar_competencia, name="central_agregar_competencia"),
+    path("central/supervisores/<int:pk>/competencias/<int:nivel_id>/finalizar/", views_central.finalizar_competencia, name="central_finalizar_competencia"),
+    path("central/supervisores/<int:pk>/regionales/<int:sr_id>/finalizar/", views_central.finalizar_regional, name="central_finalizar_regional"),
+    path("central/supervisores/<int:pk>/situaciones/agregar/", views_central.crear_situacion, name="central_crear_situacion"),
+    path("central/supervisores/<int:pk>/situaciones/<int:situacion_id>/editar/", views_central.editar_situacion, name="central_editar_situacion"),
+    path("central/supervisores/<int:pk>/situaciones/<int:situacion_id>/finalizar/", views_central.finalizar_situacion, name="central_finalizar_situacion"),
+    path("central/supervisores/<int:pk>/contacto/", views_central.actualizar_contacto, name="central_actualizar_contacto"),
+    path("central/calidad/", views_central.calidad, name="central_calidad"),
+    path("central/auditoria/", views_central.auditoria, name="central_auditoria"),
+    path("central/exportar/", views_central.exportar_asignaciones, name="central_exportar"),
+    path("observatorio/", observatorio, name="observatorio"),
+    path("observatorio/mapa/", mapa_territorial, name="mapa_territorial"),
+    path("observatorio/nomina/", nomina_supervisores, name="nomina_ministerial"),
+    path("api/observatorio/sin-supervisor/", sin_supervisor.consultar, name="sin_supervisor"),
+    path("api/observatorio/indicadores/", api_observatorio.indicadores, name="observatorio_indicadores"),
     path("", dashboard, name="dashboard"),
 
     # -----------------------------------------------------

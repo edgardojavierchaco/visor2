@@ -1,0 +1,10 @@
+{% extends 'archivos/base/dashboard.html' %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'supervisores/css/sigse_central.css' %}">
+<section class="sigse-shell">
+<header class="sigse-top"><div><small>VISOR EDUCATIVO CHACO · SIGSE</small><h1>Administración Central</h1><p>Registro único, asignaciones y control de calidad</p></div><a class="sigse-link" href="{% url 'supervisor_registro:observatorio' %}">Observatorio ↗</a></header>
+<nav class="sigse-nav"><a href="{% url 'supervisor_registro:central_inicio' %}">Inicio</a><a href="{% url 'supervisor_registro:central_listado' %}">Supervisores</a><a href="{% url 'supervisor_registro:central_alta' %}">+ Crear supervisor</a><a href="{% url 'supervisor_registro:central_calidad' %}">Inconsistencias</a><a href="{% url 'supervisor_registro:central_auditoria' %}">Auditoría</a><a href="{% url 'supervisor_registro:central_exportar' %}">Exportar CSV</a><a href="{% url 'supervisor_registro:mapa_territorial' %}">Mapa territorial</a><a href="{% url 'supervisor_registro:nomina_ministerial' %}">Nómina ministerial</a></nav>
+{% block sigse_body %}{% endblock %}
+</section>
+{% endblock %}

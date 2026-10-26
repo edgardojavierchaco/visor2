@@ -603,6 +603,10 @@ def constancia_servicio_pdf(request, persona_id, cueanexo):
             'nivel_curricular', 'espacio_curricular', 'espacios',
             'grado_anio', 'secciones',
         )
+        .prefetch_related(
+            'ubicaciones_curriculares__grado_anio',
+            'ubicaciones_curriculares__seccion',
+        )
         .order_by('f_desde', 'ceic_id', 'pk')
     )
 

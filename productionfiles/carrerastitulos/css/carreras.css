@@ -1,0 +1,45 @@
+.ct-app { --ct-navy:#07344f;--ct-blue:#0875ba;--ct-line:#dae3eb; --ct-green:#16815d; font:14px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; color:#21364c; }
+.ct-app * {box-sizing:border-box} .ct-app h1,.ct-app h2,.ct-app p {margin-top:0} .ct-app h1{font-size:clamp(24px,3vw,32px);color:var(--ct-navy);font-weight:750}.ct-app h2{font-size:17px;font-weight:730;color:var(--ct-navy)}
+.ct-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:6px 0 20px}.ct-heading p{margin-bottom:5px;color:#647487}.ct-eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:1px;font-weight:700}.ct-tag{background:#dfeef8;color:var(--ct-navy);padding:8px 12px;border-radius:30px;white-space:nowrap}
+.ct-layout{display:grid;grid-template-columns:minmax(220px,270px) minmax(0,1fr);gap:16px}.ct-main{display:grid;gap:16px;min-width:0}.ct-card,.ct-kpi{background:#fff;border:1px solid var(--ct-line);box-shadow:0 3px 12px #162b4210;border-radius:9px;padding:16px}.ct-filters{align-self:start}.ct-filters label{font-weight:650;margin:13px 0 5px;display:block;font-size:12px}.ct-filters input,.ct-filters select{display:block;border:1px solid #cbd8e3;color:#264257;border-radius:6px;min-height:36px;padding:7px 9px;width:100%;background:#fff}.ct-filters select{height:74px}.ct-filters select option{padding:3px}.ct-hint{color:#6d7e8a;font-size:11px;margin-top:15px}
+.ct-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.ct-btn{border:1px solid #b9cddd;border-radius:6px;display:inline-block;background:#f7fbfd;color:#16466d;cursor:pointer;padding:8px 11px;text-decoration:none;font-weight:650;font-size:12px}.ct-btn:hover{background:#dfeefa;text-decoration:none}.ct-primary{background:var(--ct-blue);color:#fff;border-color:var(--ct-blue)}.ct-primary:hover{background:#055d96;color:#fff}
+.ct-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(136px,1fr));gap:12px}.ct-kpi{border-top:3px solid var(--ct-blue);min-height:95px}.ct-kpi span{color:#64768a;display:block;font-size:12px}.ct-kpi strong{color:#06699e;font-size:27px;font-variant-numeric:tabular-nums}.ct-section-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.ct-map{height:350px;background:#e5edf2;border-radius:6px;margin:12px 0}.ct-app small{color:#697d90}
+.ct-table-wrap{overflow-x:auto}.ct-table{width:100%;border-collapse:collapse;font-size:12px}.ct-table th,.ct-table td{padding:10px;border-bottom:1px solid #e2e9ef;text-align:left;vertical-align:top}.ct-table th{background:#edf4fa;color:#164060;white-space:nowrap}.ct-table tbody tr:hover{background:#f5faff}.ct-table button{white-space:nowrap}.ct-pagination{display:flex;gap:16px;justify-content:center;align-items:center;margin-top:15px}.ct-analysis{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.ct-analysis article{border:1px solid #e0e8ee;border-radius:6px;padding:12px}.ct-analysis h3{font-size:14px;color:#154e75}.ct-bar{margin:10px 0;font-size:12px}.ct-bar-label{display:flex;justify-content:space-between;gap:8px}.ct-bar-fill{height:7px;background:#127db8;border-radius:4px}.ct-bar-track{background:#ebf2f8;border-radius:4px;margin-top:4px}.ct-dialog{max-width:min(780px,95vw);width:95%;border:1px solid #d3e2eb;border-radius:10px;box-shadow:0 10px 45px #1235;padding:22px}.ct-dialog::backdrop{background:#102b42b5}.ct-close{float:right;cursor:pointer;border:0;background:transparent;font-size:26px}.ct-dialog h2{margin-right:35px}@media(max-width:850px){.ct-layout{grid-template-columns:1fr}.ct-filters{position:static}.ct-heading{display:block}.ct-tag{display:inline-block;margin-top:8px}.ct-map{height:300px}}
+
+/* Panel ministerial integrado con barra lateral AdminLTE de BNH Personas */
+.ct-ministerial-content { min-height:calc(100vh - 57px); background:#f3f6fa; }
+.ct-ministerial-topbar { border-bottom:1px solid #d9e4ed;padding:4px 2px 15px; }
+.ct-ministerial-body .ct-heading h1 { font-weight:700; }
+.ct-ministerial-body .ct-kpi { border-top:3px solid #1779af; }
+.ct-ministerial-body .ct-map { min-height:370px; width:100%; }
+.ct-ministerial-body .ct-app { max-width:100%; }
+.ct-ministerial-body .content-wrapper { overflow-x:hidden; }
+@media(max-width:991px){.ct-ministerial-body .ct-map{min-height:320px}}
+
+/* Rediseño SNU 2026: encapsulado; no altera BNH ni dashboard global */
+.ct-redesign{--ct-navy:#0b3352;--ct-blue:#0878cd;--ct-line:#dce7f0;color:#233d57;max-width:100%}
+.ct-redesign .ct-hero{background:linear-gradient(115deg,#0c3657,#096baf);border-radius:13px;color:white;padding:38px clamp(20px,4vw,52px);margin-bottom:18px;min-height:180px}
+.ct-redesign .ct-hero h1{color:white;font-size:clamp(28px,3.3vw,40px);margin:12px 0 8px}.ct-redesign .ct-hero p{color:#e5f3ff;font-size:16px;max-width:650px}
+.ct-redesign .ct-hero-chip{font-size:11px;font-weight:800;letter-spacing:.1em;color:#d4f0ff}.ct-redesign .ct-hero-action{color:white;border:1px solid #ffffff75;border-radius:7px;display:inline-block;text-decoration:none;padding:8px 14px}
+.ct-redesign .ct-ministerial-heading{padding:10px 0}.ct-redesign .ct-ministerial-heading h1 i{color:#067ad0;margin-right:8px}
+.ct-redesign .ct-kpis{grid-template-columns:repeat(6,minmax(120px,1fr));gap:10px;margin-bottom:16px}
+.ct-redesign .ct-kpi{border:1px solid #dce9f2;border-top:0;box-shadow:0 4px 12px #1644650a;min-height:94px;padding:15px 12px;display:flex;align-items:center;gap:12px;background:#f2faff}
+.ct-redesign .ct-kpi i{font-size:24px;color:#0980d1;background:#e1efff;padding:12px;border-radius:10px}
+.ct-redesign .ct-kpi:nth-child(2){background:#edf9f4}.ct-redesign .ct-kpi:nth-child(2) i,.ct-redesign .ct-kpi:nth-child(2) strong{color:#0b9b68}
+.ct-redesign .ct-kpi:nth-child(3){background:#f4f0ff}.ct-redesign .ct-kpi:nth-child(3) i,.ct-redesign .ct-kpi:nth-child(3) strong{color:#6a37d6}
+.ct-redesign .ct-kpi:nth-child(4){background:#fff1f4}.ct-redesign .ct-kpi:nth-child(4) i,.ct-redesign .ct-kpi:nth-child(4) strong{color:#d82c56}
+.ct-redesign .ct-kpi:nth-child(5){background:#fff8e9}.ct-redesign .ct-kpi:nth-child(5) i,.ct-redesign .ct-kpi:nth-child(5) strong{color:#c9790c}
+.ct-redesign .ct-kpi strong{display:block;color:#0871b9;font-size:25px;line-height:1.1;margin-top:5px}.ct-redesign .ct-kpi span{font-size:11px;line-height:1.2}
+.ct-redesign .ct-layout{grid-template-columns:minmax(220px,260px) minmax(0,1fr);align-items:start;gap:13px}.ct-redesign .ct-filter-rail{display:grid;gap:12px}.ct-redesign .ct-main{gap:12px}
+.ct-redesign .ct-card{border-radius:10px;padding:14px;box-shadow:0 3px 13px #0d38500b}.ct-redesign .ct-filters h2 i,.ct-redesign .ct-section-head i{color:#0579cf;margin-right:6px}
+.ct-redesign .ct-filters label{margin-top:11px}.ct-redesign .ct-filters select{height:61px}.ct-redesign .ct-filters input{min-height:38px}
+.ct-redesign .ct-help-card{display:grid;gap:7px}.ct-redesign .ct-help-card a{font-size:12px;color:#1169ab}.ct-redesign .ct-help-callout{background:#e5f3ff}.ct-redesign .ct-help-callout strong{color:#006fbe}
+.ct-redesign .ct-tabs{display:flex;flex-wrap:wrap;gap:3px;background:white;border:1px solid #dce7f0;border-radius:8px;overflow:hidden}.ct-redesign .ct-tab{padding:10px 13px;color:#2c5877;text-decoration:none;font-size:12px;border-right:1px solid #e7eff6}.ct-redesign .ct-tab.is-active,.ct-redesign .ct-tab:hover{background:#087acb;color:white;text-decoration:none}
+.ct-redesign .ct-dashboard-panels{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,1fr);gap:12px;align-items:start}
+.ct-redesign .ct-map{height:440px;width:100%;border:1px solid #edf2f7;margin:10px 0;background:#e8f3f8}
+.ct-redesign .ct-analysis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ct-redesign .ct-analysis article{padding:10px;min-width:0}.ct-redesign .ct-analysis h3{font-size:13px}.ct-redesign .ct-analysis .ct-bar-label{overflow-wrap:anywhere}
+.ct-redesign .ct-table th{background:#eaf3fb}.ct-redesign .ct-table tbody tr:nth-child(even){background:#f9fcff}.ct-redesign .ct-section-head h2{margin:0 0 6px}
+.ct-redesign .ct-dialog{max-height:82vh;overflow:auto}
+@media(max-width:1550px){.ct-redesign .ct-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.ct-redesign .ct-dashboard-panels{grid-template-columns:1fr}.ct-redesign .ct-analysis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:900px){.ct-redesign .ct-layout{grid-template-columns:1fr}.ct-redesign .ct-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.ct-redesign .ct-analysis{grid-template-columns:repeat(2,minmax(0,1fr))}.ct-redesign .ct-map{height:350px}}
+@media(max-width:520px){.ct-redesign .ct-kpi{gap:6px;padding:9px}.ct-redesign .ct-kpi i{font-size:18px;padding:6px}.ct-redesign .ct-kpi strong{font-size:21px}.ct-redesign .ct-analysis{grid-template-columns:1fr}}

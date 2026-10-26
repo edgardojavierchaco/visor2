@@ -1,0 +1,52 @@
+{% extends "archivos/base/dashboard.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'supervisores/css/sigse.css' %}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'supervisores/css/mapa_ministerial.css' %}?v=20261023b">
+<style>
+/* SIGSE: leyenda externa; reglas incrustadas para impedir problemas de caché y temas globales. */
+.sigse-map-page #sigseLeyendaPanel{display:block!important;position:relative!important;z-index:2!important;margin:0 0 16px!important;max-width:100%!important;background:#132238!important;border:1px solid #405b7a!important;border-radius:12px!important;box-shadow:none!important;color:#f1f5f9!important;overflow:hidden!important}
+.sigse-map-page #sigseLeyendaPanel summary{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:10px!important;padding:14px 16px!important;background:#1a314a!important;color:#f8fafc!important;font-size:14px!important;font-weight:700!important;cursor:pointer!important;list-style:none!important}
+.sigse-map-page #sigseLeyendaPanel summary::-webkit-details-marker{display:none}
+.sigse-map-page #sigseLeyendaPanel .sigse-legend-hint{color:#c5d7ed!important;font-size:12px!important;font-weight:400!important;text-align:right!important}
+.sigse-map-page #sigseLeyendaContenido{display:flex!important;flex-wrap:wrap!important;align-items:flex-start!important;gap:14px 25px!important;padding:15px 16px!important;max-height:230px!important;overflow-y:auto!important;color:#f1f5f9!important}
+.sigse-map-page #sigseLeyendaPanel:not([open]) #sigseLeyendaContenido{display:none!important}
+.sigse-map-page .sigse-legend-group{min-width:190px;flex:1 1 245px;max-width:100%}
+.sigse-map-page .sigse-legend-heading{margin:0 0 8px!important;color:#a9dcff!important;font-size:13px!important;font-weight:750!important}
+.sigse-map-page .sigse-legend-list{display:flex;flex-wrap:wrap;gap:7px 13px}
+.sigse-map-page .sigse-legend-item{display:inline-flex!important;align-items:center!important;gap:8px!important;min-width:0;color:#f1f5f9!important;font-size:12.5px!important;line-height:1.4!important}
+.sigse-map-page .sigse-legend-swatch{display:inline-block!important;flex:0 0 14px!important;width:14px!important;height:14px!important;min-width:14px!important;border:1px solid #f8fafc!important;border-radius:4px!important}
+.sigse-map-page .sigse-legend-swatch.dot{border-radius:50%!important}
+.sigse-map-page .sigse-legend-empty{color:#c9d9eb!important;font-size:13px!important}
+@media(max-width:650px){.sigse-map-page #sigseLeyendaPanel summary{flex-wrap:wrap}.sigse-map-page #sigseLeyendaContenido{max-height:190px!important}}
+.sigse-sin-panel{background:#0e1d30;border:1px solid #3a5879;border-radius:12px;padding:16px;margin:14px 0;color:#e6effb}.sigse-sin-toggle{display:inline-flex;gap:10px;align-items:center;margin-right:16px;color:#f4f8ff;cursor:pointer}.sigse-sin-panel input{accent-color:#f97316;width:18px;height:18px}.sigse-sin-panel #sigseSinEstado{font-size:13px;color:#c8d7ea}.sigse-sin-panel #sigseSinResumen{margin:10px 0;color:#fcd39d}.sigse-sin-scroll{max-height:280px;overflow:auto}.sigse-sin-tabla{width:100%;border-collapse:collapse;color:#e6effb;font-size:13px}.sigse-sin-tabla th,.sigse-sin-tabla td{padding:9px;border-bottom:1px solid #35506b;text-align:left}.sigse-sin-tabla th{background:#1e3149;position:sticky;top:0}.sigse-sin-nav{display:flex;gap:12px;align-items:center;justify-content:flex-end;margin-top:10px}.sigse-sin-nav button{background:#24476c;color:white;border:1px solid #537395;border-radius:6px;padding:7px 11px}.sigse-sin-nav button:disabled{opacity:.4}
+</style>
+<div class="sigse-shell sigse-map-page">
+<header class="sigse-top"><div><span class="sigse-eyebrow">SIGSE · INTELIGENCIA TERRITORIAL</span><h1>Mapa territorial de supervisión</h1><p>Establecimientos y ofertas con asignación registrada</p></div><div class="sigse-actions"><a class="sigse-btn" href="{% url 'supervisor_registro:observatorio' %}">← Observatorio</a><a class="sigse-btn" href="{% url 'supervisor_registro:nomina_ministerial' %}">Nómina nominal</a>{% if puede_administrar %}<a class="sigse-btn" href="{% url 'supervisor_registro:central_inicio' %}">Administración Central</a>{% endif %}</div></header>
+<div class="sigse-filterbar">
+<label>Regional<select id="filtroRegion"><option value="">Todas las regionales</option>{% for region in regiones %}<option value="{{ region.pk }}">{{ region.nombre }}</option>{% endfor %}</select></label>
+<label>Nivel / modalidad<select id="filtroNivel"><option value="">Todos</option>{% for nivel in niveles %}<option value="{{ nivel.pk }}">{{ nivel }}</option>{% endfor %}</select></label>
+<label>Situación de revista<select id="filtroSituacion"><option value="">Todas</option>{% for situacion in situaciones %}<option value="{{ situacion.pk }}">{{ situacion }}</option>{% endfor %}</select></label>
+<label>Buscar<input type="search" id="filtroBusqueda" placeholder="CUIL, apellido o escuela" /></label>
+<button class="sigse-btn" id="mapaAplicar" type="button">Buscar</button><button class="sigse-btn" id="mapaLimpiar" type="button">Limpiar</button>
+</div>
+<section class="sigse-panel"><h2 id="tituloMapa">Cobertura territorial registrada</h2><p id="estadoMapa" aria-live="polite">Cargando mapa…</p><details id="sigseLeyendaPanel" class="sigse-legend-panel" open>
+<summary><span>▦ &nbsp; Leyenda del mapa</span><span class="sigse-legend-hint">Regionales y ofertas visualizadas · desplegar / contraer</span></summary>
+<div id="sigseLeyendaContenido" class="sigse-legend-body" aria-live="polite"><span class="sigse-legend-empty">Cargando categorías…</span></div>
+</details>
+<section class="sigse-sin-panel" aria-label="Ofertas sin supervisor">
+<label class="sigse-sin-toggle"><input type="checkbox" id="sigseMostrarSin" /> <strong>Mostrar ofertas sin supervisor</strong></label>
+<span id="sigseSinEstado" aria-live="polite">Se compararán las ofertas del padrón con las asignaciones vigentes.</span>
+<div id="sigseSinResumen" hidden></div>
+<div id="sigseSinTablaCont" hidden>
+<div class="sigse-sin-scroll"><table class="sigse-sin-tabla"><thead><tr><th>Regional</th><th>CUEANEXO</th><th>Establecimiento</th><th>Oferta</th></tr></thead><tbody id="sigseSinFilas"></tbody></table></div>
+<div class="sigse-sin-nav"><button type="button" id="sigseSinPrev">← Anterior</button><span id="sigseSinPagina"></span><button type="button" id="sigseSinNext">Siguiente →</button></div>
+</div></section>
+<div id="mapaSupervisores" aria-label="Mapa de supervisores y establecimientos"></div><p class="sigse-map-help">Los filtros de regional y nivel también permiten consultar ofertas del padrón sin supervisión registrada. Las ofertas sin coordenadas se incluyen en la tabla, aunque no aparezcan en el mapa.</p></section>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'supervisores/js/mapa_supervisores.js' %}?v=20261023b"></script>
+<script src="{% static 'supervisores/js/mapa_ministerial.js' %}"></script>
+<script src="{% static 'supervisores/js/sin_supervisor.js' %}?v=20261023c"></script>
+{% endblock %}

@@ -342,12 +342,13 @@ def _tipo_designacion(
 
 def _grado(
     actividad,
+    ubicacion=None,
 ):
 
-    obj = getattr(
-        actividad,
-        "grado_anio",
-        None,
+    obj = (
+        getattr(ubicacion, "grado_anio", None)
+        if ubicacion is not None
+        else getattr(actividad, "grado_anio", None)
     )
 
     if not obj:
@@ -367,12 +368,13 @@ def _grado(
 
 def _seccion(
     actividad,
+    ubicacion=None,
 ):
 
-    obj = getattr(
-        actividad,
-        "secciones",
-        None,
+    obj = (
+        getattr(ubicacion, "seccion", None)
+        if ubicacion is not None
+        else getattr(actividad, "secciones", None)
     )
 
     if not obj:
@@ -388,6 +390,15 @@ def _seccion(
             obj
         )
     )
+
+
+def _turno(actividad, ubicacion=None):
+    value = (
+        getattr(ubicacion, "turno", None)
+        if ubicacion is not None
+        else getattr(actividad, "turno", None)
+    )
+    return _texto(value)
 
 
 # ============================================================
@@ -1485,6 +1496,11 @@ def generar_constancia_servicio_pdf(
         ),
 
         Paragraph(
+            "Turno",
+            style_label,
+        ),
+
+        Paragraph(
             "Carga horaria",
             style_label,
         ),
@@ -1501,8 +1517,10 @@ def generar_constancia_servicio_pdf(
     ]]
 
 
-    for index, actividad in enumerate(
-        actividades,
+    from .constancia_verificacion import iterar_servicios_constancia
+
+    for index, (actividad, ubicacion) in enumerate(
+        iterar_servicios_constancia(actividades),
         start=1,
     ):
 
@@ -1552,7 +1570,8 @@ def generar_constancia_servicio_pdf(
             Paragraph(
                 _html(
                     _grado(
-                        actividad
+                        actividad,
+                        ubicacion,
                     )
                 ),
                 style_body_small,
@@ -1561,7 +1580,18 @@ def generar_constancia_servicio_pdf(
             Paragraph(
                 _html(
                     _seccion(
-                        actividad
+                        actividad,
+                        ubicacion,
+                    )
+                ),
+                style_body_small,
+            ),
+
+            Paragraph(
+                _html(
+                    _turno(
+                        actividad,
+                        ubicacion,
                     )
                 ),
                 style_body_small,
@@ -1614,21 +1644,23 @@ def generar_constancia_servicio_pdf(
 
         colWidths=[
 
-            6 * mm,
-
-            23 * mm,
+            5 * mm,
 
             22 * mm,
 
-            18 * mm,
+            20 * mm,
 
-            29 * mm,
+            16 * mm,
 
-            15 * mm,
+            26 * mm,
 
-            11 * mm,
+            13 * mm,
 
-            15 * mm,
+            10 * mm,
+
+            14 * mm,
+
+            13 * mm,
 
             21 * mm,
 
@@ -1687,7 +1719,7 @@ def generar_constancia_servicio_pdf(
             (
                 "ALIGN",
                 (5, 1),
-                (9, -1),
+                (10, -1),
                 "CENTER",
             ),
 

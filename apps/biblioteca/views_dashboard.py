@@ -182,12 +182,13 @@ SECCIONES_CARGA = (
     ),
     SeccionCarga(
         'aguapey',
-        'Aguapey',
+        'Base de datos utilizada',
         Aguapey,
         'aguapey_list',
         'fa-database',
         'dns',
         (
+            ('nombre_base_datos', 'Base de datos utilizada'),
             ('total_mes', 'Total del mes'),
             ('total_base', 'Total de la base'),
             ('total_usuarios', 'Total de usuarios'),
@@ -298,14 +299,11 @@ def _numeracion_secciones_periodo(periodo):
 
 
 def _nombre_seccion_periodo(seccion, periodo):
-    if (
-        seccion.clave == 'destino-fondos'
-        and not es_planilla_biblioteca_nueva(
-            periodo.meses,
-            periodo.annos,
-        )
-    ):
-        return 'Destino de fondos'
+    if not es_planilla_biblioteca_nueva(periodo.meses, periodo.annos):
+        if seccion.clave == 'destino-fondos':
+            return 'Destino de fondos'
+        if seccion.clave == 'aguapey':
+            return 'Aguapey'
     return seccion.nombre
 
 SECCIONES_CARGA_POR_CLAVE = {
@@ -318,6 +316,29 @@ REFERENCIA_VIRTUAL_COLUMNAS_HISTORICAS = (
     ('varones', 'Varones'),
     ('total', 'Total'),
 )
+
+AGUAPEY_COLUMNAS_HISTORICAS = (
+    ('total_mes', 'Total del mes'),
+    ('total_base', 'Total de la base'),
+    ('total_usuarios', 'Total de usuarios'),
+    ('observaciones', 'Observaciones'),
+)
+
+
+def _columnas_seccion_periodo(seccion, periodo):
+    if (
+        seccion.clave == 'aguapey'
+        and not es_planilla_biblioteca_nueva(periodo.meses, periodo.annos)
+    ):
+        return AGUAPEY_COLUMNAS_HISTORICAS
+    if (
+        seccion.clave == 'referencia-virtual'
+        and not es_formato_referencia_virtual_nuevo(
+            periodo.meses, periodo.annos,
+        )
+    ):
+        return REFERENCIA_VIRTUAL_COLUMNAS_HISTORICAS
+    return seccion.columnas
 
 
 PERSONAL_COLUMNAS_ACTUALES = (
@@ -602,9 +623,7 @@ def _construir_totales_seccion(seccion_config, campos, registros):
         }
 
     indice_por_campo = {
-        campo: indice for indice, (campo, _etiqueta) in enumerate(
-            seccion_config.columnas
-        )
+        campo: indice for indice, campo in enumerate(campos)
     }
     registros_totalizables = registros
     if seccion_config.clave == 'procesos-tecnicos':
@@ -639,6 +658,12 @@ def _valor_detalle_visible(valor):
     if isinstance(valor, bool):
         return 'Sí' if valor else 'No'
     return valor
+
+
+def _valor_seccion_visible(campo, valor):
+    if campo == 'nombre_base_datos' and not (valor or '').strip():
+        return 'No informado'
+    return _valor_detalle_visible(valor)
 
 
 def _personal_tiene_valor(valor):
@@ -987,11 +1012,7 @@ class PeriodoHistoricoDetalleView(LoginRequiredMixin, View):
                 periodo.annos,
             )
         )
-        columnas = (
-            REFERENCIA_VIRTUAL_COLUMNAS_HISTORICAS
-            if referencia_virtual_legacy
-            else seccion_config.columnas
-        )
+        columnas = _columnas_seccion_periodo(seccion_config, periodo)
         campos = tuple(campo for campo, _etiqueta in columnas)
         registros = list(
             seccion_config.modelo.objects.filter(
@@ -1002,7 +1023,10 @@ class PeriodoHistoricoDetalleView(LoginRequiredMixin, View):
         )
 
         filas = [
-            [_valor_detalle_visible(valor) for valor in registro]
+            [
+                _valor_seccion_visible(campo, valor)
+                for campo, valor in zip(campos, registro)
+            ]
             for registro in registros
         ]
         if referencia_virtual_legacy:
@@ -1149,17 +1173,8 @@ class InformeDetalleView(LoginRequiredMixin, View):
                 'formato': detalle['formato'],
             })
 
-        referencia_virtual_legacy = (
-            seccion == 'referencia-virtual'
-            and not es_formato_referencia_virtual_nuevo(
-                periodo_pendiente.meses,
-                periodo_pendiente.annos,
-            )
-        )
-        columnas = (
-            REFERENCIA_VIRTUAL_COLUMNAS_HISTORICAS
-            if referencia_virtual_legacy
-            else seccion_config.columnas
+        columnas = _columnas_seccion_periodo(
+            seccion_config, periodo_pendiente,
         )
         campos = tuple(campo for campo, _etiqueta in columnas)
         registros = seccion_config.modelo.objects.filter(
@@ -1169,7 +1184,10 @@ class InformeDetalleView(LoginRequiredMixin, View):
         ).order_by('pk').values_list(*campos)
 
         filas = [
-            [_valor_detalle_visible(valor) for valor in registro]
+            [
+                _valor_seccion_visible(campo, valor)
+                for campo, valor in zip(campos, registro)
+            ]
             for registro in registros
         ]
         return JsonResponse({

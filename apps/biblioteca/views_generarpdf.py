@@ -5,6 +5,7 @@ import psycopg2
 import qrcode
 
 from io import BytesIO
+from xml.sax.saxutils import escape
 from datetime import datetime
 from collections import defaultdict
 
@@ -73,16 +74,18 @@ def valor_pdf(valor):
     return '—' if valor is None or valor == '' else valor
 
 
-def build_qr(data_str):
+def build_qr(data_str, *, width=90, border=2, max_chars=1500):
     qr = qrcode.QRCode(
         version=None,
         error_correction=ERROR_CORRECT_L,
         box_size=4,
-        border=2,
+        border=border,
     )
 
-    # 🔥 límite defensivo
-    data_str = str(data_str)[:1500]
+    data_str = str(data_str)
+    if max_chars is not None:
+        # Mantener el comportamiento del PDF histórico.
+        data_str = data_str[:max_chars]
 
     qr.add_data(data_str)
     qr.make(fit=True)
@@ -93,7 +96,66 @@ def build_qr(data_str):
     qr_img.save(buffer, format="PNG")
     buffer.seek(0)
 
-    return Image(buffer, width=90, height=90)
+    return Image(buffer, width=width, height=width)
+
+
+def _fragmentar_texto_qr(texto, limite_bytes):
+    """Divide por bytes UTF-8 sin perder caracteres ni registros."""
+    fragmentos = []
+    while texto:
+        bytes_usados = 0
+        fin = 0
+        for caracter in texto:
+            tamano = len(caracter.encode("utf-8"))
+            if bytes_usados + tamano > limite_bytes:
+                break
+            bytes_usados += tamano
+            fin += 1
+
+        if fin < len(texto):
+            salto = texto.rfind("\n", 0, fin)
+            if salto > fin // 2:
+                fin = salto + 1
+
+        fragmentos.append(texto[:fin])
+        texto = texto[fin:]
+
+    return fragmentos
+
+
+def build_qrs_seccion(titulo, cueanexo, mes, anio, detalle):
+    """QR legibles para la planilla nueva; nunca recorta datos."""
+    limite_bytes = 300
+    encabezado = f"{titulo}\nCUE-ANEXO: {cueanexo} | PERÍODO: {mes}/{anio}\n"
+    capacidad = limite_bytes - len(
+        (encabezado + "PARTE 9999/9999\n").encode("utf-8")
+    )
+    if capacidad < 16:
+        raise ValueError("El encabezado del QR es demasiado extenso.")
+
+    datos = str(detalle or "")
+    if not datos.strip():
+        datos = "Sin registros"
+
+    fragmentos = _fragmentar_texto_qr(datos, capacidad)
+    total = len(fragmentos)
+    codigos = []
+    for indice, fragmento in enumerate(fragmentos, start=1):
+        parte = f"PARTE {indice}/{total}\n" if total > 1 else ""
+        contenido = f"{encabezado}{parte}{fragmento}"
+        if len(contenido.encode("utf-8")) > limite_bytes:
+            raise ValueError("Los datos del QR superan la capacidad prevista.")
+        codigos.append(
+            build_qr(contenido, width=110, border=4, max_chars=None)
+        )
+    return codigos
+
+
+def build_qr_versionado(planilla_nueva, titulo, cueanexo, mes, anio, datos, legado):
+    if planilla_nueva:
+        return build_qrs_seccion(titulo, cueanexo, mes, anio, datos)
+    return build_qr(legado)
+
 
 class ReportEngine:
     def __init__(self, story, styles):
@@ -101,6 +163,44 @@ class ReportEngine:
         self.styles = styles
 
     def add_section(self, title, table, qr=None):
+        if isinstance(qr, list):
+            # En la planilla nueva, los QR extensos pueden ocupar varias filas
+            # y páginas; el formato histórico conserva su bloque original.
+            self.story.append(KeepTogether([
+                Paragraph(title, self.styles["Heading3"]),
+                table,
+                Spacer(1, 6),
+            ]))
+            if len(qr) == 1:
+                self.story.append(qr[0])
+            else:
+                for inicio in range(0, len(qr), 7):
+                    celdas = [
+                        [
+                            qr[indice],
+                            Paragraph(
+                                f"QR {indice + 1}/{len(qr)}",
+                                self.styles["Normal"],
+                            ),
+                        ]
+                        for indice in range(inicio, min(inicio + 7, len(qr)))
+                    ]
+                    fila_qr = Table(
+                        [celdas], colWidths=[130] * len(celdas)
+                    )
+                    if inicio == 0:
+                        self.story.append(KeepTogether([
+                            Paragraph(
+                                f"Códigos QR: {title}",
+                                self.styles["Normal"],
+                            ),
+                            fila_qr,
+                        ]))
+                    else:
+                        self.story.append(fila_qr)
+            self.story.append(Spacer(1, 12))
+            return
+
         block = []
 
         block.append(Paragraph(title, self.styles["Heading3"]))
@@ -282,7 +382,11 @@ def generar_pdf_material_bibliografico(request):
     engine.add_section(
         "1. MATERIAL BIBLIOGRÁFICO Y ESPECIAL",
         build_table(data),
-        build_qr(f"MATERIAL BIBLIOGRÁFICO {cueanexos} {mes}/{anio}\n\n")
+        build_qr_versionado(
+            planilla_nueva, "MATERIAL BIBLIOGRÁFICO Y ESPECIAL",
+            cueanexos, mes, anio, qr_material_data,
+            f"MATERIAL BIBLIOGRÁFICO {cueanexos} {mes}/{anio}\n\n",
+        )
     )
 
     # =========================================================
@@ -313,7 +417,11 @@ def generar_pdf_material_bibliografico(request):
     engine.add_section(
         f"{'2.1' if planilla_nueva else '2'}. SERVICIO DE REFERENCIA",
         build_table(data),
-        build_qr(f"SERVICIO DE REFERENCIA {cueanexos} {mes}/{anio}\n\n{qr_servref_data}")
+        build_qr_versionado(
+            planilla_nueva, "SERVICIO DE REFERENCIA",
+            cueanexos, mes, anio, qr_servref_data,
+            f"SERVICIO DE REFERENCIA {cueanexos} {mes}/{anio}\n\n{qr_servref_data}",
+        )
     )
     
 
@@ -373,7 +481,11 @@ def generar_pdf_material_bibliografico(request):
     engine.add_section(
         f"{'2.2' if planilla_nueva else '3'}. SERVICIO DE REFERENCIA VIRTUAL",
         build_table(data),
-        build_qr(f"VIRTUAL {cueanexos} {mes}/{anio}\n\n{qr_virtual_data}")
+        build_qr_versionado(
+            planilla_nueva, "SERVICIO DE REFERENCIA VIRTUAL",
+            cueanexos, mes, anio, qr_virtual_data,
+            f"VIRTUAL {cueanexos} {mes}/{anio}\n\n{qr_virtual_data}",
+        )
     )
 
     if not planilla_nueva:
@@ -487,7 +599,11 @@ def generar_pdf_material_bibliografico(request):
     engine.add_section(
         f"{'3' if planilla_nueva else '5'}. INFORME PEDAGÓGICO DE SERVICIOS",
         build_table(data),
-        build_qr(f"PEDAGÓGICO {cueanexos} {mes}/{anio}\n\n{qr_pedagogico_data}")
+        build_qr_versionado(
+            planilla_nueva, "INFORME PEDAGÓGICO DE SERVICIOS",
+            cueanexos, mes, anio, qr_pedagogico_data,
+            f"PEDAGÓGICO {cueanexos} {mes}/{anio}\n\n{qr_pedagogico_data}",
+        )
     )
     
 
@@ -519,7 +635,11 @@ def generar_pdf_material_bibliografico(request):
     engine.add_section(
         f"{'4' if planilla_nueva else '6'}. ASISTENCIA DE USUARIOS BIBLIOTECAS ESCOLARES",
         build_table(data),
-        build_qr(f"ASISTENCIA {cueanexos} {mes}/{anio}\n\n{qr_asistencia_data}")
+        build_qr_versionado(
+            planilla_nueva, "ASISTENCIA DE USUARIOS",
+            cueanexos, mes, anio, qr_asistencia_data,
+            f"ASISTENCIA {cueanexos} {mes}/{anio}\n\n{qr_asistencia_data}",
+        )
     )
     
 
@@ -540,7 +660,11 @@ def generar_pdf_material_bibliografico(request):
     engine.add_section(
         f"{'5' if planilla_nueva else '7'}. INSTITUCIONES A LAS QUE PRESTA SERVICIOS",
         build_table(data),
-        build_qr(f"INSTITUCIONES {cueanexos} {mes}/{anio}\n\n{qr_material_data}")
+        build_qr_versionado(
+            planilla_nueva, "INSTITUCIONES A LAS QUE PRESTA SERVICIOS",
+            cueanexos, mes, anio, qr_material_data,
+            f"INSTITUCIONES {cueanexos} {mes}/{anio}\n\n{qr_material_data}",
+        )
     )
     
     
@@ -626,32 +750,68 @@ def generar_pdf_material_bibliografico(request):
     engine.add_section(
         f"{'6' if planilla_nueva else '8'}. SECTOR PROCESOS TÉCNICOS",
         build_table(data),
-        build_qr(f"PROCESOS {cueanexos} {mes}/{anio}\n\n{qr_material_data}")
+        build_qr_versionado(
+            planilla_nueva, "PROCESOS TÉCNICOS",
+            cueanexos, mes, anio, qr_material_data,
+            f"PROCESOS {cueanexos} {mes}/{anio}\n\n{qr_material_data}",
+        )
     )   
     
 
-    # ===========
-    # 7. AGUAPEY
-    # ===========
+    # ======================================
+    # 7. BASE DE DATOS COMO RECURSO DE GESTIÓN
+    # ======================================
     aguapey = Aguapey.objects.filter(cueanexo=cueanexo_activo, mes=mes, anio=anio).first()
 
-    data = [["MES", "BASE", "USUARIOS", "OBSERVACIONES"], [
-        getattr(aguapey, "total_mes", 0),
-        getattr(aguapey, "total_base", 0),
-        getattr(aguapey, "total_usuarios", 0),
-        getattr(aguapey, "observaciones", ""),
-    ]]
+    # Conservar íntegro el formato anterior a NOVIEMBRE 2026.
+    if planilla_nueva:
+        nombre_base = (getattr(aguapey, "nombre_base_datos", "") or "").strip() or "No informado"
+        data = [["BASE DE DATOS UTILIZADA", "MES", "BASE", "USUARIOS", "OBSERVACIONES"], [
+            Paragraph(escape(nombre_base), styles["BodyText"]),
+            getattr(aguapey, "total_mes", 0),
+            getattr(aguapey, "total_base", 0),
+            getattr(aguapey, "total_usuarios", 0),
+            Paragraph(escape(getattr(aguapey, "observaciones", "") or ""), styles["BodyText"]),
+        ]]
+        # Anchos acotados para que nombres largos no compriman los totales.
+        ancho_disponible = doc.width - 12
+        tabla_base_datos = Table(
+            data,
+            colWidths=[ancho_disponible * proporcion for proporcion in (0.25, 0.09, 0.09, 0.12, 0.45)],
+            repeatRows=1,
+        )
+        tabla_base_datos.setStyle(TABLE_STYLE_GLOBAL)
+    else:
+        data = [["MES", "BASE", "USUARIOS", "OBSERVACIONES"], [
+            getattr(aguapey, "total_mes", 0),
+            getattr(aguapey, "total_base", 0),
+            getattr(aguapey, "total_usuarios", 0),
+            getattr(aguapey, "observaciones", ""),
+        ]]
+        tabla_base_datos = build_table(data)
 
+    # El QR del formato histórico mantiene exactamente su contenido original.
     qr_aguapey_data = f"BASE DE DATOS COMO RECURSO DE GESTION | MES: {getattr(aguapey, 'total_mes', 0)} | BASE: {getattr(aguapey, 'total_base', 0)} | USUARIOS: {getattr(aguapey, 'total_usuarios', 0)} | OBS: {getattr(aguapey, 'observaciones', '')}"
-    
+    qr_aguapey_nuevo = (
+        f"Base de datos utilizada: {nombre_base}\n"
+        f"Total del mes: {aguapey.total_mes}\n"
+        f"Total de la base: {aguapey.total_base}\n"
+        f"Total de usuarios: {aguapey.total_usuarios}\n"
+        f"Observaciones: {aguapey.observaciones}"
+        if planilla_nueva and aguapey is not None else ""
+    )
+
     engine.add_section(
         (
             "7. BASE DE DATOS COMO RECURSO DE GESTIÓN"
             if planilla_nueva
             else "9. BASE DE DATOS COMO RECURSOS DE GESTION"
         ),
-        build_table(data),
-        build_qr(qr_aguapey_data)
+        tabla_base_datos,
+        build_qr_versionado(
+            planilla_nueva, "BASE DE DATOS COMO RECURSO DE GESTIÓN",
+            cueanexos, mes, anio, qr_aguapey_nuevo, qr_aguapey_data,
+        )
     )
     
 
@@ -676,7 +836,10 @@ def generar_pdf_material_bibliografico(request):
             else "10. COMPRAS REALIZADAS CON EL FONDO BIBLIOTECARIO CHAQUEÑO"
         ),
         build_table(data),
-        build_qr(qr_fondos_data)
+        build_qr_versionado(
+            planilla_nueva, "COMPRAS REALIZADAS CON EL FBCH",
+            cueanexos, mes, anio, qr_fondos_data, qr_fondos_data,
+        )
     )
 
     doc.build(story, canvasmaker=canvasmaker)
