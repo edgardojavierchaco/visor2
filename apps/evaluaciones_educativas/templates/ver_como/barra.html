@@ -1,0 +1,48 @@
+<div id="ver-como-barra" class="{% if editar %}vc-editando{% endif %}" role="status">
+    <style>
+        #ver-como-barra { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2147483000; font-family: 'Inter', system-ui, sans-serif; font-size: 0.85rem; background: #0a1628; color: #fff; border-top: 3px solid #00bcd4; box-shadow: 0 -6px 20px rgba(0,0,0,0.25); }
+        #ver-como-barra.vc-editando { border-top-color: #ef4444; }
+        #ver-como-barra .vc-inner { max-width: 1200px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        #ver-como-barra .vc-quien { flex: 1; min-width: 220px; line-height: 1.35; }
+        #ver-como-barra .vc-quien strong { color: #00bcd4; }
+        #ver-como-barra.vc-editando .vc-quien strong { color: #fca5a5; }
+        #ver-como-barra .vc-sub { color: rgba(255,255,255,0.55); font-size: 0.75rem; }
+        #ver-como-barra .vc-modo { padding: 3px 10px; border-radius: 20px; font-weight: 700; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px; background: rgba(0,188,212,0.2); color: #00bcd4; border: 1px solid rgba(0,188,212,0.4); }
+        #ver-como-barra.vc-editando .vc-modo { background: rgba(239,68,68,0.2); color: #fca5a5; border-color: rgba(239,68,68,0.5); }
+        #ver-como-barra form { margin: 0; }
+        #ver-como-barra button { border: none; border-radius: 8px; padding: 7px 14px; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
+        #ver-como-barra .vc-btn-editar { background: #f8fafc; color: #0a1628; }
+        #ver-como-barra.vc-editando .vc-btn-editar { background: #00bcd4; color: #fff; }
+        #ver-como-barra .vc-btn-salir { background: #ef4444; color: #fff; }
+        body { padding-bottom: 72px !important; }
+    </style>
+    <div class="vc-inner">
+        <i class="bi bi-person-bounding-box" style="font-size:1.3rem; color:{% if editar %}#fca5a5{% else %}#00bcd4{% endif %};"></i>
+        <div class="vc-quien">
+            Viendo como <strong>{{ objetivo.apellido }}, {{ objetivo.nombres }}</strong>
+            · {{ objetivo.nivelacceso_id }}{% if objetivo.perfil.rol %} / {{ objetivo.perfil.rol.nombre }}{% endif %}
+            <div class="vc-sub">CUIL {{ objetivo.username }} · sesión real: {{ real.apellido }}, {{ real.nombres }}</div>
+        </div>
+        <span class="vc-modo">{% if editar %}Edición habilitada{% else %}Solo lectura{% endif %}</span>
+        <form method="post" action="{% url 'evaluaciones_educativas:ver_como:edicion' %}" id="vc-form-edicion">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <input type="hidden" name="next" value="{{ next }}">
+            <button type="submit" class="vc-btn-editar">
+                {% if editar %}<i class="bi bi-lock-fill"></i> Volver a solo lectura{% else %}<i class="bi bi-pencil-fill"></i> Habilitar edición{% endif %}
+            </button>
+        </form>
+        <form method="post" action="{% url 'evaluaciones_educativas:ver_como:salir' %}">
+            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+            <button type="submit" class="vc-btn-salir"><i class="bi bi-box-arrow-left"></i> Salir</button>
+        </form>
+    </div>
+    {% if not editar %}
+    <script>
+    document.getElementById('vc-form-edicion').addEventListener('submit', function (e) {
+        if (!confirm('Vas a poder modificar datos como {{ objetivo.apellido|escapejs }}, {{ objetivo.nombres|escapejs }}. Cada cambio queda registrado a tu nombre. ¿Continuar?')) {
+            e.preventDefault();
+        }
+    });
+    </script>
+    {% endif %}
+</div>

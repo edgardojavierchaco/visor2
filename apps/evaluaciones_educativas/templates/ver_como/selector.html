@@ -1,0 +1,138 @@
+{% extends 'dashboard/bodydirector.html' %}
+{% load static %}
+
+{% block head %}
+{{ block.super }}
+<title>Ver como — Evaluaciones Educativas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+    .vc-wrapper { font-family: 'Inter', sans-serif; max-width: 980px; margin: 0 auto; padding: 30px 16px 80px; }
+    .vc-volver { display: inline-flex; align-items: center; gap: 6px; color: #64748b; text-decoration: none; font-size: 0.85rem; font-weight: 600; padding: 6px 4px; }
+    .vc-volver:hover { color: #0097a7; text-decoration: none; }
+    .vc-hero { text-align: center; padding: 22px 20px 18px; }
+    .vc-hero h1 { font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 900; color: #0a1628; margin-bottom: 6px; }
+    .vc-hero h1 span { color: #00bcd4; }
+    .vc-hero p { color: #64748b; font-size: 0.92rem; margin: 0 auto; max-width: 620px; }
+    .vc-alert { border-radius: 12px; padding: 12px 16px; font-size: 0.88rem; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+    .vc-alert-success, .vc-alert-info { background: #ecfeff; border: 1px solid #a5f3fc; color: #155e75; }
+    .vc-alert-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+    .vc-alert-error { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+
+    .vc-card { background: #fff; border-radius: 16px; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 4px 20px rgba(0,0,0,0.05); padding: 20px 22px; margin-bottom: 20px; }
+    .vc-step { font-size: 0.75rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .vc-step b { background: #00bcd4; color: #fff; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; }
+
+    .vc-ops { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+    .vc-op { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: #f8fafc; color: #1e293b; text-decoration: none; font-weight: 700; font-size: 0.88rem; transition: all 0.2s; }
+    .vc-op:hover { border-color: #00bcd4; text-decoration: none; color: #0097a7; }
+    .vc-op.active { border-color: #00bcd4; background: rgba(0,188,212,0.08); color: #0097a7; box-shadow: 0 0 0 3px rgba(0,188,212,0.15); }
+    .vc-op i { font-size: 1.2rem; }
+
+    .vc-roles { display: flex; gap: 8px; flex-wrap: wrap; }
+    .vc-rol { padding: 7px 14px; border-radius: 50px; font-size: 0.83rem; font-weight: 600; text-decoration: none; border: 1.5px solid #e2e8f0; color: #475569; background: #f8fafc; }
+    .vc-rol:hover { border-color: #00bcd4; color: #0097a7; text-decoration: none; }
+    .vc-rol.active { background: linear-gradient(135deg, #00bcd4, #00acc1); color: #fff; border-color: transparent; }
+
+    .vc-search { display: flex; gap: 10px; }
+    .vc-search input { flex: 1; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-family: inherit; font-size: 0.9rem; background: #f8fafc; outline: none; }
+    .vc-search input:focus { border-color: #00bcd4; background: #fff; box-shadow: 0 0 0 3px rgba(0,188,212,0.15); }
+    .vc-search button { padding: 10px 18px; border: none; border-radius: 10px; background: linear-gradient(135deg, #00bcd4, #00acc1); color: #fff; font-weight: 700; cursor: pointer; }
+
+    .vc-users { margin-top: 14px; border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; overflow: hidden; }
+    .vc-user { display: flex; align-items: center; gap: 12px; padding: 11px 16px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+    .vc-user:last-child { border-bottom: none; }
+    .vc-user:hover { background: #f8fafc; }
+    .vc-avatar { width: 38px; height: 38px; border-radius: 10px; background: rgba(0,188,212,0.1); color: #00bcd4; display: flex; align-items: center; justify-content: center; font-weight: 800; border: 1px solid rgba(0,188,212,0.2); flex-shrink: 0; }
+    .vc-user-info { flex: 1; min-width: 0; }
+    .vc-user-nombre { font-weight: 700; color: #1e293b; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vc-user-sub { font-size: 0.76rem; color: #64748b; }
+    .vc-user-sub code { color: #64748b; }
+    .vc-btn-ver { padding: 7px 14px; border: none; border-radius: 8px; background: #0a1628; color: #fff; font-weight: 700; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .vc-btn-ver:hover { background: #00bcd4; }
+    .vc-vacio { padding: 26px; text-align: center; color: #94a3b8; font-size: 0.88rem; }
+    .vc-nota { font-size: 0.78rem; color: #94a3b8; margin-top: 10px; }
+</style>
+{% endblock %}
+
+{% block content %}
+{{ block.super }}
+<div class="vc-wrapper">
+
+    <a href="{% url 'evaluaciones_educativas:dashboard' %}" class="vc-volver"><i class="bi bi-arrow-left"></i> Volver al panel principal</a>
+
+    {% for message in messages %}
+    <div class="vc-alert vc-alert-{{ message.tags|default:'info' }}"><i class="bi bi-info-circle-fill"></i> {{ message }}</div>
+    {% endfor %}
+
+    <div class="vc-hero">
+        <h1>Ver <span>como</span></h1>
+        <p>Elegí un operativo, un rol y un usuario para entrar exactamente como lo ve esa persona. Arrancás en <strong>solo lectura</strong>; si necesitás corregir algo, habilitás la edición desde la barra inferior.</p>
+    </div>
+
+    {% if activo %}
+    <div class="vc-alert vc-alert-warning">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        Ya tenés un "Ver como" activo. Elegir otro usuario lo reemplaza.
+    </div>
+    {% endif %}
+
+    <div class="vc-card">
+        <div class="vc-step"><b>1</b> Operativo</div>
+        <div class="vc-ops">
+            <a href="?" class="vc-op {% if not operativo %}active{% endif %}"><i class="bi bi-grid"></i> Todos</a>
+            {% for op in operativos %}
+            <a href="?operativo={{ op.id }}" class="vc-op {% if operativo.id == op.id %}active{% endif %}">
+                <i class="bi {{ op.icono }}" style="color:{{ op.color }};"></i> {{ op.titulo }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="vc-card">
+        <div class="vc-step"><b>2</b> Rol{% if operativo %} con acceso a {{ operativo.titulo }}{% endif %}</div>
+        <div class="vc-roles">
+            {% for r in roles %}
+            <a href="?{% if operativo %}operativo={{ operativo.id }}&{% endif %}rol={{ r|urlencode }}" class="vc-rol {% if r == rol %}active{% endif %}">{{ r }}</a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="vc-card">
+        <div class="vc-step"><b>3</b> Usuario</div>
+        <form method="get" class="vc-search">
+            {% if operativo %}<input type="hidden" name="operativo" value="{{ operativo.id }}">{% endif %}
+            {% if rol %}<input type="hidden" name="rol" value="{{ rol }}">{% endif %}
+            <input type="text" name="q" value="{{ q }}" placeholder="Buscar por CUIL, apellido o nombre{% if rol %} dentro de {{ rol }}{% endif %}..." autocomplete="off">
+            <button type="submit"><i class="bi bi-search"></i> Buscar</button>
+        </form>
+
+        {% if usuarios is None %}
+            <div class="vc-vacio">Elegí un rol o buscá un usuario para ver la lista.</div>
+        {% elif not usuarios %}
+            <div class="vc-users"><div class="vc-vacio">No se encontraron usuarios activos con ese criterio.</div></div>
+        {% else %}
+            <div class="vc-users">
+                {% for u in usuarios %}
+                <div class="vc-user">
+                    <div class="vc-avatar">{{ u.apellido|first|upper }}{{ u.nombres|first|upper }}</div>
+                    <div class="vc-user-info">
+                        <div class="vc-user-nombre">{{ u.apellido }}, {{ u.nombres }}</div>
+                        <div class="vc-user-sub"><code>{{ u.username }}</code> · {{ u.nivelacceso_id }}{% if u.perfil.rol %} / {{ u.perfil.rol.nombre }}{% endif %}</div>
+                    </div>
+                    <form method="post" action="{% url 'evaluaciones_educativas:ver_como:iniciar' %}" style="margin:0;">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_id" value="{{ u.pk }}">
+                        {% if operativo %}<input type="hidden" name="operativo" value="{{ operativo.id }}">{% endif %}
+                        <button type="submit" class="vc-btn-ver"><i class="bi bi-eye-fill"></i> Ver como</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% if hay_mas %}
+            <div class="vc-nota">Se muestran los primeros {{ max_resultados }}. Afiná la búsqueda para encontrar a alguien en particular.</div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

@@ -12,6 +12,218 @@ def _es_supervisor(usuario):
     )
 
 
+# ================================================================
+# OPERATIVOS
+# Jerarquía: Operativo ➔ Años ➔ Meses del Operativo ➔ Links
+#
+# Campos de cada link:
+#   titulo      → texto del botón
+#   icono       → clase Bootstrap Icon (ej: 'bi-bar-chart-line')
+#   roles       → lista de nivelacceso_id con permiso para ver el link
+#   url         → nombre de URL Django (mismo para todos los roles)
+#   url_director / url_regional / url_funcionario
+#               → cuando la URL destino cambia según el rol
+# ================================================================
+OPERATIVOS = [
+
+    # ── Fluidez Lectora ──────────────────────────────────────────
+    {
+        'id':          'fluidez',
+        'titulo':      'Fluidez Lectora',
+        'descripcion': 'Evaluación de fluidez y comprensión lectora',
+        'icono':       'bi-book-half',
+        'color':       '#00bcd4',
+        'anios': [
+            {
+                'anio': '2026',
+                'meses': [
+                    {
+                        'mes':         'Octubre',
+                        'descripcion': 'Evaluación — Octubre 2026',
+                        'icono':       'bi-calendar-event',
+                        'links': [
+                            {
+                                'titulo': 'Gestión de Tabuladores',
+                                'icono':  'bi-people-fill',
+                                'url':    'evaluaciones_educativas:fluidez_octubre_2026:gestion_tabuladores',
+                                'roles':  ['Regional'],
+                            },
+                            {
+                                'titulo': 'Gestión de Aplicadores',
+                                'icono':  'bi-people-fill',
+                                'url':    'evaluaciones_educativas:fluidez_octubre_2026:gestion_aplicadores',
+                                'roles':  ['Regional'],
+                            },
+                        ],
+                    },
+                    {
+                        'mes':         'Junio',
+                        'descripcion': 'Evaluación — Junio 2026',
+                        'icono':       'bi-calendar-event',
+                        'links': [
+                            {
+                                'titulo': 'Carga de datos',
+                                'icono':  'bi-pencil-square',
+                                'url':    'evaluaciones_educativas:fluidez_2026:lista',
+                                'roles':  ['Director/a'],
+                            },
+                            {
+                                'titulo':          'Análisis de Resultados',
+                                'icono':           'bi-bar-chart-line',
+                                'url_director':    'evaluaciones_educativas:fluidez_2026:analisis_evaluacion',
+                                'url_regional':    'evaluaciones_educativas:fluidez_2026:analisis_evaluacion_junio_2026',
+                                'url_funcionario': 'evaluaciones_educativas:fluidez_2026:analisis_completo_evaluacion_junio_2026',
+                                'roles':           ['Director/a', 'Regional', 'Supervisor', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse'],
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                'anio': '2025',
+                'meses': [
+                    {
+                        'mes':         'Mayo',
+                        'descripcion': 'Evaluación — Mayo 2025',
+                        'icono':       'bi-calendar-check',
+                        'links': [
+                            {
+                                'titulo': 'Análisis Mayo 2025',
+                                'icono':  'bi-calendar2-range',
+                                'url':    'evaluaciones_educativas:fluidez_2025:analisis_evaluacion_mayo_2025',
+                                'roles':  ['Director/a'],
+                            },
+                        ],
+                    },
+                    {
+                        'mes':         'Noviembre',
+                        'descripcion': 'Evaluación — Noviembre 2025',
+                        'icono':       'bi-calendar-event',
+                        'links': [
+                            {
+                                'titulo': 'Carga de datos',
+                                'icono':  'bi-pencil-square',
+                                'url':    'evaluaciones_educativas:fluidez_2025:grados',
+                                'roles':  ['Director/a'],
+                            },
+                            {
+                                'titulo':          'Análisis Noviembre 2025',
+                                'icono':           'bi-bar-chart-steps',
+                                'url_director':    'evaluaciones_educativas:fluidez_2025:analisis_evaluacion',
+                                'url_regional':    'evaluaciones_educativas:fluidez_2025:analisis_evaluacion_noviembre_2025',
+                                'url_funcionario': 'evaluaciones_educativas:fluidez_2025:analisis_completo_evaluacion_noviembre_2025',
+                                'roles':           ['Director/a', 'Regional', 'Supervisor', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse'],
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
+
+    # ── Diagnóstico ──────────────────────────────────────────────
+    {
+        'id':          'diagnostico',
+        'titulo':      'Diagnóstico',
+        'descripcion': 'Evaluación diagnóstica institucional',
+        'icono':       'bi-journal-medical',
+        'color':       '#6366f1',
+        'anios': [
+            {
+                'anio': '2026',
+                'meses': [
+                    {
+                        'mes':         'Diagnóstico 2026',
+                        'descripcion': 'Evaluación diagnóstica — 2026',
+                        'icono':       'bi-calendar-check',
+                        'links': [
+                            {
+                                'titulo': 'Carga de datos',
+                                'icono':  'bi-pencil-square',
+                                'url':    'evaluaciones_educativas:diagnostico_2026:inicio',
+                                'roles':  ['Director/a'],
+                            },
+                            {
+                                'titulo': 'Análisis de Resultados',
+                                'icono':  'bi-graph-up-arrow',
+                                'url':    'evaluaciones_educativas:diagnostico_2026:analisis_evaluacion',
+                                'roles':  ['Director/a', 'Regional', 'Supervisor', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse'],
+                            },
+                            # {
+                            #     'titulo': 'Progreso de Alumnos',
+                            #     'icono':  'bi-person-lines-fill',
+                            #     'url':    'evaluaciones_educativas:diagnostico_2026:progreso_alumnos',
+                            #     'roles':  ['Director/a', 'Regional', 'Funcionario', 'Ministro', 'Subse'],
+                            # },
+                        ],
+                    },
+                ],
+            },
+            {
+                'anio': '2025',
+                'meses': [
+                    {
+                        'mes':         'Diagnóstico 2025',
+                        'descripcion': 'Datos históricos — 2025',
+                        'icono':       'bi-calendar2-check',
+                        'links': [
+                            {
+                                'titulo': 'Análisis de Resultados',
+                                'icono':  'bi-graph-up-arrow',
+                                'url':    'evaluaciones_educativas:diagnostico_2025:analisis_evaluacion',
+                                'roles':  ['Director/a', 'Regional', 'Supervisor', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse'],
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
+
+   # ── Validaciones Aprender 2026 ───────────────────────────────
+    {
+        'id':          'validaciones_2026',
+        'titulo':      'APRENDER Censal 2026',
+        'descripcion': 'Gestión sobre operativo Aprender',
+        'icono':       'bi-check2-circle',
+        'color':       '#06b6d4',
+        'anios': [
+            {
+                'anio': '2026',
+                'meses': [
+                    # {
+                    #     'mes':         'Aprender 2026',
+                    #     'descripcion': 'Validaciones de matrícula y secciones',
+                    #     'icono':       'bi-calendar-check',
+                    #     'links': [
+                    #         {
+                    #             'titulo': 'Gestión de Validaciones',
+                    #             'icono':  'bi-shield-check',
+                    #             'url':    'evaluaciones_educativas:validaciones_2026:lista',
+                    #             'roles':  ['Regional', 'Funcionario', 'Ministro', 'Subse'],
+                    #         },
+                    #     ],
+                    # },
+                    {
+                        'mes':         'Aprender 2026',
+                        'descripcion': 'Gestión de aplicadores y veedores',
+                        'icono':       'bi-calendar-check',
+                        'links': [
+                            {
+                                'titulo': 'Gestión de Aplicadores y Veedores',
+                                'icono':  'bi-shield-check',
+                                'url':    'evaluaciones_educativas:validaciones_2026:personas_lista',
+                                'roles':  ['Regional', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse'],
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
+]
+
+
 @login_required
 def dashboard(request):
     usuario = request.user
@@ -31,220 +243,9 @@ def dashboard(request):
     if usuario.is_superuser and not (es_director or es_regional or es_funcionario):
         es_funcionario = True
 
-    # ================================================================
-    # OPERATIVOS
-    # Jerarquía: Operativo ➔ Años ➔ Meses del Operativo ➔ Links
-    #
-    # Campos de cada link:
-    #   titulo      → texto del botón
-    #   icono       → clase Bootstrap Icon (ej: 'bi-bar-chart-line')
-    #   roles       → lista de nivelacceso_id con permiso para ver el link
-    #   url         → nombre de URL Django (mismo para todos los roles)
-    #   url_director / url_regional / url_funcionario
-    #               → cuando la URL destino cambia según el rol
-    # ================================================================
-    operativos = [
-
-        # ── Fluidez Lectora ──────────────────────────────────────────
-        {
-            'id':          'fluidez',
-            'titulo':      'Fluidez Lectora',
-            'descripcion': 'Evaluación de fluidez y comprensión lectora',
-            'icono':       'bi-book-half',
-            'color':       '#00bcd4',
-            'anios': [
-                {
-                    'anio': '2026',
-                    'meses': [
-                        {
-                            'mes':         'Octubre',
-                            'descripcion': 'Evaluación — Octubre 2026',
-                            'icono':       'bi-calendar-event',
-                            'links': [
-                                {
-                                    'titulo': 'Gestión de Tabuladores',
-                                    'icono':  'bi-people-fill',
-                                    'url':    'evaluaciones_educativas:fluidez_octubre_2026:gestion_tabuladores',
-                                    'roles':  ['Regional'],
-                                },
-                                {
-                                    'titulo': 'Gestión de Aplicadores',
-                                    'icono':  'bi-people-fill',
-                                    'url':    'evaluaciones_educativas:fluidez_octubre_2026:gestion_aplicadores',
-                                    'roles':  ['Regional'],
-                                },
-                            ],
-                        },
-                        {
-                            'mes':         'Junio',
-                            'descripcion': 'Evaluación — Junio 2026',
-                            'icono':       'bi-calendar-event',
-                            'links': [
-                                {
-                                    'titulo': 'Carga de datos',
-                                    'icono':  'bi-pencil-square',
-                                    'url':    'evaluaciones_educativas:fluidez_2026:lista',
-                                    'roles':  ['Director/a'],
-                                },
-                                {
-                                    'titulo':          'Análisis de Resultados',
-                                    'icono':           'bi-bar-chart-line',
-                                    'url_director':    'evaluaciones_educativas:fluidez_2026:analisis_evaluacion',
-                                    'url_regional':    'evaluaciones_educativas:fluidez_2026:analisis_evaluacion_junio_2026',
-                                    'url_funcionario': 'evaluaciones_educativas:fluidez_2026:analisis_completo_evaluacion_junio_2026',
-                                    'roles':           ['Director/a', 'Regional', 'Supervisor', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse'],
-                                },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    'anio': '2025',
-                    'meses': [
-                        {
-                            'mes':         'Mayo',
-                            'descripcion': 'Evaluación — Mayo 2025',
-                            'icono':       'bi-calendar-check',
-                            'links': [
-                                {
-                                    'titulo': 'Análisis Mayo 2025',
-                                    'icono':  'bi-calendar2-range',
-                                    'url':    'evaluaciones_educativas:fluidez_2025:analisis_evaluacion_mayo_2025',
-                                    'roles':  ['Director/a'],
-                                },
-                            ],
-                        },
-                        {
-                            'mes':         'Noviembre',
-                            'descripcion': 'Evaluación — Noviembre 2025',
-                            'icono':       'bi-calendar-event',
-                            'links': [
-                                {
-                                    'titulo': 'Carga de datos',
-                                    'icono':  'bi-pencil-square',
-                                    'url':    'evaluaciones_educativas:fluidez_2025:grados',
-                                    'roles':  ['Director/a'],
-                                },
-                                {
-                                    'titulo':          'Análisis Noviembre 2025',
-                                    'icono':           'bi-bar-chart-steps',
-                                    'url_director':    'evaluaciones_educativas:fluidez_2025:analisis_evaluacion',
-                                    'url_regional':    'evaluaciones_educativas:fluidez_2025:analisis_evaluacion_noviembre_2025',
-                                    'url_funcionario': 'evaluaciones_educativas:fluidez_2025:analisis_completo_evaluacion_noviembre_2025',
-                                    'roles':           ['Director/a', 'Regional', 'Supervisor', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse'],
-                                },
-                            ],
-                        },
-                    ],
-                },
-            ],
-        },
-
-        # ── Diagnóstico ──────────────────────────────────────────────
-        {
-            'id':          'diagnostico',
-            'titulo':      'Diagnóstico',
-            'descripcion': 'Evaluación diagnóstica institucional',
-            'icono':       'bi-journal-medical',
-            'color':       '#6366f1',
-            'anios': [
-                {
-                    'anio': '2026',
-                    'meses': [
-                        {
-                            'mes':         'Diagnóstico 2026',
-                            'descripcion': 'Evaluación diagnóstica — 2026',
-                            'icono':       'bi-calendar-check',
-                            'links': [
-                                {
-                                    'titulo': 'Carga de datos',
-                                    'icono':  'bi-pencil-square',
-                                    'url':    'evaluaciones_educativas:diagnostico_2026:inicio',
-                                    'roles':  ['Director/a'],
-                                },
-                                {
-                                    'titulo': 'Análisis de Resultados',
-                                    'icono':  'bi-graph-up-arrow',
-                                    'url':    'evaluaciones_educativas:diagnostico_2026:analisis_evaluacion',
-                                    'roles':  ['Director/a', 'Regional', 'Supervisor', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse'],
-                                },
-                                # {
-                                #     'titulo': 'Progreso de Alumnos',
-                                #     'icono':  'bi-person-lines-fill',
-                                #     'url':    'evaluaciones_educativas:diagnostico_2026:progreso_alumnos',
-                                #     'roles':  ['Director/a', 'Regional', 'Funcionario', 'Ministro', 'Subse'],
-                                # },
-                            ],
-                        },
-                    ],
-                },
-                {
-                    'anio': '2025',
-                    'meses': [
-                        {
-                            'mes':         'Diagnóstico 2025',
-                            'descripcion': 'Datos históricos — 2025',
-                            'icono':       'bi-calendar2-check',
-                            'links': [
-                                {
-                                    'titulo': 'Análisis de Resultados',
-                                    'icono':  'bi-graph-up-arrow',
-                                    'url':    'evaluaciones_educativas:diagnostico_2025:analisis_evaluacion',
-                                    'roles':  ['Director/a', 'Regional', 'Supervisor', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse'],
-                                },
-                            ],
-                        },
-                    ],
-                },
-            ],
-        },
-
-       # ── Validaciones Aprender 2026 ───────────────────────────────
-        {
-            'id':          'validaciones_2026',
-            'titulo':      'APRENDER Censal 2026',
-            'descripcion': 'Gestión sobre operativo Aprender',
-            'icono':       'bi-check2-circle',
-            'color':       '#06b6d4',
-            'anios': [
-                {
-                    'anio': '2026',
-                    'meses': [
-                        # {
-                        #     'mes':         'Aprender 2026',
-                        #     'descripcion': 'Validaciones de matrícula y secciones',
-                        #     'icono':       'bi-calendar-check',
-                        #     'links': [
-                        #         {
-                        #             'titulo': 'Gestión de Validaciones',
-                        #             'icono':  'bi-shield-check',
-                        #             'url':    'evaluaciones_educativas:validaciones_2026:lista',
-                        #             'roles':  ['Regional', 'Funcionario', 'Ministro', 'Subse'],
-                        #         },
-                        #     ],
-                        # },
-                        {
-                            'mes':         'Aprender 2026',
-                            'descripcion': 'Gestión de aplicadores y veedores',
-                            'icono':       'bi-calendar-check',
-                            'links': [
-                                {
-                                    'titulo': 'Gestión de Aplicadores y Veedores',
-                                    'icono':  'bi-shield-check',
-                                    'url':    'evaluaciones_educativas:validaciones_2026:personas_lista',
-                                    'roles':  ['Regional', 'Funcionario', 'Evaluacion', 'Ministro', 'Subse'],
-                                },
-                            ],
-                        },
-                    ],
-                },
-            ],
-        },
-    ] 
-
     # ── Filtrar por rol y resolver URLs ──────────────────────────────
     operativos_visibles = []
-    for op in operativos:
+    for op in OPERATIVOS:
         anios_visibles = []
         for anio_data in op.get('anios', []):
             meses_visibles = []
@@ -327,6 +328,13 @@ def dashboard(request):
             'icono':       'bi-check2-circle',
             'url':         'evaluaciones_educativas:monitoreo_personas_2026:monitoreo',
             'query':       '?tab=aprender',
+            'roles':       ['Evaluacion'],
+        },
+        {
+            'titulo':      'Ver como otro usuario',
+            'descripcion': 'Entrá a cada operativo tal como lo ve un rol',
+            'icono':       'bi-person-bounding-box',
+            'url':         'evaluaciones_educativas:ver_como:selector',
             'roles':       ['Evaluacion'],
         },
     ]
