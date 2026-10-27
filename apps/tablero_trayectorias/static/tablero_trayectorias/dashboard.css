@@ -62,3 +62,9 @@
 .trayectorias-widget .tabcontent{display:block!important}
 @media(max-width:991px){.trayectorias-widget .main{padding:12px}.trayectorias-widget .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:575px){.trayectorias-widget .metrics,.trayectorias-widget .grid{grid-template-columns:1fr}}
+
+/* Filtro adicional por nombre de establecimiento; sin desbordar el layout ministerial */
+.trayectorias-widget .filters{grid-template-columns:minmax(175px,1.6fr) minmax(210px,1.7fr) repeat(3,minmax(105px,1fr)) auto}
+.trayectorias-widget .field{min-width:0}
+@media(max-width:1350px){.trayectorias-widget .filters{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:780px){.trayectorias-widget .filters{grid-template-columns:1fr}}

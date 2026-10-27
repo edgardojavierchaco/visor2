@@ -1,0 +1,56 @@
+{% extends "archivos/base/dashboard.html" %}
+{% load static %}
+{% block title %}Guía de lectura | Trayectorias Educativas{% endblock %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'tablero_trayectorias/guia.css' %}?v=20261024.1">
+<div class="lectura-ra">
+  <header class="lectura-hero">
+    <div><div class="lectura-kicker">VISOR EDUCATIVO CHACO · ORIENTACIONES METODOLÓGICAS</div>
+      <h1>Guía de lectura de indicadores de trayectoria</h1>
+      <p>Cómo interpretar los resultados del Panorama Ejecutivo: qué mide cada indicador, cuál es su período de referencia y qué conclusiones se pueden —y no se pueden— extraer.</p>
+      <span class="lectura-fuente">Fuente: Relevamiento Anual (RA)</span>
+    </div>
+    <a href="{% url 'trayectorias:dashboard' %}" class="lectura-regresar">← Volver al Panorama Ejecutivo</a>
+  </header>
+  <div class="lectura-nota"><b>Cómo leer el tablero:</b> las cantidades y los porcentajes se consultan tal como están registrados y validados en <code>indicadores.visorindicador</code>. Esta guía no recalcula ni modifica resultados.</div>
+  <section class="lectura-grupo" aria-labelledby="lectura-cuatro"><h2 id="lectura-cuatro">Los cuatro indicadores, de un vistazo</h2>
+    <div class="lectura-cards">
+      <article class="lectura-ind rojo"><div class="lectura-tag">TRANSICIÓN INTERANUAL</div><h3>Abandono interanual</h3><p>Estima la proporción de estudiantes que no continúa registrada en el sistema educativo en el ciclo siguiente según el modelo de flujo escolar utilizado.</p><span>Lectura: interrupción estimada de la continuidad.</span></article>
+      <article class="lectura-ind violeta"><div class="lectura-tag">SITUACIÓN ANUAL</div><h3>Sobreedad</h3><p>Porcentaje de estudiantes cuya edad supera la edad teórica esperada para el grado o año de estudio.</p><span>Lectura: desfasaje edad–grado/año; no equivale a repitencia.</span></article>
+      <article class="lectura-ind azul"><div class="lectura-tag">TRANSICIÓN INTERANUAL</div><h3>Repitencia</h3><p>Porcentaje de estudiantes de un grado o año que se matricula al ciclo siguiente como repitiente en el mismo grado o año.</p><span>Lectura: permanencia como repitiente en el año de estudio.</span></article>
+      <article class="lectura-ind verde"><div class="lectura-tag">TRANSICIÓN INTERANUAL</div><h3>Promoción efectiva</h3><p>Porcentaje de estudiantes que figura como nuevo en el grado o año inmediato superior en el ciclo siguiente. El último año de nivel exige un tratamiento metodológico particular.</p><span>Lectura: progresión al año siguiente.</span></article>
+    </div>
+  </section>
+  <section class="lectura-grupo" aria-labelledby="lectura-tiempo"><h2 id="lectura-tiempo">¿Qué período describe cada indicador?</h2>
+    <div class="lectura-periodos"><div><strong>Momento de referencia</strong><span>Sobreedad</span><p>Fotografía de la matrícula del año observado y su relación con la edad teórica.</p></div><div><strong>Entre dos ciclos lectivos</strong><span>Promoción · Repitencia · Abandono</span><p>Comparación entre el año de origen y el ciclo posterior; los resultados son tasas aparentes de flujo y dependen de los supuestos del método.</p></div></div>
+  </section>
+  <section class="lectura-grupo" aria-labelledby="lectura-calculo"><h2 id="lectura-calculo">Fórmulas de referencia</h2><p class="lectura-sub">Esquemas explicativos. La formulación exacta aplicada a los datos publicados debe ser la de su procesamiento oficial.</p>
+    <div class="lectura-formulas">
+      <div><b>Promoción efectiva (%)</b><code>100 × estudiantes nuevos en grado i+1 (año t+1) / matrícula del grado i (año t)</code><small>El último grado/año del nivel requiere una regla específica.</small></div>
+      <div><b>Repitencia (%)</b><code>100 × repitientes en grado i (año t+1) / matrícula del grado i (año t)</code></div>
+      <div><b>Sobreedad (%)</b><code>100 × estudiantes con sobreedad / matrícula del grado o año</code></div>
+      <div><b>Abandono interanual (%)</b><code>100 − promoción efectiva (%) − repitencia (%) [− reinscripción (%), según metodología]</code><small>El manual histórico del sistema nacional distingue reinscripción; otras fichas oficiales utilizan una presentación de tres componentes. No mezclar métodos.</small></div>
+    </div>
+  </section>
+  <section class="lectura-grupo" aria-labelledby="lectura-ejemplo"><h2 id="lectura-ejemplo">Ejemplo de lectura: una escuela, un grado</h2>
+    <div class="lectura-ejemplo"><div class="lectura-ejemplo-num">100 <small>estudiantes matriculados en el grado de origen</small></div><div class="lectura-ejemplo-desc"><p>Supongamos que, para un período interanual y usando una metodología de tres componentes, se observan <b>85 promociones efectivas</b>, <b>10 repitencias</b> y <b>5 abandonos estimados</b>.</p><div class="lectura-segmentos"><span style="width:85%;background:#137f61" title="85% promoción"></span><span style="width:10%;background:#2368c8" title="10% repitencia"></span><span style="width:5%;background:#c73749" title="5% abandono"></span></div><p><b>Lectura correcta:</b> en este ejemplo, 85 % progresa, 10 % repite y 5 % no continúa según la estimación. <b>No representa el resultado de ninguna escuela real.</b></p></div></div>
+  </section>
+  <section class="lectura-grupo" aria-labelledby="lectura-cautelas"><h2 id="lectura-cautelas">Cinco reglas para interpretar correctamente</h2>
+    <div class="lectura-reglas">
+      <div><b>01 · Una tasa aparente no sigue necesariamente a los mismos estudiantes</b><p>Las estimaciones interanuales construidas con matrícula agregada pueden verse afectadas por cambios de escuela, sector, jurisdicción y movimientos de estudiantes.</p></div>
+      <div><b>02 · Abandono negativo y promoción superior al 100 %</b><p>Pueden ocurrir por movimientos entre establecimientos y por las hipótesis del modelo de cohortes. No corregir ni truncar automáticamente valores ya validados.</p></div>
+      <div><b>03 · Sobreedad no es repitencia</b><p>La sobreedad puede deberse a ingreso tardío, interrupciones o repitencia anterior. No se debe atribuir toda la sobreedad a estudiantes repitientes actuales.</p></div>
+      <div><b>04 · Cantidad no equivale a porcentaje</b><p>La cantidad mide volumen; el porcentaje relaciona una parte con su población de referencia. Comparar solo cantidades entre escuelas de distinto tamaño puede resultar engañoso.</p></div>
+      <div><b>05 · Promediar porcentajes no da automáticamente una tasa provincial</b><p>En el Panorama Ejecutivo, las comparaciones agregadas identificadas como «promedio simple» no son tasas jurisdiccionales oficiales recalculadas. Para ello se necesitan denominadores y el método de agregación correspondiente.</p></div>
+    </div>
+  </section>
+  <section class="lectura-grupo" aria-labelledby="lectura-hacer"><h2 id="lectura-hacer">Del indicador a una pregunta de gestión</h2>
+    <div class="lectura-preguntas"><div><strong>Abandono</strong><p>¿En qué grados o años y períodos se observan mayores interrupciones estimadas? ¿Qué otros registros ayudarían a contextualizarlas?</p></div><div><strong>Sobreedad</strong><p>¿En qué grados se concentra el desfasaje edad–trayectoria? ¿Qué apoyos de continuidad se están ofreciendo?</p></div><div><strong>Repitencia</strong><p>¿En qué transiciones aumenta? ¿Cómo se relaciona con el régimen académico y las estrategias de acompañamiento?</p></div><div><strong>Promoción</strong><p>¿Cómo evoluciona la progresión entre grados? ¿Qué diferencias aparecen al comparar períodos equivalentes?</p></div></div>
+    <p class="lectura-recordatorio">Estos indicadores orientan preguntas y prioridades de seguimiento; por sí solos no establecen causalidad ni miden la calidad de un establecimiento.</p>
+  </section>
+  <section class="lectura-grupo" aria-labelledby="lectura-bibliografia"><h2 id="lectura-bibliografia">Documentación oficial de referencia</h2>
+    <div class="lectura-fuentes"><a target="_blank" rel="noopener noreferrer" href="https://www.argentina.gob.ar/educacion/evaluacion-informacion-educativa/metodologicos">Sistema Nacional de Indicadores Educativos · Documentos metodológicos ↗</a></div>
+  </section>
+  <footer class="lectura-pie">Visor Educativo Chaco · Orientación para la lectura de indicadores · Fuente: Relevamiento Anual (RA)</footer>
+</div>
+{% endblock %}

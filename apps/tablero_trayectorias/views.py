@@ -45,6 +45,9 @@ def base_rows(scope, filters=None):
                 try: value=int(value)
                 except (TypeError,ValueError): return []
             sql+=' AND '+key+' = %s'; params.append(value)
+    if filters.get('nom_est'):
+        sql+=' AND nombre_escuela = %s'
+        params.append(str(filters['nom_est'])[:255])
     if filters.get('search'):
         term=str(filters['search'])[:120]
         sql+=' AND (cue::text ILIKE %s OR nombre_escuela ILIKE %s)'
@@ -69,7 +72,7 @@ def datos(request):
 @authorized
 def exportar(request):
     rows=base_rows(request.tray_scope, {
-        'search':request.GET.get('search',''), 'nivel':request.GET.get('nivel',''),
+        'search':request.GET.get('search',''), 'nom_est':request.GET.get('nom_est',''), 'nivel':request.GET.get('nivel',''),
         'grado_o_anio':request.GET.get('grado',''), 'ciclo_lectivo_dato':request.GET.get('ciclo','')})
     response=HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition']='attachment; filename="trayectorias_educativas_RA.csv"'
@@ -83,3 +86,7 @@ def exportar(request):
             return v
         writer.writerow([safe_csv(row.get(k)) for k in FIELDS])
     return response
+
+@authorized
+def guia(request):
+    return render(request, 'tablero_trayectorias/guia.html')
