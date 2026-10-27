@@ -242,9 +242,9 @@ def agregar_regional(request, pk):
 def agregar_competencia(request, pk):
     denied=_deny(request)
     if denied:return denied
-    regional=get_object_or_404(SupervisorRegional.objects.select_for_update(),pk=request.POST.get('regional_id'),supervisor_id=pk,activo=True)
-    nivel=get_object_or_404(NivelModalidad,pk=request.POST.get('nivel_id'))
     with transaction.atomic():
+        regional=get_object_or_404(SupervisorRegional.objects.select_for_update(),pk=request.POST.get('regional_id'),supervisor_id=pk,activo=True)
+        nivel=get_object_or_404(NivelModalidad,pk=request.POST.get('nivel_id'))
         relacion, creada=SupervisorRegionalNivel.objects.select_for_update().get_or_create(supervisor_regional=regional,nivel=nivel)
         antes=None if creada else snapshot(relacion)
         if not relacion.activo:
