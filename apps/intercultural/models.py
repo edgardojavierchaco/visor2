@@ -6,7 +6,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 import re
 
 class EscuelasBilingues(models.Model):
-    cueanexo=models.CharField(max_length=9,verbose_name='Cueanexo')
+    cueanexo=models.CharField(max_length=9,primary_key=True,verbose_name='Cueanexo')
     nom_est=models.CharField(max_length=255, verbose_name='Escuela')
     acronimo=models.CharField(max_length=50, verbose_name='Acronimo')
     oferta=models.CharField(max_length=255, verbose_name='Oferta')

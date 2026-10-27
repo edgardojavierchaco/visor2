@@ -2,6 +2,8 @@ python3 manage.py runserver --settings=config.settings.local
 
 python manage.py shell --settings=config.settings.local
 
+python manage.py check --settings=config.settings.local
+
 python manage.py importarusuarios --settings=config.settings.local
 
 docker compose -f local.yml exec django python manage.py shell
@@ -12,9 +14,10 @@ git stash pop
 git add .
 git rebase --continue
 
+python manage.py collectstatic --noinput 
 
 python manage.py makemigrations --settings=config.settings.local
-python manage.py migrate --settings=config.settings.local
+python manage.py migrate --settings=config.settings.local --settings=config.settings.local
 
 
 sudo docker compose -f local.yml down -v --remove-orphans

@@ -1,0 +1,11 @@
+/* AdminLTE sidebar: estilos aislados para evitar desbordes de etiquetas */
+.main-sidebar { overflow-x: hidden; }
+.main-sidebar .sidebar { overflow-x: hidden; }
+.main-sidebar .nav-sidebar, .main-sidebar .nav-sidebar .nav-item { max-width: 100%; min-width: 0; }
+.main-sidebar .nav-sidebar > .nav-item > .nav-link { display: flex; align-items: center; width: 100%; min-width: 0; }
+.main-sidebar .nav-sidebar .nav-link .nav-icon { flex: 0 0 1.6rem; width: 1.6rem; text-align: center; margin-right: .35rem; }
+.main-sidebar .nav-sidebar .nav-link p { display: block; flex: 1 1 auto; min-width: 0; margin: 0; white-space: normal; overflow-wrap: break-word; line-height: 1.35; }
+.main-sidebar .nav-sidebar .nav-link p .right { float: right; margin-left: .4rem; }
+.main-sidebar .nav-sidebar .nav-treeview { width: 100%; min-width: 0; }
+.main-sidebar .nav-sidebar .nav-treeview .nav-link { max-width: 100%; white-space: normal; }
+.main-sidebar .nav-sidebar .nav-treeview .nav-link p { max-width: 100%; }

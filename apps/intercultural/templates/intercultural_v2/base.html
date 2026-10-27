@@ -1,0 +1,17 @@
+{% extends "archivos/base/dashboard.html" %}
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'intercultural_v2/eib.css' %}?v=20261027.trayectorias">
+<div id="eib-module" class="eib-module">
+  <div class="eib-breadcrumb" aria-label="Ubicación">Visor Educativo / Educación Intercultural Bilingüe / {{ tab|title }}</div>
+  <header class="top">
+    <div><span class="eyebrow">MINISTERIO DE EDUCACIÓN · PROVINCIA DEL CHACO</span>
+      <h1>{% block title %}Educación Intercultural Bilingüe{% endblock %}</h1>
+      <p class="muted">Sistema de información y análisis territorial · Datos registrados</p>
+    </div>
+  </header>
+  {% if messages %}{% for message in messages %}<div class="notice" role="status">{{ message }}</div>{% endfor %}{% endif %}
+  {% block eib_content %}{% endblock %}
+  <div class="eib-footer">VISOR EDUCATIVO CHACO · Módulo EIB · Los totales representan registros disponibles, no cobertura universal.</div>
+</div>
+{% endblock %}
