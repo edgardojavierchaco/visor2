@@ -82,3 +82,16 @@
 #eib-module .cards { grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr)); }
 #eib-module .grid > * { min-width:0; }
 #eib-module .overflow { max-width:100%; }
+
+/* Selector cartográfico: limitado al módulo EIB */
+#eib-module .eib-map-toolbar{display:flex;gap:.6rem;align-items:center;justify-content:flex-end;padding:0 0 .65rem;font-size:.84rem;color:#41647b}
+#eib-module .leaflet-container{z-index:0}
+
+/* Corrección de teselas Leaflet dentro de AdminLTE y estilos globales */
+#eib-module #eib-map {position:relative; overflow:hidden; min-height:540px;}
+#eib-module #eib-map .leaflet-pane,
+#eib-module #eib-map .leaflet-map-pane,
+#eib-module #eib-map .leaflet-tile-pane {max-width:none !important;}
+#eib-module #eib-map .leaflet-tile {max-width:none !important; max-height:none !important; width:256px; height:256px; border:0; padding:0;}
+#eib-module #eib-map .leaflet-container img {max-width:none !important;}
+#eib-module #eib-map .leaflet-control-container {z-index:500;}

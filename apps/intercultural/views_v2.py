@@ -10,6 +10,7 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from .forms_v2 import RegistroForm
 from .models import Alumnos_Bilingue, Nivel_curso
 from .services.access import scope, require_editor, role
@@ -26,16 +27,18 @@ def panorama(request):
     stats=sums(qs)
     items=group(qs,'lengua')
     niveles=group(qs,'nivel')
-    regiones=[]
-    # Agregación por región utilizando catálogo geográfico, sin depender de vistas externas.
-    regmap={}
-    for cue,region in schools(request).values_list('cueanexo','region_loc').distinct():
-        regmap.setdefault(cue,region)
-    for row in qs.values('cueanexo').annotate(v=Sum('varones'),m=Sum('mujeres')):
-        reg=regmap.get(row['cueanexo'],'Sin región') or 'Sin región'
-        regiones.append((reg,(row['v'] or 0)+(row['m'] or 0)))
-    totreg={}
-    for reg,amount in regiones: totreg[reg]=totreg.get(reg,0)+amount
+    # Distribución territorial desde el Padrón completo, NO desde la vista BII.
+    # Se agregan registros por CUEANEXO antes de mapearlos a una región.
+    from .services.geo_padron import padron_por_cue
+    por_cue = list(qs.values('cueanexo').annotate(v=Sum('varones'), m=Sum('mujeres')))
+    mapa = padron_por_cue([r['cueanexo'] for r in por_cue], using=qs.db)
+    totreg = {}
+    for row in por_cue:
+        datos = mapa.get(str(row['cueanexo']).strip(), {})
+        region = datos.get('region_loc') or 'Sin región'
+        totreg[region] = totreg.get(region, 0) + (row['v'] or 0) + (row['m'] or 0)
+    # Control: la suma regional debe coincidir con los estudiantes filtrados.
+    assert sum(totreg.values()) == stats['total'], 'Descuadre en distribución regional EIB'
     ctx=context(request,'panorama')
     ctx.update(stats=stats, pueblos=items,niveles=niveles,regiones=sorted(totreg.items()),
                escuelas=schools(request).values('cueanexo','nom_est')[:300],
@@ -138,13 +141,60 @@ def exportar(request):
     log.info('EIB exportación usuario=%s filtros=%s',request.user.pk,dict(request.GET))
     return resp
 
+
 @login_required
 @require_GET
 def mapa(request):
-    # Geometrías no incluidas en la vista v_escuelas_bilingues: usar tabla georreferenciada del proyecto mediante integración validada.
-    ctx=context(request,'mapa')
-    ctx['registros']=schools(request).count()
+    from .services.territorio import establecimientos_bii, resumen_bii
+    ctx = context(request,'mapa')
+    ctx['resumen'] = resumen_bii(request)
+    ctx['filtros_geo'] = {k:request.GET.get(k,'') for k in ('region_loc','departamento','localidad','ambito','sector','q')}
+    # Clave pública de navegador, leída del entorno; no guardar claves en el repositorio.
+    from django.conf import settings
+    import os
+    ctx['carto_basemaps_api_key'] = (getattr(settings, 'CARTO_BASEMAPS_API_KEY', '') or os.environ.get('CARTO_BASEMAPS_API_KEY', '')).strip()
     return render(request,'intercultural_v2/mapa.html',ctx)
+
+@xframe_options_sameorigin
+@login_required
+@require_GET
+def mapa_lienzo(request):
+    """Lienzo cartográfico aislado del CSS global de AdminLTE."""
+    from django.conf import settings
+    import os
+    key = (getattr(settings, 'CARTO_BASEMAPS_API_KEY', '') or os.environ.get('CARTO_BASEMAPS_API_KEY', '')).strip()
+    return render(request, 'intercultural_v2/mapa_lienzo.html', {
+        'carto_basemaps_api_key': key,
+    })
+
+
+@login_required
+@require_GET
+def mapa_datos(request):
+    from .services.territorio import establecimientos_bii
+    qs = establecimientos_bii(request).filter(lat__gte=-90,lat__lte=90,long__gte=-180,long__lte=180)
+    # Respuesta acotada para impedir cargas excesivas en navegadores y servidor.
+    limit=3000
+    rows=list(qs.order_by('cueanexo').values('cueanexo','nom_est','region_loc','departamento','localidad','ambito','sector','lat','long')[:limit+1])
+    return JsonResponse({'features':rows[:limit], 'truncated': len(rows)>limit, 'limit':limit})
+
+@login_required
+@require_GET
+def monitoreo(request):
+    from django.core.paginator import Paginator
+    from django.db.models import Exists, OuterRef
+    from .services.territorio import establecimientos_bii, resumen_bii
+    qs=establecimientos_bii(request).annotate(
+        tiene_carga=Exists(Alumnos_Bilingue.objects.filter(cueanexo=OuterRef('cueanexo')))
+    ).order_by('region_loc','cueanexo')
+    estado=request.GET.get('estado','')
+    if estado=='con_carga':qs=qs.filter(tiene_carga=True)
+    elif estado=='sin_carga':qs=qs.filter(tiene_carga=False)
+    ctx=context(request,'monitoreo')
+    ctx.update(page=Paginator(qs,40).get_page(request.GET.get('page')),
+               resumen=resumen_bii(request),estado=estado,
+               filtros_geo={k:request.GET.get(k,'') for k in ('region_loc','departamento','localidad','ambito','sector','q')})
+    return render(request,'intercultural_v2/monitoreo.html',ctx)
 
 @login_required
 @require_GET

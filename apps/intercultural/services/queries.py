@@ -23,11 +23,16 @@ def filtered(request):
         value=request.GET.get(param,'').strip()
         if value:
             qs=qs.filter(**{field:value})
-    for key,field in (('regional','region_loc'),('departamento','departamento'),('localidad','localidad'),('sector','sector'),('ambito','ambito'),('establecimiento','nom_est')):
-        value=request.GET.get(key,'').strip()
-        if value:
-            scu=schools(request).filter(**{field+'__icontains':value}).values('cueanexo')
-            qs=qs.filter(cueanexo__in=scu)
+    territoriales = (('regional','region_loc'), ('departamento','departamento'),
+                     ('localidad','localidad'), ('sector','sector'),
+                     ('ambito','ambito'), ('establecimiento','nom_est'))
+    filtros = {field: request.GET.get(param, '').strip()
+               for param, field in territoriales if request.GET.get(param, '').strip()}
+    if filtros:
+        from .geo_padron import cues_por_filtro
+        cues = qs.order_by().values_list('cueanexo', flat=True).distinct()
+        autorizados = cues_por_filtro(request, cues, filtros)
+        qs = qs.filter(cueanexo__in=autorizados)
     return qs
 
 def sums(qs):

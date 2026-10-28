@@ -1,1 +1,19 @@
-{% extends 'intercultural_v2/base.html' %}{% block title %}Mapa territorial EIB{% endblock %}{% block eib_content %}<div class="headline"><div><span class="badge">CAPA TERRITORIAL</span><h2>Georreferenciación institucional</h2></div></div><div class="card chart"><h3>Integración geoespacial pendiente de configuración</h3><p>La vista <code>v_escuelas_bilingues</code> incluida en esta entrega no contiene latitud ni longitud. Para evitar ubicar incorrectamente establecimientos, el mapa no fabrica coordenadas.</p><p>Establecimientos disponibles para el usuario: <b>{{ registros }}</b>.</p><p>Configure una fuente georreferenciada validada de CUEANEXO en el proyecto principal. Consulte <code>INSTALACION.md</code>.</p><a class="button" href="{% url 'intercultural:establecimientos' %}">Explorar establecimientos</a></div>{% endblock %}
+{% extends 'intercultural_v2/base.html' %}
+{% block title %}Mapa territorial EIB{% endblock %}
+{% block eib_content %}
+<div class="headline"><div><span class="badge">GEOREFERENCIACIÓN · OFERTA BII</span><h2>Establecimientos con oferta BII activa</h2><p class="muted">Fuente: Padrón jurisdiccional, vista v_escuelas_bilingues_geo.</p></div><a class="button ghost" href="{% url 'intercultural:monitoreo' %}">Monitoreo →</a></div>
+<form class="filters" method="get"><label>Regional<input name="region_loc" value="{{ filtros_geo.region_loc }}" placeholder="Regional"></label><label>Departamento<input name="departamento" value="{{ filtros_geo.departamento }}"></label><label>Localidad<input name="localidad" value="{{ filtros_geo.localidad }}"></label><label>Ámbito<input name="ambito" value="{{ filtros_geo.ambito }}"></label><label>Sector<input name="sector" value="{{ filtros_geo.sector }}"></label><label class="wide">Escuela o CUEANEXO<input name="q" value="{{ filtros_geo.q }}"></label><button class="button">Filtrar</button><a href="{% url 'intercultural:mapa' %}" class="textlink">Limpiar</a></form>
+<section class="cards"><article class="card metric"><span>OFERTAS BII / ESCUELAS</span><strong>{{ resumen.bii }}</strong></article><article class="card metric"><span>GEOREFERENCIADAS</span><strong>{{ resumen.con_coords }}</strong></article><article class="card metric"><span>SIN COORDENADAS</span><strong>{{ resumen.sin_coords }}</strong></article><article class="card metric"><span>CON REGISTROS EIB</span><strong>{{ resumen.con_carga }}</strong></article><article class="card metric"><span>SIN REGISTROS EIB</span><strong>{{ resumen.sin_carga }}</strong></article></section>
+<div class="card chart eib-map-card">
+  <div class="eib-map-toolbar"><span>Mapa territorial de Chaco · CARTO Basemaps</span></div>
+  <iframe
+    id="eib-map-frame"
+    title="Mapa de establecimientos BII en Chaco"
+    src="{% url 'intercultural:mapa_lienzo' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
+    loading="eager"
+    style="display:block;width:100%;height:550px;border:0;border-radius:12px;background:#e7f0f7"
+  ></iframe>
+  <p class="muted" style="margin-top:14px">Las ubicaciones provienen del Padrón. Los establecimientos sin coordenadas se contabilizan pero no se muestran como puntos.</p>
+  <p class="muted">La ausencia de registros no implica incumplimiento. Máximo 3000 marcadores por consulta.</p>
+</div>
+{% endblock %}

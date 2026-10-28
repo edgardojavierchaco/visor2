@@ -31,6 +31,9 @@ urlpatterns=[
  path('establecimientos/',v.establecimientos,name='establecimientos'),
  path('establecimientos/<str:cueanexo>/',v.ficha,name='ficha'),
  path('mapa/',v.mapa,name='mapa'),
+ path('mapa/lienzo/',v.mapa_lienzo,name='mapa_lienzo'),
+ path('mapa/datos/',v.mapa_datos,name='mapa_datos'),
+ path('monitoreo/',v.monitoreo,name='monitoreo'),
  path('guia/',v.guia,name='guia'),
  path('index/',v.panorama,name='index'),
 ]

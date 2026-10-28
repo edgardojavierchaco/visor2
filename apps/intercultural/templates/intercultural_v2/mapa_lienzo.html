@@ -1,0 +1,64 @@
+{% load static %}
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa EIB · Chaco</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyojjAmZXpMz4=" crossorigin="">
+<style>
+html,body{height:100%;width:100%;margin:0;padding:0;overflow:hidden;font-family:Arial,Helvetica,sans-serif}
+*,*::before,*::after{box-sizing:border-box}
+#map{position:absolute;inset:0;width:100%;height:100%;background:#e7f0f7}
+#status{position:absolute;z-index:1000;left:12px;bottom:12px;max-width:calc(100% - 24px);padding:8px 12px;border-radius:7px;background:rgba(255,255,255,.95);font:12px/1.4 Arial;box-shadow:0 2px 12px #0002;pointer-events:none}
+.leaflet-container img.leaflet-tile,.leaflet-container img.leaflet-marker-icon,.leaflet-container img.leaflet-marker-shadow{max-width:none!important;max-height:none!important}
+.leaflet-container .leaflet-tile{border:0!important;padding:0!important}
+</style></head><body><div id="map" aria-label="Mapa de Chaco"></div><div id="status" role="status">Cargando establecimientos…</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(()=>{'use strict';
+const status=document.getElementById('status');
+if(typeof L==='undefined'){status.textContent='No se pudo cargar Leaflet.';return;}
+const center=[-26.7,-60.7], chacoBounds=L.latLngBounds([-28.6,-63.9],[-23.9,-58.0]);
+const map=L.map('map',{zoomControl:true,preferCanvas:true}).setView(center,7);
+const key='{{ carto_basemaps_api_key|default:""|escapejs }}'.trim();
+const attribution='&copy; OpenStreetMap contributors &copy; CARTO';
+if(key){
+ const opts={attribution,subdomains:'abcd',minZoom:3,maxZoom:19,tileSize:256,detectRetina:false};
+ const suffix='?key='+encodeURIComponent(key);
+ const voyager=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'+suffix,opts);
+ const claro=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'+suffix,opts);
+ const oscuro=L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'+suffix,opts);
+ voyager.addTo(map);
+ L.control.layers({'Voyager':voyager,'Claro':claro,'Oscuro':oscuro}).addTo(map);
+ voyager.on('tileerror',()=>{if(!status.dataset.loaded)status.textContent='No se pueden cargar todas las teselas de CARTO; revisar clave o dominio.'});
+}else{status.textContent='Falta configurar CARTO_BASEMAPS_API_KEY.';}
+const qs=window.location.search;
+fetch('{% url "intercultural:mapa_datos" %}'+qs,{credentials:'same-origin',headers:{Accept:'application/json'}})
+.then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()})
+.then(data=>{
+ const rows=Array.isArray(data.features)?data.features:[];
+ const valid=[],missing=[],outside=[];
+ for(const row of rows){
+  if(row.lat===null||row.lat===undefined||row.long===null||row.long===undefined||row.lat===''||row.long===''){missing.push(row);continue}
+  const lat=Number(row.lat),lon=Number(row.long);
+  if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180){missing.push(row);continue}
+  if(!chacoBounds.contains([lat,lon])){outside.push(row);continue}
+  valid.push({row,lat,lon});
+ }
+ const group=L.featureGroup().addTo(map);
+ for(const {row,lat,lon} of valid){
+  const dot=L.circleMarker([lat,lon],{radius:9,color:'#07577f',weight:2,fillColor:'#11ad9e',fillOpacity:.92}).addTo(group);
+  const node=document.createElement('div'), title=document.createElement('strong');title.textContent=(row.nom_est||'Establecimiento')+' · '+row.cueanexo;node.appendChild(title);
+  for(const item of [row.region_loc,row.localidad,row.departamento])if(item){const line=document.createElement('div');line.textContent=item;node.appendChild(line)}
+  dot.bindPopup(node);
+ }
+ if(valid.length>1)map.fitBounds(group.getBounds().pad(.3),{maxZoom:9,padding:[20,20]});
+ else map.setView(center,7);
+ status.dataset.loaded='1';
+ status.textContent=valid.length+' ubicados · '+missing.length+' sin coordenadas · '+outside.length+' fuera del área esperada.';
+ if(data.truncated)status.textContent+=' Resultado limitado a '+data.limit+'.';
+ if(outside.length)console.warn('EIB coordenadas fuera del área',outside.map(x=>({cueanexo:x.cueanexo,lat:x.lat,long:x.long})));
+ setTimeout(()=>map.invalidateSize(),200);
+}).catch(e=>{status.textContent='No se pudieron cargar marcadores: '+e.message;console.error(e)});
+window.addEventListener('resize',()=>map.invalidateSize());
+setTimeout(()=>map.invalidateSize(),250);
+})();
+</script></body></html>
