@@ -66,7 +66,10 @@
   <body>
     <div class="card">
       <div class="card-header">
-        <h1>Evaluación de: {{ alumno.nombre }} — DNI {{ alumno.dni }}</h1>
+        <h1>{% if es_edicion %}Editar evaluación{% else %}Evaluación{% endif %} de: {{ alumno.apellido }}, {{ alumno.nombre }}</h1>
+        <div class="small mt-2" style="opacity: .9;">
+          DNI {{ alumno.numero_documento }} — {{ anio_grado }} — Sección {{ alumno.nombre_seccion|default:'-' }} — {{ alumno.turno|default:'Sin turno' }}
+        </div>
       </div>
 
       <div class="card-body p-4">
@@ -80,7 +83,7 @@
           </button>
           
           <div class="card-footer footer-bg p-4 px-md-5 mt-3">
-              <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:lista_examen' fid_actual=fid_actual %}" id="btn-volver" class="btn btn-outline-secondary fw-semibold w-100 py-2" style="border-radius: 10px; font-size: 1.05rem;">
+              <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:lista_examen_fid' fid_actual=fid_actual %}" id="btn-volver" class="btn btn-outline-secondary fw-semibold w-100 py-2" style="border-radius: 10px; font-size: 1.05rem;">
                 <i class="bi bi-arrow-left me-2"></i> Volver a la Lista de Exámenes
               </a>
           </div>

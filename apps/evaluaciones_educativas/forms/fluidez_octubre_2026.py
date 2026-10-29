@@ -1,46 +1,45 @@
 from django import forms
 from apps.evaluaciones_educativas.models.fluidez_octubre_2026 import *
 import re
+from django.core.validators import MaxValueValidator
 from apps.consultasge.models import CapaUnicaOfertas
 import psycopg2
 import os
 from psycopg2 import extras
 
 
-# class CueanexoFluidezOctubre2026ViewForm(forms.Form):
-# 	cueanexo = forms.ChoiceField(
-# 		choices=[('', '--- Seleccionar ---')],
-# 		label='SELECCIONE UN CUEANEXO', 
-# 		required=False,
-# 		widget=forms.Select
-# 	)
-# 	def __init__(self, *args, **kwargs):
-# 		cuil = kwargs.pop('cuil', None)
-# 		super().__init__(*args, **kwargs)
-# 		if cuil:
-# 			qs = SeccionesAplicadorFluidezOctubre2026.objects.filter(aplicador_id=cuil).only('cueanexo').distinct()
-# 			choices_cueanexo = [
-# 					('', '---SELECCIONE UN CUEANEXO-----'),
-# 					]
-# 			for i in qs:
-# 				choices_cueanexo.append((i.cueanexo, i.cueanexo))
-# 			self.fields['cueanexo'].choices = choices_cueanexo
+class CueanexoFluidezOctubre2026ViewForm(forms.Form):
+    """Escuelas asignadas al tabulador."""
+    cueanexo = forms.ChoiceField(
+        choices=[('', '--- Seleccionar ---')],
+        label='SELECCIONE UN CUEANEXO',
+        required=False,
+        widget=forms.Select,
+    )
+
+    def __init__(self, *args, cueanexos=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        cueanexos = [str(c).strip() for c in (cueanexos or [])]
+        nombres = {
+            str(c).strip(): nombre
+            for c, nombre in CapaUnicaOfertas.objects
+            .filter(cueanexo__in=cueanexos)
+            .values_list('cueanexo', 'nom_est')
+        }
+        choices = [('', '---SELECCIONE UN CUEANEXO-----')]
+        for c in sorted(cueanexos, key=lambda c: nombres.get(c) or c):
+            choices.append((c, f"{c} - {nombres[c]}" if nombres.get(c) else c))
+        self.fields['cueanexo'].choices = choices
 
 
-# class GradoFluidezOctubre2026ViewForm(forms.Form):
-# 	grado = forms.ChoiceField(label='SELECCIONE UN GRADO', required=False, widget=forms.RadioSelect())
-# 	def __init__(self, *args, **kwargs):
-# 		cueanexo = kwargs.pop('cueanexo', None)
-# 		super().__init__(*args, **kwargs)
-# 		if cueanexo:
-# 			grados_permitidos=['2do Año/Grado','3er Año/Grado']
-# 			# print('entre')
-# 			# qs=V_Trayectoria_Alumnos_SGE.objects.using('test').filter(cueanexo=cueanexo,anio_grado__in=grados_permitidos ).values_list('anio_grado').distinct()
-# 			# print(qs)
-# 			choices_grado = []
-# 			for i in grados_permitidos:
-# 				choices_grado.append((i, i))
-# 			self.fields['grado'].choices = choices_grado
+class GradoFluidezOctubre2026ViewForm(forms.Form):
+    # Valores = claves de GRADOS_URL ('2', '3').
+    grado = forms.ChoiceField(
+        label='SELECCIONE UN GRADO',
+        required=False,
+        widget=forms.RadioSelect(),
+        choices=[('2', '2do Año/Grado'), ('3', '3er Año/Grado')],
+    )
 
 
 # class AlumnoFluidezOctubre2026Form(forms.Form):	
@@ -81,52 +80,50 @@ from psycopg2 import extras
 # 	)
 
 
-# class EvaluacionFluidezOctubre2026Form(forms.ModelForm):
-# 	class Meta:
-# 		model = Fluidez_Lectora_Octubre_2026
-# 		fields = ['asistencia', 'cantidad_palabras_leidas', 'pregunta_1', 'pregunta_2', 'pregunta_3', 'pregunta_4', 'pregunta_5', 'pregunta_6']
-# 		widgets = {
-# 			'asistencia': forms.Select(
-# 				attrs={'required': 'true'}),
-# 			'cantidad_palabras_leidas': forms.NumberInput(attrs={
-# 				'min': '0',
-# 				'placeholder': 'INGRESA LA CANTIDAD DE PALABRAS LEIDAS'
-# 			}),
-# 			'pregunta_1': forms.Select(attrs={'required': 'true'}),
-# 			'pregunta_2': forms.Select(attrs={'required': 'true'}),
-# 			'pregunta_3': forms.Select(attrs={'required': 'true'}),
-# 			'pregunta_4': forms.Select(attrs={'required': 'true'}),
-# 			'pregunta_5': forms.Select(attrs={'required': 'true'}),
-# 			'pregunta_6': forms.Select(attrs={'required': 'true'}),
-# 		}
+class EvaluacionFluidezOctubre2026Form(forms.ModelForm):
+    CAMPOS_EXAMEN = [
+        'cantidad_palabras_leidas', 'pregunta_1', 'pregunta_2',
+        'pregunta_3', 'pregunta_4', 'pregunta_5', 'pregunta_6',
+    ]
 
-# 	def __init__(self, *args, max_cantidad_palabra=None, **kwargs):
-# 		super().__init__(*args, **kwargs)
-# 		if max_cantidad_palabra is not None:
-# 			self.fields['cantidad_palabras_leidas'].max_value = max_cantidad_palabra
-# 			self.fields['cantidad_palabras_leidas'].widget.attrs['max'] = max_cantidad_palabra
-# 			self.fields['cantidad_palabras_leidas'].widget.attrs['placeholder'] = f'Máx. {max_cantidad_palabra}'
-# 		if self.is_bound and self.data.get('asistencia') == 'AUSENTE':
-# 			campos_dependientes = [
-# 				'cantidad_palabras_leidas', 'pregunta_1', 'pregunta_2', 
-# 				'pregunta_3', 'pregunta_4', 'pregunta_5', 'pregunta_6'
-# 			]
-# 			for campo in campos_dependientes:
-# 				self.fields[campo].required = False
+    class Meta:
+        model = FluidezLectoraOctubre2026
+        fields = ['asistencia', 'cantidad_palabras_leidas', 'pregunta_1', 'pregunta_2', 'pregunta_3', 'pregunta_4', 'pregunta_5', 'pregunta_6']
+        widgets = {
+            'asistencia': forms.Select(attrs={'required': 'true'}),
+            'cantidad_palabras_leidas': forms.NumberInput(attrs={
+                'min': '0',
+                'placeholder': 'INGRESA LA CANTIDAD DE PALABRAS LEIDAS'
+            }),
+            'pregunta_1': forms.Select(attrs={'required': 'true'}),
+            'pregunta_2': forms.Select(attrs={'required': 'true'}),
+            'pregunta_3': forms.Select(attrs={'required': 'true'}),
+            'pregunta_4': forms.Select(attrs={'required': 'true'}),
+            'pregunta_5': forms.Select(attrs={'required': 'true'}),
+            'pregunta_6': forms.Select(attrs={'required': 'true'}),
+        }
 
-# 	def clean(self):
-# 		cleaned_data = super().clean()
-# 		asistencia = cleaned_data.get('asistencia')
-# 		if asistencia == 'AUSENTE':
-# 			campos_dependientes = [
-# 				'cantidad_palabras_leidas', 'pregunta_1', 'pregunta_2', 
-# 				'pregunta_3', 'pregunta_4', 'pregunta_5', 'pregunta_6'
-# 			]
-# 			for campo in campos_dependientes:
-# 				cleaned_data[campo] = None
-# 				if campo in self._errors:
-# 					del self._errors[campo]
-# 		return cleaned_data
+    def __init__(self, *args, max_cantidad_palabra=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if max_cantidad_palabra is not None:
+            self.fields['cantidad_palabras_leidas'].max_value = max_cantidad_palabra
+            self.fields['cantidad_palabras_leidas'].widget.attrs['max'] = max_cantidad_palabra
+            self.fields['cantidad_palabras_leidas'].widget.attrs['placeholder'] = f'Máx. {max_cantidad_palabra}'
+            self.fields['cantidad_palabras_leidas'].validators.append(
+                MaxValueValidator(max_cantidad_palabra)
+            )
+        # PRESENTE: todo obligatorio. AUSENTE: el resto se ignora.
+        ausente = self.is_bound and self.data.get('asistencia') == 'AUSENTE'
+        for campo in self.CAMPOS_EXAMEN:
+            self.fields[campo].required = not ausente
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data.get('asistencia') == 'AUSENTE':
+            for campo in self.CAMPOS_EXAMEN:
+                cleaned_data[campo] = None
+                self._errors.pop(campo, None)
+        return cleaned_data
 
 
 # class GradoFluidezOctubre2026Form(forms.Form):

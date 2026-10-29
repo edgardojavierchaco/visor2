@@ -1,59 +1,65 @@
 from django.db import models
-# from .modelo_oficial import *
+from .modelo_oficial import *
 
-# #--------------------------------FLUIDEZ OCTUBRE 2026-----------------------------------
+#--------------------------------FLUIDEZ OCTUBRE 2026-----------------------------------
 
 
-# class Fluidez_Lectora_Octubre_2026 (models.Model):
-#     """
-#     Evaluación de Fluidez Lectora - Octubre 2026.
-#     Subtipo exclusivo de Evaluación (especialización).
-#     Relación: 1:1 con Evaluación y 1:1 con AlumnoFluidez2026.
-#     """
-#     OPCIONES_EVALUACION = [
-#         ('A', 'A'),
-#         ('B', 'B'),
-#         ('C', 'C'),
-#         ('D', 'D'),
-#         ('NORESPONDE', 'NoResponde'),
-#     ]
-#     OPCIONES_ASISTENCIA = [
-#         ('PRESENTE', 'Presente'),
-#         ('AUSENTE', 'Ausente'),
-#     ]
+class FluidezLectoraOctubre2026(EvaluacionHija):
+    """
+    Examen de Fluidez Lectora - Octubre 2026. Tabla hija de Evaluacion
+    (PK = evaluacion_id). El alumno es de SGE (otra base): alumno_id guarda
+    su id_persona, igual que datos_completo.id_uuid_alumno.
+    """
+    TIPO_EVALUACION = 'Fluidez Lectora Octubre 2026'
+    OPERATIVO = ('Fluidez Lectora', 2026, 10)
 
-#     evaluacion = models.OneToOneField(
-#         Evaluacion,
-#         on_delete=models.CASCADE,
-#         primary_key=True,
-#         related_name="fluidez_lectora_octubre_2026",
-#     )
-#     alumno = models.OneToOneField(
-#         'AlumnoFluidez2026',
-#         on_delete=models.CASCADE,
-#         related_name="fluidez_lectora_octubre_2026",
-#         null=True,
-#         blank=True,
-#     )
-#     cantidad_palabras_leidas = models.IntegerField(default=0, null=True)
-#     pregunta_1 = models.CharField(max_length=10, choices=OPCIONES_EVALUACION, blank=True, null=True)
-#     pregunta_2 = models.CharField(max_length=10, choices=OPCIONES_EVALUACION, blank=True, null=True)
-#     pregunta_3 = models.CharField(max_length=10, choices=OPCIONES_EVALUACION, blank=True, null=True)
-#     pregunta_4 = models.CharField(max_length=10, choices=OPCIONES_EVALUACION, blank=True, null=True)
-#     pregunta_5 = models.CharField(max_length=10, choices=OPCIONES_EVALUACION, blank=True, null=True)
-#     pregunta_6 = models.CharField(max_length=10, choices=OPCIONES_EVALUACION, blank=True, null=True)
-#     asistencia = models.CharField(choices=OPCIONES_ASISTENCIA, default='AUSENTE')
-#     encargado_carga = models.CharField(max_length=9)
+    OPCIONES_EVALUACION = [
+        ('A', 'A'),
+        ('B', 'B'),
+        ('C', 'C'),
+        ('D', 'D'),
+        ('NORESPONDE', 'NoResponde'),
+    ]
+    OPCIONES_ASISTENCIA = [
+        ('PRESENTE', 'Presente'),
+        ('AUSENTE', 'Ausente'),
+    ]
 
-#     class Meta:
-#         db_table = '"datos_oficiales"."fluidez_lectora_octubre_2026"'
-#         verbose_name = "Fluidez Lectora Octubre 2026"
-#         verbose_name_plural = "Fluidez Lectora Octubre 2026"
+    cantidad_palabras_leidas = models.IntegerField(default=0, null=True, blank=True)
+    pregunta_1 = models.CharField(max_length=10, choices=OPCIONES_EVALUACION, blank=True, null=True)
+    pregunta_2 = models.CharField(max_length=10, choices=OPCIONES_EVALUACION, blank=True, null=True)
+    pregunta_3 = models.CharField(max_length=10, choices=OPCIONES_EVALUACION, blank=True, null=True)
+    pregunta_4 = models.CharField(max_length=10, choices=OPCIONES_EVALUACION, blank=True, null=True)
+    pregunta_5 = models.CharField(max_length=10, choices=OPCIONES_EVALUACION, blank=True, null=True)
+    pregunta_6 = models.CharField(max_length=10, choices=OPCIONES_EVALUACION, blank=True, null=True)
+    asistencia = models.CharField(max_length=10, choices=OPCIONES_ASISTENCIA, default='AUSENTE')
+    encargado_carga = models.CharField(max_length=9)
+    alumno_id = models.IntegerField(null=True, blank=True, db_index=True)
 
-#     def __str__(self):
-#         alumno_info = self.alumno.nombre if self.alumno else f"Eval #{self.evaluacion_id}"
-#         return f"Fluidez Lectora Octubre 2026 - {alumno_info}"
+    class Meta:
+        db_table = '"datos_oficiales"."fluidez_lectora_octubre_2026"'
+        verbose_name = "Fluidez Lectora Octubre 2026"
+        verbose_name_plural = "Fluidez Lectora Octubre 2026"
 
+    def __str__(self):
+        return f"Fluidez Lectora Octubre 2026 - alumno {self.alumno_id} (eval #{self.evaluacion_id})"
+
+
+class CierreCargaFluidezOctubre2026(models.Model):
+    """Estado de la carga de exámenes de un grado de una escuela."""
+    cueanexo = models.CharField(max_length=15)
+    anio_grado = models.CharField(max_length=50)
+    estado_carga = models.BooleanField(default=False)  # True = carga cerrada
+    cuil_tabulador = models.CharField(max_length=20, null=True, blank=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = '"datos_oficiales"."cierre_carga_fluidez_octubre_2026"'
+        unique_together = ('cueanexo', 'anio_grado')
+
+    def __str__(self):
+        estado = 'cerrada' if self.estado_carga else 'abierta'
+        return f"{self.cueanexo} - {self.anio_grado}: {estado}"
 
 
 #-------------tabla aplicadores----------------------------
@@ -114,6 +120,44 @@ class TabuladoresFluidezOctubre2026(models.Model):
     
     def __str__(self):
         return f"{self.apellido} {self.nombre} - {self.cuil}"
+
+
+class TabuladoresCueanexoFluidezOctubre2026(models.Model):
+    """
+    Igual a TabuladoresFluidezOctubre2026 pero con una fila por cueanexo
+    (en vez de lista_cueanexos) y el estado de la carga de cada cueanexo.
+    Se puebla desde la tabla vieja con `poblar_desde_tabuladores`.
+    """
+    apellido = models.CharField(max_length=250, null=True, blank=True)
+    nombre = models.CharField(max_length=250, null=True, blank=True)
+    cuil = models.CharField(max_length=20, db_index=True)
+    correo = models.CharField(max_length=250, null=True, blank=True)
+    celular = models.CharField(max_length=250, null=True, blank=True)
+    region = models.CharField(max_length=250, null=True, blank=True)
+    cueanexo = models.CharField(max_length=15, db_index=True)
+    estado_carga = models.BooleanField(default=False)  # True = carga cerrada
+
+    class Meta:
+        db_table = '"datos_oficiales"."tabuladores_cueanexo_fluidez_octubre_2026"'
+        unique_together = ('cuil', 'cueanexo')
+
+    def __str__(self):
+        estado = 'cerrada' if self.estado_carga else 'abierta'
+        return f"{self.apellido} {self.nombre} - {self.cuil} - {self.cueanexo}: {estado}"
+
+    @classmethod
+    def poblar_desde_tabuladores(cls):
+        """Crea una fila por (tabulador, cueanexo) de lista_cueanexos. Las
+        filas que ya existen no se tocan, así conservan su estado_carga."""
+        filas = [
+            cls(apellido=t.apellido, nombre=t.nombre, cuil=t.cuil, correo=t.correo,
+                celular=t.celular, region=t.region, cueanexo=str(cue).strip())
+            for t in TabuladoresFluidezOctubre2026.objects.all()
+            for cue in dict.fromkeys(t.lista_cueanexos or [])
+            if str(cue).strip()
+        ]
+        return cls.objects.bulk_create(filas, ignore_conflicts=True)
+
 
 class TemporalCargaTabuladoresFluidez2026Eliminar(models.Model):
     region = models.CharField(max_length=100)

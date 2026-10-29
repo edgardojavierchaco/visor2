@@ -277,7 +277,7 @@
             <h1>Evaluación de Fluidez Lectora - Octubre 2026</h1>
 
             <div class="header-controls shadow-sm">
-              <form method="POST" id="filter-form" class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <form method="POST" id="filter-form" action="{% url 'evaluaciones_educativas:fluidez_octubre_2026:lista_examen_fid' fid_actual=fid_actual %}" class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 {% csrf_token %}
 
                 <div class="filter-group">
@@ -323,23 +323,23 @@
               </div>
 
               <div class="action-buttons d-flex flex-wrap gap-2">
-                <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:lista' %}" class="btn btn-outline-secondary px-3 fw-semibold shadow-sm" style="border-radius: 10px;">
+                <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:lista_fid' fid_actual=fid_actual %}" class="btn btn-outline-secondary px-3 fw-semibold shadow-sm" style="border-radius: 10px;">
                   <i class="bi bi-arrow-left me-1"></i> Listado
                 </a>
-                <a href="https://visoreducativochaco.com.ar/" class="btn btn-outline-secondary px-3 fw-semibold shadow-sm" style="border-radius: 10px;">
-                        <i class="bi bi-display"></i> Visor
-                    </a>
-                {% if grado.public_id %}
-                <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:excel' grado_public_id=grado.public_id %}" class="btn btn-success px-3 fw-semibold shadow-sm text-white" style="border-radius: 10px;">
-                  <i class="bi bi-file-earmark-excel me-1"></i> Exportar
+                <a href="{% url 'evaluaciones_educativas:dashboard' %}" class="btn btn-outline-secondary px-3 fw-semibold shadow-sm" style="border-radius: 10px;">
+                  <i class="bi bi-house"></i> Inicio
                 </a>
-                
-                <button 
-                    type="button" 
-                    id="btn-toggle-carga" 
-                    class="btn {% if grado.estado_carga %}btn-success{% else %}btn-secondary{% endif %}" 
-                    data-url="{% url 'evaluaciones_educativas:fluidez_octubre_2026:completar_carga' grado_public_id=grado.public_id %}">
-                    {% if grado.estado_carga %}
+                {% if alumnos is not None %}
+                <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:excel' cueanexo=cueanexo grado=grado %}" class="btn btn-success px-3 fw-semibold shadow-sm text-white btn-descarga" style="border-radius: 10px;">
+                  <i class="bi bi-file-earmark-excel me-1"></i> Exportar Excel
+                </a>
+
+                <button
+                    type="button"
+                    id="btn-toggle-carga"
+                    class="btn {% if carga_cerrada %}btn-success{% else %}btn-secondary{% endif %}"
+                    data-url="{% url 'evaluaciones_educativas:fluidez_octubre_2026:completar_carga' cueanexo=cueanexo grado=grado %}">
+                    {% if carga_cerrada %}
                         <i class="bi bi-lock-fill"></i> Carga Completada
                     {% else %}
                         <i class="bi bi-unlock-fill"></i> Carga Abierta
@@ -352,7 +352,7 @@
 
             {% if alumnos %}
             <div class="bg-alumno text-white text-center py-2 px-3" style="font-size: 0.95rem; font-weight: 600; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-              <i class="bi bi-eye me-1"></i> VISUALIZANDO | CUEANEXO: {{ grado.cueanexo }} <br class="d-md-none"> GRADO: {{ grado.nombre_grado }}
+              <i class="bi bi-eye me-1"></i> VISUALIZANDO | CUEANEXO: {{ cueanexo }} <br class="d-md-none"> GRADO: {{ anio_grado }}
             </div>
             {% endif %}
 
@@ -392,41 +392,38 @@
                 </thead>
                 <tbody>
                   {% for alum in alumnos %}
+                  {% with ex=alum.examen %}
                   <tr class="fila-alumno"
                       data-nombre="{{ alum.nombre }}"
                       data-apellido="{{ alum.apellido }}"
-                      data-dni="{{ alum.dni }}"
-                      data-seccion="{{ alum.seccion.seccion|default:'' }}"
-                      data-turno="{{ alum.seccion.turno|default:'' }}"
-                      data-asistencia="{{ alum.fluidez_lectora_octubre_2026.asistencia|default:'' }}"
-                      data-fluidez="{{ alum.fluidez_lectora_octubre_2026.cantidad_palabras_leidas|default_if_none:'' }}">
+                      data-dni="{{ alum.numero_documento }}"
+                      data-seccion="{{ alum.nombre_seccion|default_if_none:'' }}"
+                      data-turno="{{ alum.turno|default_if_none:'' }}"
+                      data-asistencia="{{ ex.asistencia|default:'' }}"
+                      data-fluidez="{{ ex.cantidad_palabras_leidas|default_if_none:'' }}">
                     <td class="fw-semibold text-dark">{{ alum.nombre }}</td>
                     <td class="text-secondary">{{ alum.apellido }}</td>
-                    <td class="text-secondary numeros-tabulares">{{ alum.dni }}</td>
-                    <td>{{ alum.seccion.seccion|default:'-' }}</td>
-                    <td>{{ alum.seccion.turno|default:'-' }}</td>
-                    <td class="text-center">{{ alum.fluidez_lectora_octubre_2026.asistencia|default:'-' }}</td>
-                    <td class="text-center">{{ alum.fluidez_lectora_octubre_2026.cantidad_palabras_leidas|default_if_none:'-' }}</td>
-                    <td class="text-center">{{ alum.fluidez_lectora_octubre_2026.pregunta_1|default:'-' }}</td>
-                    <td class="text-center">{{ alum.fluidez_lectora_octubre_2026.pregunta_2|default:'-' }}</td>
-                    <td class="text-center">{{ alum.fluidez_lectora_octubre_2026.pregunta_3|default:'-' }}</td>
-                    <td class="text-center">{{ alum.fluidez_lectora_octubre_2026.pregunta_4|default:'-' }}</td>
-                    <td class="text-center">{{ alum.fluidez_lectora_octubre_2026.pregunta_5|default:'-' }}</td>
-                    <td class="text-center">{{ alum.fluidez_lectora_octubre_2026.pregunta_6|default:'-' }}</td>
+                    <td class="text-secondary numeros-tabulares">{{ alum.numero_documento }}</td>
+                    <td>{{ alum.nombre_seccion|default:'-' }}</td>
+                    <td>{{ alum.turno|default:'-' }}</td>
+                    <td class="text-center">{{ ex.asistencia|default:'-' }}</td>
+                    <td class="text-center">{{ ex.cantidad_palabras_leidas|default_if_none:'-' }}</td>
+                    <td class="text-center">{{ ex.pregunta_1|default:'-' }}</td>
+                    <td class="text-center">{{ ex.pregunta_2|default:'-' }}</td>
+                    <td class="text-center">{{ ex.pregunta_3|default:'-' }}</td>
+                    <td class="text-center">{{ ex.pregunta_4|default:'-' }}</td>
+                    <td class="text-center">{{ ex.pregunta_5|default:'-' }}</td>
+                    <td class="text-center">{{ ex.pregunta_6|default:'-' }}</td>
                     <td class="text-center">
-                      {% if alum.seccion.seccion and not alum.fluidez_lectora_octubre_2026.asistencia %}
-                        <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:carga_evaluacion' alumno_public_id=alum.public_id fid_actual=fid_actual %}" 
-                           class="btn btn-outline-primary btn-custom {% if grado.estado_carga %}disabled{% endif %}" 
-                           {% if grado.estado_carga %} style="pointer-events: none; filter: grayscale(100%); opacity: 0.5;" {% endif %}
-                           title="Cargar evaluación"><i class="bi bi-file-earmark-plus"></i></a>
-                      {% elif alum.fluidez_lectora_octubre_2026.asistencia %}
-                        <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:editar_evaluacion' alumno_public_id=alum.public_id fid_actual=fid_actual %}" 
-                           class="btn btn-outline-success btn-custom {% if grado.estado_carga %}disabled{% endif %}" 
-                           {% if grado.estado_carga %} style="pointer-events: none; filter: grayscale(100%); opacity: 0.5;" {% endif %}
-                           title="Editar evaluación"><i class="bi bi-pencil"></i></a>
-                      {% endif %}
+                      <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:evaluacion' fid_actual=fid_actual cueanexo=cueanexo grado=grado id_persona=alum.id_persona %}"
+                         class="btn {% if ex %}btn-outline-success{% else %}btn-outline-primary{% endif %} btn-custom {% if carga_cerrada %}disabled{% endif %}"
+                         {% if carga_cerrada %} style="pointer-events: none; filter: grayscale(100%); opacity: 0.5;" {% endif %}
+                         title="{% if ex %}Editar evaluación{% else %}Cargar evaluación{% endif %}">
+                        <i class="bi {% if ex %}bi-pencil{% else %}bi-file-earmark-plus{% endif %}"></i>
+                      </a>
                     </td>
                   </tr>
+                  {% endwith %}
                   {% empty %}
                   <tr>
                     <td colspan="14" class="text-center py-5">
@@ -434,7 +431,13 @@
                         <i class="bi bi-inboxes mb-3" style="font-size: 3.5rem; color: #cbd5e1;"></i>
                         <h5 class="fw-semibold" style="color: #64748b;">No hay alumnos para mostrar</h5>
                         <p class="mb-0" style="font-size: 0.95rem; max-width: 400px;">
-                          Utilizá los filtros del panel azul superior seleccionando un <strong>Cueanexo</strong> y un <strong>Grado</strong> para cargar la lista.
+                          {% if sin_escuelas %}
+                            Todavía no tenés escuelas asignadas. Consultá con tu regional.
+                          {% elif alumnos is not None %}
+                            SGE no tiene alumnos regulares de ese grado en la escuela.
+                          {% else %}
+                            Utilizá los filtros del panel azul superior seleccionando un <strong>Cueanexo</strong> y un <strong>Grado</strong> para cargar la lista.
+                          {% endif %}
                         </p>
                       </div>
                     </td>
@@ -529,10 +532,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 this.hasAttribute('data-bs-dismiss') ||
                 this.id === 'btn-mobile-toggle' ||
                 this.id === 'btn-close-sidebar' ||
-                this.classList.contains('btn-custom')  // botones de acción por fila no muestran spinner global
+                this.classList.contains('btn-custom') ||  // botones de acción por fila no muestran spinner global
+                this.classList.contains('btn-descarga')   // la descarga no cambia de página
             ) {
                 if (this.id !== 'btn-mobile-toggle' && this.id !== 'btn-close-sidebar') {
-                    if (!this.classList.contains('btn-custom')) e.preventDefault();
+                    if (!this.classList.contains('btn-custom') && !this.classList.contains('btn-descarga')) e.preventDefault();
                 }
                 return;
             }
@@ -639,9 +643,15 @@ document.addEventListener("DOMContentLoaded", function () {
             btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
             btn.disabled = true;
 
-            fetch(url)
-                .then(response => response.json()) 
+            const csrf = document.querySelector('#filter-form [name=csrfmiddlewaretoken]').value;
+            fetch(url, { method: 'POST', headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(response => response.json())
                 .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        btn.innerHTML = contenidoOriginal;
+                        return;
+                    }
                     // Validamos si se permitió hacer el cambio de estado
                     if (!data.es_valido) {
                         alert(`No se puede cerrar la carga. Faltan evaluar a ${data.faltantes} alumno(s).`);

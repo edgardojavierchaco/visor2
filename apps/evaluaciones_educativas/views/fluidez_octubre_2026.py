@@ -1,9 +1,8 @@
 from apps.evaluaciones_educativas.models.fluidez_octubre_2026 import *
-# from apps.evaluaciones_educativas.models.modelo_oficial import  *
 from apps.consultasge.models import CapaUnicaOfertas
 from apps.evaluaciones_educativas.forms.fluidez_octubre_2026 import *
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, Http404
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
@@ -18,102 +17,17 @@ from django.urls import reverse
 from urllib.parse import urlencode
 import re
 import logging
-from django.db import DatabaseError, IntegrityError
+from django.db import DatabaseError, IntegrityError, connections
+import uuid
 from django.views.decorators.http import require_POST
-from apps.evaluaciones_educativas.services.fluidez_octubre_2026 import secciones_region
+from apps.evaluaciones_educativas.services.fluidez_octubre_2026 import (
+    secciones_region,
+    alumnos_seccion_grado,
+    GRADOS_URL,
+    MAX_PALABRAS,
+)
 
 logger = logging.getLogger(__name__)
-
-
-# def lista(request, fid_actual=None):
-#     cuil = 27280062443
-
-#     if not fid_actual:
-#         fid_actual = request.GET.get("fid")
-#     cueanexo_id = None
-#     grado_public_id = None
-
-#     alumnos_qs = None
-#     qs_secciones = None
-#     grado = None
-#     # registros_pruba=V_Trayectoria_Alumnos_SGE.objects.using('test').filter(cueanexo='220037300')
-#     # print('estoy aca')
-#     # print(registros_pruba)
-#     cueanexo_form = CueanexoFluidezOctubre2026ViewForm(cuil=cuil)
-#     grado_form = GradoFluidezOctubre2026ViewForm()
-
-#     if request.method == "POST":
-#         cueanexo_nuevo = request.POST.get("cueanexo")
-#         grado_nuevo = request.POST.get("grado")
-
-#         datos_anteriores = request.session.get(f"filtro_oct_{fid_actual}", {})
-#         cueanexo_anterior = datos_anteriores.get("cueanexo")
-
-#         if cueanexo_nuevo != cueanexo_anterior:
-#             grado_nuevo = None
-
-#         request.session[f"filtro_oct_{fid_actual}"] = {
-#             "cueanexo": cueanexo_nuevo,
-#             "grado": grado_nuevo,
-#         }
-#         request.session.modified = True
-#         return redirect(f"{request.path}?fid={fid_actual}")
-
-#     else:
-#         if fid_actual:
-#             datos_guardados = request.session.get(f"filtro_oct_{fid_actual}")
-#             if datos_guardados:
-#                 cueanexo_id = datos_guardados.get("cueanexo")
-#                 grado = datos_guardados.get("grado")
-#                 cueanexo_form = CueanexoFluidezOctubre2026ViewForm(datos_guardados, cuil=cuil)
-#                 if cueanexo_id:
-#                     grado_form = GradoFluidezOctubre2026ViewForm(
-#                         datos_guardados, cueanexo=cueanexo_id
-#                     )
-
-#     if cueanexo_id and grado:
-#         # grado = GradoFluidez2026.objects.get(public_id=grado_public_id)
-
-#         # if grado.nombre_grado == "2do Año/Grado":
-#         #     nombre_grado = "2do Grado/Año"
-#         # else:
-#         #     nombre_grado = "3er Grado/Año"
-
-#         # lista_dnis = list(
-#         #     TablaTemporalAlumnoFluidez2026.objects.filter(
-#         #         cueanexo=cueanexo_id, anio=nombre_grado
-#         #     ).values_list("numero_de_documento", flat=True)
-#         # )
-
-#         # lista = list(
-#         #     AlumnoFluidez2026.objects.filter(
-#         #         ~Q(dni__in=lista_dnis),
-#         #         seccion__grado__cueanexo=int(cueanexo_id),
-#         #         seccion__grado__nombre_grado=grado.nombre_grado,
-#         #     ).values_list("dni", flat=True)
-#         # )
-
-#         # lista_dnis.extend(lista)
-#         # alumnos_qs = AlumnoFluidez2026.objects.filter(dni__in=lista_dnis)
-
-#         # qs_secciones = SeccionFluidez2026.objects.filter(
-#         #     grado__public_id=grado.public_id
-#         # )
-
-#         alumnos_qs=V_Trayectoria_Alumnos_SGE.objects.using('test').filter(cueanexo=cueanexo_id,anio_grado=grado).values_list('nombre','apellido','numero_documento','nombre_seccion','turno','comunidad_indigena','discapacidad')
-
-#     contexto = {
-#         "cueanexo_form": cueanexo_form,
-#         "grado_form": grado_form,
-#         "grado": grado,
-#         "alumnos": alumnos_qs,
-#         # "secciones_turnos_disponibles": qs_secciones,
-#         # "opciones_comunidad_indigena": AlumnoFluidezOctubre2026Form.OPCIONES_COMUNIDAD_INDIGENA,
-#         # "opciones_discapacidad": AlumnoFluidezOctubre2026Form.OPCIONES_DISCAPACIDAD,
-#         "fid_actual": fid_actual,
-#     }
-
-#     return render(request, "fluidez_octubre_2026/lista.html", contexto)
 
 
 # def actualizar_seccion(request, alumno_public_id):
@@ -161,88 +75,6 @@ logger = logging.getLogger(__name__)
 #         return redirect(base_url)
 
 #     return redirect("evaluaciones_educativas:fluidez_octubre_2026:lista")
-
-
-# def lista_examen(request, fid_actual=None):
-#     cuil = 27275780559
-#     if not fid_actual:
-#         fid_actual = request.GET.get("fid")
-
-#     cueanexo_id = None
-#     grado_public_id = None
-
-#     alumnos_qs = None
-#     qs_secciones = None
-#     grado = None
-
-#     cueanexo_form = CueanexoFluidezOctubre2026ViewForm(cuil=cuil)
-#     grado_form = GradoFluidezOctubre2026ViewForm()
-
-#     if request.method == "POST":
-#         cueanexo_nuevo = request.POST.get("cueanexo")
-#         grado_nuevo = request.POST.get("grado")
-
-#         datos_anteriores = request.session.get(f"filtro_oct_{fid_actual}", {})
-#         cueanexo_anterior = datos_anteriores.get("cueanexo")
-
-#         if cueanexo_nuevo != cueanexo_anterior:
-#             grado_nuevo = None
-
-#         request.session[f"filtro_oct_{fid_actual}"] = {
-#             "cueanexo": cueanexo_nuevo,
-#             "grado": grado_nuevo,
-#         }
-#         request.session.modified = True
-#         return redirect(f"{request.path}?fid={fid_actual}")
-
-#     else:
-#         if fid_actual:
-#             datos_guardados = request.session.get(f"filtro_oct_{fid_actual}")
-#             if datos_guardados:
-#                 cueanexo_id = datos_guardados.get("cueanexo")
-#                 grado_public_id = datos_guardados.get("grado")
-#                 cueanexo_form = CueanexoFluidezOctubre2026ViewForm(datos_guardados, cuil=cuil)
-#                 if cueanexo_id:
-#                     grado_form = GradoFluidezOctubre2026ViewForm(
-#                         datos_guardados, cueanexo=cueanexo_id
-#                     )
-
-#     if cueanexo_id and grado_public_id:
-#         grado = GradoFluidez2026.objects.get(public_id=grado_public_id)
-
-#         if grado.nombre_grado == "2do Año/Grado":
-#             nombre_grado = "2do Grado/Año"
-#         else:
-#             nombre_grado = "3er Grado/Año"
-
-#         lista_dnis = list(
-#             TablaTemporalAlumnoFluidez2026.objects.filter(
-#                 cueanexo=cueanexo_id, anio=nombre_grado
-#             ).values_list("numero_de_documento", flat=True)
-#         )
-
-#         lista = list(
-#             AlumnoFluidez2026.objects.filter(
-#                 ~Q(dni__in=lista_dnis),
-#                 seccion__grado__cueanexo=int(cueanexo_id),
-#                 seccion__grado__nombre_grado=grado.nombre_grado,
-#             ).values_list("dni", flat=True)
-#         )
-
-#         lista_dnis.extend(lista)
-#         alumnos_qs = AlumnoFluidez2026.objects.filter(
-#             dni__in=lista_dnis
-#         ).select_related("fluidez_lectora_octubre_2026")
-
-#     contexto = {
-#         "cueanexo_form": cueanexo_form,
-#         "grado_form": grado_form,
-#         "grado": grado,
-#         "alumnos": alumnos_qs,
-#         "fid_actual": fid_actual,
-#     }
-
-#     return render(request, "fluidez_octubre_2026/lista_examen.html", contexto)
 
 
 # def carga_alumno(request, fid_actual, grado_public_id):
@@ -335,105 +167,6 @@ logger = logging.getLogger(__name__)
 #         "fid_actual": fid_actual,
 #     }
 #     return render(request, "fluidez_octubre_2026/alumno.html", context)
-
-
-# def _obtener_o_crear_evaluacion_padre():
-#     """Obtiene o crea un Operativo y Evaluacion padre para Fluidez Octubre 2026."""
-#     operativo, _ = Operativo.objects.get_or_create(
-#         tipo_operativo="Fluidez Lectora",
-#         anio=2026,
-#         mes=10,
-#     )
-#     evaluacion = Evaluacion.objects.create(operativo=operativo)
-#     return evaluacion
-
-
-# def carga_evaluacion(request, alumno_public_id, fid_actual):
-#     alumno_id = get_object_or_404(AlumnoFluidez2026, public_id=alumno_public_id)
-#     instancia_seccion = get_object_or_404(SeccionFluidez2026, id=alumno_id.seccion_id)
-#     instancia_grado = get_object_or_404(GradoFluidez2026, id=instancia_seccion.grado_id)
-#     grado_public = instancia_grado.public_id
-#     if instancia_grado.nombre_grado == "2do Año/Grado":
-#         cantidad_palabra_maxima = 196
-#     else:
-#         cantidad_palabra_maxima = 265
-
-#     evaluacion_existente = None
-#     try:
-#         evaluacion_existente = Fluidez_Lectora_Octubre_2026.objects.get(
-#             alumno=alumno_id
-#         )
-#     except Fluidez_Lectora_Octubre_2026.DoesNotExist:
-#         pass
-
-#     if request.method == "POST":
-#         form = EvaluacionFluidezOctubre2026Form(
-#             request.POST,
-#             max_cantidad_palabra=cantidad_palabra_maxima,
-#             instance=evaluacion_existente,
-#         )
-#         if form.is_valid():
-#             with transaction.atomic():
-#                 evaluacion = form.save(commit=False)
-#                 if not evaluacion_existente:
-#                     # Crear evaluacion padre si es nueva
-#                     eval_padre = _obtener_o_crear_evaluacion_padre()
-#                     evaluacion.evaluacion = eval_padre
-#                 evaluacion.alumno = alumno_id
-#                 evaluacion.encargado_carga = "DIRECTOR"
-#                 evaluacion.save()
-#             return redirect(
-#                 "evaluaciones_educativas:fluidez_octubre_2026:lista_examen",
-#                 fid_actual=fid_actual,
-#             )
-#     else:
-#         form = EvaluacionFluidezOctubre2026Form(max_cantidad_palabra=cantidad_palabra_maxima)
-
-#     context = {"form": form, "alumno": alumno_id, "fid_actual": fid_actual}
-#     return render(request, "fluidez_octubre_2026/evaluacion.html", context)
-
-
-# def editar_evaluacion(request, alumno_public_id, fid_actual):
-#     alumno_id = get_object_or_404(AlumnoFluidez2026, public_id=alumno_public_id)
-#     instancia_seccion = get_object_or_404(SeccionFluidez2026, id=alumno_id.seccion_id)
-#     instancia_grado = get_object_or_404(GradoFluidez2026, id=instancia_seccion.grado_id)
-#     grado_public = instancia_grado.public_id
-#     instancia_evaluacion = get_object_or_404(
-#         Fluidez_Lectora_Octubre_2026, alumno=alumno_id
-#     )
-#     if instancia_grado.nombre_grado == "2do Año/Grado":
-#         cantidad_palabra_maxima = 196
-#     else:
-#         cantidad_palabra_maxima = 265
-#     form = EvaluacionFluidezOctubre2026Form(
-#         instance=instancia_evaluacion, max_cantidad_palabra=cantidad_palabra_maxima
-#     )
-#     if request.method == "POST":
-#         form = EvaluacionFluidezOctubre2026Form(
-#             request.POST,
-#             instance=instancia_evaluacion,
-#             max_cantidad_palabra=cantidad_palabra_maxima,
-#         )
-#         if form.is_valid():
-#             with transaction.atomic():
-#                 evaluacion = form.save(commit=False)
-#                 evaluacion.alumno = alumno_id
-#                 evaluacion.encargado_carga = "DIRECTOR"
-#                 if form.cleaned_data["asistencia"] == "AUSENTE":
-#                     evaluacion = ausentismo_evaluacion(instancia_evaluacion)
-#                 else:
-#                     evaluacion.asistencia = "PRESENTE"
-#                 evaluacion.save()
-#             return redirect(
-#                 "evaluaciones_educativas:fluidez_octubre_2026:lista_examen",
-#                 fid_actual=fid_actual,
-#             )
-#     context = {
-#         "form": form,
-#         "alumno": alumno_id,
-#         "fid_actual": fid_actual,
-#     }
-#     return render(request, "fluidez_octubre_2026/evaluacion.html", context)
 
 
 # def borrar_registro_alumno(request, alumno_public_id, fid_actual):
@@ -626,65 +359,294 @@ logger = logging.getLogger(__name__)
 #     return render(request, "fluidez_octubre_2026/monitoreo_alumno.html", contexto)
 
 
-# def completar_carga(request, grado_public_id):
-#     estado_carga = True
-#     lista_inicial_conteo = None
-#     lista_final_conteo = None
-#     numero = None
-#     instancia_grado = GradoFluidez2026.objects.get(public_id=grado_public_id)
+#-------------------------------------------------CARGA DE EXÁMENES (TABULADORES)-------------------------------------------------
+# El tabulador es el usuario logueado (su CUIL está en TabuladoresFluidezOctubre2026)
+# y ve los alumnos de 2º y 3º de las escuelas de su lista_cueanexos. Los alumnos,
+# secciones y grados son de SGE y no se modifican: solo se cargan los exámenes.
 
-#     if instancia_grado.nombre_grado == "2do Año/Grado":
-#         nombre_grado = "2do Grado/Año"
-#     else:
-#         nombre_grado = "3er Grado/Año"
-
-#     lista_dnis = list(
-#         TablaTemporalAlumnoFluidez2026.objects.filter(
-#             cueanexo=instancia_grado.cueanexo, anio=nombre_grado
-#         ).values_list("numero_de_documento", flat=True)
-#     )
-
-#     lista = list(
-#         AlumnoFluidez2026.objects.filter(
-#             ~Q(dni__in=lista_dnis),
-#             seccion__grado__cueanexo=int(instancia_grado.cueanexo),
-#             seccion__grado__nombre_grado=instancia_grado.nombre_grado,
-#         ).values_list("dni", flat=True)
-#     )
-#     lista_dnis.extend(lista)
-#     alumnos_qs = AlumnoFluidez2026.objects.filter(dni__in=lista_dnis)
-#     lista_inicial_conteo = alumnos_qs.count()
-#     evaluaciones = Fluidez_Lectora_Octubre_2026.objects.filter(
-#         alumno__in=alumnos_qs
-#     ).count()
-#     lista_final_conteo = evaluaciones
-#     if instancia_grado.estado_carga == True:
-#         instancia_grado.estado_carga = False
-#         instancia_grado.save()
-#     else:
-#         if lista_inicial_conteo == lista_final_conteo:
-#             instancia_grado.estado_carga = True
-#             instancia_grado.save()
-#         else:
-#             estado_carga = False
-#             numero = lista_inicial_conteo - lista_final_conteo
-#     return JsonResponse(
-#         {
-#             "es_valido": estado_carga,
-#             "nuevo_estado": instancia_grado.estado_carga,
-#             "faltantes": numero,
-#         }
-#     )
+# Namespace del lock pg_advisory_xact_lock(namespace, id_persona) al guardar un examen.
+LOCK_EXAMEN_FLUIDEZ_OCT = 202610
 
 
-# def ausentismo_evaluacion(instancia_evaluacion):
-#     evaluacion_campos = instancia_evaluacion._meta.fields
-#     for i in evaluacion_campos:
-#         if i.name == "asistencia":
-#             setattr(instancia_evaluacion, i.name, "AUSENTE")
-#         if not i.primary_key and i.null:
-#             setattr(instancia_evaluacion, i.name, None)
-#     return instancia_evaluacion
+def _tabulador_actual(request):
+    return TabuladoresFluidezOctubre2026.objects.filter(cuil=str(request.user.username)).first()
+
+
+def _cueanexos_tabulador(tabulador):
+    return [str(c).strip() for c in (tabulador.lista_cueanexos or [])]
+
+
+def _validar_cueanexo(tabulador, cueanexo):
+    if str(cueanexo).strip() not in _cueanexos_tabulador(tabulador):
+        raise PermissionDenied('La escuela no está asignada a este tabulador.')
+
+
+def _anio_grado(grado):
+    anio_grado = GRADOS_URL.get(str(grado))
+    if not anio_grado:
+        raise Http404('Grado inválido.')
+    return anio_grado
+
+
+def _sin_tabulador(request):
+    messages.error(request, 'Tu usuario no está cargado como tabulador de Fluidez Octubre 2026.')
+    return redirect(reverse('evaluaciones_educativas:dashboard'))
+
+
+def _examenes_por_persona(ids_persona):
+    """{id_persona: FluidezLectoraOctubre2026} de los alumnos que ya tienen examen."""
+    if not ids_persona:
+        return {}
+    return {
+        e.alumno_id: e
+        for e in FluidezLectoraOctubre2026.objects.filter(
+            evaluacion__operativo=FluidezLectoraOctubre2026.operativo(),
+            alumno_id__in=ids_persona,
+        )
+    }
+
+
+def _carga_cerrada(cueanexo, anio_grado):
+    return CierreCargaFluidezOctubre2026.objects.filter(
+        cueanexo=cueanexo, anio_grado=anio_grado, estado_carga=True
+    ).exists()
+
+
+def _listado_alumnos(request, fid_actual, template, con_examenes):
+    """
+    Lógica común de `lista` y `lista_examen`. El filtro (cueanexo y grado) se
+    guarda en sesión por pestaña (`fid`, va en la URL), con POST -> redirect -> GET.
+    """
+    tabulador = _tabulador_actual(request)
+    if not tabulador:
+        return _sin_tabulador(request)
+
+    fid_actual = fid_actual or request.GET.get('fid') or uuid.uuid4().hex[:12]
+    clave = f'filtro_oct_{fid_actual}'
+
+    if request.method == 'POST':
+        cueanexo_nuevo = request.POST.get('cueanexo') or None
+        grado_nuevo = request.POST.get('grado') or None
+        # Si cambió la escuela, el grado elegido antes ya no corresponde.
+        if cueanexo_nuevo != request.session.get(clave, {}).get('cueanexo'):
+            grado_nuevo = None
+        request.session[clave] = {'cueanexo': cueanexo_nuevo, 'grado': grado_nuevo}
+        request.session.modified = True
+        return redirect(request.path)
+
+    cueanexos = _cueanexos_tabulador(tabulador)
+    datos = request.session.get(clave) or {}
+    cueanexo = datos.get('cueanexo')
+    grado = datos.get('grado')
+    if cueanexo not in cueanexos:
+        cueanexo, grado = None, None
+    if grado not in GRADOS_URL:
+        grado = None
+
+    cueanexo_form = CueanexoFluidezOctubre2026ViewForm({'cueanexo': cueanexo}, cueanexos=cueanexos)
+    grado_form = GradoFluidezOctubre2026ViewForm({'grado': grado}) if cueanexo else None
+
+    alumnos = None
+    anio_grado = GRADOS_URL.get(grado) if grado else None
+    carga_cerrada = False
+    if cueanexo and anio_grado:
+        try:
+            alumnos = alumnos_seccion_grado(cueanexo, anio_grado)
+        except DatabaseError:
+            logger.exception('Error consultando alumnos en sge_nacion (%s, %s)', cueanexo, anio_grado)
+            messages.error(request, ERROR_SGE)
+            alumnos = []
+        if con_examenes:
+            examenes = _examenes_por_persona([a['id_persona'] for a in alumnos])
+            for a in alumnos:
+                a['examen'] = examenes.get(a['id_persona'])
+            carga_cerrada = _carga_cerrada(cueanexo, anio_grado)
+
+    contexto = {
+        'tabulador': tabulador,
+        'sin_escuelas': not cueanexos,
+        'cueanexo_form': cueanexo_form,
+        'grado_form': grado_form,
+        'cueanexo': cueanexo,
+        'grado': grado,
+        'anio_grado': anio_grado,
+        'alumnos': alumnos,
+        'carga_cerrada': carga_cerrada,
+        'fid_actual': fid_actual,
+    }
+    return render(request, template, contexto)
+
+
+@login_required
+def lista(request, fid_actual=None):
+    """Listado de solo lectura de los alumnos de SGE."""
+    return _listado_alumnos(request, fid_actual, 'fluidez_octubre_2026/lista.html', con_examenes=False)
+
+
+@login_required
+def lista_examen(request, fid_actual=None):
+    """Alumnos con el estado de su examen, para cargarlo o editarlo."""
+    return _listado_alumnos(request, fid_actual, 'fluidez_octubre_2026/lista_examen.html', con_examenes=True)
+
+
+@login_required
+def evaluacion(request, fid_actual, cueanexo, grado, id_persona):
+    """Alta o edición del examen de un alumno."""
+    tabulador = _tabulador_actual(request)
+    if not tabulador:
+        return _sin_tabulador(request)
+    _validar_cueanexo(tabulador, cueanexo)
+    anio_grado = _anio_grado(grado)
+    url_lista = reverse(
+        'evaluaciones_educativas:fluidez_octubre_2026:lista_examen_fid',
+        kwargs={'fid_actual': fid_actual},
+    )
+
+    try:
+        encontrados = alumnos_seccion_grado(cueanexo, anio_grado, id_persona=id_persona)
+    except DatabaseError:
+        logger.exception('Error consultando el alumno %s en sge_nacion', id_persona)
+        messages.error(request, ERROR_SGE)
+        return redirect(url_lista)
+    if not encontrados:
+        raise Http404('El alumno no pertenece a esa escuela y grado.')
+    alumno = encontrados[0]
+
+    if _carga_cerrada(cueanexo, anio_grado):
+        messages.error(request, 'La carga de este grado está cerrada. Abrila para modificar exámenes.')
+        return redirect(url_lista)
+
+    existente = FluidezLectoraOctubre2026.de_alumno(id_persona)
+    form = EvaluacionFluidezOctubre2026Form(
+        request.POST or None, instance=existente, max_cantidad_palabra=MAX_PALABRAS[anio_grado],
+    )
+
+    if request.method == 'POST' and form.is_valid():
+        db = FluidezLectoraOctubre2026.objects.db
+        with transaction.atomic(using=db):
+            # Serializa los guardados del mismo alumno (doble envío, dos pestañas):
+            # se vuelve a buscar el examen ya con el lock tomado.
+            with connections[db].cursor() as cur:
+                cur.execute('SELECT pg_advisory_xact_lock(%s, %s)', [LOCK_EXAMEN_FLUIDEZ_OCT, id_persona])
+            examen = FluidezLectoraOctubre2026.de_alumno(id_persona)
+            if examen:
+                for campo, valor in form.cleaned_data.items():
+                    setattr(examen, campo, valor)
+                examen.encargado_carga = 'TABULADOR'
+                examen.alumno_id = id_persona
+                examen.save()
+            else:
+                FluidezLectoraOctubre2026.crear(
+                    id_alumno=id_persona,
+                    cueanexo_original=alumno['cueanexo'],
+                    cueanexo=str(cueanexo).strip(),
+                    alumno_id=id_persona,
+                    encargado_carga='TABULADOR',
+                    **form.cleaned_data,
+                )
+        messages.success(request, f"Examen de {alumno['apellido']}, {alumno['nombre']} guardado correctamente.")
+        return redirect(url_lista)
+
+    context = {
+        'form': form,
+        'alumno': alumno,
+        'anio_grado': anio_grado,
+        'es_edicion': bool(existente),
+        'fid_actual': fid_actual,
+    }
+    return render(request, 'fluidez_octubre_2026/evaluacion.html', context)
+
+
+@login_required
+@require_POST
+def completar_carga(request, cueanexo, grado):
+    """
+    Abre o cierra la carga de un grado. Cerrar solo se permite si todos los
+    alumnos tienen examen; abrir, siempre.
+    """
+    tabulador = _tabulador_actual(request)
+    if not tabulador:
+        return JsonResponse({'error': 'Sin permiso.'}, status=403)
+    _validar_cueanexo(tabulador, cueanexo)
+    anio_grado = _anio_grado(grado)
+
+    cierre, _ = CierreCargaFluidezOctubre2026.objects.get_or_create(cueanexo=cueanexo, anio_grado=anio_grado)
+    faltantes = None
+    es_valido = True
+
+    if cierre.estado_carga:
+        cierre.estado_carga = False
+    else:
+        try:
+            ids = [a['id_persona'] for a in alumnos_seccion_grado(cueanexo, anio_grado)]
+        except DatabaseError:
+            logger.exception('Error consultando alumnos en sge_nacion (%s, %s)', cueanexo, anio_grado)
+            return JsonResponse({'error': ERROR_SGE}, status=503)
+        faltantes = len(ids) - len(_examenes_por_persona(ids))
+        if faltantes == 0:
+            cierre.estado_carga = True
+        else:
+            es_valido = False
+
+    if es_valido:
+        cierre.cuil_tabulador = tabulador.cuil
+        cierre.save()
+
+    return JsonResponse({
+        'es_valido': es_valido,
+        'nuevo_estado': cierre.estado_carga,
+        'faltantes': faltantes,
+    })
+
+
+@login_required
+def descargar_excel(request, cueanexo, grado):
+    """Excel con todos los alumnos del grado y su examen ('SIN CARGAR' si no tiene)."""
+    tabulador = _tabulador_actual(request)
+    if not tabulador:
+        return _sin_tabulador(request)
+    _validar_cueanexo(tabulador, cueanexo)
+    anio_grado = _anio_grado(grado)
+
+    try:
+        alumnos = alumnos_seccion_grado(cueanexo, anio_grado)
+    except DatabaseError:
+        logger.exception('Error consultando alumnos en sge_nacion (%s, %s)', cueanexo, anio_grado)
+        messages.error(request, ERROR_SGE)
+        return redirect(reverse('evaluaciones_educativas:fluidez_octubre_2026:lista_examen'))
+    examenes = _examenes_por_persona([a['id_persona'] for a in alumnos])
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Fluidez Octubre 2026'
+    ws['A1'] = f'CUEANEXO: {cueanexo}'
+    ws['G1'] = f'FECHA Y HORA: {datetime.now():%d/%m/%Y %H:%M:%S}'
+    ws.append([
+        'NOMBRE', 'APELLIDO', 'DNI', 'COMUNIDAD INDÍGENA', 'DISCAPACIDAD', 'GRADO',
+        'SECCIÓN', 'TURNO', 'ASISTENCIA', 'FLUIDEZ', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6',
+    ])
+    for a in alumnos:
+        e = examenes.get(a['id_persona'])
+        fila = [
+            a['nombre'], a['apellido'], a['numero_documento'], a['comunidad_indigena'],
+            a['discapacidad'], a['anio_grado'], str(a['nombre_seccion'] or ''), a['turno'],
+        ]
+        if e:
+            fila += [
+                e.asistencia, e.cantidad_palabras_leidas, e.pregunta_1, e.pregunta_2,
+                e.pregunta_3, e.pregunta_4, e.pregunta_5, e.pregunta_6,
+            ]
+        else:
+            fila.append('SIN CARGAR')
+        ws.append(fila)
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = (
+        f'attachment; filename="fluidez_octubre_2026_{cueanexo}_{grado}_grado_{datetime.now():%Y%m%d_%H%M}.xlsx"'
+    )
+    wb.save(response)
+    return response
+
 
 #-------------------------------------------------CARGA Y SELECCION DE TABULADOR-------------------------------------------------------------
 

@@ -3,3 +3,4 @@ from .diagnostico_2026 import *
 from .fluidez_2026 import *
 from .analisis_evaluacion import *
 from .fluidez_octubre_2026 import *
+from .modelo_oficial import *

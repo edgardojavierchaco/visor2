@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lista de Evaluación</title>
+    <title>Alumnos - Fluidez Lectora Octubre 2026</title>
 
     <!-- Preconectar a Google Fonts para mayor velocidad -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -287,7 +287,7 @@
             <h1>Evaluación de Fluidez Lectora - Octubre 2026</h1> 
             
             <div class="header-controls shadow-sm">
-                <form method="POST" id="filter-form" class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <form method="POST" id="filter-form" action="{% url 'evaluaciones_educativas:fluidez_octubre_2026:lista_fid' fid_actual=fid_actual %}" class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                     {% csrf_token %}
                     
                     <div class="filter-group">
@@ -340,18 +340,10 @@
 
                 <!-- Botones de Acción -->
                 <div class="action-buttons gap-2">
-                    {% comment %} <a href="{% url 'director:institucional' %}" class="btn btn-outline-secondary px-3 fw-semibold shadow-sm" style="border-radius: 10px;">
-                        <i class="bi bi-display"></i> Visor
-                    </a> {% endcomment %}
-                    
-                    {% comment %}
-                    {% if grado %}
-                    <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:carga_alumno' fid_actual=fid_actual grado_public_id=grado %}" class="btn btn-success px-4 fw-bold shadow-sm" style="border-radius: 10px;">
-                        <i class="bi bi-person-plus"></i> Cargar Alumno
+                    <a href="{% url 'evaluaciones_educativas:dashboard' %}" class="btn btn-outline-secondary px-3 fw-semibold shadow-sm" style="border-radius: 10px;">
+                        <i class="bi bi-arrow-left me-1"></i> Inicio
                     </a>
-                    {% endif %}
-                    {% endcomment %}
-                    <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:lista_examen' %}" class="btn btn-primary px-4 fw-bold shadow-sm" style="border-radius: 10px;">
+                    <a href="{% url 'evaluaciones_educativas:fluidez_octubre_2026:lista_examen_fid' fid_actual=fid_actual %}" class="btn btn-primary px-4 fw-bold shadow-sm" style="border-radius: 10px;">
                         <i class="bi bi-journal-check me-1"></i> Exámenes
                     </a>
                 </div>
@@ -360,7 +352,7 @@
             <!-- TÍTULO DE VISUALIZACIÓN (Ahora está fuera del contenedor con scroll para que no se rompa) -->
             {% if alumnos %}
             <div class="bg-alumno text-white text-center py-2 px-3" style="font-size: 0.95rem; font-weight: 600; letter-spacing: 0.5px; border-top-left-radius: 8px; border-top-right-radius: 8px;">
-              <i class="bi bi-eye me-1"></i> VISUALIZANDO | GRADO: {{ grado }}
+              <i class="bi bi-eye me-1"></i> VISUALIZANDO | CUEANEXO: {{ cueanexo }} <br class="d-md-none"> GRADO: {{ anio_grado }}
             </div>  
             {% endif %}
 
@@ -394,22 +386,22 @@
                 </thead>
                 <tbody>
                   {% for alum in alumnos %}
-                  {# alum = (nombre, apellido, numero_documento, nombre_seccion, turno, comunidad_indigena, discapacidad) #}
+                  {# Datos de SGE, solo lectura #}
                   <tr class="fila-alumno"
-                      data-nombre="{{ alum.0 }}"
-                      data-apellido="{{ alum.1 }}"
-                      data-dni="{{ alum.2 }}"
-                      data-seccion="{{ alum.3 }}"
-                      data-turno="{{ alum.4 }}"
-                      data-comunidad_indigena="{{ alum.5 }}"
-                      data-discapacidad="{{ alum.6 }}">
-                    <td class="fw-semibold text-dark">{{ alum.0 }}</td>
-                    <td class="text-secondary">{{ alum.1 }}</td>
-                    <td class="text-secondary numeros-tabulares">{{ alum.2 }}</td>
-                    <td class="text-secondary">{{ alum.3|default:"-" }}</td>
-                    <td class="text-secondary">{{ alum.4|default:"-" }}</td>
-                    <td class="text-secondary">{{ alum.5|default:"-" }}</td>
-                    <td class="text-secondary">{{ alum.6|default:"-" }}</td>
+                      data-nombre="{{ alum.nombre }}"
+                      data-apellido="{{ alum.apellido }}"
+                      data-dni="{{ alum.numero_documento }}"
+                      data-seccion="{{ alum.nombre_seccion|default_if_none:'' }}"
+                      data-turno="{{ alum.turno|default_if_none:'' }}"
+                      data-comunidad_indigena="{{ alum.comunidad_indigena|default_if_none:'' }}"
+                      data-discapacidad="{{ alum.discapacidad|default_if_none:'' }}">
+                    <td class="fw-semibold text-dark">{{ alum.nombre }}</td>
+                    <td class="text-secondary">{{ alum.apellido }}</td>
+                    <td class="text-secondary numeros-tabulares">{{ alum.numero_documento }}</td>
+                    <td class="text-secondary">{{ alum.nombre_seccion|default:"-" }}</td>
+                    <td class="text-secondary">{{ alum.turno|default:"-" }}</td>
+                    <td class="text-secondary">{{ alum.comunidad_indigena|default:"-" }}</td>
+                    <td class="text-secondary">{{ alum.discapacidad|default:"-" }}</td>
                   </tr>
                   {% empty %}
                   <tr>
@@ -418,7 +410,13 @@
                           <i class="bi bi-inboxes mb-3" style="font-size: 3.5rem; color: #cbd5e1;"></i>
                           <h5 class="fw-semibold" style="color: #64748b;">No hay alumnos para mostrar</h5>
                           <p class="mb-0" style="font-size: 0.95rem; max-width: 400px;">
+                            {% if sin_escuelas %}
+                              Todavía no tenés escuelas asignadas. Consultá con tu regional.
+                            {% elif alumnos is not None %}
+                              SGE no tiene alumnos regulares de ese grado en la escuela.
+                            {% else %}
                               Utilizá los filtros del panel azul superior seleccionando un <strong>Cueanexo</strong> y un <strong>Grado</strong> para cargar la lista.
+                            {% endif %}
                           </p>
                       </div>
                     </td>

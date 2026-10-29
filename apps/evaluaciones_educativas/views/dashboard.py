@@ -1,4 +1,5 @@
 from apps.usuarios.services.user_context import get_user_rol
+from apps.evaluaciones_educativas.models.fluidez_octubre_2026 import TabuladoresFluidezOctubre2026
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse, NoReverseMatch
@@ -53,6 +54,14 @@ OPERATIVOS = [
                                 'icono':  'bi-people-fill',
                                 'url':    'evaluaciones_educativas:fluidez_octubre_2026:gestion_aplicadores',
                                 'roles':  ['Regional'],
+                            },
+                            {
+                                # Lo ve quien esté cargado como tabulador, sin importar su nivel de acceso.
+                                'titulo':         'Carga de exámenes',
+                                'icono':          'bi-pencil-square',
+                                'url':            'evaluaciones_educativas:fluidez_octubre_2026:lista',
+                                'roles':          [],
+                                'solo_tabulador': True,
                             },
                         ],
                     },
@@ -242,6 +251,7 @@ def dashboard(request):
     es_funcionario = rol in ['Funcionario', 'Evaluacion', 'Ministro', 'Subse']
     if usuario.is_superuser and not (es_director or es_regional or es_funcionario):
         es_funcionario = True
+    es_tabulador = TabuladoresFluidezOctubre2026.objects.filter(cuil=str(usuario.username)).exists()
 
     # ── Filtrar por rol y resolver URLs ──────────────────────────────
     operativos_visibles = []
@@ -255,7 +265,7 @@ def dashboard(request):
                     # Verificar si el rol del usuario está autorizado para este link
                     rol_autorizado = (rol in link['roles']) or (
                         usuario.is_superuser and any(r in ['Funcionario', 'Evaluacion', 'Ministro', 'Subse'] for r in link['roles'])
-                    )
+                    ) or (link.get('solo_tabulador') and es_tabulador)
                     if not rol_autorizado:
                         continue
 

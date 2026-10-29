@@ -127,3 +127,56 @@ def secciones_region(region, id_seccion=None):
 
     secciones.sort(key=lambda s: (s['escuela'] or '', s['grados'][0] if s['grados'] else '', str(s['nombre_seccion'] or '')))
     return secciones
+
+
+# ---------------------------------------------------------------------------
+# Alumnos para la carga de exámenes (tabuladores)
+# ---------------------------------------------------------------------------
+
+# anio_grado lleva "/" y no puede ir en la URL: se usa el código.
+GRADOS_URL = {'2': '2do Año/Grado', '3': '3er Año/Grado'}
+
+# Cantidad máxima de palabras del texto de lectura de cada grado.
+MAX_PALABRAS = {'2do Año/Grado': 196, '3er Año/Grado': 265}
+
+# Una fila por alumno: la vista puede repetir a la persona (p. ej. si cambió
+# de sección), por eso DISTINCT ON id_persona.
+SQL_ALUMNOS = """
+    SELECT *
+    FROM (
+        SELECT DISTINCT ON (id_persona)
+               id_persona, apellido, nombre, numero_documento, nombre_seccion,
+               turno, comunidad_indigena, discapacidad, cueanexo, anio_grado
+        FROM public.trayectoria_alumnos_sge
+        WHERE cueanexo = %s
+          AND anio_grado = %s
+          AND anio_ciclo = %s
+          AND estado_inscripcion = 'Regular'
+          AND id_persona IS NOT NULL
+          {filtro_persona}
+        ORDER BY id_persona, fecha_insc DESC NULLS LAST
+    ) alumnos
+    ORDER BY apellido, nombre
+"""
+
+
+def alumnos_seccion_grado(cueanexo, anio_grado, id_persona=None):
+    """
+    Alumnos regulares de un grado de la escuela, ordenados por apellido y
+    nombre. Con `id_persona` devuelve solo ese alumno (lista vacía si no es
+    de esa escuela y grado).
+    """
+    params = [str(cueanexo).strip(), anio_grado, CICLO_LECTIVO]
+    filtro_persona = ''
+    if id_persona is not None:
+        filtro_persona = 'AND id_persona = %s'
+        params.append(id_persona)
+
+    with conexion_sge().cursor() as cur:
+        cur.execute(SQL_ALUMNOS.format(filtro_persona=filtro_persona), params)
+        columnas = [c[0] for c in cur.description]
+        alumnos = [dict(zip(columnas, fila)) for fila in cur.fetchall()]
+
+    for a in alumnos:
+        a['cueanexo'] = str(a['cueanexo']).strip()
+    return alumnos
