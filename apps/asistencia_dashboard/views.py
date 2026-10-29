@@ -15,8 +15,10 @@ TABLA_ASISTENCIA = "sge.aip_asistencia_explotacion"
 TABLA_NOMINAL = "sge.aip_asistencia_alumno"
 TABLA_ALERTA_SEMANAL = "sge.aip_alerta_asistencia_alumno_semana"
 TABLA_CALIDAD = "sge.aip_calidad_registro_mes"
+TABLA_CALIDAD_SEMANAL = "sge.aip_calidad_registro_semana"
 TABLA_CALENDARIO_DIA = "sge.aip_calendario_seccion_dia"
 TABLA_MATRICULA = "sge.aip_matricula_seccion_mes"
+TABLA_CONTROL = "sge.aip_control_actualizacion"
 
 
 def _int_param(request, nombre, default=None):
@@ -42,14 +44,49 @@ def _rango_mes(anio, mes):
     return desde, hasta
 
 
+def _rango_semanal(filtros):
+    anio_iso = filtros.get("anio_semana")
+    semana_desde = filtros.get("semana_desde") or filtros.get("semana")
+    semana_hasta = filtros.get("semana_hasta") or semana_desde
+    if not anio_iso or not semana_desde or not semana_hasta:
+        return None
+    if semana_desde > semana_hasta:
+        semana_desde, semana_hasta = semana_hasta, semana_desde
+    try:
+        desde = date.fromisocalendar(int(anio_iso), int(semana_desde), 1)
+        hasta_inclusive = date.fromisocalendar(int(anio_iso), int(semana_hasta), 7)
+    except ValueError:
+        return None
+    return desde, hasta_inclusive + timedelta(days=1)
+
+
+def _rango_analisis(filtros):
+    return _rango_semanal(filtros) or _rango_mes(filtros["anio"], filtros["mes"])
+
+
+def _mes_referencia(filtros):
+    rango = _rango_semanal(filtros)
+    if rango:
+        fin_inclusive = rango[1] - timedelta(days=1)
+        return fin_inclusive.year, fin_inclusive.month
+    return filtros["anio"], filtros["mes"]
+
+
 def _filtros_request(request):
     hoy = date.today()
     iso = hoy.isocalendar()
+    semana_legacy = _int_param(request, "semana", iso.week)
+    semana_desde = _int_param(request, "semana_desde", semana_legacy)
+    semana_hasta = _int_param(request, "semana_hasta", semana_legacy)
+    if semana_desde and semana_hasta and semana_desde > semana_hasta:
+        semana_desde, semana_hasta = semana_hasta, semana_desde
     return {
         "anio": _int_param(request, "anio", hoy.year),
         "mes": _int_param(request, "mes", hoy.month),
         "anio_semana": _int_param(request, "anio_semana", iso.year),
-        "semana": _int_param(request, "semana", iso.week),
+        "semana": semana_hasta,
+        "semana_desde": semana_desde,
+        "semana_hasta": semana_hasta,
         "region": _text_param(request, "region"),
         "departamento": _text_param(request, "departamento"),
         "localidad": _text_param(request, "localidad"),
@@ -150,7 +187,7 @@ def _apply_scope_to_conditions(request, condiciones, params, alias=None):
 
 def _build_where(filtros, request=None, alias=None, calendario=False):
     prefix = f"{alias}." if alias else ""
-    desde, hasta = _rango_mes(filtros["anio"], filtros["mes"])
+    desde, hasta = _rango_analisis(filtros)
     condiciones = [f"{prefix}fecha_asistencia >= %s", f"{prefix}fecha_asistencia < %s"]
     params = [desde, hasta]
 
@@ -190,8 +227,9 @@ def _build_where(filtros, request=None, alias=None, calendario=False):
 
 def _build_where_calidad(filtros, request, alias=None):
     prefix = f"{alias}." if alias else ""
+    anio_ref, mes_ref = _mes_referencia(filtros)
     condiciones = [f"{prefix}anio = %s", f"{prefix}mes = %s"]
-    params = [filtros["anio"], filtros["mes"]]
+    params = [anio_ref, mes_ref]
     _apply_scope_to_conditions(request, condiciones, params, alias=alias)
 
     cues = _cueanexos_territorio(filtros)
@@ -214,10 +252,45 @@ def _build_where_calidad(filtros, request, alias=None):
     return " AND ".join(condiciones), params
 
 
+
+
+def _build_where_calidad_semanal(filtros, request, alias=None):
+    prefix = f"{alias}." if alias else ""
+    anio_iso = filtros.get("anio_semana")
+    semana_desde = filtros.get("semana_desde") or filtros.get("semana")
+    semana_hasta = filtros.get("semana_hasta") or semana_desde
+    if not anio_iso or not semana_desde or not semana_hasta:
+        return None, []
+    if semana_desde > semana_hasta:
+        semana_desde, semana_hasta = semana_hasta, semana_desde
+    condiciones = [f"{prefix}anio_iso = %s", f"{prefix}semana_iso BETWEEN %s AND %s"]
+    params = [anio_iso, semana_desde, semana_hasta]
+    _apply_scope_to_conditions(request, condiciones, params, alias=alias)
+    cues = _cueanexos_territorio(filtros)
+    if cues is not None:
+        if cues:
+            condiciones.append(f"{prefix}cueanexo = ANY(%s)")
+            params.append(cues)
+        else:
+            condiciones.append("1 = 0")
+    for campo in ("departamento", "localidad", "nivel", "cueanexo"):
+        valor = filtros.get(campo)
+        if valor:
+            condiciones.append(f"{prefix}{campo} = %s")
+            params.append(valor)
+    return " AND ".join(condiciones), params
+
+
+def _usar_calidad_semanal(filtros):
+    return bool(_rango_semanal(filtros) and _relation_exists(TABLA_CALIDAD_SEMANAL))
+
 def _build_where_matricula(filtros, request, anio=None, mes=None, alias=None):
     prefix = f"{alias}." if alias else ""
-    anio = anio or filtros["anio"]
-    mes = mes or filtros["mes"]
+    if anio is None and mes is None:
+        anio, mes = _mes_referencia(filtros)
+    else:
+        anio = anio or filtros["anio"]
+        mes = mes or filtros["mes"]
     condiciones = [f"{prefix}anio = %s", f"{prefix}mes = %s"]
     params = [anio, mes]
     _apply_scope_to_conditions(request, condiciones, params, alias=alias)
@@ -241,9 +314,12 @@ def _build_where_matricula(filtros, request, anio=None, mes=None, alias=None):
 
 def _build_where_nominal(filtros, request, anio=None, mes=None, alias=None):
     prefix = f"{alias}." if alias else ""
-    anio = anio or filtros["anio"]
-    mes = mes or filtros["mes"]
-    desde, hasta = _rango_mes(anio, mes)
+    if anio is None and mes is None:
+        desde, hasta = _rango_analisis(filtros)
+    else:
+        anio = anio or filtros["anio"]
+        mes = mes or filtros["mes"]
+        desde, hasta = _rango_mes(anio, mes)
     condiciones = [f"{prefix}fecha_asistencia >= %s", f"{prefix}fecha_asistencia < %s"]
     params = [desde, hasta]
     _apply_scope_to_conditions(request, condiciones, params, alias=alias)
@@ -267,8 +343,20 @@ def _build_where_nominal(filtros, request, anio=None, mes=None, alias=None):
 
 def _build_where_semanal(filtros, request, anio_iso=None, semana_iso=None, alias=None):
     prefix = f"{alias}." if alias else ""
-    condiciones = [f"{prefix}anio_iso = %s", f"{prefix}semana_iso = %s"]
-    params = [anio_iso or filtros["anio_semana"], semana_iso or filtros["semana"]]
+    if anio_iso is not None and semana_iso is not None:
+        desde = date.fromisocalendar(anio_iso, semana_iso, 1)
+        hasta = desde + timedelta(days=7)
+    else:
+        rango = _rango_semanal(filtros)
+        if rango:
+            desde, hasta = rango
+        else:
+            anio = filtros["anio_semana"]
+            semana = filtros["semana"]
+            desde = date.fromisocalendar(anio, semana, 1)
+            hasta = desde + timedelta(days=7)
+    condiciones = [f"{prefix}fecha_desde >= %s", f"{prefix}fecha_desde < %s"]
+    params = [desde, hasta]
     _apply_scope_to_conditions(request, condiciones, params, alias=alias)
 
     cues = _cueanexos_territorio(filtros)
@@ -402,100 +490,88 @@ def _adjuntar_matricula(datos, filtros, request, detalle=False):
 
 
 def _adjuntar_sin_registro_secciones(datos, filtros, request):
-    """Adjunta los días sin registro de calidad a cada fila de sección."""
+    """Adjunta días sin registro según el rango semanal exacto o el mes de referencia."""
     if not datos:
         return datos
-
     for fila in datos:
         fila["sin_registro"] = 0
-
-    if not _relation_exists(TABLA_CALIDAD):
-        return datos
-
     ids = [fila.get("id_seccion") for fila in datos if fila.get("id_seccion") is not None]
     if not ids:
         return datos
 
-    where, params = _build_where_calidad(filtros, request, alias="c")
+    semanal = _usar_calidad_semanal(filtros)
+    tabla = TABLA_CALIDAD_SEMANAL if semanal else TABLA_CALIDAD
+    if not _relation_exists(tabla):
+        return datos
+    where, params = (_build_where_calidad_semanal(filtros, request, alias="c") if semanal
+                     else _build_where_calidad(filtros, request, alias="c"))
     where += " AND c.id_seccion = ANY(%s)"
     params.append(ids)
-
     try:
         with connections[DB_ALIAS].cursor() as cursor:
             cursor.execute(
-                f"""
-                SELECT c.id_seccion, COALESCE(SUM(c.dias_sin_registro), 0)::integer AS sin_registro
-                FROM {TABLA_CALIDAD} c
-                WHERE {where}
-                GROUP BY c.id_seccion
-                """,
+                f"SELECT c.id_seccion, COALESCE(SUM(c.dias_sin_registro),0)::integer "
+                f"FROM {tabla} c WHERE {where} GROUP BY c.id_seccion",
                 params,
             )
             mapa = {row[0]: int(row[1] or 0) for row in cursor.fetchall()}
     except Exception:
         return datos
-
     for fila in datos:
         fila["sin_registro"] = mapa.get(fila.get("id_seccion"), 0)
-
     return datos
 
-
 def _calidad_resumen(filtros, request):
-    if not _relation_exists(TABLA_CALIDAD):
-        return {
-            "dias_habiles": None,
-            "dias_registrados": None,
-            "jornadas_esperadas": 0,
-            "jornadas_registradas": 0,
-            "jornadas_sin_registro": 0,
-            "secciones_calidad": 0,
-            "secciones_completas": 0,
-            "porcentaje_cobertura": None,
-        }
-
-    where, params = _build_where_calidad(filtros, request)
+    semanal = _usar_calidad_semanal(filtros)
+    tabla = TABLA_CALIDAD_SEMANAL if semanal else TABLA_CALIDAD
+    vacio = {
+        "dias_habiles": None, "dias_registrados": None, "jornadas_esperadas": 0,
+        "jornadas_registradas": 0, "jornadas_sin_registro": 0,
+        "secciones_calidad": 0, "secciones_completas": 0, "porcentaje_cobertura": None,
+    }
+    if not _relation_exists(tabla):
+        return vacio
+    where, params = (_build_where_calidad_semanal(filtros, request) if semanal
+                     else _build_where_calidad(filtros, request))
     try:
         with connections[DB_ALIAS].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT
-                    MAX(dias_habiles_calendario) AS dias_habiles,
-                    MAX(dias_registrados) AS dias_registrados,
-                    COALESCE(SUM(dias_esperados),0) AS jornadas_esperadas,
-                    COALESCE(SUM(dias_registrados),0) AS jornadas_registradas,
-                    COALESCE(SUM(dias_sin_registro),0) AS jornadas_sin_registro,
-                    COUNT(*) AS secciones_calidad,
-                    COUNT(*) FILTER (WHERE estado_registro='COMPLETO') AS secciones_completas,
-                    ROUND(100.0 * SUM(dias_registrados) / NULLIF(SUM(dias_esperados),0),2) AS porcentaje_cobertura
-                FROM {TABLA_CALIDAD}
-                WHERE {where}
-                """,
-                params,
-            )
+            if semanal:
+                cursor.execute(f"""
+                    WITH seccion AS (
+                        SELECT id_seccion,
+                               SUM(dias_habiles_calendario) dias_habiles,
+                               SUM(dias_esperados) esperados,
+                               SUM(dias_registrados) registrados,
+                               SUM(dias_sin_registro) sin_registro
+                        FROM {tabla}
+                        WHERE {where}
+                        GROUP BY id_seccion
+                    )
+                    SELECT MAX(dias_habiles), MAX(registrados),
+                           COALESCE(SUM(esperados),0), COALESCE(SUM(registrados),0),
+                           COALESCE(SUM(sin_registro),0), COUNT(*),
+                           COUNT(*) FILTER (WHERE esperados > 0 AND sin_registro = 0),
+                           ROUND(100.0 * SUM(registrados) / NULLIF(SUM(esperados),0),2)
+                    FROM seccion
+                """, params)
+            else:
+                cursor.execute(f"""
+                    SELECT MAX(dias_habiles_calendario), MAX(dias_registrados),
+                           COALESCE(SUM(dias_esperados),0), COALESCE(SUM(dias_registrados),0),
+                           COALESCE(SUM(dias_sin_registro),0), COUNT(*),
+                           COUNT(*) FILTER (WHERE estado_registro='COMPLETO'),
+                           ROUND(100.0 * SUM(dias_registrados) / NULLIF(SUM(dias_esperados),0),2)
+                    FROM {tabla} WHERE {where}
+                """, params)
             row = cursor.fetchone()
         return {
-            "dias_habiles": row[0],
-            "dias_registrados": row[1],
-            "jornadas_esperadas": row[2] or 0,
-            "jornadas_registradas": row[3] or 0,
-            "jornadas_sin_registro": row[4] or 0,
-            "secciones_calidad": row[5] or 0,
-            "secciones_completas": row[6] or 0,
-            "porcentaje_cobertura": row[7],
+            "dias_habiles": row[0], "dias_registrados": row[1],
+            "jornadas_esperadas": row[2] or 0, "jornadas_registradas": row[3] or 0,
+            "jornadas_sin_registro": row[4] or 0, "secciones_calidad": row[5] or 0,
+            "secciones_completas": row[6] or 0, "porcentaje_cobertura": row[7],
         }
     except Exception:
-        return {
-            "dias_habiles": None,
-            "dias_registrados": None,
-            "jornadas_esperadas": 0,
-            "jornadas_registradas": 0,
-            "jornadas_sin_registro": 0,
-            "secciones_calidad": 0,
-            "secciones_completas": 0,
-            "porcentaje_cobertura": None,
-        }
-
+        return vacio
 
 def _url_volver_por_rol(user):
     role_name = (get_access_scope(user).role_name or "").strip().upper()
@@ -524,6 +600,26 @@ def dashboard(request):
     except Exception:
         pass
 
+    estado_actualizacion = None
+    fecha_dato_max = None
+    try:
+        with connections[DB_ALIAS].cursor() as cursor:
+            cursor.execute(f"SELECT MAX(fecha_asistencia)::date FROM {TABLA_ASISTENCIA}")
+            row = cursor.fetchone()
+            fecha_dato_max = row[0] if row else None
+            cursor.execute("SELECT to_regclass(%s)", [TABLA_CONTROL])
+            if cursor.fetchone()[0]:
+                cursor.execute(f"SELECT proceso, anio, mes, fecha_inicio, fecha_fin, estado, fecha_dato_max FROM {TABLA_CONTROL} ORDER BY fecha_inicio DESC LIMIT 1")
+                row = cursor.fetchone()
+                if row:
+                    estado_actualizacion = {
+                        "proceso": row[0], "anio": row[1], "mes": row[2],
+                        "fecha_inicio": row[3], "fecha_fin": row[4],
+                        "estado": row[5], "fecha_dato_max": row[6],
+                    }
+    except Exception:
+        pass
+
     return render(request, "asistencia_dashboard/dashboard.html", {
         "anio_actual": anio_actual,
         "mes_actual": mes_actual,
@@ -531,6 +627,8 @@ def dashboard(request):
         "semana_actual": semana_actual,
         "semana_desde": semana_desde,
         "semana_hasta": semana_hasta,
+        "fecha_dato_max": fecha_dato_max,
+        "estado_actualizacion": estado_actualizacion,
         "perfil_acceso": get_access_scope(request.user).role_name,
         "url_volver": _url_volver_por_rol(request.user),
     })
@@ -833,92 +931,82 @@ def api_establecimientos(request):
 def api_calidad_registro(request):
     filtros = _filtros_request(request)
     page, page_size, offset = _pagination_request(request)
-
-    if not _relation_exists(TABLA_CALIDAD):
+    semanal = _usar_calidad_semanal(filtros)
+    tabla = TABLA_CALIDAD_SEMANAL if semanal else TABLA_CALIDAD
+    if not _relation_exists(tabla):
         return JsonResponse({
-            "data": [],
-            "resumen": {},
-            "procesado": False,
+            "data": [], "resumen": {}, "procesado": False,
             "message": "La tabla de calidad todavía no está instalada.",
             "pagination": _pagination_meta(page, page_size, 0),
         })
-
-    where, params = _build_where_calidad(filtros, request)
-
-    base = f"""
-        SELECT
-            cueanexo,
-            MAX(escuela) AS escuela,
-            MAX(departamento) AS departamento,
-            MAX(localidad) AS localidad,
-            COUNT(DISTINCT id_seccion) AS cantidad_secciones,
-            MAX(dias_habiles_calendario) AS dias_habiles_calendario,
-            SUM(dias_excepcion) AS jornadas_excepcion,
-            SUM(dias_evento_excluyente) AS jornadas_evento_excluyente,
-            SUM(dias_esperados) AS jornadas_esperadas,
-            SUM(dias_registrados) AS jornadas_registradas,
-            SUM(dias_sin_registro) AS jornadas_sin_registro,
-            ROUND(100.0 * SUM(dias_registrados) / NULLIF(SUM(dias_esperados), 0), 2)
-                AS porcentaje_cumplimiento,
-            CASE
-                WHEN SUM(dias_esperados) = 0 THEN 'SIN_DIAS_ESPERADOS'
-                WHEN SUM(dias_registrados) = 0 THEN 'SIN_CARGA'
-                WHEN SUM(dias_sin_registro) > 0 THEN 'PARCIAL'
-                ELSE 'COMPLETO'
-            END AS estado_registro
-        FROM {TABLA_CALIDAD}
-        WHERE {where}
-        GROUP BY cueanexo
-    """
-
-    # El resumen siempre representa el universo completo alcanzado por los
-    # filtros generales. El botón de estado sólo filtra la tabla/paginación.
+    where, params = (_build_where_calidad_semanal(filtros, request) if semanal
+                     else _build_where_calidad(filtros, request))
+    if semanal:
+        base = f"""
+            WITH seccion AS (
+                SELECT cueanexo, MAX(escuela) escuela, MAX(departamento) departamento,
+                       MAX(localidad) localidad, id_seccion,
+                       SUM(dias_habiles_calendario) dias_habiles_calendario,
+                       SUM(dias_esperados) dias_esperados, SUM(dias_registrados) dias_registrados,
+                       SUM(dias_sin_registro) dias_sin_registro
+                FROM {tabla}
+                WHERE {where}
+                GROUP BY cueanexo, id_seccion
+            )
+            SELECT cueanexo, MAX(escuela) escuela, MAX(departamento) departamento,
+                   MAX(localidad) localidad, COUNT(*) cantidad_secciones,
+                   MAX(dias_habiles_calendario) dias_habiles_calendario,
+                   0::bigint jornadas_excepcion, 0::bigint jornadas_evento_excluyente,
+                   SUM(dias_esperados) jornadas_esperadas, SUM(dias_registrados) jornadas_registradas,
+                   SUM(dias_sin_registro) jornadas_sin_registro,
+                   ROUND(100.0 * SUM(dias_registrados) / NULLIF(SUM(dias_esperados),0),2) porcentaje_cumplimiento,
+                   CASE WHEN SUM(dias_esperados)=0 THEN 'SIN_DIAS_ESPERADOS'
+                        WHEN SUM(dias_registrados)=0 THEN 'SIN_CARGA'
+                        WHEN SUM(dias_sin_registro)>0 THEN 'PARCIAL' ELSE 'COMPLETO' END estado_registro
+            FROM seccion GROUP BY cueanexo
+        """
+    else:
+        base = f"""
+            SELECT cueanexo, MAX(escuela) AS escuela, MAX(departamento) AS departamento,
+                   MAX(localidad) AS localidad, COUNT(DISTINCT id_seccion) AS cantidad_secciones,
+                   MAX(dias_habiles_calendario) AS dias_habiles_calendario,
+                   SUM(dias_excepcion) AS jornadas_excepcion,
+                   SUM(dias_evento_excluyente) AS jornadas_evento_excluyente,
+                   SUM(dias_esperados) AS jornadas_esperadas, SUM(dias_registrados) AS jornadas_registradas,
+                   SUM(dias_sin_registro) AS jornadas_sin_registro,
+                   ROUND(100.0 * SUM(dias_registrados) / NULLIF(SUM(dias_esperados),0),2) porcentaje_cumplimiento,
+                   CASE WHEN SUM(dias_esperados)=0 THEN 'SIN_DIAS_ESPERADOS'
+                        WHEN SUM(dias_registrados)=0 THEN 'SIN_CARGA'
+                        WHEN SUM(dias_sin_registro)>0 THEN 'PARCIAL' ELSE 'COMPLETO' END estado_registro
+            FROM {tabla} WHERE {where} GROUP BY cueanexo
+        """
     estado = (request.GET.get("estado_registro") or "").strip().upper()
-    estados_validos = {"COMPLETO", "PARCIAL", "SIN_CARGA", "SIN_DIAS_ESPERADOS"}
-    if estado not in estados_validos:
+    validos = {"COMPLETO", "PARCIAL", "SIN_CARGA", "SIN_DIAS_ESPERADOS"}
+    if estado not in validos:
         estado = ""
-
-    consulta_datos = f"SELECT * FROM ({base}) q"
+    consulta = f"SELECT * FROM ({base}) q"
     params_datos = list(params)
-
     if estado:
-        consulta_datos += " WHERE estado_registro = %s"
+        consulta += " WHERE estado_registro = %s"
         params_datos.append(estado)
-
     with connections[DB_ALIAS].cursor() as cursor:
-        cursor.execute(
-            f"SELECT estado_registro, COUNT(*) FROM ({base}) q GROUP BY estado_registro",
-            params,
-        )
-        resumen = {
-            "COMPLETO": 0,
-            "PARCIAL": 0,
-            "SIN_CARGA": 0,
-            "SIN_DIAS_ESPERADOS": 0,
-        }
+        cursor.execute(f"SELECT estado_registro, COUNT(*) FROM ({base}) q GROUP BY estado_registro", params)
+        resumen = {k: 0 for k in validos}
         for e, c in cursor.fetchall():
             if e in resumen:
                 resumen[e] = c
-
-        cursor.execute(f"SELECT COUNT(*) FROM ({consulta_datos}) z", params_datos)
+        cursor.execute(f"SELECT COUNT(*) FROM ({consulta}) z", params_datos)
         total = cursor.fetchone()[0]
-
-        cursor.execute(
-            consulta_datos
-            + " ORDER BY jornadas_sin_registro DESC, escuela LIMIT %s OFFSET %s",
-            params_datos + [page_size, offset],
-        )
+        cursor.execute(consulta + " ORDER BY jornadas_sin_registro DESC, escuela LIMIT %s OFFSET %s",
+                       params_datos + [page_size, offset])
         datos = _dictfetchall(cursor)
-
     return JsonResponse({
-        "data": datos,
-        "resumen": resumen,
-        "procesado": sum(resumen.values()) > 0,
+        "data": datos, "resumen": resumen, "procesado": sum(resumen.values()) > 0,
         "filtro_estado": estado or None,
+        "fuente_calidad": "SEMANAL" if semanal else "MENSUAL",
         "message": None if sum(resumen.values()) > 0 else "No hay calidad procesada para el período.",
         "pagination": _pagination_meta(page, page_size, total),
     })
-
 
 def _nivel_severidad(nivel):
     return {"SIN DATOS": 0, "NORMAL": 1, "ATENCION": 2, "ALTO": 3, "CRITICO": 4}.get(nivel or "SIN DATOS", 0)
@@ -1003,8 +1091,13 @@ def api_resumen_alertas_semana(request):
         )
         alertas, atencion, alto, critico, desde, hasta, alumnos_evaluados = cursor.fetchone()
     if hasta is None:
-        desde = date.fromisocalendar(filtros["anio_semana"], filtros["semana"], 1)
-        hasta = desde + timedelta(days=6)
+        rango = _rango_semanal(filtros)
+        if rango:
+            desde, hasta_exclusive = rango
+            hasta = hasta_exclusive - timedelta(days=1)
+        else:
+            desde = date.fromisocalendar(filtros["anio_semana"], filtros["semana"], 1)
+            hasta = desde + timedelta(days=6)
     matricula, fuente = _matricula_total(filtros, request, anio=hasta.year, mes=hasta.month)
     incidencia = round(100.0 * int(alertas or 0) / matricula, 2) if matricula else None
     return JsonResponse({
@@ -1021,13 +1114,20 @@ def api_resumen_alertas_semana(request):
 @login_required
 def api_tendencia_alertas(request):
     filtros = _filtros_request(request)
-    inicio_actual = date.fromisocalendar(filtros["anio_semana"], filtros["semana"], 1)
+    rango = _rango_semanal(filtros)
+    if rango:
+        inicio, fin_exclusive = rango
+    else:
+        inicio = date.fromisocalendar(filtros["anio_semana"], filtros["semana"], 1)
+        fin_exclusive = inicio + timedelta(days=7)
+
     resultado = []
-    for despl in (3, 2, 1, 0):
-        inicio = inicio_actual - timedelta(weeks=despl)
-        iso = inicio.isocalendar()
+    cursor_semana = inicio
+    while cursor_semana < fin_exclusive:
+        iso = cursor_semana.isocalendar()
         fs = dict(filtros)
         fs["anio_semana"], fs["semana"] = iso.year, iso.week
+        fs["semana_desde"], fs["semana_hasta"] = iso.week, iso.week
         where, params = _build_where_semanal(fs, request, anio_iso=iso.year, semana_iso=iso.week)
         with connections[DB_ALIAS].cursor() as cursor:
             cursor.execute(
@@ -1035,10 +1135,17 @@ def api_tendencia_alertas(request):
                 params,
             )
             alertas, criticos, evaluados = cursor.fetchone()
-        fin = inicio + timedelta(days=6)
+        fin = cursor_semana + timedelta(days=6)
         matricula, fuente = _matricula_total(fs, request, anio=fin.year, mes=fin.month)
         incidencia = round(100.0 * int(alertas or 0) / matricula, 2) if matricula else None
-        resultado.append({"anio_iso": iso.year, "semana_iso": iso.week, "fecha_desde": inicio.isoformat(), "fecha_hasta": fin.isoformat(), "label": f"Sem {iso.week}", "alumnos_alerta": int(alertas or 0), "criticos": int(criticos or 0), "alumnos_evaluados": int(evaluados or 0), "matricula": matricula, "matricula_fuente": fuente, "incidencia": incidencia})
+        resultado.append({
+            "anio_iso": iso.year, "semana_iso": iso.week,
+            "fecha_desde": cursor_semana.isoformat(), "fecha_hasta": fin.isoformat(),
+            "label": f"Sem {iso.week}", "alumnos_alerta": int(alertas or 0),
+            "criticos": int(criticos or 0), "alumnos_evaluados": int(evaluados or 0),
+            "matricula": matricula, "matricula_fuente": fuente, "incidencia": incidencia,
+        })
+        cursor_semana += timedelta(days=7)
     return JsonResponse({"data": resultado})
 
 

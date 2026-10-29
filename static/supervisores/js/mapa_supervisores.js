@@ -6,6 +6,8 @@ let capaRegionales = null;
 let controlLeyenda = null;
 let mapaInicializado = false;
 let cargandoMapa = false;
+let controladorMapa = null;
+let ultimaSolicitudMapa = 0;
 
 const MAPA_SUPERVISORES_URL = "/supreg/api/mapa/supervisores/";
 const CENTRO_CHACO = [-27.45, -59.0];
@@ -198,8 +200,11 @@ function mostrarCoberturaGeneral() {
 
 async function cargarMapaSupervisores(supervisorId = null) {
     inicializarMapaSupervisores();
-    if (!mapaSupervisores || cargandoMapa) return;
+    if (!mapaSupervisores) return;
 
+    if (controladorMapa) controladorMapa.abort();
+    controladorMapa = new AbortController();
+    const solicitudActual = ++ultimaSolicitudMapa;
     cargandoMapa = true;
     limpiarMapa();
     actualizarEstadoMapa("Cargando cobertura territorial...");
@@ -210,6 +215,7 @@ async function cargarMapaSupervisores(supervisorId = null) {
         const url = query ? `${MAPA_SUPERVISORES_URL}?${query}` : MAPA_SUPERVISORES_URL;
         const response = await fetch(url, {
             method: "GET",
+            signal: controladorMapa.signal,
             credentials: "same-origin",
             headers: {
                 Accept: "application/json",
@@ -218,6 +224,7 @@ async function cargarMapaSupervisores(supervisorId = null) {
         });
 
         const data = await response.json();
+        if (solicitudActual !== ultimaSolicitudMapa) return;
         if (!response.ok || !data.ok) {
             throw new Error(data?.error || `Error HTTP ${response.status}`);
         }
@@ -227,6 +234,7 @@ async function cargarMapaSupervisores(supervisorId = null) {
         actualizarKpis(data.estadisticas || {});
         actualizarTituloMapa(data);
         actualizarLeyendaMapa(data.regionales || null, data.escuelas || []);
+        window.sigseSinSupervisorActualizar?.();
 
         if (!Array.isArray(data.escuelas) || data.escuelas.length === 0) {
             actualizarEstadoMapa("No se encontraron establecimientos.");
@@ -234,10 +242,14 @@ async function cargarMapaSupervisores(supervisorId = null) {
             actualizarEstadoMapa(`${data.escuelas.length} establecimiento(s) cargado(s).`);
         }
     } catch (error) {
+        if (error.name === "AbortError" || solicitudActual !== ultimaSolicitudMapa) return;
         actualizarEstadoMapa(error.message || "Error cargando el mapa.", true);
         actualizarKpis({ total: 0, geolocalizadas: 0, sin_geolocalizar: 0, supervisores: 0, regiones: 0 });
     } finally {
-        cargandoMapa = false;
+        if (solicitudActual === ultimaSolicitudMapa) {
+            cargandoMapa = false;
+            controladorMapa = null;
+        }
     }
 }
 
@@ -375,12 +387,56 @@ function actualizarLeyendaMapa(geojson, escuelas) {
         });
     }
 
+    // El Observatorio SIGSE utiliza una leyenda EXTERNA al mapa:
+    // evita problemas de contraste, superposición y CSS global sobre Leaflet.
+    const leyendaExterna = document.getElementById("sigseLeyendaContenido");
+    if (leyendaExterna) {
+        const crearGrupo = (titulo, items, clase) => {
+            if (!items.length) return null;
+            const grupo = document.createElement("section");
+            grupo.className = "sigse-legend-group";
+            const encabezado = document.createElement("h3");
+            encabezado.className = "sigse-legend-heading";
+            encabezado.textContent = titulo;
+            grupo.appendChild(encabezado);
+            const lista = document.createElement("div");
+            lista.className = "sigse-legend-list";
+            for (const item of items) {
+                const fila = document.createElement("span");
+                fila.className = "sigse-legend-item";
+                const muestra = document.createElement("span");
+                muestra.className = "sigse-legend-swatch" + (clase === "dot" ? " dot" : "");
+                muestra.style.backgroundColor = item.color;
+                const etiqueta = document.createElement("span");
+                etiqueta.textContent = item.nombre;
+                fila.append(muestra, etiqueta);
+                lista.appendChild(fila);
+            }
+            grupo.appendChild(lista);
+            return grupo;
+        };
+        leyendaExterna.replaceChildren();
+        const regionales = crearGrupo("Regionales", regiones, "region");
+        const ofertas = crearGrupo("Ofertas / niveles", [...categorias]
+            .sort((a, b) => a.localeCompare(b, "es"))
+            .map(nombre => ({nombre, color: obtenerColorCategoria(nombre)})), "dot");
+        if (regionales) leyendaExterna.appendChild(regionales);
+        if (ofertas) leyendaExterna.appendChild(ofertas);
+        if (!regionales && !ofertas) {
+            const vacio = document.createElement("span");
+            vacio.className = "sigse-legend-empty";
+            vacio.textContent = "No hay categorías para los filtros seleccionados.";
+            leyendaExterna.appendChild(vacio);
+        }
+        return;
+    }
+
     controlLeyenda = L.control({ position: "bottomright" });
 
     controlLeyenda.onAdd = function () {
         const contenedor = L.DomUtil.create(
             "div",
-            "mapa-leyenda-control leaflet-bar"
+            "mapa-leyenda-control leaflet-bar abierta"
         );
 
         const boton = L.DomUtil.create(
@@ -390,8 +446,8 @@ function actualizarLeyendaMapa(geojson, escuelas) {
         );
 
         boton.type = "button";
-        boton.setAttribute("aria-expanded", "false");
-        boton.setAttribute("aria-label", "Mostrar leyenda del mapa");
+        boton.setAttribute("aria-expanded", "true");
+        boton.setAttribute("aria-label", "Ocultar leyenda del mapa");
         boton.innerHTML = `
             <span class="mapa-leyenda-toggle-icon" aria-hidden="true">☰</span>
             <span>Leyenda</span>
@@ -583,3 +639,5 @@ window.cargarMapaSupervisores = cargarMapaSupervisores;
 window.mostrarCoberturaGeneral = mostrarCoberturaGeneral;
 window.mostrarCoberturaSupervisor = mostrarCoberturaSupervisor;
 window.mostrarMapaSupervisorPorCuil = mostrarMapaSupervisorPorCuil;
+
+window.sigseMapaLeaflet = () => mapaSupervisores;

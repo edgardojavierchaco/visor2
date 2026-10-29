@@ -991,10 +991,16 @@ class Aguapey(models.Model):
     total_usuarios = models.PositiveIntegerField(verbose_name='Total Usuarios')
 
     observaciones = models.TextField(max_length=255, verbose_name='Observaciones')
+    nombre_base_datos = models.CharField(
+        max_length=120,
+        blank=True,
+        default='',
+        verbose_name='Base de datos utilizada',
+    )
 
     class Meta:
-        verbose_name = 'Aguapey'
-        verbose_name_plural = 'Aguapeys'
+        verbose_name = 'Base de datos utilizada'
+        verbose_name_plural = 'Bases de datos utilizadas'
         db_table = 'aguapey'
 
         # 🔥 EVITA DUPLICADOS EN BASE DE DATOS
@@ -1017,6 +1023,7 @@ class Aguapey(models.Model):
     # =========================
     def clean(self):
         super().clean()
+        self.nombre_base_datos = (self.nombre_base_datos or '').strip()
 
         # 🔴 VALIDACIÓN 1: valores no negativos
         numeric_fields = {
@@ -1060,7 +1067,7 @@ class Aguapey(models.Model):
 
             if qs.exists():
                 raise ValidationError({
-                    '__all__': '⚠️ Ya existe un registro de Aguapey para este CUE, Mes y Año.'
+                    '__all__': 'Ya existe un registro de base de datos utilizada para este CUE-Anexo y período.'
                 })
 
     # =========================
@@ -1083,6 +1090,7 @@ class Aguapey(models.Model):
         item['total_mes'] = self.total_mes
         item['total_base'] = self.total_base
         item['total_usuarios'] = self.total_usuarios
+        item['nombre_base_datos'] = self.nombre_base_datos
 
         item['observaciones'] = self.observaciones
 

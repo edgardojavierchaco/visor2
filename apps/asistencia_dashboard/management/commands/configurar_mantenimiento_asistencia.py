@@ -15,8 +15,8 @@ class Command(BaseCommand):
     help = "Configura mantenimiento diario y reproceso semanal de asistencia."
 
     def add_arguments(self, parser):
-        parser.add_argument("--hora", default="02:30", help="Hora diaria HH:MM. Default 02:30")
-        parser.add_argument("--hora-semanal", default="03:30", help="Hora dominical HH:MM. Default 03:30")
+        parser.add_argument("--hora", default="05:30", help="Hora diaria HH:MM. Default 05:30")
+        parser.add_argument("--hora-semanal", default="06:30", help="Hora dominical HH:MM. Default 06:30")
         parser.add_argument("--sin-semanal", action="store_true", help="No crear reproceso semanal")
         parser.add_argument("--deshabilitar", action="store_true")
 

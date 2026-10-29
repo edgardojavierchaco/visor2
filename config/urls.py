@@ -85,6 +85,7 @@ urlpatterns = [
     path("asistencia/", include("apps.asistencia_dashboard.urls",
         namespace="asistencia_dashboard")),
     path('carreras/', include('apps.carrerastitulos.urls', namespace='carrerastitulos')),
+    path('indicadores/trayectorias/', include('apps.tablero_trayectorias.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 if settings.DEBUG:

@@ -65,12 +65,13 @@ function actualizarTituloPeriodo() {
         `${nombresMeses[mes]} ${anio}`
     );
 
-    const semanaTexto = $("#filtroSemana option:selected").text();
-    if (semanaTexto) {
-        $("#periodoActual").attr(
-            "title",
-            `Alertas: ${semanaTexto}`
-        );
+    const desdeTexto = $("#filtroSemanaDesde option:selected").text();
+    const hastaTexto = $("#filtroSemanaHasta option:selected").text();
+    if (desdeTexto && hastaTexto) {
+        const desde = $("#filtroSemanaDesde").val();
+        const hasta = $("#filtroSemanaHasta").val();
+        $("#periodoActual").text(desde === hasta ? desdeTexto : `Semanas ${desde} a ${hasta}`);
+        $("#periodoActual").attr("title", `${desdeTexto} → ${hastaTexto}`);
     }
 }
 
@@ -82,7 +83,8 @@ function inicializarSelect2() {
         "#filtroDepartamento",
         "#filtroLocalidad",
         "#filtroOferta",
-        "#filtroSemana"
+        "#filtroSemanaDesde",
+        "#filtroSemanaHasta"
     ];
 
     selects.forEach(function (selector) {
@@ -147,49 +149,51 @@ async function cargarFiltros() {
 
 async function cargarSemanas(seleccionarInicial) {
     const anio = $("#filtroAnioSemana").val();
+    const data = await fetchJSON(`${CFG.urls.semanas}?anio=${anio}`, 15000);
+    const items = data.data || [];
+    const desdeSelect = $("#filtroSemanaDesde");
+    const hastaSelect = $("#filtroSemanaHasta");
+    const desdeActual = desdeSelect.val();
+    const hastaActual = hastaSelect.val();
 
-    const data = await fetchJSON(
-        `${CFG.urls.semanas}?anio=${anio}`,
-        15000
-    );
-
-    const select = $("#filtroSemana");
-    const actual = select.val();
-
-    select.empty();
-
-    (data.data || []).forEach(function (item) {
-        select.append(
-            new Option(
-                item.texto,
-                item.semana,
-                false,
-                false
-            )
-        );
+    desdeSelect.empty();
+    hastaSelect.empty();
+    items.forEach(function (item) {
+        desdeSelect.append(new Option(item.texto, item.semana, false, false));
+        hastaSelect.append(new Option(item.texto, item.semana, false, false));
     });
 
-    if (
-        seleccionarInicial
-        && String(anio) === String(CFG.anioSemanaActual)
-    ) {
-        select.val(String(CFG.semanaActual));
-    }
-    else if (
-        actual
-        && (data.data || []).some(
-            item => String(item.semana) === String(actual)
-        )
-    ) {
-        select.val(String(actual));
-    }
-    else if ((data.data || []).length) {
-        select.val(String(data.data[0].semana));
+    if (items.length) {
+        const semanas = items.map(item => String(item.semana));
+        const semanaInicial = String(CFG.semanaActual);
+        if (seleccionarInicial && String(anio) === String(CFG.anioSemanaActual) && semanas.includes(semanaInicial)) {
+            desdeSelect.val(semanaInicial);
+            hastaSelect.val(semanaInicial);
+        } else {
+            desdeSelect.val(desdeActual && semanas.includes(String(desdeActual)) ? String(desdeActual) : String(items[0].semana));
+            hastaSelect.val(hastaActual && semanas.includes(String(hastaActual)) ? String(hastaActual) : String(items[0].semana));
+        }
     }
 
-    select.trigger("change.select2");
+    normalizarRangoSemanal("hasta");
+    desdeSelect.trigger("change.select2");
+    hastaSelect.trigger("change.select2");
     actualizarTituloPeriodo();
 }
+
+function normalizarRangoSemanal(origen) {
+    const desde = Number($("#filtroSemanaDesde").val());
+    const hasta = Number($("#filtroSemanaHasta").val());
+    if (!desde || !hasta) return;
+    if (desde > hasta) {
+        if (origen === "desde") {
+            $("#filtroSemanaHasta").val(String(desde)).trigger("change.select2");
+        } else {
+            $("#filtroSemanaDesde").val(String(hasta)).trigger("change.select2");
+        }
+    }
+}
+
 
 function cargarOpciones(selector, valores) {
     const select = $(selector);
@@ -232,7 +236,9 @@ function obtenerParametros() {
         anio: $("#filtroAnio").val(),
         mes: $("#filtroMes").val(),
         anio_semana: $("#filtroAnioSemana").val(),
-        semana: $("#filtroSemana").val() || "",
+        semana_desde: $("#filtroSemanaDesde").val() || "",
+        semana_hasta: $("#filtroSemanaHasta").val() || "",
+        semana: $("#filtroSemanaHasta").val() || "",
         cueanexo: $("#filtroCue").val() || "",
         nivel: $("#filtroNivel").val() || "",
         ambito: $("#filtroAmbito").val() || "",
@@ -1276,15 +1282,25 @@ function configurarEventos() {
         async function () {
             await cargarSemanas(false);
             actualizarTituloPeriodo();
-            await actualizarAlertasSemanales();
+            await actualizarDashboard();
         }
     );
 
-    $("#filtroSemana").on(
+    $("#filtroSemanaDesde").on(
         "change",
         async function () {
+            normalizarRangoSemanal("desde");
             actualizarTituloPeriodo();
-            await actualizarAlertasSemanales();
+            await actualizarDashboard();
+        }
+    );
+
+    $("#filtroSemanaHasta").on(
+        "change",
+        async function () {
+            normalizarRangoSemanal("hasta");
+            actualizarTituloPeriodo();
+            await actualizarDashboard();
         }
     );
 

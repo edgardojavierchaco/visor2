@@ -1,0 +1,5 @@
+{% extends 'supervisores/central/base.html' %}
+{% block sigse_body %}
+<div class="sigse-columns"><section class="sigse-panel"><h2>Asignaciones regionales sin nivel activo</h2><div class="sigse-results">{% for row in sin_niveles %}<p>#{{ row.pk }} · {{ row.supervisor }} · {{ row.region }}</p>{% empty %}<p>No se detectaron.</p>{% endfor %}</div></section><section class="sigse-panel"><h2>Asignaciones regionales sin ofertas activas</h2><div class="sigse-results">{% for row in sin_ofertas %}<p>#{{ row.pk }} · {{ row.supervisor }} · {{ row.region }}</p>{% empty %}<p>No se detectaron.</p>{% endfor %}</div></section></div>
+<section class="sigse-panel"><h2>Ofertas asignadas a varios supervisores</h2><p>Coincidencias para revisión, no necesariamente errores.</p><table class="sigse-table"><thead><tr><th>CUEANEXO</th><th>Oferta</th><th>Supervisores</th></tr></thead><tbody>{% for row in duplicados %}<tr><td>{{ row.cueanexo }}</td><td>{{ row.oferta }}</td><td>{{ row.n }}</td></tr>{% empty %}<tr><td colspan="3">Sin coincidencias detectadas.</td></tr>{% endfor %}</tbody></table></section>
+{% endblock %}

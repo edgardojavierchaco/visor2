@@ -33,7 +33,7 @@
         <div>
             <div class="dashboard-eyebrow">MINISTERIO DE EDUCACIÓN</div>
             <h1>Seguimiento y Monitoreo de Asistencia</h1>
-            <p>Indicadores mensuales y alertas nominales semanales</p>
+            <p>Indicadores de asistencia y alertas nominales por períodos semanales</p>
         </div>
 
         <div class="dashboard-header-actions">
@@ -55,6 +55,24 @@
             </div>
         </div>
     </header>
+
+    <section class="data-freshness-strip" aria-label="Estado de actualización de datos">
+        <div>
+            <i class="bi bi-database-check"></i>
+            <span>Último dato SGE</span>
+            <strong>{{ fecha_dato_max|date:"d/m/Y"|default:"Sin dato" }}</strong>
+        </div>
+        <div>
+            <i class="bi bi-arrow-repeat"></i>
+            <span>Último procesamiento</span>
+            {% if estado_actualizacion %}
+                <strong>{{ estado_actualizacion.fecha_fin|date:"d/m/Y H:i"|default:"En ejecución" }}</strong>
+                <span class="update-status update-status-{{ estado_actualizacion.estado|lower }}">{{ estado_actualizacion.estado }}</span>
+            {% else %}
+                <strong>Sin auditoría registrada</strong>
+            {% endif %}
+        </div>
+    </section>
 
     <section class="dashboard-panel filter-panel">
         <div class="panel-title-row">
@@ -98,7 +116,7 @@
             </div>
 
             <div class="col-6 col-lg-2">
-                <label class="form-label">Año alerta</label>
+                <label class="form-label">Año semanal</label>
                 <select id="filtroAnioSemana" class="form-select">
                     <option value="2025">2025</option>
                     <option value="2026">2026</option>
@@ -107,9 +125,15 @@
                 </select>
             </div>
 
-            <div class="col-12 col-lg-4">
-                <label class="form-label">Semana de alerta</label>
-                <select id="filtroSemana" class="form-select"></select>
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Semana desde</label>
+                <select id="filtroSemanaDesde" class="form-select"></select>
+            </div>
+
+            <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Semana hasta</label>
+                <select id="filtroSemanaHasta" class="form-select"></select>
+                <div class="form-text">El rango siempre comprende semanas completas procesadas.</div>
             </div>
 
             <div class="col-12 col-md-6 col-lg-4">
@@ -805,7 +829,7 @@ window.ASISTENCIA_DASHBOARD = {
 };
 </script>
 
-<script src="{% static 'asistencia_dashboard/js/dashboard.js' %}?v=20260925.2"></script>
+<script src="{% static 'asistencia_dashboard/js/dashboard.js' %}?v=20261029.1"></script>
 
 </body>
 </html>

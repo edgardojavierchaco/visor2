@@ -182,11 +182,11 @@ async function buscarSupervisor() {
                 <b>Supervisor existente</b>
 
                 <hr>
-                <b>CUIL:</b> ${res.supervisor.cuil}<br>
-                <b>Apellido:</b> ${res.supervisor.apellido}<br>
-                <b>Nombres:</b> ${res.supervisor.nombres}<br>
-                <b>Email:</b> ${res.supervisor.email || "-"}<br>
-                <b>Teléfono:</b> ${res.supervisor.telefono || "-"}
+                <b>CUIL:</b> ${sigseEscapeHtml(res.supervisor.cuil)}<br>
+                <b>Apellido:</b> ${sigseEscapeHtml(res.supervisor.apellido)}<br>
+                <b>Nombres:</b> ${sigseEscapeHtml(res.supervisor.nombres)}<br>
+                <b>Email:</b> ${sigseEscapeHtml(res.supervisor.email || "-")}<br>
+                <b>Teléfono:</b> ${sigseEscapeHtml(res.supervisor.telefono || "-")}
 
             </div>
         `;
@@ -215,9 +215,9 @@ async function buscarSupervisor() {
 
                 <hr>
 
-                <b>CUIL:</b> ${res.usuario.cuil}<br>
-                <b>Apellido:</b> ${res.usuario.apellido}<br>
-                <b>Nombres:</b> ${res.usuario.nombres}
+                <b>CUIL:</b> ${sigseEscapeHtml(res.usuario.cuil)}<br>
+                <b>Apellido:</b> ${sigseEscapeHtml(res.usuario.apellido)}<br>
+                <b>Nombres:</b> ${sigseEscapeHtml(res.usuario.nombres)}
 
                 <br><br>
 

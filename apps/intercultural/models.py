@@ -6,7 +6,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 import re
 
 class EscuelasBilingues(models.Model):
-    cueanexo=models.CharField(max_length=9,verbose_name='Cueanexo')
+    cueanexo=models.CharField(max_length=9,primary_key=True,verbose_name='Cueanexo')
     nom_est=models.CharField(max_length=255, verbose_name='Escuela')
     acronimo=models.CharField(max_length=50, verbose_name='Acronimo')
     oferta=models.CharField(max_length=255, verbose_name='Oferta')
@@ -157,3 +157,21 @@ class ExportarAlumnoBilingueConId(models.Model):
     class Meta:
         managed = False  
         db_table = 'v_alumnos_bilingues_con_id'
+
+class EscuelaBilingueGeo(models.Model):
+    """Vista SQL instalada por separado, id estable basado en CUEANEXO."""
+    cueanexo = models.CharField(max_length=9, primary_key=True)
+    nom_est = models.TextField(null=True)
+    acronimo = models.TextField(null=True)
+    oferta = models.TextField(null=True)
+    ambito = models.TextField(null=True)
+    sector = models.TextField(null=True)
+    region_loc = models.TextField(null=True)
+    departamento = models.TextField(null=True)
+    localidad = models.TextField(null=True)
+    lat = models.FloatField(null=True)
+    long = models.FloatField(null=True)
+
+    class Meta:
+        managed = False
+        db_table = "v_escuelas_bilingues_geo"

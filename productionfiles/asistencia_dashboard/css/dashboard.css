@@ -861,3 +861,17 @@ body {
         flex-direction: column;
     }
 }
+
+
+/* Estado de actualización */
+.data-freshness-strip {
+    display:flex; flex-wrap:wrap; gap:.75rem 1.5rem; align-items:center;
+    margin:0 0 1rem; padding:.8rem 1rem; border:1px solid rgba(71,85,105,.14);
+    border-radius:12px; background:#fff; box-shadow:0 1px 3px rgba(15,23,42,.05);
+}
+.data-freshness-strip > div { display:flex; align-items:center; gap:.45rem; color:#475569; font-size:.86rem; }
+.data-freshness-strip strong { color:#1e293b; }
+.update-status { display:inline-flex; padding:.15rem .45rem; border-radius:999px; font-size:.72rem; font-weight:800; }
+.update-status-ok { background:#dcfce7; color:#166534; }
+.update-status-error { background:#fee2e2; color:#991b1b; }
+.update-status-procesando { background:#fef3c7; color:#92400e; }
