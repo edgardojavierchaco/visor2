@@ -1517,125 +1517,63 @@ def generar_constancia_servicio_pdf(
     ]]
 
 
-    from .constancia_verificacion import iterar_servicios_constancia
+    # Cada actividad representa un puesto. En sección múltiple, las ubicaciones
+    # (grado/año + sección + turno) son componentes del mismo puesto y NO deben
+    # repetir la carga horaria semanal. La carga se informa una sola vez al final
+    # del bloque, como total del puesto.
+    row_number = 1
+    multiple_total_rows = []
 
-    for index, (actividad, ubicacion) in enumerate(
-        iterar_servicios_constancia(actividades),
-        start=1,
-    ):
+    for actividad in actividades:
+        manager = getattr(actividad, "ubicaciones_curriculares", None)
+        ubicaciones = list(manager.all()) if manager is not None else []
+        es_multiple = (
+            str(getattr(actividad, "tipo_ubicacion", "") or "").upper() == "MULTIPLE"
+            and len(ubicaciones) > 1
+        )
 
-        table_data.append([
+        filas_ubicacion = ubicaciones if ubicaciones else [None]
 
-            Paragraph(
-                str(index),
-                style_body_small,
-            ),
+        for ubicacion in filas_ubicacion:
+            carga_mostrada = (
+                "—"
+                if es_multiple
+                else _numero(getattr(actividad, "carga_horaria", None))
+            )
 
-            Paragraph(
-                _html(
-                    _cargo_actividad(
-                        actividad
-                    )
+            table_data.append([
+                Paragraph(str(row_number), style_body_small),
+                Paragraph(_html(_cargo_actividad(actividad)), style_body_small),
+                Paragraph(_html(_situacion_revista(actividad)), style_body_small),
+                Paragraph(_html(_tipo_designacion(actividad)), style_body_small),
+                Paragraph(_html(_espacios_actividad(actividad)), style_body_small),
+                Paragraph(_html(_grado(actividad, ubicacion)), style_body_small),
+                Paragraph(_html(_seccion(actividad, ubicacion)), style_body_small),
+                Paragraph(_html(_turno(actividad, ubicacion)), style_body_small),
+                Paragraph(_html(carga_mostrada), style_body_small),
+                Paragraph(_html(_fecha(getattr(actividad, "f_desde", None))), style_body_small),
+                Paragraph(_html(_fecha(getattr(actividad, "f_hasta", None))), style_body_small),
+            ])
+            row_number += 1
+
+        if es_multiple:
+            # Fila resumen del puesto: la carga horaria semanal se consigna una
+            # sola vez, después de todos sus componentes curriculares.
+            table_data.append([
+                "",
+                Paragraph(
+                    "<b>Carga horaria semanal total del puesto (sección múltiple)</b>",
+                    style_body_small,
                 ),
-                style_body_small,
-            ),
-
-            Paragraph(
-                _html(
-                    _situacion_revista(
-                        actividad
-                    )
+                "", "", "", "", "", "",
+                Paragraph(
+                    f"<b>{_html(_numero(getattr(actividad, 'carga_horaria', None)))}</b>",
+                    style_body_small,
                 ),
-                style_body_small,
-            ),
-
-            Paragraph(
-                _html(
-                    _tipo_designacion(
-                        actividad
-                    )
-                ),
-                style_body_small,
-            ),
-
-            Paragraph(
-                _html(
-                    _espacios_actividad(
-                        actividad
-                    )
-                ),
-                style_body_small,
-            ),
-
-            Paragraph(
-                _html(
-                    _grado(
-                        actividad,
-                        ubicacion,
-                    )
-                ),
-                style_body_small,
-            ),
-
-            Paragraph(
-                _html(
-                    _seccion(
-                        actividad,
-                        ubicacion,
-                    )
-                ),
-                style_body_small,
-            ),
-
-            Paragraph(
-                _html(
-                    _turno(
-                        actividad,
-                        ubicacion,
-                    )
-                ),
-                style_body_small,
-            ),
-
-            Paragraph(
-                _html(
-                    _numero(
-                        getattr(
-                            actividad,
-                            "carga_horaria",
-                            None,
-                        )
-                    )
-                ),
-                style_body_small,
-            ),
-
-            Paragraph(
-                _html(
-                    _fecha(
-                        getattr(
-                            actividad,
-                            "f_desde",
-                            None,
-                        )
-                    )
-                ),
-                style_body_small,
-            ),
-
-            Paragraph(
-                _html(
-                    _fecha(
-                        getattr(
-                            actividad,
-                            "f_hasta",
-                            None,
-                        )
-                    )
-                ),
-                style_body_small,
-            ),
-        ])
+                "",
+                "",
+            ])
+            multiple_total_rows.append(len(table_data) - 1)
 
 
     services_table = Table(
@@ -1753,6 +1691,19 @@ def generar_constancia_servicio_pdf(
         ])
     )
 
+
+    # Dar formato diferencial a las filas resumen de sección múltiple.
+    for row_idx in multiple_total_rows:
+        services_table.setStyle(
+            TableStyle([
+                ("SPAN", (1, row_idx), (7, row_idx)),
+                ("BACKGROUND", (1, row_idx), (8, row_idx), PALE_BLUE),
+                ("ALIGN", (1, row_idx), (7, row_idx), "RIGHT"),
+                ("ALIGN", (8, row_idx), (8, row_idx), "CENTER"),
+                ("TOPPADDING", (0, row_idx), (-1, row_idx), 1.4 * mm),
+                ("BOTTOMPADDING", (0, row_idx), (-1, row_idx), 1.4 * mm),
+            ])
+        )
 
     story.append(
         services_table

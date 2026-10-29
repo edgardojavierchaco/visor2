@@ -55,49 +55,69 @@ def iterar_servicios_constancia(actividades):
 def construir_snapshot_constancia(*, persona, cueanexo, nom_est, actividades, emitida_en):
     servicios = []
 
-    for a, ubicacion in iterar_servicios_constancia(actividades):
-        grado_obj = (
-            getattr(ubicacion, 'grado_anio', None)
-            if ubicacion is not None
-            else getattr(a, 'grado_anio', None)
+    for a in actividades:
+        manager = getattr(a, 'ubicaciones_curriculares', None)
+        ubicaciones = list(manager.all()) if manager is not None else []
+        es_multiple = (
+            _texto(getattr(a, 'tipo_ubicacion', '')).upper() == 'MULTIPLE'
+            and len(ubicaciones) > 1
         )
-        seccion_obj = (
-            getattr(ubicacion, 'seccion', None)
-            if ubicacion is not None
-            else getattr(a, 'secciones', None)
-        )
-        turno = (
-            getattr(ubicacion, 'turno', '')
-            if ubicacion is not None
-            else getattr(a, 'turno', '')
-        )
+        filas = ubicaciones if ubicaciones else [None]
 
-        servicios.append({
-            'id_actividad': a.pk,
-            'id_ubicacion': getattr(ubicacion, 'pk', None),
-            'id_puesto': _texto(getattr(a, 'id_puesto', '')),
-            'tipo_ubicacion': _texto(getattr(a, 'tipo_ubicacion', '')),
-            'tipo_personal': _descripcion(getattr(a, 'tipo_personal', None), 'descripcion'),
-            'modalidad': _descripcion(getattr(a, 'modalidad', None), 'descrip_modalidad'),
-            'nivel': _descripcion(getattr(a, 'niveles', None), 'descrip_nivel'),
-            'cargo_ceic': _descripcion(getattr(a, 'ceic', None), 'descripcion') or 'NO CORRESPONDE',
-            'situacion_revista': _descripcion(getattr(a, 'sit_revista', None), 'descrip_sitrev'),
-            'condicion_actividad': _descripcion(getattr(a, 'cond_actividad', None), 'denominacion'),
-            'tipo_designacion': _descripcion(getattr(a, 't_designacion', None), 'desigfunc_descripcion'),
-            'turno': _texto(turno),
-            'espacio_curricular': _descripcion(getattr(a, 'espacio_curricular', None), 'nombre')
-                or _descripcion(getattr(a, 'espacios', None), 'descrip_titulo'),
-            'grado_anio': _descripcion(grado_obj, 'nombre_grado_anio'),
-            'seccion': _descripcion(seccion_obj, 'nombre_seccion'),
-            'carga_horaria': _decimal(getattr(a, 'carga_horaria', None)),
-            'fecha_inicio': _fecha(getattr(a, 'f_desde', None)),
-            'fecha_fin': _fecha(getattr(a, 'f_hasta', None)),
-            'estado': _texto(getattr(a, 'estado', '')),
-            'validacion': _texto(getattr(a, 'validacion', '')),
-        })
+        for indice, ubicacion in enumerate(filas):
+            grado_obj = (
+                getattr(ubicacion, 'grado_anio', None)
+                if ubicacion is not None
+                else getattr(a, 'grado_anio', None)
+            )
+            seccion_obj = (
+                getattr(ubicacion, 'seccion', None)
+                if ubicacion is not None
+                else getattr(a, 'secciones', None)
+            )
+            turno = (
+                getattr(ubicacion, 'turno', '')
+                if ubicacion is not None
+                else getattr(a, 'turno', '')
+            )
+
+            es_ultimo_componente = indice == len(filas) - 1
+
+            servicios.append({
+                'id_actividad': a.pk,
+                'id_ubicacion': getattr(ubicacion, 'pk', None),
+                'id_puesto': _texto(getattr(a, 'id_puesto', '')),
+                'tipo_ubicacion': _texto(getattr(a, 'tipo_ubicacion', '')),
+                'es_seccion_multiple': es_multiple,
+                'fin_bloque_multiple': bool(es_multiple and es_ultimo_componente),
+                'tipo_personal': _descripcion(getattr(a, 'tipo_personal', None), 'descripcion'),
+                'modalidad': _descripcion(getattr(a, 'modalidad', None), 'descrip_modalidad'),
+                'nivel': _descripcion(getattr(a, 'niveles', None), 'descrip_nivel'),
+                'cargo_ceic': _descripcion(getattr(a, 'ceic', None), 'descripcion') or 'NO CORRESPONDE',
+                'situacion_revista': _descripcion(getattr(a, 'sit_revista', None), 'descrip_sitrev'),
+                'condicion_actividad': _descripcion(getattr(a, 'cond_actividad', None), 'denominacion'),
+                'tipo_designacion': _descripcion(getattr(a, 't_designacion', None), 'desigfunc_descripcion'),
+                'turno': _texto(turno),
+                'espacio_curricular': _descripcion(getattr(a, 'espacio_curricular', None), 'nombre')
+                    or _descripcion(getattr(a, 'espacios', None), 'descrip_titulo'),
+                'grado_anio': _descripcion(grado_obj, 'nombre_grado_anio'),
+                'seccion': _descripcion(seccion_obj, 'nombre_seccion'),
+                # En sección múltiple la carga pertenece al puesto completo: no se
+                # repite en cada componente. Se informa una sola vez al final.
+                'carga_horaria': None if es_multiple else _decimal(getattr(a, 'carga_horaria', None)),
+                'carga_horaria_total': (
+                    _decimal(getattr(a, 'carga_horaria', None))
+                    if es_multiple and es_ultimo_componente
+                    else None
+                ),
+                'fecha_inicio': _fecha(getattr(a, 'f_desde', None)),
+                'fecha_fin': _fecha(getattr(a, 'f_hasta', None)),
+                'estado': _texto(getattr(a, 'estado', '')),
+                'validacion': _texto(getattr(a, 'validacion', '')),
+            })
 
     return {
-        'version_snapshot': 2,
+        'version_snapshot': 3,
         'emitida_en': emitida_en.isoformat(),
         'persona': {
             'id': persona.pk,

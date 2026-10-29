@@ -73,6 +73,14 @@
                     <td>{{ s.fecha_inicio|default:"—" }}</td>
                     <td>{{ s.fecha_fin|default:"—" }}</td>
                 </tr>
+                {% if s.fin_bloque_multiple and s.carga_horaria_total %}
+                <tr style="background:#eef5fa;font-weight:700;">
+                    <td></td>
+                    <td colspan="7" style="text-align:right;">Carga horaria semanal total del puesto (sección múltiple)</td>
+                    <td>{{ s.carga_horaria_total }}</td>
+                    <td colspan="2"></td>
+                </tr>
+                {% endif %}
             {% empty %}
                 <tr><td colspan="11">No hay servicios en el snapshot.</td></tr>
             {% endfor %}
