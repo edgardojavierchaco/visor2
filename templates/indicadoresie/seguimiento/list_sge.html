@@ -419,22 +419,28 @@
                 
                 <h6 class="mb-3 fw-bold"><i class="fas fa-chart-line text-primary me-2"></i>Filtro: Estado Carga (SGE 2025 - Insc. 2025) y Estado Carga (SGE 2026 - Insc. 2026)</h6>
                 <div class="row g-3 mb-4">
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="p-3 rounded-3 h-100" style="background-color: #f0fdf4; border-left: 4px solid #22c55e;">
                             <strong class="text-success">Carga Coincidente</strong>
                             <p class="mb-0 small text-muted mt-1">Los valores cargados de SGE y los alumnos inscriptos coinciden.</p>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="p-3 rounded-3 h-100" style="background-color: #fef9e3; border-left: 4px solid #eab308;">
                             <strong class="text-warning">Con Discrepancias</strong>
                             <p class="mb-0 small text-muted mt-1">Hay valores cargados (mayores a cero), pero no coinciden entre la Carga SGE y las Inscripciones.</p>
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                        <div class="p-3 rounded-3 h-100" style="background-color: #f1f5f9; border-left: 4px solid #64748b;">
-                            <strong class="text-secondary">Sin Carga</strong>
+                            <strong class="text-secondary">Sin Carga (Ambos)</strong>
                             <p class="mb-0 small text-muted mt-1">Ambos valores (SGE e Inscripciones) prensentan la leyenda "Sin carga", "Sin Inscripciones" o el número 0. Es decir, no presenta carga.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 rounded-3 h-100" style="background-color: #f0f9ff; border-left: 4px solid #0284c7;">
+                            <strong class="text-primary">Sin Carga (Solo en Inscriptos)</strong>
+                            <p class="mb-0 small text-muted mt-1">Muestra establecimientos con carga SGE mayor a cero pero con cero inscriptos o sin inscripciones en el año seleccionado. Excluye los casos sin carga en ambos campos.</p>
                         </div>
                     </div>
                 </div>
@@ -573,8 +579,9 @@
                         <select id="fAudit2025" style="border-color: #3b82f6; font-weight: 600;">
                             <option value="">-- Todas --</option>
                             <option value="ok">✅ Carga Coincidente</option>
-                            <option value="vacio">⚪ Sin Carga</option>
+                            <option value="vacio">⚪ Sin Carga (Ambos)</option>
                             <option value="diff">⚠️ Con Discrepancias</option>
+                            <option value="solo_insc">⚪ Sin Carga (Solo en Inscriptos)</option>
                         </select>
                     </div>
 
@@ -583,8 +590,9 @@
                         <select id="fAudit2026" style="border-color: #3b82f6; font-weight: 600;">
                             <option value="">-- Todas --</option>
                             <option value="ok">✅ Carga Coincidente</option>
-                            <option value="vacio">⚪ Sin Carga</option>
+                            <option value="vacio">⚪ Sin Carga (Ambos)</option>
                             <option value="diff">⚠️ Con Discrepancias</option>
+                            <option value="solo_insc">⚪ Sin Carga (Solo en Inscriptos)</option>
                         </select>
                     </div>
 
@@ -1239,10 +1247,12 @@ $(document).ready(function () {
                 if (audit2025 === 'ok' && !(sge25 > 0 && sge25 === insc25)) return false;
                 if (audit2025 === 'diff' && !((sge25 > 0 || insc25 > 0) && sge25 !== insc25)) return false;
                 if (audit2025 === 'vacio' && !(sge25 === 0 && insc25 === 0)) return false;
+                if (audit2025 === 'solo_insc' && !(sge25 > 0 && insc25 === 0)) return false;
                 
                 if (audit2026 === 'ok' && !(sge26 > 0 && sge26 === insc26)) return false;
                 if (audit2026 === 'diff' && !((sge26 > 0 || insc26 > 0) && sge26 !== insc26)) return false;
                 if (audit2026 === 'vacio' && !(sge26 === 0 && insc26 === 0)) return false;
+                if (audit2026 === 'solo_insc' && !(sge26 > 0 && insc26 === 0)) return false;
                 return true;
             });
             if (audit2025) { table.column(16).visible(true); table.column(17).visible(true); }
