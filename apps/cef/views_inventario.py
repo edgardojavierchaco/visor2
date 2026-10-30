@@ -317,13 +317,16 @@ def carga_inventario(request, item_id=None):
         if not puede_operar:
             messages.error(
                 request,
-                "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+                (cef_context.get("mensaje_bloqueo_inicio") or ("El ciclo está cerrado. La información se encuentra en modo sólo lectura."
                 if cef_context["ciclo_cerrado"]
-                else "Seleccioná un CUE-Anexo y un ciclo lectivo para gestionar inventario.",
+                else "Seleccioná un CUE-Anexo y un ciclo lectivo para gestionar inventario.")),
             )
             return redirect(redirect_con_contexto("cef:carga_inventario", cef_context))
         try:
-            validar_ciclo_escribible(cef_context["ciclo"])
+            validar_ciclo_escribible(
+                cef_context["ciclo"], request.user,
+                cueanexo=cef_context["cueanexo"],
+            )
         except ValidationError as error:
             messages.error(request, "; ".join(error.messages))
             return redirect(redirect_con_contexto("cef:carga_inventario", cef_context))
@@ -359,7 +362,10 @@ def carga_inventario(request, item_id=None):
                     formulario_error = form
                     try:
                         with transaction.atomic():
-                            validar_ciclo_escribible(cef_context["ciclo"])
+                            validar_ciclo_escribible(
+                                cef_context["ciclo"], request.user,
+                                cueanexo=cef_context["cueanexo"],
+                            )
                             item = form.save(commit=False)
                             item.cueanexo = cef_context["cueanexo"]
                             item.ciclo = cef_context["ciclo"]
@@ -406,7 +412,10 @@ def carga_inventario(request, item_id=None):
             guardado = False
             try:
                 with transaction.atomic():
-                    validar_ciclo_escribible(cef_context["ciclo"])
+                    validar_ciclo_escribible(
+                        cef_context["ciclo"], request.user,
+                        cueanexo=cef_context["cueanexo"],
+                    )
                     item_bloqueado = _item_seguro(
                         detalle_item_id,
                         cef_context,
@@ -467,7 +476,10 @@ def carga_inventario(request, item_id=None):
             else:
                 try:
                     with transaction.atomic():
-                        validar_ciclo_escribible(cef_context["ciclo"])
+                        validar_ciclo_escribible(
+                            cef_context["ciclo"], request.user,
+                            cueanexo=cef_context["cueanexo"],
+                        )
                         item_bloqueado = _item_seguro(
                             detalle_item_id,
                             cef_context,
@@ -532,7 +544,10 @@ def carga_inventario(request, item_id=None):
             detalle_item_id = _id_entero(request.POST.get("item_id"))
             estado_id = request.POST.get("estado_id")
             with transaction.atomic():
-                validar_ciclo_escribible(cef_context["ciclo"])
+                validar_ciclo_escribible(
+                    cef_context["ciclo"], request.user,
+                    cueanexo=cef_context["cueanexo"],
+                )
                 item_bloqueado = _item_seguro(
                     detalle_item_id,
                     cef_context,
@@ -554,7 +569,10 @@ def carga_inventario(request, item_id=None):
         elif accion == "eliminar_material":
             detalle_item = _item_seguro(request.POST.get("item_id"), cef_context)
             with transaction.atomic():
-                validar_ciclo_escribible(cef_context["ciclo"])
+                validar_ciclo_escribible(
+                    cef_context["ciclo"], request.user,
+                    cueanexo=cef_context["cueanexo"],
+                )
                 item_bloqueado = _item_seguro(
                     detalle_item.pk,
                     cef_context,

@@ -11,8 +11,13 @@ from .models import (
     CefGrupo,
     CefInscripcion,
     CefJornadaAsistencia,
+    usuario_puede_rectificar_cef,
 )
-from .services import validar_ciclo_escribible
+from .services import (
+    validar_ciclo_escribible,
+    validar_fecha_interactiva_ciclo,
+    validar_vigencia_historica_grupo,
+)
 
 
 def inscripciones_vigentes_jornada(grupo, fecha):
@@ -72,23 +77,36 @@ def fecha_jornada_habitual(grupo, fecha):
 
 
 def _validar_fecha_jornada(grupo, fecha):
-    ciclo = grupo.ciclo
-    if fecha.year != ciclo.anio:
-        raise ValidationError("La fecha debe corresponder al año del ciclo.")
-    if fecha > timezone.localdate():
-        raise ValidationError(
-            "No se puede registrar asistencia de una fecha futura."
+    validar_fecha_interactiva_ciclo(
+        grupo.ciclo,
+        fecha,
+        mensaje_anio="La fecha debe corresponder al año del ciclo.",
+        mensaje_posterior="No se puede registrar asistencia de una fecha futura.",
+    )
+
+def ultima_fecha_asistencia_cargada(grupo):
+    """Ignora jornadas vacías al resolver el último avance efectivo."""
+
+    return (
+        CefJornadaAsistencia.objects.filter(
+            grupo=grupo, asistencias__isnull=False,
         )
+        .order_by("-fecha", "-pk")
+        .values_list("fecha", flat=True)
+        .first()
+    )
 
 
-def _bloquear_grupo_asistencia(grupo, fecha):
+def _bloquear_grupo_asistencia(grupo, fecha, user=None):
+    validar_ciclo_escribible(grupo.ciclo_id, user, cueanexo=grupo.cueanexo)
     grupo = CefGrupo.objects.select_for_update().select_related("ciclo").filter(
         pk=grupo.pk
     ).first()
     if grupo is None:
         raise ValidationError("El grupo seleccionado no es válido.")
-    validar_ciclo_escribible(grupo.ciclo_id)
-    if grupo.estado != CefGrupo.Estado.ACTIVO:
+    if grupo.estado != CefGrupo.Estado.ACTIVO and not usuario_puede_rectificar_cef(
+        user, cueanexo=grupo.cueanexo,
+    ):
         raise ValidationError(
             "El grupo está dado de baja. La asistencia es de sólo lectura."
         )
@@ -114,9 +132,40 @@ def registrar_asistencias_jornada(grupo, fecha, estados_por_inscripcion, user):
         estados_normalizados[inscripcion_id] = estado
 
     with transaction.atomic():
-        grupo = _bloquear_grupo_asistencia(grupo, fecha)
+        grupo = _bloquear_grupo_asistencia(grupo, fecha, user)
+        jornada = (
+            CefJornadaAsistencia.objects.select_for_update()
+            .filter(grupo=grupo, fecha=fecha).first()
+        )
+        jornada_creada = jornada is None
+        rectificacion_historica = grupo.estado == CefGrupo.Estado.BAJA
+        existentes = {}
+        if rectificacion_historica:
+            if jornada:
+                existentes = {
+                    item.inscripcion_id: item
+                    for item in CefAsistencia.objects.select_for_update()
+                    .filter(jornada=jornada)
+                    .select_related("jornada__grupo__ciclo", "inscripcion__grupo")
+                }
+            if not existentes or set(estados_normalizados) - set(existentes):
+                raise ValidationError(
+                    "El grupo está dado de baja. Sólo se pueden rectificar "
+                    "jornadas de asistencia ya registradas."
+                )
+            validar_vigencia_historica_grupo(grupo, fecha, bloquear=True)
+        if jornada_creada:
+            ultima_fecha = ultima_fecha_asistencia_cargada(grupo)
+            if ultima_fecha is not None and fecha < ultima_fecha:
+                raise ValidationError(
+                    "No se puede registrar una nueva jornada anterior a la última "
+                    f"asistencia cargada ({ultima_fecha:%d/%m/%Y}). "
+                    "Elegí esa fecha o una posterior."
+                )
 
         inscripciones = list(inscripciones_vigentes_jornada(grupo, fecha))
+        if rectificacion_historica:
+            inscripciones = [item for item in inscripciones if item.pk in existentes]
         if not inscripciones:
             raise ValidationError(
                 "No hay alumnos vigentes para registrar en esta fecha."
@@ -133,36 +182,33 @@ def registrar_asistencias_jornada(grupo, fecha, estados_por_inscripcion, user):
                 "Registrá la asistencia de todos los alumnos antes de guardar."
             )
 
-        jornada, jornada_creada = CefJornadaAsistencia.objects.get_or_create(
-            grupo=grupo,
-            fecha=fecha,
-            defaults={
-                "creado_por": user,
-                "actualizado_por": user,
-            },
-        )
-        if not jornada_creada:
-            jornada = CefJornadaAsistencia.objects.select_for_update().get(
-                pk=jornada.pk
+        if jornada_creada:
+            jornada = CefJornadaAsistencia(
+                grupo=grupo,
+                fecha=fecha,
+                creado_por=user,
+                actualizado_por=user,
             )
+            jornada.save(user=user)
         cargada_previamente = CefAsistencia.objects.filter(
             jornada=jornada
         ).exists()
 
-        existentes = {
-            item.inscripcion_id: item
-            for item in (
-                CefAsistencia.objects.select_for_update()
-                .filter(
-                    jornada=jornada,
-                    inscripcion_id__in=estados_normalizados,
+        if not rectificacion_historica:
+            existentes = {
+                item.inscripcion_id: item
+                for item in (
+                    CefAsistencia.objects.select_for_update()
+                    .filter(
+                        jornada=jornada,
+                        inscripcion_id__in=estados_normalizados,
+                    )
+                    .select_related(
+                        "jornada__grupo__ciclo",
+                        "inscripcion__grupo",
+                    )
                 )
-                .select_related(
-                    "jornada__grupo__ciclo",
-                    "inscripcion__grupo",
-                )
-            )
-        }
+            }
         altas = 0
         cambios = 0
         for inscripcion_id, estado_nuevo in estados_normalizados.items():
@@ -172,18 +218,20 @@ def registrar_asistencias_jornada(grupo, fecha, estados_por_inscripcion, user):
                 continue
 
             if asistencia is None:
-                asistencia = CefAsistencia.objects.create(
+                asistencia = CefAsistencia(
                     jornada=jornada,
                     inscripcion=inscripciones_por_id[inscripcion_id],
                     estado=estado_nuevo,
                     creado_por=user,
                     actualizado_por=user,
                 )
+                asistencia.save(user=user)
                 altas += 1
             else:
                 asistencia.estado = estado_nuevo
                 asistencia.actualizado_por = user
                 asistencia.save(
+                    user=user,
                     update_fields=[
                         "estado",
                         "actualizado_por",
@@ -192,7 +240,7 @@ def registrar_asistencias_jornada(grupo, fecha, estados_por_inscripcion, user):
                 )
                 cambios += 1
 
-            CefAsistenciaMovimiento.objects.create(
+            movimiento = CefAsistenciaMovimiento(
                 asistencia=asistencia,
                 estado_anterior=estado_anterior,
                 estado_nuevo=estado_nuevo,
@@ -200,9 +248,11 @@ def registrar_asistencias_jornada(grupo, fecha, estados_por_inscripcion, user):
                 actualizado_por=user,
             )
 
+            movimiento.save(user=user)
+
         if altas or cambios:
             jornada.actualizado_por = user
-            jornada.save(update_fields=["actualizado_por", "actualizado_en"])
+            jornada.save(user=user, update_fields=["actualizado_por", "actualizado_en"])
 
         return {
             "jornada": jornada,

@@ -1,0 +1,4 @@
+-- Retirado como punto de entrada independiente.
+-- Las auditorias estan en el registro fijo de audit_readonly.py, con READ ONLY
+-- y verificacion obligatoria del rol antes de consultar datos CEF.
+-- Este archivo no contiene SQL ejecutable ni instrucciones de conexion.

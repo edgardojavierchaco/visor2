@@ -23,6 +23,7 @@ from .models import (
     CefGrupoDiaFuncionamiento,
     CefInscripcion,
     docentes_grupo_tiene_duplicados_activos,
+    usuario_puede_rectificar_cef,
 )
 from .permisos import cef_required
 from .performance import perf_render, perf_start_view
@@ -34,6 +35,8 @@ from .services import (
     reasignar_docente_grupo,
     reinscribir_alumno,
     validar_ciclo_escribible,
+    validar_cupo_grupo,
+    validar_estructura_grupo_con_historia,
     validar_conflictos_horarios_edicion_grupo,
 )
 from .views_contexto import (
@@ -136,8 +139,9 @@ def _grupo_seguro(grupo_id, cef_context):
 def _grupo_historico_seguro(grupo_id, cef_context):
     return get_object_or_404(
         CefGrupo.objects.filter(
+            Q(ciclo=cef_context["ciclo"])
+            | Q(ciclo__anio__lt=cef_context["ciclo"].anio),
             cueanexo=cef_context["cueanexo"],
-            ciclo__anio__lt=cef_context["ciclo"].anio,
         )
         .select_related("ciclo", "actividad", "turno", "nivel", "rango_etario")
         .prefetch_related(
@@ -395,6 +399,9 @@ def _gestionar_fragment_context(
         "cef_context": cef_context,
         "grupo": grupo,
         "inscripciones": inscripciones,
+        "inscripciones_activas": sum(
+            item.estado == CefInscripcion.Estado.ACTIVO for item in inscripciones_todas
+        ),
         "docentes": docentes,
         "docentes_activos": docentes_activos,
         "vista_alumnos": vista_alumnos,
@@ -404,6 +411,10 @@ def _gestionar_fragment_context(
         "gestionar_solo_lectura": solo_lectura,
         "inscripciones_solo_lectura": solo_lectura,
         "docentes_solo_lectura": solo_lectura,
+        "puede_rectificar_historial": (
+            cef_context.get("puede_rectificar_cef", False)
+            and cef_context["puede_consultar"]
+        ),
         "inscripciones_permite_edicion": (
             not solo_lectura and vista_alumnos == "actuales"
         ),
@@ -856,9 +867,9 @@ def carga_grupo(request):
 
     if request.method == "POST" and not cef_context["puede_operar"]:
         message = (
-            "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+            (cef_context.get("mensaje_bloqueo_inicio") or ("El ciclo está cerrado. La información se encuentra en modo sólo lectura."
             if cef_context["ciclo_cerrado"]
-            else "Seleccioná un CUE-Anexo y un ciclo lectivo para gestionar grupos."
+            else "Seleccioná un CUE-Anexo y un ciclo lectivo para gestionar grupos."))
         )
         if _is_ajax(request):
             return JsonResponse({"ok": False, "message": message})
@@ -1033,7 +1044,7 @@ def gestionar_grupo(request, grupo_id):
                 )
             )
         if not cef_context["puede_operar"]:
-            message = "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+            message = (cef_context.get("mensaje_bloqueo_inicio") or ("El ciclo está cerrado. La información se encuentra en modo sólo lectura."))
             if _is_ajax(request):
                 return JsonResponse({"ok": False, "message": message})
             messages.error(request, message)
@@ -1268,20 +1279,29 @@ def _guardar_grupo(form, dias_form, cef_context, user):
     grupo = form.save(commit=False)
     grupo.cueanexo = cef_context["cueanexo"]
     grupo.ciclo = cef_context["ciclo"]
-    grupo.codigo_ra_override = None
-    grupo.motivo_codigo_ra_override = ""
     dias = list(dias_form.cleaned_data["dias"])
     dias_ids = [dia.pk for dia in dias]
 
     with transaction.atomic():
+        validar_ciclo_escribible(
+            cef_context["ciclo"], user, cueanexo=cef_context["cueanexo"],
+        )
+        rectificacion_historica = False
+        snapshots_rectificados = []
         if grupo.pk:
-            grupo_actual = CefGrupo.objects.select_for_update().get(pk=grupo.pk)
-            validar_ciclo_escribible(grupo_actual.ciclo_id)
-            if grupo_actual.estado != CefGrupo.Estado.ACTIVO:
+            grupo_actual = CefGrupo.objects.select_for_update().get(
+                pk=grupo.pk, cueanexo=cef_context["cueanexo"], ciclo=cef_context["ciclo"],
+            )
+            rectificacion_historica = grupo_actual.estado == CefGrupo.Estado.BAJA
+            if rectificacion_historica and not usuario_puede_rectificar_cef(
+                user, cueanexo=grupo_actual.cueanexo,
+            ):
                 raise ValidationError(
                     "El grupo está dado de baja y no puede editarse."
                 )
 
+            validar_cupo_grupo(grupo_actual, grupo.cupo_maximo)
+            validar_estructura_grupo_con_historia(grupo_actual, grupo, dias_ids)
             dias_actuales_ids = set(
                 CefGrupoDiaFuncionamiento.objects.filter(
                     grupo=grupo_actual,
@@ -1292,7 +1312,7 @@ def _guardar_grupo(form, dias_form, cef_context, user):
                 or grupo_actual.hora_fin != grupo.hora_fin
                 or dias_actuales_ids != set(dias_ids)
             )
-            if cambia_compatibilidad:
+            if cambia_compatibilidad and not rectificacion_historica:
                 alumnos_ids = list(
                     CefInscripcion.objects.filter(
                         grupo=grupo_actual,
@@ -1322,17 +1342,40 @@ def _guardar_grupo(form, dias_form, cef_context, user):
                         alumnos_ids=alumnos_ids,
                     )
 
-            grupo.estado = grupo_actual.estado
-            grupo.fecha_baja = grupo_actual.fecha_baja
-            grupo.motivo_baja = grupo_actual.motivo_baja
-        else:
-            validar_ciclo_escribible(cef_context["ciclo"])
+            if rectificacion_historica:
+                snapshots_por_campo = {
+                    "turno": [
+                        "turno_nombre_snapshot",
+                        "turno_hora_desde_snapshot",
+                        "turno_hora_hasta_snapshot",
+                    ],
+                    "nivel": ["nivel_nombre_snapshot"],
+                    "rango_etario": ["rango_etario_nombre_snapshot"],
+                }
+                for campo, snapshots in snapshots_por_campo.items():
+                    if getattr(grupo_actual, f"{campo}_id") != getattr(grupo, f"{campo}_id"):
+                        snapshots_rectificados.extend(snapshots)
 
-        _preparar_numero_nombre(grupo)
+            for campo in form.Meta.fields:
+                setattr(grupo_actual, campo, getattr(grupo, campo))
+            grupo = grupo_actual
+        else:
+            validar_cupo_grupo(grupo, grupo.cupo_maximo)
+            grupo.codigo_ra_override = None
+            grupo.motivo_codigo_ra_override = ""
+
+        if not rectificacion_historica:
+            _preparar_numero_nombre(grupo)
         if not grupo.pk:
             grupo.creado_por = user
         grupo.actualizado_por = user
-        grupo.save()
+        if rectificacion_historica:
+            # Persistir sólo snapshots de FK rectificados; los demás son históricos.
+            grupo.save(update_fields=[
+                campo for campo in form.Meta.fields if campo != "actividad"
+            ] + snapshots_rectificados + ["actualizado_por", "actualizado_en"])
+        else:
+            grupo.save()
         _guardar_dias(grupo, dias, user)
     return grupo
 
@@ -1345,14 +1388,19 @@ def carga_grupo_form(request, grupo_id=None):
     if not cef_context["puede_operar"]:
         messages.error(
             request,
-            "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+            (cef_context.get("mensaje_bloqueo_inicio") or ("El ciclo está cerrado. La información se encuentra en modo sólo lectura."
             if cef_context["ciclo_cerrado"]
-            else "Seleccioná un CUE-Anexo y un ciclo para cargar grupos.",
+            else "Seleccioná un CUE-Anexo y un ciclo para cargar grupos.")),
         )
         return redirect(redirect_con_contexto("cef:carga_grupo", cef_context))
 
     grupo_edicion = _grupo_seguro(grupo_id, cef_context) if grupo_id else None
-    if grupo_edicion and grupo_edicion.estado != CefGrupo.Estado.ACTIVO:
+    rectificacion_historica = bool(
+        grupo_edicion and grupo_edicion.estado == CefGrupo.Estado.BAJA
+    )
+    if rectificacion_historica and not usuario_puede_rectificar_cef(
+        request.user, cueanexo=grupo_edicion.cueanexo,
+    ):
         messages.error(request, "El grupo está dado de baja y no puede editarse.")
         return redirect(
             _url_gestionar_grupo(grupo_edicion, cef_context, "grupos")
@@ -1369,13 +1417,21 @@ def carga_grupo_form(request, grupo_id=None):
 
         if form.is_valid() and dias_form.is_valid():
             try:
-                _guardar_grupo(form, dias_form, cef_context, request.user)
+                grupo_guardado = _guardar_grupo(form, dias_form, cef_context, request.user)
             except ValidationError as exc:
                 mensaje = "; ".join(exc.messages)
-                form.add_error(None, mensaje)
+                if hasattr(exc, "message_dict"):
+                    for campo, errores in exc.message_dict.items():
+                        form.add_error(campo if campo in form.fields else None, errores)
+                else:
+                    form.add_error(None, mensaje)
                 messages.error(request, mensaje)
             else:
                 messages.success(request, "Grupo guardado correctamente.")
+                if grupo_edicion is None:
+                    return redirect(_url_gestionar_grupo(
+                        grupo_guardado, cef_context, "grupos", "profesores-curso",
+                    ))
                 return redirect(redirect_con_contexto("cef:carga_grupo", cef_context))
 
         if not form.non_field_errors():
@@ -1390,7 +1446,11 @@ def carga_grupo_form(request, grupo_id=None):
             "form": form,
             "dias_form": dias_form,
             "grupo_edicion": grupo_edicion,
-            "form_title": "Editar Sección" if grupo_edicion else "Agregar Sección",
+            "rectificacion_historica": rectificacion_historica,
+            "form_title": (
+                "Rectificar grupo histórico" if rectificacion_historica
+                else "Editar Sección" if grupo_edicion else "Agregar Sección"
+            ),
         }
     )
     return render(request, "cef/form_grupo_cef.html", context)

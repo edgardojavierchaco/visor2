@@ -1,6 +1,6 @@
 {% extends "cef/base_operativo_cef.html" %}
 
-{% block cef_subtitle %}Carga y edición de grupos del CEF activo.{% endblock %}
+{% block cef_subtitle %}{% if rectificacion_historica %}Rectificación de datos del grupo histórico.{% else %}Carga y edición de grupos del CEF activo.{% endif %}{% endblock %}
 
 {% block cef_content %}
 <div class="cef-panel">
@@ -48,15 +48,24 @@
             {% endif %}
 
             <div class="alert alert-info mb-3">
-                <div>El numero y el nombre del grupo se generan automaticamente segun la actividad seleccionada.</div>
-                <div>El codigo RA se toma automaticamente de la actividad configurada.</div>
+                {% if rectificacion_historica %}
+                    <div>El grupo conserva su estado BAJA, actividad, identidad y datos de baja. Esta rectificación no lo reactiva.</div>
+                {% else %}
+                    <div>El numero y el nombre del grupo se generan automaticamente segun la actividad seleccionada.</div>
+                    <div>El codigo RA se toma automaticamente de la actividad configurada.</div>
+                {% endif %}
             </div>
 
             <div class="cef-form-grid">
                 {% for field in form %}
                     <div class="cef-field {% if field.name == 'observaciones' %}span-3{% endif %}">
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {{ field }}
+                        {% if rectificacion_historica and field.name == 'actividad' %}
+                            <div class="form-control-plaintext">{{ grupo_edicion.actividad_nombre_snapshot|default:grupo_edicion.actividad }}</div>
+                            {{ field.as_hidden }}
+                        {% else %}
+                            {{ field }}
+                        {% endif %}
                         {% if field.errors %}
                             <div class="cef-error">{{ field.errors|join:", " }}</div>
                         {% endif %}

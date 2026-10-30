@@ -172,6 +172,14 @@
     width: auto;
 }
 
+.cef-metricas-chart.is-grupos-ocupacion svg,
+.cef-metricas-chart.is-asistencia-mes-unico svg,
+.cef-metricas-chart.is-barras-compactas svg {
+    margin-inline: auto;
+    min-height: 0;
+    min-width: 0;
+}
+
 .cef-metricas-chart-empty {
     align-items: center;
     color: var(--text-muted, #68758a);
@@ -355,6 +363,25 @@
 /* Patrón vivo de Padrón; controles acotados para la base AdminLTE de CEF. */
 .cef-consultas-filter-card { width: 100%; min-width: 0; margin-top: 1rem; border: 1px solid #b7c7dd; border-radius: .6rem; background: #f5f8ff; padding: 1rem; }
 .cef-consultas-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; min-height: 31px; }
+.cef-consultas-export { display: inline-flex; position: relative; }
+.cef-consultas-export-toggle { white-space: nowrap; }
+.cef-consultas-export-menu {
+    background: #fff; border: 1px solid #b9c7d8; border-radius: .5rem;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, .16); max-width: calc(100vw - 1rem); padding: .35rem;
+    position: absolute; top: calc(100% + .35rem); z-index: 50;
+}
+.cef-consultas-export-menu > button {
+    align-items: flex-start; background: transparent; border: 0; border-radius: .35rem; color: #23364d;
+    display: grid; gap: .55rem; grid-template-columns: 1.25rem minmax(0, 1fr); padding: .55rem .65rem;
+    text-align: left; width: 100%;
+}
+.cef-consultas-export-menu > button:hover:not(:disabled),
+.cef-consultas-export-menu > button:focus-visible:not(:disabled) { background: #edf5ff; color: #173f66; outline: none; }
+.cef-consultas-export-menu > button:disabled { cursor: not-allowed; opacity: .45; }
+.cef-consultas-export-menu > button > i { color: #198754; margin-top: .15rem; }
+.cef-consultas-export-menu > button > span { display: grid; gap: .08rem; min-width: 0; }
+.cef-consultas-export-menu strong { font-size: .8rem; line-height: 1.3; }
+.cef-consultas-export-menu small { color: #64748b; font-size: .7rem; line-height: 1.35; }
 .cef-consultas-filter-card .btn,
 .cef-metricas .cef-filter-dialog-actions .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: .35rem;
@@ -399,7 +426,10 @@
 .cef-metricas .cef-consultas-search .btn:hover { background: #fff1f2; border-color: #f1aeb5; }
 .cef-consultas-search .input-group:focus-within { box-shadow: 0 0 0 3px rgba(45,125,210,.13); }
 .cef-consultas-panel { display: block; width: 100%; min-width: 0; border-top: 1px solid #dee2e6; margin-top: .5rem; padding-top: .5rem; }
-.cef-consultas-panel > p.cef-consultas-muted { margin: 0 0 .5rem; font-size: .78rem; color: #374151; }
+.cef-consultas-panel-heading {
+    align-items: center; display: flex; justify-content: space-between; gap: .5rem; margin: 0 0 .5rem;
+}
+.cef-consultas-panel-heading > strong { color: #374151; font-size: .78rem; font-weight: 700; }
 .cef-panel-option-search { width: 100%; margin-bottom: .5rem; }
 .cef-panel-option-search .input-group {
     flex-wrap: nowrap; overflow: hidden; min-height: 36px; border: 1px solid #cbd5e1;
@@ -463,13 +493,13 @@
     display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-shrink: 0;
     padding: .95rem 1rem .85rem; background: #f8fbff; border-bottom: 1px solid rgba(26, 79, 138, .18);
 }
-.cef-filter-dialog-header h3 { color: #20364d; font-size: .98rem; font-weight: 800; line-height: 1.45; margin: 0; }
+.cef-filter-dialog-title { align-items: center; display: flex; gap: .5rem; min-width: 0; }
+.cef-filter-dialog-header h3 { color: #20364d; font-size: .98rem; font-weight: 800; line-height: 1.45; margin: 0; min-width: 0; }
 .cef-filter-dialog-header h3 > i { color: var(--blue-700); margin-right: .4rem; }
 .cef-filter-dialog-close { flex-shrink: 0; border: 0; padding: .25rem; background: transparent; color: #000; opacity: .5; font-size: 1rem; line-height: 1; cursor: pointer; }
 .cef-filter-dialog-close:hover { opacity: .75; }
 .cef-filter-dialog-body { padding: 1rem 1rem 0; overflow-y: auto; min-height: 0; }
 .cef-filter-dialog-content > label { display: block; color: #60758a; margin-bottom: .5rem; font-size: .78rem; font-weight: 600; }
-.cef-filter-dialog-help { margin: .7rem 0 0; color: #60758a; font-size: .76rem; line-height: 1.5; }
 .cef-filter-dialog-actions {
     display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: 1rem;
     border-top: 0; background: #fff; flex-shrink: 0;
@@ -516,13 +546,49 @@ body.cef-filter-dialog-open { overflow: hidden; }
 .cef-consultas-active-filters { display: flex; flex-wrap: wrap; gap: .6rem; }
 .cef-consultas-active-filters:not(:empty) { margin-top: .85rem; margin-bottom: .9rem; }
 .cef-consultas-filter-chip {
-    display: inline-flex; align-items: center; gap: .5rem; background: #eff6ff; border: 1px solid #c3d8f5; border-radius: 999px; color: #174c90;
-    cursor: pointer; font-size: .78rem; font-weight: 700; line-height: 1.5; max-width: 100%; padding: .25rem 1rem;
-    text-align: left; overflow-wrap: anywhere; transition: background-color .15s ease;
+    align-items: center; background: #eff6ff; border: 1px solid #c3d8f5; border-radius: 999px; color: #174c90;
+    display: inline-flex; font-size: .78rem; font-weight: 700; gap: .45rem; line-height: 1.5;
+    max-width: 100%; padding: .25rem .7rem .25rem .85rem; text-align: left; overflow-wrap: anywhere;
 }
-.cef-consultas-filter-chip:hover { background: #dbeafe; }
-.cef-consultas-filter-chip > span { min-width: 0; }
-.cef-consultas-filter-chip > .fa-xmark { color: #b02a37; }
+.cef-consultas-filter-chip-text { min-width: 0; }
+.cef-consultas-filter-chip-remove {
+    align-items: center !important;
+    background: rgba(220, 53, 69, .07) !important;
+    border: 1px solid rgba(220, 53, 69, .45) !important;
+    border-radius: 999px !important;
+    box-shadow: none !important;
+    color: #dc3545 !important;
+    cursor: pointer;
+    display: inline-flex !important;
+    flex-shrink: 0 !important;
+    height: 18px !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    margin-left: .22rem !important;
+    min-width: 18px !important;
+    padding: 0 !important;
+    text-decoration: none !important;
+    transition: background-color .16s ease, color .16s ease, border-color .16s ease, transform .14s ease;
+    width: 18px !important;
+}
+.cef-consultas-filter-chip-remove i {
+    color: inherit !important;
+    font-size: .66rem !important;
+    line-height: 1 !important;
+}
+.cef-consultas-filter-chip-remove:hover,
+.cef-consultas-filter-chip-remove:focus,
+.cef-consultas-filter-chip-remove:focus-visible {
+    background: #dc3545 !important;
+    border-color: #dc3545 !important;
+    box-shadow: none !important;
+    color: #fff !important;
+    outline: none !important;
+    transform: translateY(-.5px);
+}
+.cef-consultas-filter-chip-remove:active {
+    transform: scale(.96);
+}
 .cef-consultas-muted { color: #526174; font-size: .78rem; }
 p.cef-consultas-muted { margin: .4rem 0 .6rem; }
 .cef-consultas-status { background: #f1f5f9; border: 1px solid #dce4ef; border-radius: .45rem; color: #334155; font-size: .82rem; margin-top: .6rem; padding: .55rem .7rem; }
@@ -593,6 +659,42 @@ p.cef-consultas-muted { margin: .4rem 0 .6rem; }
     align-items: center; background: #e5eef8; border-bottom: 1px solid #cfdae7; color: #173f66;
     display: flex; font-size: .82rem; font-weight: 800; gap: .45rem; margin: 0; padding: .55rem .7rem;
 }
+.cef-consultas-help-surface.is-help-open,
+.cef-filter-dialog-card.is-help-open {
+    overflow: visible; position: relative; z-index: 3;
+}
+.cef-consultas-detail-heading {
+    align-items: center; background: #e5eef8; border-bottom: 1px solid #cfdae7;
+    display: flex; justify-content: space-between; min-height: 2.15rem; padding: .42rem .65rem .42rem .7rem;
+    position: relative;
+}
+.cef-consultas-detail-heading > h3 {
+    align-items: center; color: #173f66; display: flex; font-size: .82rem; font-weight: 800;
+    gap: .45rem; margin: 0; min-width: 0;
+}
+.cef-consultas-help-wrap { display: inline-flex; flex: 0 0 auto; margin-left: .45rem; position: relative; }
+.cef-consultas-help-toggle {
+    align-items: center; background: transparent; border: 1px solid #9eb4ca; border-radius: 999px;
+    color: #315c84; cursor: pointer; display: inline-flex; font-size: .77rem; height: 1.45rem;
+    justify-content: center; padding: 0; transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+    width: 1.45rem;
+}
+.cef-consultas-help-toggle:hover,
+.cef-consultas-help-toggle:focus-visible,
+.cef-consultas-help-toggle[aria-expanded="true"] {
+    background: #d8e7f6; border-color: #6589aa; color: #173f66;
+}
+.cef-consultas-help-toggle:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.cef-consultas-help-popover {
+    background: #fff; border: 1px solid #bdcddd; border-radius: .45rem; box-shadow: 0 7px 20px rgba(31, 55, 78, .16);
+    color: #334155; font-size: .79rem; font-weight: 500; line-height: 1.45; padding: .62rem .72rem;
+    position: absolute; right: 0; top: calc(100% + .4rem); width: min(22rem, calc(100vw - 4rem)); z-index: 30;
+}
+.cef-consultas-help-popover[hidden] { display: none; }
+.cef-consultas-result-help > span { display: block; }
+.cef-consultas-result-help ul { margin: .45rem 0 0; padding-left: 1.05rem; }
+.cef-consultas-result-help li + li { margin-top: .25rem; }
+.cef-consultas-results-title { align-items: center; display: inline-flex; min-width: 0; }
 .cef-consultas-detail-section .cef-consultas-table-scroll { border: 0; border-radius: 0; }
 .cef-consultas-detail-empty { color: #526174; font-size: .8rem; margin: 0; padding: 1rem; }
 .cef-consultas-modal-foot { background: #fff; border-top: 1px solid #d7e0eb; display: flex; justify-content: flex-end; padding: .65rem .85rem; }
@@ -600,9 +702,6 @@ body.cef-consultas-modal-open { overflow: hidden; }
 .cef-consultas-chart-panel { border: 1px solid var(--metricas-border); border-radius: .6rem; margin-top: 1rem; padding: 1rem; }
 .cef-consultas-chart-head h3 { color: #23476e; font-size: .9rem; font-weight: 700; margin: 0; }
 .cef-consultas-chart-head > span { color: #526174; font-size: .75rem; }
-.cef-consultas-definition { color: #526174; font-size: .78rem; margin-top: .8rem; }
-.cef-consultas-definition > summary { color: #23476e; cursor: pointer; font-weight: 600; }
-.cef-consultas-definition p { margin: .6rem 0; }
 @keyframes cef-consultas-panel-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes cef-consultas-modal-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .cef-metricas button:focus-visible, .cef-metricas a:focus-visible, .cef-consultas-table-scroll:focus-visible {

@@ -7,7 +7,7 @@
     <div class="cef-panel-head">
         <div>
             <span class="cef-section-kicker">Generación anual completada</span>
-            <h2 class="cef-panel-title">Ciclo {{ resumen.ciclo_destino.anio }} <span>generado correctamente</span></h2>
+            <h2 class="cef-panel-title">Ciclo {{ resumen.ciclo_destino.anio|stringformat:"s" }} <span>generado correctamente</span></h2>
         </div>
         <div class="cef-panel-actions">
             <span class="badge text-bg-success">COMPLETADO</span>
@@ -19,12 +19,18 @@
 
     <div class="cef-panel-body">
         <div class="alert alert-success">
-            El ciclo {{ resumen.ciclo_destino.anio }} se generó correctamente y ya está disponible para trabajar. El ciclo {{ resumen.ciclo_origen.anio }} continúa cerrado y conserva su información.
+            El ciclo {{ resumen.ciclo_destino.anio|stringformat:"s" }} se generó correctamente.
+            {% if cef_context.ciclo_inicio_futuro %}
+                Está preparado para consultas; las cargas se habilitarán el {{ resumen.ciclo_destino.fecha_inicio|date:"d/m/Y" }}.
+            {% else %}
+                Las cargas operativas ya están habilitadas.
+            {% endif %}
+            El ciclo {{ resumen.ciclo_origen.anio|stringformat:"s" }} continúa cerrado y conserva su información.
         </div>
 
         <div class="cef-context-summary mb-4">
             <div class="cef-context-summary-item">
-                <span>Fecha</span>
+                <span>Fecha de generación</span>
                 <strong>{{ resumen.fecha|date:"d/m/Y" }}</strong>
             </div>
             <div class="cef-context-summary-item">
@@ -33,11 +39,19 @@
             </div>
             <div class="cef-context-summary-item">
                 <span>Ciclo anterior</span>
-                <strong>{{ resumen.ciclo_origen.anio }} · Cerrado</strong>
+                <strong>{{ resumen.ciclo_origen.anio|stringformat:"s" }} · Cerrado</strong>
             </div>
             <div class="cef-context-summary-item">
                 <span>Nuevo ciclo</span>
-                <strong>{{ resumen.ciclo_destino.anio }} · Disponible</strong>
+                <strong>{{ resumen.ciclo_destino.anio|stringformat:"s" }} · {% if cef_context.ciclo_inicio_futuro %}Preparado{% else %}Habilitado{% endif %}</strong>
+            </div>
+            <div class="cef-context-summary-item">
+                <span>Fecha de inicio oficial</span>
+                <strong>{{ resumen.ciclo_destino.fecha_inicio|date:"d/m/Y" }}</strong>
+            </div>
+            <div class="cef-context-summary-item">
+                <span>Fecha de fin prevista</span>
+                <strong>{{ resumen.ciclo_destino.fecha_fin|date:"d/m/Y"|default:"Sin definir" }}</strong>
             </div>
         </div>
 

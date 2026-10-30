@@ -8,8 +8,8 @@
         <div>
             <span class="cef-section-kicker">Previsualización anual</span>
             <h2 class="cef-panel-title">
-                Ciclo {{ resultado.origen.anio }}
-                <span>→ {{ resultado.destino_anio }}</span>
+                Ciclo {{ resultado.origen.anio|stringformat:"s" }}
+                <span>→ {{ resultado.destino_anio|stringformat:"s" }}</span>
             </h2>
         </div>
         <div class="cef-panel-actions">
@@ -31,11 +31,11 @@
         <div class="cef-context-summary mb-4">
             <div class="cef-context-summary-item">
                 <span>Ciclo origen</span>
-                <strong>{{ resultado.origen.anio }} · {% if resultado.origen.cerrado %}Cerrado{% else %}Actual y abierto{% endif %}</strong>
+                <strong>{{ resultado.origen.anio|stringformat:"s" }} · {% if resultado.origen.cerrado %}Cerrado{% else %}Actual y abierto{% endif %}</strong>
             </div>
             <div class="cef-context-summary-item">
                 <span>Ciclo proyectado</span>
-                <strong>{{ resultado.destino_anio }}</strong>
+                <strong>{{ resultado.destino_anio|stringformat:"s" }}</strong>
             </div>
             <div class="cef-context-summary-item">
                 <span>Fecha simulada</span>
@@ -60,8 +60,8 @@
                         <thead>
                             <tr>
                                 <th>Entidad</th>
-                                <th>Encontrados en {{ resultado.origen.anio }}</th>
-                                <th>Proyectables a {{ resultado.destino_anio }}</th>
+                                <th>Encontrados en {{ resultado.origen.anio|stringformat:"s" }}</th>
+                                <th>Proyectables a {{ resultado.destino_anio|stringformat:"s" }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -182,24 +182,37 @@
                     </div>
                 {% elif resultado.requiere_cierre %}
                     <div class="alert alert-warning">
-                        El ciclo {{ resultado.origen.anio }} aún está abierto. Cerralo antes de generar el ciclo {{ resultado.destino_anio }}.
+                        El ciclo {{ resultado.origen.anio|stringformat:"s" }} aún está abierto. Cerralo antes de generar el ciclo {{ resultado.destino_anio|stringformat:"s" }}.
                     </div>
                     <a class="btn btn-outline-primary" href="{{ volver_url }}">
                         <i class="fa-solid fa-arrow-left me-1"></i>Volver a Ciclos para cerrarlo
                     </a>
                 {% else %}
                     <p>
-                        Al confirmar, se creará el ciclo {{ resultado.destino_anio }} con la información detallada en esta previsualización. El ciclo {{ resultado.origen.anio }} seguirá cerrado y no se modificará.
+                        Al confirmar, se creará el ciclo {{ resultado.destino_anio|stringformat:"s" }} con la información detallada en esta previsualización. El ciclo {{ resultado.origen.anio|stringformat:"s" }} seguirá cerrado y no se modificará.
                     </p>
                     <form method="post"
                           action="{% url 'cef:generar_ciclo_anual' resultado.origen.id %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}"
                           data-cef-confirm-submit
-                          data-cef-confirm-title="Generar ciclo {{ resultado.destino_anio }}"
-                          data-cef-confirm-message="Se creará el ciclo {{ resultado.destino_anio }} con la información mostrada en esta previsualización."
-                          data-cef-confirm-entity="El ciclo {{ resultado.origen.anio }} seguirá cerrado y no se modificará.">
+                          data-cef-confirm-title="Generar ciclo {{ resultado.destino_anio|stringformat:"s" }}"
+                          data-cef-confirm-message="Se creará el ciclo {{ resultado.destino_anio|stringformat:"s" }} con la información mostrada en esta previsualización."
+                          data-cef-confirm-entity="El ciclo {{ resultado.origen.anio|stringformat:"s" }} seguirá cerrado y no se modificará.">
                         {% csrf_token %}
+                        {% if form_anual.non_field_errors %}
+                            <div class="alert alert-danger">{{ form_anual.non_field_errors }}</div>
+                        {% endif %}
+                        <div class="cef-form-grid is-two-col mb-3">
+                            {% for field in form_anual %}
+                                <div class="cef-field">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}<div class="cef-error">{{ field.errors|join:", " }}</div>{% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <p class="text-muted small">El inicio oficial habilita las cargas del nuevo ciclo. El fin previsto es informativo y no reemplaza el cierre manual.</p>
                         <button type="submit" class="btn btn-primary">
-                            <i class="fa-solid fa-calendar-plus me-1"></i>Generar ciclo {{ resultado.destino_anio }}
+                            <i class="fa-solid fa-calendar-plus me-1"></i>Generar ciclo {{ resultado.destino_anio|stringformat:"s" }}
                         </button>
                     </form>
                 {% endif %}

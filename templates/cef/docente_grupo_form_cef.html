@@ -1,11 +1,11 @@
 {% extends "cef/base_operativo_cef.html" %}
 
-{% block cef_subtitle %}Edición de rol, fecha de asignación y observaciones del profesor.{% endblock %}
+{% block cef_subtitle %}{% if rectificacion_historica %}Rectificación de un período histórico del profesor. El estado continúa en baja.{% else %}Edición de rol, fecha de asignación y observaciones del profesor.{% endif %}{% endblock %}
 
 {% block cef_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
-        <h2 class="cef-panel-title">Editar profesor del grupo</h2>
+        <h2 class="cef-panel-title">{% if rectificacion_historica %}Rectificar asignación histórica{% else %}Editar profesor del grupo{% endif %}</h2>
         <div class="cef-panel-actions">
             <a class="btn btn-outline-secondary" href="{{ volver_url }}">
                 <i class="fa-solid fa-arrow-left"></i> {{ volver_label }}

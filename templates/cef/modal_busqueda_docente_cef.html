@@ -188,6 +188,11 @@
                 </div>
             {% endif %}
 
+            {% if docente_row %}
+                <div class="alert alert-success mb-3">
+                    Profesor encontrado en BNH y vinculado al CUE-Anexo seleccionado.
+                </div>
+            {% endif %}
             <div class="cef-docente-table-wrap">
                 <table class="cef-docente-table">
                     <thead>
@@ -207,23 +212,6 @@
                                 <td>{{ docente_row.cuil|default:"-" }}</td>
                                 <td>{{ docente_row.dni|default:"-" }}</td>
                                 <td>
-                                    {% if not modal_tiene_grupo %}
-                                        {% if docente_en_banco %}
-                                            <span class="text-muted small">Ya está en el banco de profesores del CEF.</span>
-                                        {% elif modal_puede_agregar_banco %}
-                                            <form method="post" action="{{ modal_action_url }}" style="display:contents" data-docente-modal-post-form>
-                                                {% csrf_token %}
-                                                <input type="hidden" name="cueanexo_contexto" value="{{ cef_context.cueanexo }}">
-                                                {% if cef_context.ciclo %}<input type="hidden" name="ciclo_contexto" value="{{ cef_context.ciclo.pk }}">{% endif %}
-                                                <input type="hidden" name="cuil" value="{{ cuil_buscado }}">
-                                                <button class="btn btn-primary btn-sm" type="submit">
-                                                    <i class="fa-solid fa-user-check"></i> Agregar al banco de profesores del CEF
-                                                </button>
-                                            </form>
-                                        {% else %}
-                                            <span class="text-muted small">Seleccioná CUE-Anexo y ciclo para agregarlo al banco de profesores del CEF.</span>
-                                        {% endif %}
-                                    {% endif %}
                                     {% if url_editar_profesor %}
                                         <a class="btn btn-outline-primary btn-sm" href="{{ url_editar_profesor }}" target="_blank" rel="noopener">
                                             <i class="fa-solid fa-pen-to-square"></i> Editar datos
@@ -249,14 +237,7 @@
                                     {% else %}
                                         <div class="cef-docente-msg">
                                             <i class="fa-solid fa-user-xmark" style="color:#bfdbfe"></i>
-                                            No se encontró ningún profesor con ese CUIL. Podés cargar los datos del profesor desde el módulo correspondiente. Se abrirá una nueva pestaña para completar el formulario. Cuando termines de cargar y guardar al profesor, regresá a esta pantalla de CEF y buscá nuevamente el CUIL para poder asociarlo.
-                                            {% if url_carga_profesor %}
-                                                <a class="btn btn-outline-primary btn-sm" href="{{ url_carga_profesor }}" target="_blank" rel="noopener">
-                                                    <i class="fa-solid fa-plus-circle"></i> Cargar datos del profesor
-                                                </a>
-                                            {% else %}
-                                                <span class="alert alert-warning mb-0">No está configurada la URL de carga externa de profesor.</span>
-                                            {% endif %}
+                                            El profesor no existe en BNH Personas.
                                         </div>
                                     {% endif %}
                                 </td>
@@ -305,12 +286,6 @@
             {% elif docente_row %}
                 <p class="small text-muted mb-0">
                     La asignación a grupos se realiza desde la pantalla de grupos.
-                </p>
-            {% endif %}
-
-            {% if url_carga_profesor %}
-                <p class="small text-muted mt-3 mb-0">
-                    Se abrirá una nueva pestaña. Cuando termines de cargar y guardar al profesor, regresá a esta pantalla de CEF y buscá nuevamente el CUIL.
                 </p>
             {% endif %}
 

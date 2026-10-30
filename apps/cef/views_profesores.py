@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+from types import SimpleNamespace
 from urllib.parse import urlencode
 
 from django.contrib import messages
@@ -22,6 +23,7 @@ from .models import (
     PADRON_DB_ALIAS,
 )
 from .permisos import cef_required
+from .services_bnh import buscar_docente_bnh, cuiles_docentes_bnh, docentes_bnh
 from .performance import perf_render, perf_start_view
 from .services import (
     asegurar_docente_banco_activo,
@@ -50,12 +52,8 @@ def _is_ajax(request):
     return request.headers.get("x-requested-with") == "XMLHttpRequest"
 
 
-def _buscar_docente(cuil):
-    return (
-        CefDocenteBnh.objects.using(PADRON_DB_ALIAS)
-        .filter(cuil=cuil)
-        .first()
-    )
+def _buscar_docente(cuil, cueanexo):
+    return buscar_docente_bnh(cuil, cueanexo)
 
 
 def _docente_row(docente):
@@ -65,7 +63,7 @@ def _docente_row(docente):
     return {
         "apellido": docente.apellido or "",
         "nombre": docente.nombre or "",
-        "nombre_completo": docente.nombre_completo,
+        "nombre_completo": ", ".join(filter(None, (docente.apellido, docente.nombre))),
         "cuil": docente.cuil or "",
         "dni": docente.dni or "",
         "estado": docente.estado or "",
@@ -74,20 +72,15 @@ def _docente_row(docente):
 
 def _docentes_cef(cef_context):
     if not cef_context["puede_consultar"]:
-        return CefDocenteCef.objects.none()
-
-    return (
-        CefDocenteCef.objects.filter(
-            cueanexo=cef_context["cueanexo"],
-            ciclo=cef_context["ciclo"],
-            estado=CefDocenteCef.Estado.ACTIVO,
+        return []
+    return [
+        SimpleNamespace(
+            docente_cuil=docente.cuil,
+            docente_nombre_snapshot=_docente_row(docente)["nombre_completo"],
+            docente_dni_snapshot=docente.dni or "",
         )
-        .order_by(
-            "docente_nombre_snapshot",
-            "docente_cuil",
-            "estado",
-        )
-    )
+        for docente in docentes_bnh(cef_context["cueanexo"])
+    ]
 
 
 def _docentes_bajas_ciclo(cef_context):
@@ -268,6 +261,11 @@ def _profesores_listado_context(cef_context, vista="actuales"):
     docentes_banco_tabla_pendiente = False
     if vista == "historial":
         try:
+            cuiles_vinculados = set(cuiles_docentes_bnh(cef_context["cueanexo"]))
+        except (OperationalError, ProgrammingError):
+            cuiles_vinculados = set()
+            docentes_banco_tabla_pendiente = True
+        try:
             docentes_bajas_ciclo = list(_docentes_bajas_ciclo(cef_context))
             docentes_historial = list(_docentes_historial(cef_context))
             asignaciones_historicas = list(
@@ -397,6 +395,10 @@ def _profesores_listado_context(cef_context, vista="actuales"):
                 None,
             )
             periodo_resumen.activo_banco_actual = periodo_activo is not None
+            periodo_resumen.vinculado_bnh = docente_cuil in cuiles_vinculados
+            periodo_resumen.estado_actual_cef = (
+                "Vinculado en BNH" if periodo_resumen.vinculado_bnh else "Sin vinculación en BNH"
+            )
             periodo_resumen.grupos_bloqueados = asignaciones_activas_por_docente.get(
                 docente_cuil,
                 [],
@@ -524,7 +526,7 @@ def _docente_baja_modal(cef_context, docente_banco_id):
 
 def _reincorporar_docente_cef(request, cef_context):
     if not cef_context["puede_operar"]:
-        return None, "El ciclo está cerrado o no está listo para operar."
+        return None, (cef_context.get("mensaje_bloqueo_inicio") or ("El ciclo está cerrado o no está listo para operar."))
 
     periodo = _docente_cef_seguro(
         request.POST.get("docente_banco_id"),
@@ -672,34 +674,33 @@ def _grupo_profesores_seguro(grupo_id, cef_context):
 
 
 def _asignar_docente_grupo(request, cef_context):
-    form = CefDocenteGrupoForm(request.POST)
     cuil = _solo_digitos(request.POST.get("cuil"))
     grupo = _grupo_profesores_seguro(request.POST.get("grupo_id"), cef_context)
-    docente = _buscar_docente(cuil)
+    form = CefDocenteGrupoForm(
+        request.POST, grupo=grupo, ciclo=cef_context.get("ciclo")
+    )
+    docente = None
     modal_error = ""
+    if grupo:
+        try:
+            docente = _buscar_docente(cuil, grupo.cueanexo)
+        except ValidationError as exc:
+            modal_error = "; ".join(exc.messages)
+        except (OperationalError, ProgrammingError):
+            modal_error = "No se pudo consultar BNH Personas."
 
     if not cef_context["puede_operar"]:
         modal_error = "Seleccioná un CUE-Anexo y un ciclo lectivo para asignar profesores."
     elif not grupo:
         modal_error = "El grupo seleccionado no pertenece al CEF y ciclo actual."
     elif len(cuil) != 11 or not docente:
-        modal_error = "Primero seleccioná un profesor válido por CUIL."
+        modal_error = modal_error or "Primero seleccioná un profesor válido por CUIL."
     else:
         form.instance.grupo = grupo
         form.instance.docente_cuil = cuil
 
     if not modal_error and grupo and len(cuil) == 11 and docente and form.is_valid():
         try:
-            banco_pendiente = False
-            try:
-                asegurar_docente_banco_activo(
-                    docente_cuil=cuil,
-                    cueanexo=cef_context["cueanexo"],
-                    ciclo=cef_context["ciclo"],
-                    user=request.user,
-                )
-            except (OperationalError, ProgrammingError):
-                banco_pendiente = True
             asignacion = crear_asignacion_docente_activa(
                 grupo=grupo,
                 docente_cuil=cuil,
@@ -707,14 +708,17 @@ def _asignar_docente_grupo(request, cef_context):
                 user=request.user,
                 fecha_desde=form.cleaned_data.get("fecha_desde"),
                 observaciones=form.cleaned_data.get("observaciones") or "",
+                incorporar_banco=True,
             )
-            if banco_pendiente and not _is_ajax(request):
-                messages.warning(request, MSG_BANCO_DOCENTES_PENDIENTE)
             ajax_message = f"Profesor asignado como {asignacion.get_rol_display().lower()}."
             if _is_ajax(request):
                 return None, form, grupo, cuil, modal_error, ajax_message
             messages.success(request, "Profesor asociado correctamente al grupo.")
             return redirect(_url_profesores(cef_context)), form, grupo, cuil, modal_error, ""
+        except (OperationalError, ProgrammingError):
+            modal_error = "No se pudo acceder al banco de profesores. La asignación no se guardó."
+        except (OperationalError, ProgrammingError):
+            modal_error = "No se pudo consultar BNH Personas. La asignación no se guardó."
         except ValidationError as exc:
             modal_error = "; ".join(exc.messages)
         except IntegrityError:
@@ -726,7 +730,6 @@ def _asignar_docente_grupo(request, cef_context):
 
 
 def _asignar_docente_grupo_desde_historial(request, cef_context):
-    form = CefDocenteGrupoForm(request.POST)
     try:
         periodo_id = int(request.POST.get("periodo_historico_id") or "")
     except (TypeError, ValueError):
@@ -743,24 +746,27 @@ def _asignar_docente_grupo_desde_historial(request, cef_context):
     )
     cuil = periodo.docente_cuil if periodo else ""
     grupo = _grupo_profesores_seguro(request.POST.get("grupo_id"), cef_context)
-    docente = _buscar_docente(cuil) if cuil else None
+    form = CefDocenteGrupoForm(
+        request.POST, grupo=grupo, ciclo=cef_context.get("ciclo")
+    )
+    docente = None
     modal_error = ""
+    if grupo and cuil:
+        try:
+            docente = _buscar_docente(cuil, grupo.cueanexo)
+        except ValidationError as exc:
+            modal_error = "; ".join(exc.messages)
+        except (OperationalError, ProgrammingError):
+            modal_error = "No se pudo consultar BNH Personas."
 
     if not cef_context["puede_operar"]:
-        modal_error = "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+        modal_error = (cef_context.get("mensaje_bloqueo_inicio") or ("El ciclo está cerrado. La información se encuentra en modo sólo lectura."))
     elif not periodo:
         modal_error = "El período histórico seleccionado no pertenece a este CEF."
-    elif not CefDocenteCef.objects.filter(
-        cueanexo=cef_context["cueanexo"],
-        ciclo=cef_context["ciclo"],
-        docente_cuil=cuil,
-        estado=CefDocenteCef.Estado.ACTIVO,
-    ).exists():
-        modal_error = "El profesor debe reincorporarse primero al CEF."
     elif not grupo:
         modal_error = "El grupo seleccionado no pertenece al CEF y ciclo actual."
     elif len(cuil) != 11 or not docente:
-        modal_error = "El profesor seleccionado no es válido."
+        modal_error = modal_error or "El profesor seleccionado no es válido."
     else:
         form.instance.grupo = grupo
         form.instance.docente_cuil = cuil
@@ -774,6 +780,7 @@ def _asignar_docente_grupo_desde_historial(request, cef_context):
                 user=request.user,
                 fecha_desde=form.cleaned_data.get("fecha_desde"),
                 observaciones=form.cleaned_data.get("observaciones") or "",
+                incorporar_banco=True,
             )
             mensaje = f"Profesor asignado como {asignacion.get_rol_display().lower()}."
             if _is_ajax(request):
@@ -813,7 +820,7 @@ def profesores(request):
     cuil_error = ""
     docente_en_banco = False
     abrir_modal = request.GET.get("abrir_modal_docente") == "1"
-    docente_grupo_form = CefDocenteGrupoForm()
+    docente_grupo_form = CefDocenteGrupoForm(ciclo=cef_context.get("ciclo"))
     asignacion_modal_abierto = False
     asignacion_grupo_seleccionado = None
     asignacion_docente_cuil = ""
@@ -826,10 +833,18 @@ def profesores(request):
     baja_form = CefBajaMotivoForm()
 
     accion = request.POST.get("accion")
+    if request.method == "POST" and accion not in {
+        "asignar_grupo", "asignar_grupo_historial",
+    }:
+        message = "La pertenencia institucional se administra exclusivamente en BNH Personas."
+        if _is_ajax(request):
+            return JsonResponse({"ok": False, "message": message}, status=405)
+        messages.error(request, message)
+        return redirect(_url_profesores(cef_context, vista))
     if (
         request.method == "POST"
         and vista == "historial"
-        and accion not in {"asignar_grupo_historial", "reincorporar_cef"}
+        and accion != "asignar_grupo_historial"
     ):
         message = "La acción solicitada no está habilitada en Historial."
         if _is_ajax(request):
@@ -847,63 +862,13 @@ def profesores(request):
 
     if request.method == "POST" and not cef_context["puede_operar"]:
         message = (
-            "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+            (cef_context.get("mensaje_bloqueo_inicio") or ("El ciclo está cerrado. La información se encuentra en modo sólo lectura."
             if cef_context["ciclo_cerrado"]
-            else "Seleccioná un CUE-Anexo y un ciclo lectivo para gestionar profesores."
+            else "Seleccioná un CUE-Anexo y un ciclo lectivo para gestionar profesores."))
         )
         if _is_ajax(request):
             return JsonResponse({"ok": False, "message": message})
         messages.error(request, message)
-        return redirect(_url_profesores(cef_context, vista))
-
-    if request.method == "POST" and request.POST.get("accion") == "baja_cef":
-        baja_ok, baja_message, baja_modal_docente, baja_form = _dar_baja_docente_cef(
-            request,
-            cef_context,
-        )
-        if _is_ajax(request):
-            baja_context = {
-                "cef_context": cef_context,
-                "baja_action_url": _url_profesores(cef_context),
-                "baja_modal_docente": None if baja_ok else baja_modal_docente,
-                "baja_form": baja_form,
-            }
-            baja_context.update(_profesores_listado_context(cef_context))
-            return JsonResponse(
-                {
-                    "ok": baja_ok,
-                    "message": baja_message,
-                    "fragment_selector": "[data-cef-fragment='profesores-banco']",
-                    "fragment_html": render_to_string(
-                        "cef/profesores_lista_cef.html",
-                        baja_context,
-                        request=request,
-                    ),
-                    "modal_html": render_to_string(
-                        "cef/profesor_baja_cef_modal.html",
-                        baja_context,
-                        request=request,
-                    ),
-                    "close_modal": baja_ok,
-                }
-            )
-        if baja_ok:
-            messages.success(request, baja_message)
-        else:
-            messages.error(request, baja_message)
-        return redirect(_url_profesores(cef_context))
-
-    if request.method == "POST" and accion == "reincorporar_cef":
-        reincorporacion_ok, reincorporacion_message = _reincorporar_docente_cef(
-            request,
-            cef_context,
-        )
-        if reincorporacion_ok:
-            messages.success(request, reincorporacion_message)
-        elif reincorporacion_ok is False:
-            messages.info(request, reincorporacion_message)
-        else:
-            messages.error(request, reincorporacion_message)
         return redirect(_url_profesores(cef_context, vista))
 
     if request.method == "POST" and accion in {
@@ -931,57 +896,6 @@ def profesores(request):
         asignacion_ajax_ok = bool(asignacion_ajax_message)
         asignacion_modal_abierto = not asignacion_ajax_ok
         busqueda_form = CefBusquedaDocenteForm()
-    elif request.method == "POST":
-        busqueda_form = CefBusquedaDocenteForm(request.POST)
-        abrir_modal = True
-
-        if busqueda_form.is_valid():
-            cuil_buscado = busqueda_form.cleaned_data["cuil"]
-            docente = _buscar_docente(cuil_buscado)
-        else:
-            cuil_buscado = _solo_digitos(request.POST.get("cuil"))
-            cuil_error = _errores_form(busqueda_form)
-
-        if not docente:
-            messages.error(request, "Primero buscá un profesor existente por CUIL.")
-        elif not cef_context["puede_operar"]:
-            messages.error(
-                request,
-                "Seleccioná un CUE-Anexo y un ciclo lectivo para agregar profesores al banco.",
-            )
-        else:
-            try:
-                try:
-                    banco, creado = asegurar_docente_banco_activo(
-                        docente_cuil=docente.cuil,
-                        cueanexo=cef_context["cueanexo"],
-                        ciclo=cef_context["ciclo"],
-                        user=request.user,
-                    )
-                    tabla_pendiente = False
-                except (OperationalError, ProgrammingError):
-                    banco = None
-                    creado = False
-                    tabla_pendiente = True
-                docente_en_banco = bool(banco)
-
-                if tabla_pendiente:
-                    messages.error(request, MSG_BANCO_DOCENTES_PENDIENTE)
-                elif creado:
-                    messages.success(request, "Profesor agregado al banco de profesores del CEF.")
-                    return redirect(_url_profesores(cef_context))
-                else:
-                    messages.info(
-                        request,
-                        "Ese profesor ya está activo en el banco de profesores de este CEF y ciclo.",
-                    )
-            except ValidationError as exc:
-                messages.error(request, "; ".join(exc.messages))
-            except IntegrityError:
-                messages.error(
-                    request,
-                    "No se pudo agregar el profesor al banco. Verificá que no exista ya activo para este CEF y ciclo.",
-                )
     else:
         busqueda_form = CefBusquedaDocenteForm(
             request.GET if request.GET.get("cuil") else None
@@ -989,7 +903,12 @@ def profesores(request):
 
         if busqueda_form.is_valid():
             cuil_buscado = busqueda_form.cleaned_data["cuil"]
-            docente = _buscar_docente(cuil_buscado)
+            try:
+                docente = _buscar_docente(cuil_buscado, cef_context["cueanexo"])
+            except ValidationError as exc:
+                cuil_error = "; ".join(exc.messages)
+            except (OperationalError, ProgrammingError):
+                cuil_error = "No se pudo consultar BNH Personas."
         elif request.GET.get("cuil"):
             cuil_buscado = _solo_digitos(request.GET.get("cuil"))
             cuil_error = _errores_form(busqueda_form)
@@ -1019,28 +938,26 @@ def profesores(request):
                 )
             else:
                 asignacion_docente_cuil = _solo_digitos(request.GET.get("cuil"))
-            docente_asignacion = (
-                _buscar_docente(asignacion_docente_cuil)
-                if asignacion_docente_cuil
-                else None
-            )
+            docente_asignacion = None
+            if asignacion_docente_cuil and asignacion_grupo_seleccionado:
+                try:
+                    docente_asignacion = _buscar_docente(
+                        asignacion_docente_cuil, asignacion_grupo_seleccionado.cueanexo,
+                    )
+                except ValidationError as exc:
+                    asignacion_modal_error = "; ".join(exc.messages)
+                except (OperationalError, ProgrammingError):
+                    asignacion_modal_error = "No se pudo consultar BNH Personas."
 
             if not asignacion_grupo_seleccionado:
                 asignacion_modal_error = "El grupo seleccionado no pertenece al CEF y ciclo actual."
             elif vista == "historial" and not periodo_historico:
                 asignacion_modal_error = "El período histórico seleccionado no pertenece a este CEF."
-            elif vista == "historial" and not CefDocenteCef.objects.filter(
-                cueanexo=cef_context["cueanexo"],
-                ciclo=cef_context["ciclo"],
-                docente_cuil=asignacion_docente_cuil,
-                estado=CefDocenteCef.Estado.ACTIVO,
-            ).exists():
-                asignacion_modal_error = "El profesor debe reincorporarse primero al CEF."
             elif len(asignacion_docente_cuil) != 11 or not docente_asignacion:
-                asignacion_modal_error = "El profesor seleccionado no es válido."
+                asignacion_modal_error = asignacion_modal_error or "El profesor seleccionado no es válido."
             else:
                 asignacion_docente_label = (
-                    f"Profesor: {docente_asignacion.nombre_completo} - "
+                    f"Profesor: {_docente_row(docente_asignacion)['nombre_completo']} - "
                     f"CUIL {asignacion_docente_cuil}"
                 )
 
@@ -1051,10 +968,7 @@ def profesores(request):
             )
 
     if asignacion_docente_cuil and not asignacion_docente_label:
-        docente_asignacion = _buscar_docente(asignacion_docente_cuil)
-        nombre_asignacion = (
-            docente_asignacion.nombre_completo if docente_asignacion else "Profesor"
-        )
+        nombre_asignacion = "Profesor"
         asignacion_docente_label = (
             f"Profesor: {nombre_asignacion} - CUIL {asignacion_docente_cuil}"
         )
@@ -1081,6 +995,9 @@ def profesores(request):
             "asignacion_periodo_historico_id": asignacion_periodo_historico_id,
             "asignacion_docente_label": asignacion_docente_label,
             "asignacion_modal_error": asignacion_modal_error,
+            "asignacion_bnh_error": bool(
+                asignacion_modal_error and not docente_grupo_form.instance.docente_cuil
+            ),
             "asignacion_modal_feedback": asignacion_ajax_message,
             "asignacion_action_url": url_profesores,
             "asignacion_accion": (
@@ -1158,7 +1075,7 @@ def profesores_fragmento(request):
             else None
         ),
         "baja_form": CefBajaMotivoForm(),
-        "docente_grupo_form": CefDocenteGrupoForm(),
+        "docente_grupo_form": CefDocenteGrupoForm(ciclo=cef_context.get("ciclo")),
         "modal_action_url": _url_modal_profesores(cef_context),
     }
     context.update(_profesores_listado_context(cef_context, vista))

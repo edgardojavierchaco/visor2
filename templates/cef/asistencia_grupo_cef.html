@@ -283,7 +283,7 @@
             <div class="cef-course-meta">
                 <span>{% for relacion in dias_habituales %}{{ relacion.dia_semana.nombre }}{% if not forloop.last %} y {% endif %}{% empty %}Sin días configurados{% endfor %} · {{ grupo.hora_inicio|time:"H:i" }} a {{ grupo.hora_fin|time:"H:i" }}</span>
                 <span><strong>CUE-Anexo</strong> {{ grupo.cueanexo }}</span>
-                <span><strong>Ciclo</strong> {{ grupo.ciclo.anio }}</span>
+                <span><strong>Ciclo</strong> {{ grupo.ciclo.anio|stringformat:"s" }}</span>
             </div>
         </div>
         <a class="btn btn-outline-secondary btn-sm" href="{{ asistencia_inicio_url }}">

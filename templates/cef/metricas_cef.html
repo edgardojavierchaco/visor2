@@ -3,7 +3,7 @@
 
 {% block head %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'cef/cef_metricas.css' %}?v=20260923-8">
+<link rel="stylesheet" href="{% static 'cef/cef_metricas.css' %}?v=20261022-3">
 <script id="cef-select2-script" src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" defer></script>
 {% endblock %}
 
@@ -43,6 +43,7 @@
                 </div>
 
                 <form id="cefMetricasForm">
+                    {% csrf_token %}
                     <div id="cefConsultasPreguntaCampo" class="cef-field cef-consultas-question" hidden>
                         <label for="cefConsultasPregunta">¿Qué querés saber?</label>
                         <select id="cefConsultasPregunta" class="form-select"></select>
@@ -50,11 +51,11 @@
                     <div class="cef-consultas-context">
                         <div class="cef-field">
                             <label for="cefMetricasCiclos"><i class="fa-regular fa-calendar" aria-hidden="true"></i> Ciclo</label>
-                            <select id="cefMetricasCiclos" multiple size="1" data-cef-select="true" data-cef-select-search="always" data-placeholder="Elegí al menos un ciclo"></select>
+                            <select id="cefMetricasCiclos" multiple size="1" data-cef-select="true" data-cef-select-search="always" data-cef-select-close-action="true" data-placeholder="Elegí al menos un ciclo"></select>
                         </div>
                         <div class="cef-field">
                             <label for="cefMetricasCefs"><i class="fa-solid fa-school" aria-hidden="true"></i> CEF</label>
-                            <select id="cefMetricasCefs" multiple size="1" data-cef-select="true" data-cef-select-search="always" data-placeholder="Todos los CEF permitidos"></select>
+                            <select id="cefMetricasCefs" multiple size="1" data-cef-select="true" data-cef-select-search="always" data-cef-select-close-action="true" data-placeholder="Todos los CEF permitidos"></select>
                         </div>
                     </div>
 
@@ -80,13 +81,47 @@
                             <button id="cefMetricasLimpiar" type="button" class="btn btn-outline-danger btn-sm">
                                 <i class="fa-solid fa-broom" aria-hidden="true"></i> Limpiar filtros
                             </button>
-                            <a id="cefMetricasExportar" class="btn btn-success btn-sm" href="#" aria-disabled="true">
-                                <i class="fa-solid fa-file-excel" aria-hidden="true"></i> Excel
-                            </a>
+                            <div id="cefMetricasExportarWrap" class="cef-consultas-export">
+                                <button id="cefMetricasExportar" type="button" class="btn btn-success btn-sm cef-consultas-export-toggle"
+                                        aria-expanded="false" aria-controls="cefMetricasExportarMenu" aria-disabled="true" disabled>
+                                    <i class="fa-solid fa-file-export" aria-hidden="true"></i> Exportar
+                                    <i class="fa-solid fa-chevron-down cef-panel-caret" aria-hidden="true"></i>
+                                </button>
+                                <div id="cefMetricasExportarMenu" class="cef-consultas-export-menu" role="menu" hidden>
+                                    <button type="button" role="menuitem" data-cef-export-option="excel-listado">
+                                        <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+                                        <span><strong>Excel del listado</strong><small>Listado completo con las columnas seleccionadas.</small></span>
+                                    </button>
+                                    <button type="button" role="menuitem" data-cef-export-option="excel-completo">
+                                        <i class="fa-solid fa-file-circle-plus" aria-hidden="true"></i>
+                                        <span><strong>Excel completo</strong><small>Listado + estadística + gráfico en el mismo archivo.</small></span>
+                                    </button>
+                                    <button type="button" role="menuitem" data-cef-export-option="excel-estadistica">
+                                        <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+                                        <span><strong>Excel de estadística + gráfico</strong><small>Descripción estadística y gráfico en su propio Excel.</small></span>
+                                    </button>
+                                    <button type="button" role="menuitem" data-cef-export-option="png">
+                                        <i class="fa-solid fa-image" aria-hidden="true"></i>
+                                        <span><strong>Gráfico PNG</strong><small>Sólo el gráfico de la estadística.</small></span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
-                        <section id="cefMetricasFiltrosPanel" class="cef-consultas-panel" aria-label="Filtros disponibles" hidden>
-                            <p class="cef-consultas-muted"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Elegí un campo para agregar un filtro.</p>
+                        <section id="cefMetricasFiltrosPanel" class="cef-consultas-panel cef-consultas-help-surface" aria-label="Filtros disponibles" hidden>
+                            <div class="cef-consultas-panel-heading">
+                                <strong>Filtros disponibles</strong>
+                                <span class="cef-consultas-help-wrap">
+                                    <button type="button" class="cef-consultas-help-toggle" data-cef-help-toggle
+                                            aria-label="Ayuda sobre los filtros" aria-expanded="false"
+                                            aria-controls="cefConsultasFiltrosAyuda">
+                                        <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                                    </button>
+                                    <span id="cefConsultasFiltrosAyuda" class="cef-consultas-help-popover" role="note" hidden>
+                                        Elegí un campo para agregar un filtro. Podés combinar varios filtros y la consulta mostrará únicamente los registros que cumplan todos.
+                                    </span>
+                                </span>
+                            </div>
                             <div class="cef-panel-option-search">
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
@@ -98,8 +133,20 @@
                             <p id="cefConsultasFiltrosVacios" class="cef-consultas-muted" hidden>No hay filtros que coincidan.</p>
                         </section>
 
-                        <section id="cefConsultasColumnasPanel" class="cef-consultas-panel" aria-label="Columnas disponibles" hidden>
-                            <p class="cef-consultas-muted"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Elegí las columnas que querés mostrar.</p>
+                        <section id="cefConsultasColumnasPanel" class="cef-consultas-panel cef-consultas-help-surface" aria-label="Columnas disponibles" hidden>
+                            <div class="cef-consultas-panel-heading">
+                                <strong>Columnas disponibles</strong>
+                                <span class="cef-consultas-help-wrap">
+                                    <button type="button" class="cef-consultas-help-toggle" data-cef-help-toggle
+                                            aria-label="Ayuda sobre las columnas" aria-expanded="false"
+                                            aria-controls="cefConsultasColumnasAyuda">
+                                        <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                                    </button>
+                                    <span id="cefConsultasColumnasAyuda" class="cef-consultas-help-popover" role="note" hidden>
+                                        Elegí qué columnas querés ver en el listado. La selección también se respeta al exportar a Excel.
+                                    </span>
+                                </span>
+                            </div>
                             <div class="cef-panel-option-search">
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
@@ -124,8 +171,22 @@
 
                 <div id="cefMetricasEstado" class="cef-consultas-status" role="status" aria-live="polite" hidden></div>
                 <section id="cefMetricasResultado" class="cef-consultas-results" aria-labelledby="cefConsultasTotal" hidden>
-                    <div class="cef-consultas-results-head">
-                        <strong id="cefConsultasTotal"></strong>
+                    <div class="cef-consultas-results-head cef-consultas-help-surface">
+                        <div class="cef-consultas-results-title">
+                            <strong id="cefConsultasTotal"></strong>
+                            <span class="cef-consultas-help-wrap">
+                                <button id="cefConsultasResultadoAyudaToggle" type="button"
+                                        class="cef-consultas-help-toggle" data-cef-help-toggle
+                                        aria-label="Qué incluye este resultado" aria-expanded="false"
+                                        aria-controls="cefConsultasResultadoAyuda">
+                                    <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                                </button>
+                                <span id="cefConsultasResultadoAyuda" class="cef-consultas-help-popover cef-consultas-result-help" role="note" hidden>
+                                    <span id="cefMetricasDefinicion"></span>
+                                    <ul id="cefMetricasNotas"></ul>
+                                </span>
+                            </span>
+                        </div>
                         <span id="cefConsultasRango" class="cef-consultas-muted"></span>
                     </div>
                     <p id="cefConsultasDetalleTotal" class="cef-consultas-muted" hidden></p>
@@ -141,11 +202,6 @@
                         <div class="cef-consultas-chart-head"><h3 id="cefConsultasGraficoTitulo">Gráfico</h3><span id="cefMetricasChartBadge"></span></div>
                         <div id="cefMetricasChart" class="cef-metricas-chart" role="img"></div>
                     </section>
-                    <details id="cefConsultasDefinicionPanel" class="cef-consultas-definition" hidden>
-                        <summary>Qué incluye este resultado</summary>
-                        <p id="cefMetricasDefinicion"></p>
-                        <ul id="cefMetricasNotas"></ul>
-                    </details>
                 </section>
             </section>
         </div>
@@ -154,12 +210,21 @@
     <div id="cefConsultaFiltroDialog" class="cef-filter-dialog" role="dialog" aria-modal="true" aria-labelledby="cefConsultaFiltroTitulo" hidden>
         <form id="cefConsultaFiltroForm" class="cef-filter-dialog-card">
             <header class="cef-filter-dialog-header">
-                <h3><i class="fa-solid fa-filter" aria-hidden="true"></i> <span id="cefConsultaFiltroTitulo"></span></h3>
+                <div class="cef-filter-dialog-title">
+                    <h3><i class="fa-solid fa-filter" aria-hidden="true"></i> <span id="cefConsultaFiltroTitulo"></span></h3>
+                    <span class="cef-consultas-help-wrap">
+                        <button type="button" class="cef-consultas-help-toggle" data-cef-help-toggle
+                                aria-label="Ayuda sobre este filtro" aria-expanded="false"
+                                aria-controls="cefConsultaFiltroAyuda">
+                            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                        </button>
+                        <span id="cefConsultaFiltroAyuda" class="cef-consultas-help-popover" role="note" hidden></span>
+                    </span>
+                </div>
                 <button id="cefConsultaFiltroX" type="button" class="cef-filter-dialog-close" aria-label="Cerrar filtro"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
             </header>
             <div class="cef-filter-dialog-body">
                 <div id="cefConsultaFiltroContenido" class="cef-filter-dialog-content"></div>
-                <p class="cef-filter-dialog-help">Si no seleccionás ninguna opción, se incluyen todos los valores. Podés elegir una o varias opciones.</p>
             </div>
             <div class="cef-filter-dialog-actions">
                 <button id="cefConsultaFiltroCerrar" type="button" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-xmark" aria-hidden="true"></i> Cerrar</button>
@@ -168,7 +233,7 @@
         </form>
     </div>
     <div id="cefConsultasDetalleModal" class="cef-consultas-modal" role="dialog" aria-modal="true"
-         aria-labelledby="cefConsultasDetalleTitulo" aria-describedby="cefConsultasDetalleContexto" aria-hidden="true" hidden>
+         aria-labelledby="cefConsultasDetalleTitulo" aria-hidden="true" hidden>
         <div class="cef-consultas-modal-dialog" role="document">
             <header class="cef-consultas-modal-head">
                 <div class="cef-consultas-modal-heading">
@@ -176,7 +241,6 @@
                     <div>
                         <span id="cefConsultasDetalleTipo" class="cef-consultas-modal-eyebrow">Detalle</span>
                         <h2 id="cefConsultasDetalleTitulo"></h2>
-                        <p id="cefConsultasDetalleContexto">Se muestran los grupos y registros en el CEF que coinciden con los filtros seleccionados.</p>
                     </div>
                 </div>
                 <button type="button" class="cef-consultas-modal-close" data-cef-detalle-cerrar aria-label="Cerrar detalle">
@@ -184,12 +248,38 @@
                 </button>
             </header>
             <div class="cef-consultas-modal-body">
-                <section class="cef-consultas-detail-section" aria-labelledby="cefConsultasDetalleGruposTitulo">
-                    <h3 id="cefConsultasDetalleGruposTitulo"><i class="fa-solid fa-people-group" aria-hidden="true"></i> Grupos</h3>
+                <section class="cef-consultas-detail-section cef-consultas-help-surface" aria-labelledby="cefConsultasDetalleGruposTitulo">
+                    <div class="cef-consultas-detail-heading">
+                        <h3 id="cefConsultasDetalleGruposTitulo">
+                            <i class="fa-solid fa-people-group" aria-hidden="true"></i>
+                            <span id="cefConsultasDetalleGruposTituloTexto">Grupos</span>
+                        </h3>
+                        <span class="cef-consultas-help-wrap">
+                            <button type="button" class="cef-consultas-help-toggle" data-cef-help-toggle
+                                    aria-label="Información sobre los grupos" aria-expanded="false"
+                                    aria-controls="cefConsultasDetalleGruposAyuda">
+                                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                            </button>
+                            <span id="cefConsultasDetalleGruposAyuda" class="cef-consultas-help-popover" role="note" hidden></span>
+                        </span>
+                    </div>
                     <div id="cefConsultasDetalleGrupos"></div>
                 </section>
-                <section class="cef-consultas-detail-section" aria-labelledby="cefConsultasDetalleBancoTitulo">
-                    <h3 id="cefConsultasDetalleBancoTitulo"><i class="fa-solid fa-building-columns" aria-hidden="true"></i> Registro en el CEF</h3>
+                <section class="cef-consultas-detail-section cef-consultas-help-surface" aria-labelledby="cefConsultasDetalleBancoTitulo">
+                    <div class="cef-consultas-detail-heading">
+                        <h3 id="cefConsultasDetalleBancoTitulo">
+                            <i class="fa-solid fa-building-columns" aria-hidden="true"></i>
+                            <span id="cefConsultasDetalleBancoTituloTexto">Registro en los CEF</span>
+                        </h3>
+                        <span class="cef-consultas-help-wrap">
+                            <button type="button" class="cef-consultas-help-toggle" data-cef-help-toggle
+                                    aria-label="Información sobre el registro en los CEF" aria-expanded="false"
+                                    aria-controls="cefConsultasDetalleBancoAyuda">
+                                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                            </button>
+                            <span id="cefConsultasDetalleBancoAyuda" class="cef-consultas-help-popover" role="note" hidden></span>
+                        </span>
+                    </div>
                     <div id="cefConsultasDetalleBanco"></div>
                 </section>
             </div>
@@ -200,5 +290,5 @@
     </div>
 </main>
 {{ metricas_config|json_script:"cef-metricas-config" }}
-<script src="{% static 'cef/cef_metricas.js' %}?v=20260929-1" defer></script>
+<script src="{% static 'cef/cef_metricas.js' %}?v=20261022-5" defer></script>
 {% endblock %}

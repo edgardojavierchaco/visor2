@@ -5,6 +5,7 @@ import unicodedata
 from datetime import datetime
 from io import BytesIO
 
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db import connections
 from django.http import HttpResponse
@@ -679,7 +680,7 @@ def _get_global_geo_filter_options(force_refresh=False):
     return _GEO_FILTER_OPTIONS_CEF_CACHE
 
 
-def _get_filter_options_from_items(items):
+def _get_filter_options_from_items(items, *, solo_items=False):
     """
     Prepara las listas de opciones que usa el modal de filtros en el frontend.
     """
@@ -690,6 +691,9 @@ def _get_filter_options_from_items(items):
         campo: _unique_sorted_options(items, campo) if campo in FILTER_OPTIONS_LIST_FIELDS else []
         for campo in COLUMNAS_LOCALIZACIONES_CEF
     }
+
+    if solo_items:
+        return options
 
     geo_options = _get_global_geo_filter_options()
 
@@ -1001,6 +1005,11 @@ def _resolver_cueanexos_seleccionados_explicitamente(request, cefs_visualizacion
     seleccion_raw_normalizada = {normalizar_cueanexo(raw) for raw in seleccion_raw}
     seleccion_raw_normalizada.discard(None)
     seleccion_raw_normalizada.discard("")
+    if (
+        get_permisos_cef_request(request).get("es_director_cef")
+        and not seleccion_raw_normalizada.issubset(visibles)
+    ):
+        raise PermissionDenied("No tenés permisos para consultar uno o más CEF seleccionados.")
     seleccion_resuelta = _resolver_cueanexos_visualizacion_desde_request(
         request,
         cefs_visualizacion,
@@ -1083,7 +1092,13 @@ def visualizacion_localizaciones(request):
         smart_col = "all" if request.GET.get("q", "").strip() else "cueanexo"
     smart_search_value = smart_val or request.GET.get("q", "").strip()
     filter_options_started = time.perf_counter()
-    filter_options_json = json.dumps(_get_filter_options_from_items(base_items), ensure_ascii=False)
+    filter_options_json = json.dumps(
+        _get_filter_options_from_items(
+            base_items,
+            solo_items=get_permisos_cef_request(request).get("es_director_cef", False),
+        ),
+        ensure_ascii=False,
+    )
     _log_perf("filter_options_json", filter_options_started)
 
     context = {

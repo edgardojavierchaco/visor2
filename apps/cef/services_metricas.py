@@ -1003,8 +1003,8 @@ AREAS = {
                 "grupos",
                 {"kind": "occupancy"},
                 (
-                    "Porcentaje de vacantes ocupadas en los grupos activos que tienen "
-                    "un cupo máximo informado."
+                    "Porcentaje del cupo máximo informado que está ocupado por "
+                    "inscripciones activas en los grupos activos."
                 ),
                 tuple(f for f in FILTROS_GRUPO if f != "estado") + ("cupo",),
                 tuple(d for d in DIMENSIONES_GRUPO_TERRITORIO if d != "estado")
@@ -2534,7 +2534,7 @@ def _tabla_resultado(filas, consulta, indicador):
     }:
         etiquetas_componentes = {
             "average_active_students": ("Alumnos activos", "Grupos incluidos"),
-            "occupancy": ("Inscripciones activas", "Vacantes informadas"),
+            "occupancy": ("Inscripciones activas", "Cupo máximo informado"),
             "state_ratio": (
                 {
                     CefAsistencia.Estado.PRESENTE: "Presentes",
@@ -3050,6 +3050,7 @@ def _grafico_resultado(filas, consulta, indicador):
         "type": tipo,
         "available_types": disponibles,
         "labels": labels,
+        "keys": [grupo_key for grupo_key, _ in claves_grupo],
         "series": series,
     }
 
@@ -3234,7 +3235,8 @@ def ejecutar_consulta_metricas(params, paginar_detalle=True):
         elif kind == "occupancy":
             total_publico["detail"] = (
                 f"{_formatear_numero(total['numerator'], '')} inscripciones activas "
-                f"sobre {_formatear_numero(total['denominator'], '')} vacantes informadas"
+                f"sobre un cupo total informado de "
+                f"{_formatear_numero(total['denominator'], '')}"
             )
         elif kind == "state_ratio":
             estado_label = str(dict(CefAsistencia.Estado.choices)[indicador["metric"]["state"]]).lower()

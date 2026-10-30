@@ -575,6 +575,31 @@
         color: var(--blue-900);
     }
 
+    .cef-select2-close-options {
+        align-items: center;
+        background: #f8fafc;
+        border: 0;
+        border-top: 1px solid #e2e8f0;
+        color: #3b82f6;
+        cursor: pointer;
+        display: flex;
+        font-family: inherit;
+        font-size: .82rem;
+        font-weight: 800;
+        gap: .3rem;
+        justify-content: center;
+        min-height: 36px;
+        padding: .5rem .65rem;
+        width: 100%;
+    }
+
+    .cef-select2-close-options:hover,
+    .cef-select2-close-options:focus-visible {
+        background: #eff6ff;
+        color: #1d4ed8;
+        outline: none;
+    }
+
     .cef-context-actions {
         align-items: center;
         align-self: end;
@@ -2357,6 +2382,12 @@
     {% include "cef/componentes/nav_operativo_cef.html" %}
 
     <div class="cef-main">
+        {% if cef_context.mensaje_bloqueo_inicio %}
+            <div class="alert alert-warning" role="alert">
+                {% if cef_context.ciclo_inicio_futuro %}Ciclo {{ cef_context.ciclo.anio|stringformat:"s" }} · Inicio oficial: {{ cef_context.ciclo.fecha_inicio|date:"d/m/Y" }}. {% endif %}
+                {{ cef_context.mensaje_bloqueo_inicio }}
+            </div>
+        {% endif %}
         {% if messages %}
             <div class="cef-alert-stack">
                 {% for message in messages %}
@@ -2373,10 +2404,10 @@
         {% block cef_context_selector %}
             <!-- CONTEXT CARD -->
             <section class="cef-context-card">
-                <form method="get"{% if cef_context.selector_action %} action="{{ cef_context.selector_action }}"{% endif %} class="cef-context-grid">
+                <form method="get"{% if cef_context.selector_action %} action="{{ cef_context.selector_action }}"{% endif %} class="cef-context-grid" data-cef-context-form>
                     <div>
                         <label class="cef-context-label" for="id_contexto_cueanexo">CEF</label>
-                        <select id="id_contexto_cueanexo" name="cueanexo" class="form-select form-select-sm" data-cef-select="true" data-cef-select-search="always">
+                        <select id="id_contexto_cueanexo" name="cueanexo" class="form-select form-select-sm" data-cef-select="true" data-cef-select-native-change="true" data-cef-select-search="always" data-cef-select-close-action="true">
                             {% for option in cef_context.cueanexo_options %}
                                 <option value="{{ option.cueanexo }}" title="{{ option.cueanexo }} - {{ option.nombre }}" {% if option.cueanexo == cef_context.cueanexo %}selected{% endif %}>{{ option.cueanexo }} - {{ option.nombre }}</option>
                             {% empty %}
@@ -2387,9 +2418,9 @@
 
                     <div>
                         <label class="cef-context-label" for="id_contexto_ciclo">Año / ciclo</label>
-                        <select id="id_contexto_ciclo" name="ciclo" class="form-select form-select-sm" data-cef-select="true">
+                        <select id="id_contexto_ciclo" name="ciclo" class="form-select form-select-sm" data-cef-select="true" data-cef-select-native-change="true">
                             {% for ciclo in cef_context.ciclos %}
-                                <option value="{{ ciclo.pk }}" {% if cef_context.ciclo and ciclo.pk == cef_context.ciclo.pk %}selected{% endif %}>{{ ciclo.anio }}{% if ciclo.cerrado %} &middot; cerrado{% endif %}{% if ciclo.actual %} &middot; actual{% endif %}</option>
+                                <option value="{{ ciclo.pk }}" {% if cef_context.ciclo and ciclo.pk == cef_context.ciclo.pk %}selected{% endif %}>{{ ciclo.anio|stringformat:"s" }}{% if ciclo.cerrado %} &middot; cerrado{% endif %}{% if ciclo.actual %} &middot; actual{% endif %}</option>
                             {% empty %}
                                 <option value="">Sin ciclo activo</option>
                             {% endfor %}
@@ -2397,14 +2428,12 @@
                     </div>
 
                     <div class="cef-context-actions">
-                        <button type="submit" class="btn btn-primary btn-sm">
-                            <i class="fa-solid fa-check"></i> Aplicar
-                        </button>
                         {% if cef_context.es_admin_cef %}
                             <a class="btn btn-outline-primary btn-sm" href="{% url 'cef:administrar_ciclos' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}{% endif %}">
                                 <i class="fa-solid fa-calendar-plus"></i> Ciclos
                             </a>
                         {% endif %}
+                        <span class="small text-muted" role="status" aria-live="polite" data-cef-context-status></span>
                     </div>
                 </form>
             </section>
@@ -2416,9 +2445,11 @@
         {% if cef_context.sin_ciclo %}
             <div class="alert alert-warning">No hay ciclo lectivo actual para realizar esta carga.</div>
         {% endif %}
+        {% comment %}Aviso de ciclo cerrado oculto temporalmente.
         {% if cef_context.ciclo_cerrado %}
-            <div class="alert alert-warning">Ciclo {{ cef_context.ciclo.anio }} cerrado. La información se encuentra en modo sólo lectura.</div>
+            <div class="alert alert-warning">Ciclo {{ cef_context.ciclo.anio|stringformat:"s" }} cerrado. {% if cef_context.puede_operar and cef_context.puede_rectificar_cef %}Estás operando sobre información histórica; el ciclo continúa cerrado.{% else %}La información se encuentra en modo sólo lectura.{% endif %}</div>
         {% endif %}
+        {% endcomment %}
 
         <div id="cef-content-region" data-cef-content-region>
             {% block cef_content %}{% endblock %}
@@ -2924,7 +2955,7 @@
 </script>
 <script src="{% static 'cef/cef_loading.js' %}?v=20260811-4"></script>
 <script src="{% static 'cef/cef_inventario.js' %}"></script>
-<script src="{% static 'cef/cef_context_selector.js' %}"></script>
+<script src="{% static 'cef/cef_context_selector.js' %}?v=20261022-2"></script>
 <script src="{% static 'cef/cef_dropdowns.js' %}"></script>
 <script src="{% static 'cef/cef_profesores.js' %}"></script>
 <script src="{% static 'cef/cef_partial_navigation.js' %}?v=20260918-1"></script>

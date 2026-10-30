@@ -59,7 +59,7 @@ def editar_datos_cueanexo(request):
     cef_context = context["cef_context"]
     datos = _datos_relevamiento(cef_context)
 
-    if cef_context["ciclo_cerrado"]:
+    if cef_context["ciclo_cerrado"] and not cef_context["puede_operar"]:
         messages.warning(
             request,
             "El ciclo está cerrado. Los datos del CUE-Anexo son de sólo lectura.",
@@ -81,7 +81,9 @@ def editar_datos_cueanexo(request):
             obj.actualizado_por = request.user
             try:
                 with transaction.atomic():
-                    validar_ciclo_escribible(obj.ciclo_id)
+                    validar_ciclo_escribible(
+                        obj.ciclo_id, request.user, cueanexo=obj.cueanexo,
+                    )
                     obj.save()
             except ValidationError as exc:
                 form.add_error(None, "; ".join(exc.messages))

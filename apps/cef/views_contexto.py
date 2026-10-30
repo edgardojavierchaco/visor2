@@ -9,6 +9,7 @@ from django.http import HttpResponse
 from django.middleware.csrf import get_token
 from django.template.loader import get_template
 from django.urls import NoReverseMatch, reverse
+from django.utils import timezone
 
 from .models import (
     CefCiclo,
@@ -16,12 +17,13 @@ from .models import (
     normalizar_cueanexo,
 )
 from .permisos import get_permisos_cef_request
+from .services import motivo_bloqueo_inicio_ciclo
 from .performance import perf_phase
 
 
 SELECTOR_CEF_CACHE_VERSION = "v2"
 SELECTOR_CEF_CACHE_TTL = 300
-CICLOS_CEF_CACHE_KEY = "cef:ciclos:activos:v2"
+CICLOS_CEF_CACHE_KEY = "cef:ciclos:activos:v3"
 CICLOS_CEF_CACHE_TTL = 3600
 SESSION_CEF_CUEANEXO_KEY = "cef_cueanexo_actual"
 ORIGENES_GESTION_GRUPO = {"grupos", "alumnos", "profesores"}
@@ -47,6 +49,7 @@ CICLO_CEF_CACHE_FIELDS = (
     "id",
     "anio",
     "descripcion",
+    "fecha_inicio",
     "activo",
     "actual",
     "cerrado",
@@ -142,7 +145,10 @@ def _cef_options_usuario(request, permisos):
     if options_cacheadas is not None:
         return options_cacheadas
 
-    cache_key = _selector_cef_cache_key(request.user)
+    cache_key = (
+        "" if permisos.get("es_profesor_cef")
+        else _selector_cef_cache_key(request.user)
+    )
     sentinel = object()
     options = cache.get(cache_key, sentinel) if cache_key else sentinel
     establecimientos = {}
@@ -296,6 +302,33 @@ def _profesores_url():
         return ""
 
 
+def actualizar_habilitacion_ciclo(cef_context, permisos):
+    """Recalcula la habilitación por fecha local, incluso con un ciclo cacheado."""
+
+    ciclo = cef_context.get("ciclo")
+    cerrado = bool(ciclo and ciclo.cerrado)
+    inicio = ciclo.fecha_inicio if ciclo else None
+    hoy = timezone.localdate()
+    bloqueo_inicio = motivo_bloqueo_inicio_ciclo(ciclo, hoy=hoy)
+    puede_consultar = bool(cef_context.get("cueanexo") and ciclo)
+    cef_context.update(
+        {
+            "puede_consultar": puede_consultar,
+            "ciclo_cerrado": cerrado,
+            "ciclo_sin_inicio": bool(ciclo and not cerrado and inicio is None),
+            "ciclo_inicio_futuro": bool(ciclo and not cerrado and inicio and hoy < inicio),
+            "ciclo_habilitado": bool(ciclo and not cerrado and not bloqueo_inicio),
+            "mensaje_bloqueo_inicio": bloqueo_inicio,
+            "puede_operar": (
+                puede_consultar
+                and not permisos.get("solo_metricas", False)
+                and not bloqueo_inicio
+                and (not cerrado or permisos.get("puede_rectificar_cef", False))
+            ),
+        }
+    )
+
+
 def resolver_contexto_operativo(request):
     contexto_cacheado = getattr(request, "_cef_contexto_operativo", None)
     if contexto_cacheado is not None:
@@ -323,16 +356,20 @@ def resolver_contexto_operativo(request):
         "profesores_url": _profesores_url(),
         "es_admin_cef": permisos["es_admin"],
         "es_profesor_cef": permisos.get("es_profesor_cef", False),
+        "es_director_servicios_complementarios": permisos.get(
+            "es_director_servicios_complementarios", False,
+        ),
+        "puede_rectificar_cef": permisos.get("puede_rectificar_cef", False),
         "solo_asistencia": permisos.get("solo_asistencia", False),
         "puede_metricas": permisos.get("puede_metricas", False),
         "rol_usuario": permisos.get("rol"),
         "puede_consultar": puede_consultar,
         "ciclo_cerrado": ciclo_cerrado,
-        "puede_operar": puede_consultar and not ciclo_cerrado,
         "vista": vista,
         "sin_cueanexo": not bool(cueanexo),
         "sin_ciclo": not bool(ciclo),
     }
+    actualizar_habilitacion_ciclo(contexto, permisos)
     request._cef_contexto_operativo = contexto
     return contexto
 

@@ -18,12 +18,16 @@ from .models import (
     CefInscripcion,
     CefJornadaAsistencia,
     normalizar_cuil_usuario,
+    asignaciones_docentes_vigentes,
+    usuario_puede_rectificar_cef,
 )
 from .permisos import cef_asistencia_required, get_permisos_cef_request
 from .services_asistencia import (
     inscripciones_vigentes_jornada,
     registrar_asistencias_jornada,
+    ultima_fecha_asistencia_cargada,
 )
+from .services import validar_vigencia_historica_grupo
 from .views_contexto import contexto_base, redirect_con_contexto
 
 
@@ -58,15 +62,17 @@ def _grupos_asistencia_queryset(request, cef_context):
         cuil = normalizar_cuil_usuario(request.user)
         if not cuil:
             return queryset.none()
-        queryset = queryset.filter(
-            estado=CefGrupo.Estado.ACTIVO,
-            docentes__docente_cuil=cuil,
-            docentes__estado=CefDocenteGrupo.Estado.ACTIVO,
-            docentes__rol__in=(
+        asignaciones = asignaciones_docentes_vigentes(timezone.localdate()).filter(
+            docente_cuil=cuil,
+            rol__in=(
                 CefDocenteGrupo.Rol.TITULAR,
                 CefDocenteGrupo.Rol.SUPLENTE,
                 CefDocenteGrupo.Rol.INTERINO,
             ),
+        )
+        queryset = queryset.filter(
+            estado=CefGrupo.Estado.ACTIVO,
+            pk__in=asignaciones.values_list("grupo_id", flat=True),
         )
 
     return queryset.distinct()
@@ -74,8 +80,7 @@ def _grupos_asistencia_queryset(request, cef_context):
 
 def _grupos_asistencia_listado(request, cef_context):
     hoy = timezone.localdate()
-    docentes_activos = CefDocenteGrupo.objects.filter(
-        estado=CefDocenteGrupo.Estado.ACTIVO,
+    docentes_activos = asignaciones_docentes_vigentes(hoy).filter(
         rol__in=(
             CefDocenteGrupo.Rol.TITULAR,
             CefDocenteGrupo.Rol.SUPLENTE,
@@ -108,7 +113,16 @@ def _grupos_asistencia_listado(request, cef_context):
         .annotate(
             total_alumnos=Count(
                 "inscripciones__alumno",
-                filter=Q(inscripciones__estado=CefInscripcion.Estado.ACTIVO),
+                filter=(
+                    Q(
+                        inscripciones__estado=CefInscripcion.Estado.ACTIVO,
+                        inscripciones__fecha_inscripcion__lte=hoy,
+                    )
+                    & (
+                        Q(inscripciones__fecha_baja__isnull=True)
+                        | Q(inscripciones__fecha_baja__gte=hoy)
+                    )
+                ),
                 distinct=True,
             ),
             ultima_asistencia_fecha=Subquery(ultima_asistencia),
@@ -119,15 +133,7 @@ def _grupos_asistencia_listado(request, cef_context):
 
 
 def _ultima_fecha_cargada(grupo):
-    return (
-        CefJornadaAsistencia.objects.filter(
-            grupo=grupo,
-            asistencias__isnull=False,
-        )
-        .order_by("-fecha", "-pk")
-        .values_list("fecha", flat=True)
-        .first()
-    )
+    return ultima_fecha_asistencia_cargada(grupo)
 
 
 def _resolver_fecha_asistencia(request, grupo, solo_lectura):
@@ -148,7 +154,7 @@ def _resolver_fecha_asistencia(request, grupo, solo_lectura):
             fecha_error = "La fecha de asistencia no es válida."
 
     fecha = None
-    if solo_lectura:
+    if solo_lectura or grupo.estado == CefGrupo.Estado.BAJA:
         fecha = _ultima_fecha_cargada(grupo)
     else:
         hoy = timezone.localdate()
@@ -180,7 +186,6 @@ def asistencia(request):
                 ]
             ciclo_operativo_hoy = (
                 grupo.ciclo.anio == hoy.year
-                and not grupo.ciclo.cerrado
                 and cef_context["puede_operar"]
             )
             if not ciclo_operativo_hoy:
@@ -234,10 +239,13 @@ def asistencia_grupo(request, grupo_id):
         .prefetch_related("dias_funcionamiento__dia_semana"),
         pk=grupo_id,
     )
+    grupo_baja = grupo.estado == CefGrupo.Estado.BAJA
+    puede_rectificar_baja = grupo_baja and usuario_puede_rectificar_cef(
+        request.user, cueanexo=grupo.cueanexo,
+    )
     solo_lectura = (
-        modo_historial
-        or grupo.ciclo.cerrado
-        or grupo.estado != CefGrupo.Estado.ACTIVO
+        (modo_historial and not cef_context.get("puede_rectificar_cef", False))
+        or (grupo_baja and not puede_rectificar_baja)
         or not cef_context["puede_operar"]
     )
 
@@ -251,7 +259,7 @@ def asistencia_grupo(request, grupo_id):
         if solo_lectura:
             messages.error(
                 request,
-                "La asistencia se encuentra en modo sólo lectura.",
+                (cef_context.get("mensaje_bloqueo_inicio") or ("La asistencia se encuentra en modo sólo lectura.")),
             )
         elif not fecha_post:
             messages.error(request, "La fecha de asistencia no es válida.")
@@ -333,6 +341,24 @@ def asistencia_grupo(request, grupo_id):
                 )
                 .order_by("-creado_en", "-pk")
             )
+    grupo_baja_aviso = None
+    if grupo_baja:
+        grupo_baja_aviso = (
+            "El grupo está dado de baja. Sólo se pueden rectificar "
+            "jornadas de asistencia ya registradas."
+        )
+        cargada_previamente = bool(
+            jornada and CefAsistencia.objects.filter(jornada=jornada).exists()
+        )
+        if not cargada_previamente or not fecha or fecha_error:
+            solo_lectura = True
+        else:
+            try:
+                validar_vigencia_historica_grupo(grupo, fecha)
+            except ValidationError as exc:
+                solo_lectura = True
+                grupo_baja_aviso = " ".join(exc.messages)
+        inscripciones = [item for item in inscripciones if item.pk in asistencias]
     for inscripcion in inscripciones:
         inscripcion.asistencia_actual = asistencias.get(inscripcion.pk)
 
@@ -402,6 +428,7 @@ def asistencia_grupo(request, grupo_id):
             "cantidad_jornadas_registradas": cantidad_jornadas_registradas,
             "fecha_futura": fecha_futura,
             "solo_lectura": solo_lectura,
+            "grupo_baja_aviso": grupo_baja_aviso,
             "asistencia_cargada": asistencia_cargada,
             "presentes": presentes,
             "ausentes": ausentes,

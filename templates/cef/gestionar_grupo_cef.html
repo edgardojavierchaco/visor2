@@ -35,7 +35,9 @@
 
     <div class="cef-panel-body cef-course-body">
         {% if modo_historial %}
-            <div class="alert alert-info">Consulta histórica · Ciclo {{ grupo.ciclo.anio }}. Los registros se muestran en modo de sólo lectura.</div>
+            {% comment %}Aviso de consulta histórica oculto temporalmente.
+            <div class="alert alert-info">Consulta histórica · Ciclo {{ grupo.ciclo.anio|stringformat:"s" }}. Los registros se muestran en modo de sólo lectura.</div>
+            {% endcomment %}
         {% elif grupo.estado != 'activo' %}
             <div class="alert alert-warning">Este grupo está dado de baja. La información se muestra en modo de solo lectura.</div>
         {% endif %}

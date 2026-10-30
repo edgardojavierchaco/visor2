@@ -4,28 +4,32 @@ import re
 from urllib.parse import urlencode
 
 from django.contrib import messages
-from django.core.exceptions import ValidationError
-from django.db import IntegrityError, transaction
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.db import IntegrityError
 from django.db.utils import OperationalError, ProgrammingError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 
-from .forms import CefBajaMotivoForm, CefBusquedaAlumnoForm, CefInscripcionForm
+from .forms import (
+    CefBajaMotivoForm,
+    CefBusquedaAlumnoForm,
+    CefInscripcionForm,
+    CefInscripcionRectificacionForm,
+)
 from .models import CefGrupo, CefInscripcion
 from .permisos import cef_required
 from .services import (
     ConflictoHorarioInscripcionError,
-    asegurar_alumno_banco_activo,
     crear_inscripcion_activa,
     dar_baja_inscripcion,
     reinscribir_alumno,
-    validar_ciclo_escribible,
+    editar_inscripcion_activa,
+    rectificar_inscripcion_historica,
     validar_fecha_inscripcion_grupo,
 )
 from .views_alumnos import (
-    MSG_BANCO_ALUMNOS_PENDIENTE,
     _alumno_por_id,
     _buscar_alumno_sin_documento,
     _calcular_edad,
@@ -430,7 +434,7 @@ def inscripcion_grupo(request, grupo_id):
 
     grupo = _grupo_seguro(grupo_id, cef_context)
     if request.method == "POST" and not cef_context["puede_operar"]:
-        mensaje = "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+        mensaje = (cef_context.get("mensaje_bloqueo_inicio") or ("El ciclo está cerrado. La información se encuentra en modo sólo lectura."))
         if _is_ajax(request):
             return JsonResponse({"ok": False, "message": mensaje})
         messages.error(request, mensaje)
@@ -614,28 +618,12 @@ def inscripcion_grupo(request, grupo_id):
                     messages.info(request, ajax_message)
             else:
                 try:
-                    asegurar_alumno_banco_activo(
-                        alumno=alumno,
-                        cueanexo=cef_context["cueanexo"],
-                        ciclo=cef_context["ciclo"],
-                        user=request.user,
-                    )
-                except (OperationalError, ProgrammingError):
-                    if not _is_ajax(request):
-                        messages.warning(request, MSG_BANCO_ALUMNOS_PENDIENTE)
-                except (IntegrityError, ValidationError):
-                    if not _is_ajax(request):
-                        messages.warning(
-                            request,
-                            "No se pudo actualizar el banco de alumnos del CEF, pero se continuará con la inscripción al grupo.",
-                        )
-
-                try:
                     crear_inscripcion_activa(
                         grupo=grupo,
                         alumno=alumno,
                         user=request.user,
                         fecha_inscripcion=fecha_inscripcion,
+                        incorporar_banco=True,
                     )
                     if _is_ajax(request):
                         inscripcion_abierta = CefInscripcion.objects.filter(
@@ -652,6 +640,10 @@ def inscripcion_grupo(request, grupo_id):
                             if destino_gestionar
                             else inscripcion_grupo_url
                         )
+                except (OperationalError, ProgrammingError):
+                    ajax_message = "No se pudo acceder al banco de alumnos. La inscripción no se guardó."
+                    if not _is_ajax(request):
+                        messages.error(request, ajax_message)
                 except ConflictoHorarioInscripcionError as exc:
                     ajax_message = "; ".join(exc.messages)
                     conflicto_horario = _presentar_conflicto_horario(
@@ -840,9 +832,9 @@ def editar_inscripcion_grupo(request, grupo_id, inscripcion_id):
     if not cef_context["puede_operar"]:
         messages.warning(
             request,
-            "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+            (cef_context.get("mensaje_bloqueo_inicio") or ("El ciclo está cerrado. La información se encuentra en modo sólo lectura."
             if cef_context["ciclo_cerrado"]
-            else "Seleccioná un CUE-Anexo y un ciclo lectivo para administrar inscripciones.",
+            else "Seleccioná un CUE-Anexo y un ciclo lectivo para administrar inscripciones.")),
         )
         return redirect(redirect_con_contexto("cef:carga_grupo", cef_context))
 
@@ -880,43 +872,62 @@ def editar_inscripcion_grupo(request, grupo_id, inscripcion_id):
         if volver_gestionar
         else "Volver a inscripción"
     )
-    if grupo.estado != CefGrupo.Estado.ACTIVO:
-        messages.error(request, "El grupo está dado de baja y no puede editarse.")
-        return redirect(volver_url)
     inscripcion = get_object_or_404(
         CefInscripcion.objects.filter(
             grupo=grupo,
             grupo__cueanexo=cef_context["cueanexo"],
             grupo__ciclo=cef_context["ciclo"],
-            estado=CefInscripcion.Estado.ACTIVO,
         ).select_related("alumno", "alumno__sexo"),
         pk=inscripcion_id,
     )
 
+    rectificacion = inscripcion.estado == CefInscripcion.Estado.BAJA
+    if rectificacion and not cef_context.get("puede_rectificar_cef", False):
+        raise PermissionDenied("No tenés permiso para rectificar inscripciones históricas.")
+    if not rectificacion and grupo.estado != CefGrupo.Estado.ACTIVO:
+        messages.error(request, "El grupo está dado de baja y no puede editarse.")
+        return redirect(volver_url)
+    form_class = CefInscripcionRectificacionForm if rectificacion else CefInscripcionForm
+
     if request.method == "POST":
-        form = CefInscripcionForm(request.POST, instance=inscripcion, grupo=grupo)
+        form = form_class(request.POST, instance=inscripcion, grupo=grupo)
         if form.is_valid():
-            inscripcion = form.save(commit=False)
-            inscripcion.actualizado_por = request.user
             try:
-                with transaction.atomic():
-                    validar_ciclo_escribible(grupo.ciclo_id)
-                    inscripcion.save()
+                if rectificacion:
+                    inscripcion = rectificar_inscripcion_historica(
+                        inscripcion, request.user,
+                        form.cleaned_data["fecha_inscripcion"],
+                        form.cleaned_data["fecha_baja"],
+                        motivo_baja=form.cleaned_data.get("motivo_baja") or "",
+                        observaciones=form.cleaned_data.get("observaciones") or "",
+                    )
+                else:
+                    inscripcion = editar_inscripcion_activa(
+                        inscripcion,
+                        request.user,
+                        form.cleaned_data["fecha_inscripcion"],
+                        observaciones=form.cleaned_data.get("observaciones") or "",
+                    )
             except ValidationError as exc:
                 form.add_error(None, "; ".join(exc.messages))
             else:
-                messages.success(request, "Inscripción actualizada correctamente.")
+                messages.success(
+                    request,
+                    "Inscripción histórica rectificada correctamente."
+                    if rectificacion else "Inscripción actualizada correctamente.",
+                )
                 return redirect(volver_url)
 
         messages.error(request, "Revisá los datos de la inscripción.")
     else:
-        form = CefInscripcionForm(instance=inscripcion, grupo=grupo)
+        form = form_class(instance=inscripcion, grupo=grupo)
 
     context.update(
         {
             "grupo": grupo,
             "grupo_dias_texto": _dias_texto(grupo),
             "inscripcion": inscripcion,
+            "rectificacion_historica": rectificacion,
             "form": form,
             "volver_url": volver_url,
             "volver_label": volver_label,

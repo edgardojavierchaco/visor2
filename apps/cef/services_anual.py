@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from collections import defaultdict
-from datetime import date
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 from django.db.models import Prefetch
 from django.utils import timezone
 
@@ -22,7 +21,11 @@ from .models import (
     CefInventarioMaterialEstado,
     normalizar_cueanexo,
     solo_digitos,
+    validar_cupo_maximo,
 )
+
+from .services import validar_fechas_oficiales_ciclo
+from .services_bnh import pares_docente_cue_bnh
 
 
 CATEGORIAS_ANUALES = (
@@ -145,6 +148,35 @@ def origen_anual_previsualizable(ciclo_origen):
     if not ciclo_origen.cerrado or ciclo_origen.actual:
         return False
     return not CefCiclo.objects.filter(anio__gt=ciclo_origen.anio).exists()
+
+
+def _conflictos_cupo_proyectado(grupos, inscripciones):
+    """No descarta inscripciones: devuelve conflictos que bloquean toda la copia."""
+    ocupacion = defaultdict(int)
+    for inscripcion in inscripciones:
+        ocupacion[inscripcion.grupo_id] += 1
+    conflictos = []
+    for grupo in grupos:
+        previstas = ocupacion[grupo.pk]
+        if not previstas and grupo.cupo_maximo is None:
+            continue  # Compatibilidad: grupos heredados vacíos pueden seguir sin cupo.
+        try:
+            validar_cupo_maximo(grupo.cupo_maximo)
+        except ValidationError:
+            conflictos.append((grupo, "cupo_invalido", (
+                f"El grupo {_rotulo_grupo(grupo)} del CEF {grupo.cueanexo} tiene "
+                f"{previstas} inscripciones previstas y no tiene un cupo máximo válido "
+                f"(cupo: {grupo.cupo_maximo}). Configurá el cupo antes de generar el ciclo."
+            )))
+        else:
+            if previstas > grupo.cupo_maximo:
+                conflictos.append((grupo, "cupo_excedido", (
+                    f"El grupo {_rotulo_grupo(grupo)} del CEF {grupo.cueanexo} "
+                    f"trasladaría {previstas} inscripciones activas, pero su cupo "
+                    f"es {grupo.cupo_maximo}. Ampliá el cupo o resolvé la ocupación "
+                    "antes de generar el ciclo."
+                )))
+    return conflictos
 
 
 def prevalidar_generacion_anual(ciclo_origen):
@@ -524,6 +556,22 @@ def prevalidar_generacion_anual(ciclo_origen):
         item.pk for item in alumnos_validos
     ]
 
+    # Una sola consulta BNH para todo el ciclo, incluidos docentes sin banco.
+    bnh_disponible = True
+    try:
+        pares_bnh = pares_docente_cue_bnh(
+            [item.docente_cuil for item in docentes + asignaciones],
+            [item.cueanexo for item in docentes]
+            + [item.grupo.cueanexo for item in asignaciones],
+        )
+    except DatabaseError:
+        pares_bnh = set()
+        bnh_disponible = False
+        _agregar_detalle(
+            errores, "bnh_no_disponible",
+            "No se pudo consultar BNH Personas. La generación anual está bloqueada.",
+        )
+    omisiones_bnh = defaultdict(lambda: {"docentes": 0, "asignaciones": 0})
     docentes_por_clave = defaultdict(list)
     invalidos_docentes = set()
     for docente in docentes:
@@ -549,6 +597,11 @@ def prevalidar_generacion_anual(ciclo_origen):
                 ),
                 docente.cueanexo,
             )
+        if (cuil, docente.cueanexo) not in pares_bnh:
+            invalidos_docentes.add(docente.pk)
+            if bnh_disponible:
+                omisiones_bnh[docente.cueanexo]["docentes"] += 1
+            continue
         docentes_por_clave[(cue or str(docente.cueanexo), cuil)].append(docente)
     for clave, coincidencias in docentes_por_clave.items():
         if len(coincidencias) > 1:
@@ -670,6 +723,10 @@ def prevalidar_generacion_anual(ciclo_origen):
     inscripciones_validas = [
         item for item in inscripciones if item.pk not in invalidas_inscripciones
     ]
+    for grupo, codigo, mensaje in _conflictos_cupo_proyectado(
+        grupos_validos, inscripciones_validas,
+    ):
+        _agregar_detalle(errores, f"grupo_{codigo}_{grupo.pk}", mensaje, grupo.cueanexo)
     for inscripcion in inscripciones_validas:
         contar(inscripcion.grupo.cueanexo, "inscripciones", proyectables=1)
     resultado["totales"]["inscripciones"]["encontrados"] = len(inscripciones)
@@ -688,8 +745,6 @@ def prevalidar_generacion_anual(ciclo_origen):
         grupo = grupos_por_id[asignacion.grupo_id]
         contar(grupo.cueanexo, "asignaciones", encontrados=1)
         cuil = solo_digitos(asignacion.docente_cuil)
-        asignaciones_por_docente[(grupo.pk, cuil)].append(asignacion)
-        asignaciones_por_rol[(grupo.pk, asignacion.rol)].append(asignacion)
         nombre = asignacion.docente_nombre_snapshot or asignacion.docente_cuil
         if grupo.estado != CefGrupo.Estado.ACTIVO:
             invalidas_asignaciones.add(asignacion.pk)
@@ -712,6 +767,13 @@ def prevalidar_generacion_anual(ciclo_origen):
                 f"La asignación activa de {nombre} posee un CUIL inválido.",
                 grupo.cueanexo,
             )
+        if (cuil, grupo.cueanexo) not in pares_bnh:
+            invalidas_asignaciones.add(asignacion.pk)
+            if bnh_disponible:
+                omisiones_bnh[grupo.cueanexo]["asignaciones"] += 1
+            continue
+        asignaciones_por_docente[(grupo.pk, cuil)].append(asignacion)
+        asignaciones_por_rol[(grupo.pk, asignacion.rol)].append(asignacion)
         if (grupo.cueanexo, cuil) not in bancos_docente_validos:
             invalidas_asignaciones.add(asignacion.pk)
             _agregar_detalle(
@@ -914,6 +976,20 @@ def prevalidar_generacion_anual(ciclo_origen):
                 cue,
             )
 
+    resultado["omisiones_bnh"] = {
+        categoria: sum(item[categoria] for item in omisiones_bnh.values())
+        for categoria in ("docentes", "asignaciones")
+    }
+    for cue, cantidades in sorted(omisiones_bnh.items()):
+        _agregar_detalle(
+            advertencias, f"docentes_sin_vinculacion_bnh_{cue}",
+            (
+                f"Se omiten {cantidades['docentes']} períodos de profesores y "
+                f"{cantidades['asignaciones']} asignaciones del nuevo ciclo: "
+                "sin vinculación actual con este CUE-Anexo en BNH Personas."
+            ),
+            cue,
+        )
     errores.sort(key=lambda item: (item["cueanexo"], item["codigo"], item["mensaje"]))
     advertencias.sort(
         key=lambda item: (item["cueanexo"], item["codigo"], item["mensaje"])
@@ -955,7 +1031,7 @@ def _mensaje_prevalidacion_bloqueada(resultado):
     return detalle or "La prevalidación anual detectó inconsistencias bloqueantes."
 
 
-def generar_ciclo_siguiente(ciclo_origen, user):
+def generar_ciclo_siguiente(ciclo_origen, user, *, fecha_inicio=None, fecha_fin=None):
     """Genera N+1 de forma atómica a partir del último ciclo ya cerrado."""
 
     ciclo_origen_id = getattr(ciclo_origen, "pk", ciclo_origen)
@@ -981,6 +1057,11 @@ def generar_ciclo_siguiente(ciclo_origen, user):
                     "Un ciclo cerrado no puede continuar marcado como ciclo actual."
                 )
 
+            fecha_inicio_destino, fecha_fin_destino = validar_fechas_oficiales_ciclo(
+                origen.anio + 1, fecha_inicio, fecha_fin,
+            )
+            # Mismo orden que inscripción/edición: ciclo, luego grupos por PK.
+            list(CefGrupo.objects.select_for_update().filter(ciclo=origen).order_by("pk"))
             resultado = prevalidar_generacion_anual(origen)
             if resultado["bloqueado"]:
                 raise ValidationError(_mensaje_prevalidacion_bloqueada(resultado))
@@ -993,8 +1074,8 @@ def generar_ciclo_siguiente(ciclo_origen, user):
             destino = CefCiclo.objects.create(
                 anio=destino_anio,
                 descripcion="",
-                fecha_inicio=None,
-                fecha_fin=None,
+                fecha_inicio=fecha_inicio_destino,
+                fecha_fin=fecha_fin_destino,
                 activo=True,
                 actual=False,
                 cerrado=False,
@@ -1114,7 +1195,7 @@ def generar_ciclo_siguiente(ciclo_origen, user):
                     ciclo=destino,
                     alumno_id=item.alumno_id,
                     estado=CefAlumnoCef.Estado.ACTIVO,
-                    fecha_alta=fecha_generacion,
+                    fecha_alta=fecha_inicio_destino,
                     fecha_baja=None,
                     motivo_baja="",
                     alumno_nombre_snapshot=item.alumno_nombre_snapshot,
@@ -1138,7 +1219,7 @@ def generar_ciclo_siguiente(ciclo_origen, user):
                     ciclo=destino,
                     docente_cuil=item.docente_cuil,
                     estado=CefDocenteCef.Estado.ACTIVO,
-                    fecha_alta=fecha_generacion,
+                    fecha_alta=fecha_inicio_destino,
                     fecha_baja=None,
                     motivo_baja="",
                     docente_nombre_snapshot=item.docente_nombre_snapshot,
@@ -1161,7 +1242,7 @@ def generar_ciclo_siguiente(ciclo_origen, user):
                     grupo=grupos_mapa[item.grupo_id],
                     alumno_id=item.alumno_id,
                     estado=CefInscripcion.Estado.ACTIVO,
-                    fecha_inscripcion=date(destino.anio, 1, 1),
+                    fecha_inscripcion=fecha_inicio_destino,
                     fecha_baja=None,
                     motivo_baja="",
                     observaciones=item.observaciones,
@@ -1170,6 +1251,11 @@ def generar_ciclo_siguiente(ciclo_origen, user):
                 )
                 for item in inscripciones_origen
             ]
+            conflictos_cupo = _conflictos_cupo_proyectado(
+                grupos_mapa.values(), inscripciones_nuevas,
+            )
+            if conflictos_cupo:
+                raise ValidationError([mensaje for _, _, mensaje in conflictos_cupo])
             CefInscripcion.objects.bulk_create(inscripciones_nuevas)
 
             asignaciones_origen = _objetos_proyectados(
@@ -1182,7 +1268,7 @@ def generar_ciclo_siguiente(ciclo_origen, user):
                     docente_cuil=item.docente_cuil,
                     rol=item.rol,
                     estado=CefDocenteGrupo.Estado.ACTIVO,
-                    fecha_desde=fecha_generacion,
+                    fecha_desde=fecha_inicio_destino,
                     fecha_hasta=None,
                     motivo_baja="",
                     docente_nombre_snapshot=item.docente_nombre_snapshot,

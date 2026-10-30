@@ -5,14 +5,14 @@
     </div>
     {% if docentes_historial_resumen %}
         <div class="cef-table-wrap"><table class="cef-dt" data-cef-table>
-            <thead><tr><th>Profesor</th><th>DNI</th><th>CUIL</th><th>Estado actual en el CEF</th><th>Acción actual</th><th class="text-end">Historial</th></tr></thead>
+            <thead><tr><th>Profesor</th><th>DNI</th><th>CUIL</th><th>Vinculación actual en BNH</th><th>Acción actual</th><th class="text-end">Historial</th></tr></thead>
             <tbody>{% for periodo in docentes_historial_resumen %}
-                <tr class="{% if not periodo.activo_banco_actual %}cef-row-inactive{% endif %}" data-cef-history-owner="profesor-{{ periodo.docente_cuil }}">
+                <tr class="{% if not periodo.vinculado_bnh %}cef-row-inactive{% endif %}" data-cef-history-owner="profesor-{{ periodo.docente_cuil }}">
                     <td><strong>{{ periodo.docente_nombre_snapshot|default:periodo.docente_cuil }}</strong></td><td>{{ periodo.docente_dni_snapshot|default:"-" }}</td><td>{{ periodo.docente_cuil }}</td>
-                    <td><span class="badge text-bg-{% if periodo.activo_banco_actual %}success{% else %}secondary{% endif %}">{{ periodo.estado_actual_cef }}{% if not periodo.activo_banco_actual %} en el ciclo {{ cef_context.ciclo.anio }}{% endif %}</span></td>
+                    <td><span class="badge text-bg-{% if periodo.vinculado_bnh %}success{% else %}secondary{% endif %}">{{ periodo.estado_actual_cef }}</span></td>
                     <td class="cef-act-cell">
                         {% if cef_context.puede_operar %}
-                            {% if periodo.activo_banco_actual %}
+                            {% if periodo.vinculado_bnh %}
                                 {% if periodo.periodo_historico_accion and grupos_disponibles %}
                                     <div class="dropdown" data-cef-profesor-dropdown><button class="btn {% if periodo.grupos_asignables %}btn-primary{% else %}btn-outline-secondary{% endif %} btn-sm dropdown-toggle" type="button" data-cef-profesor-dropdown-toggle aria-expanded="false"><i class="fa-solid fa-user-plus"></i> {% if periodo.grupos_asignables %}Asignar a grupo actual{% elif periodo.grupos_bloqueados %}Ya asignado{% else %}Sin grupos disponibles{% endif %}</button>
                                         <ul class="dropdown-menu cef-profesor-dropdown-menu" data-cef-profesor-dropdown-menu>
@@ -23,10 +23,7 @@
                                     </div>
                                 {% elif periodo.periodo_historico_accion %}<span class="text-muted small">Sin grupos actuales disponibles</span>
                                 {% else %}<span class="text-muted small">Actualmente activo en el CEF</span>{% endif %}
-                            {% elif periodo.periodo_baja_actual.puede_reincorporar %}
-                                <form method="post" action="{% url 'cef:profesores' %}{% if cef_context.querystring %}?{{ cef_context.querystring }}&{% else %}?{% endif %}vista=historial" class="m-0">{% csrf_token %}<input type="hidden" name="accion" value="reincorporar_cef"><input type="hidden" name="docente_banco_id" value="{{ periodo.periodo_baja_actual.pk }}"><button class="btn btn-outline-success btn-sm" type="submit"><i class="fa-solid fa-user-check"></i> Reincorporar al CEF</button></form>
-                            {% elif periodo.periodo_baja_actual %}<span class="text-muted small">Reincorporación no disponible</span>
-                            {% else %}<span class="text-muted small">No activo en el ciclo actual</span>{% endif %}
+                            {% else %}<span class="text-muted small">Sin vinculación actual en BNH</span>{% endif %}
                         {% else %}<span class="text-muted small">Solo lectura</span>{% endif %}
                     </td>
                     <td class="cef-act-cell text-end"><button type="button" class="btn btn-outline-secondary btn-sm" aria-controls="profesorHistorial{{ periodo.docente_cuil }}" aria-expanded="false" data-cef-history-toggle="profesor-{{ periodo.docente_cuil }}"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i> Historial · {{ periodo.historial_periodos|length }} período{{ periodo.historial_periodos|length|pluralize:"s" }}</button></td>
@@ -39,7 +36,7 @@
                             <thead><tr><th>Período</th><th>Ciclo</th><th>Estado</th><th>Fecha de alta</th><th>Fecha de baja</th><th>Motivo</th><th>Observaciones</th><th>Asignaciones a grupos durante el período</th></tr></thead>
                             <tbody>{% for movimiento in periodo.historial_periodos %}<tr class="{% if movimiento.estado != 'activo' %}cef-row-inactive{% endif %}">
                                 <td><strong>N.º {{ movimiento.numero_periodo }}</strong></td>
-                                <td><strong>{{ movimiento.ciclo.anio }}</strong></td>
+                                <td><strong>{{ movimiento.ciclo.anio|stringformat:"s" }}</strong></td>
                                 <td><span class="badge text-bg-{% if movimiento.estado == 'activo' and not movimiento.ciclo.cerrado %}success{% else %}secondary{% endif %}">{% if movimiento.ciclo.cerrado and movimiento.estado == 'activo' %}Activo al cierre{% else %}{{ movimiento.get_estado_display }}{% endif %}</span></td>
                                 <td>{{ movimiento.fecha_alta|date:"d/m/Y" }}</td>
                                 <td>{{ movimiento.fecha_baja|date:"d/m/Y"|default:"-" }}</td>

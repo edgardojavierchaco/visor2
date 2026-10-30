@@ -28,6 +28,7 @@ ROLES_AUTORIZADOS_CEF = {
 }
 ROL_PROFESOR_CEF = "profesorcef"
 ROL_DIRECTOR_CEF = "Director"
+ROL_DIRECTOR_SERVICIOS_COMPLEMENTARIOS = "Director de Servicios Complementarios"
 
 # ============================================================
 # MODELOS EXTERNOS / INTEGRACION
@@ -212,6 +213,16 @@ def normalizar_cueanexo(valor):
     return cueanexo
 
 
+def validar_cupo_maximo(cupo_maximo, *, obligatorio=True):
+    """Valida el valor sin cambiar grupos históricos que aún no tienen cupo."""
+    if cupo_maximo is None and not obligatorio:
+        return
+    if isinstance(cupo_maximo, bool) or not isinstance(cupo_maximo, int) or cupo_maximo < 1:
+        raise ValidationError({
+            "cupo_maximo": "Indicá un cupo máximo válido: un número entero mayor a cero."
+        })
+
+
 def _validar_baja_terminal(instancia, errors):
     """
     Impide reactivar una fila historica que ya se encuentra en baja.
@@ -370,14 +381,20 @@ def obtener_permisos_usuario_cef(user):
     roles_autorizados = {item.casefold() for item in ROLES_AUTORIZADOS_CEF}
     es_profesor_cef = rol_normalizado == ROL_PROFESOR_CEF.casefold()
     es_director_cef = rol_normalizado == ROL_DIRECTOR_CEF.casefold()
+    es_admin = rol_normalizado == "administrador".casefold()
+    es_director_servicios_complementarios = (
+        rol_normalizado == ROL_DIRECTOR_SERVICIOS_COMPLEMENTARIOS.casefold()
+    )
     return {
         "rol": rol,
         "puede_ver": rol_normalizado in roles_autorizados,
-        "es_admin": rol_normalizado == "administrador".casefold(),
+        "es_admin": es_admin,
+        "es_director_servicios_complementarios": es_director_servicios_complementarios,
+        "puede_rectificar_cef": es_admin or es_director_servicios_complementarios,
         "es_profesor_cef": es_profesor_cef,
         "es_director_cef": es_director_cef,
         "solo_asistencia": es_profesor_cef,
-        "solo_metricas": es_director_cef,
+        "solo_metricas": False,
     }
 
 
@@ -403,20 +420,52 @@ def usuario_es_admin_cef(user, permisos=None):
     return permisos["es_admin"]
 
 
+def usuario_puede_rectificar_cef(user, permisos=None, *, cueanexo=None):
+    """Autoriza rectificaciones administrativas sin ampliar el alcance de CEF."""
+
+    if permisos is None:
+        permisos = obtener_permisos_usuario_cef(user)
+    if not permisos.get("puede_rectificar_cef", False):
+        return False
+    if cueanexo is None or permisos.get("es_admin", False):
+        return True
+    return cueanexo in get_cueanexos_cargables_usuario(user, permisos=permisos)
+
+
 def get_cefs_visualizacion_usuario(user, permisos=None):
     """
-    Devuelve todos los CEF para los roles autorizados.
+    Devuelve los CEF visibles según el rol y su alcance institucional.
 
     Esta funcion se conserva porque la vista actual de Localizaciones CEF
     ya la importa desde .models.
     """
 
     queryset = get_todos_los_cef()
+    if permisos is None:
+        permisos = obtener_permisos_usuario_cef(user)
 
     if not usuario_puede_ver_cef(user, permisos=permisos):
         return queryset.none()
 
+    if permisos.get("es_director_cef"):
+        cueanexos = permisos.get("cueanexos_cargables")
+        if cueanexos is None:
+            cueanexos = get_cueanexos_cargables_usuario(user, permisos=permisos)
+        return queryset.filter(cueanexo__in=cueanexos)
+
     return queryset
+
+
+def asignaciones_docentes_vigentes(fecha):
+    """Resuelve asignaciones activas cuya vigencia efectiva incluye la fecha."""
+
+    return (
+        CefDocenteGrupo.objects.filter(
+            estado=CefDocenteGrupo.Estado.ACTIVO,
+            fecha_desde__lte=fecha,
+        )
+        .filter(Q(fecha_hasta__isnull=True) | Q(fecha_hasta__gte=fecha))
+    )
 
 
 def get_cefs_cargables_usuario(user, permisos=None):
@@ -425,7 +474,7 @@ def get_cefs_cargables_usuario(user, permisos=None):
 
     Regla inicial:
     - Administrador: todos los CEF.
-    - Profesor CEF: CEF con una asignación docente activa.
+    - Profesor CEF: CEF con vinculación vigente en BNH Personas.
     - Director: CEF donde su CUIL figura como responsable.
     """
 
@@ -445,22 +494,9 @@ def get_cefs_cargables_usuario(user, permisos=None):
         if not cuil:
             return queryset.none()
 
-        cueanexos = (
-            CefDocenteGrupo.objects.filter(
-                docente_cuil=cuil,
-                estado=CefDocenteGrupo.Estado.ACTIVO,
-                rol__in=(
-                    CefDocenteGrupo.Rol.TITULAR,
-                    CefDocenteGrupo.Rol.SUPLENTE,
-                    CefDocenteGrupo.Rol.INTERINO,
-                ),
-                grupo__estado=CefGrupo.Estado.ACTIVO,
-                grupo__ciclo__activo=True,
-            )
-            .values_list("grupo__cueanexo", flat=True)
-            .distinct()
-        )
-        return queryset.filter(cueanexo__in=cueanexos)
+        from .services_bnh import cueanexos_docente_bnh
+
+        return queryset.filter(cueanexo__in=cueanexos_docente_bnh(cuil))
 
     return get_cefs_por_cuil_responsable(user)
 
@@ -1217,8 +1253,10 @@ class CefGrupo(CefAuditoriaMixin):
         else:
             self.cueanexo = cueanexo_normalizado
 
-        if self.cupo_maximo is not None and self.cupo_maximo < 1:
-            errors["cupo_maximo"] = "El cupo maximo debe ser mayor a cero."
+        try:
+            validar_cupo_maximo(self.cupo_maximo, obligatorio=not self.pk)
+        except ValidationError as exc:
+            errors["cupo_maximo"] = exc.messages
 
         if self.estado == self.Estado.ACTIVO:
             if self.fecha_baja:
@@ -1911,6 +1949,9 @@ def validar_docente_grupo_activo(grupo, docente_cuil, rol, excluir_pk=None):
     if not rol:
         raise ValidationError("Seleccioná un rol para el profesor.")
 
+    from .services_bnh import validar_docente_vinculado_bnh
+
+    validar_docente_vinculado_bnh(docente_cuil_normalizado, grupo.cueanexo)
     activos = CefDocenteGrupo.objects.filter(
         grupo=grupo,
         estado=CefDocenteGrupo.Estado.ACTIVO,
@@ -2000,7 +2041,10 @@ class CefJornadaAsistencia(CefAuditoriaMixin):
         errors = {}
         if self.grupo_id and self.fecha:
             ciclo = self.grupo.ciclo
-            if ciclo.cerrado:
+            if ciclo.cerrado and not usuario_puede_rectificar_cef(
+                getattr(self, "_usuario_operacion_cef", None),
+                cueanexo=self.grupo.cueanexo,
+            ):
                 errors["grupo"] = (
                     "El ciclo está cerrado. La asistencia se encuentra en modo sólo lectura."
                 )
@@ -2010,9 +2054,13 @@ class CefJornadaAsistencia(CefAuditoriaMixin):
         if errors:
             raise ValidationError(errors)
 
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
+    def save(self, *args, user=None, **kwargs):
+        self._usuario_operacion_cef = user
+        try:
+            self.full_clean()
+            super().save(*args, **kwargs)
+        finally:
+            del self._usuario_operacion_cef
 
     def __str__(self):
         return f"{self.grupo} - {self.fecha}"
@@ -2068,7 +2116,10 @@ class CefAsistencia(CefAuditoriaMixin):
                 errors["inscripcion"] = (
                     "La inscripción no estaba vigente en la fecha de la jornada."
                 )
-            if self.jornada.grupo.ciclo.cerrado:
+            if self.jornada.grupo.ciclo.cerrado and not usuario_puede_rectificar_cef(
+                getattr(self, "_usuario_operacion_cef", None),
+                cueanexo=self.jornada.grupo.cueanexo,
+            ):
                 errors["jornada"] = (
                     "El ciclo está cerrado. La asistencia se encuentra en modo sólo lectura."
                 )
@@ -2076,9 +2127,13 @@ class CefAsistencia(CefAuditoriaMixin):
         if errors:
             raise ValidationError(errors)
 
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
+    def save(self, *args, user=None, **kwargs):
+        self._usuario_operacion_cef = user
+        try:
+            self.full_clean()
+            super().save(*args, **kwargs)
+        finally:
+            del self._usuario_operacion_cef
 
     def __str__(self):
         return f"{self.jornada} - {self.inscripcion} - {self.get_estado_display()}"
@@ -2116,16 +2171,27 @@ class CefAsistenciaMovimiento(CefAuditoriaMixin):
         errors = {}
         if self.estado_anterior and self.estado_anterior == self.estado_nuevo:
             errors["estado_nuevo"] = "El nuevo estado debe ser distinto del anterior."
-        if self.asistencia_id and self.asistencia.jornada.grupo.ciclo.cerrado:
+        if (
+            self.asistencia_id
+            and self.asistencia.jornada.grupo.ciclo.cerrado
+            and not usuario_puede_rectificar_cef(
+                getattr(self, "_usuario_operacion_cef", None),
+                cueanexo=self.asistencia.jornada.grupo.cueanexo,
+            )
+        ):
             errors["asistencia"] = (
                 "El ciclo está cerrado. La asistencia se encuentra en modo sólo lectura."
             )
         if errors:
             raise ValidationError(errors)
 
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
+    def save(self, *args, user=None, **kwargs):
+        self._usuario_operacion_cef = user
+        try:
+            self.full_clean()
+            super().save(*args, **kwargs)
+        finally:
+            del self._usuario_operacion_cef
 
     def __str__(self):
         anterior = self.get_estado_anterior_display() if self.estado_anterior else "Sin estado"

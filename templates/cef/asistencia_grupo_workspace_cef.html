@@ -44,6 +44,10 @@
                 <div class="alert alert-info cef-asistencia-notice">Elegí una fecha para consultar el grupo.</div>
             {% endif %}
 
+            {% if grupo_baja_aviso %}
+                <div class="alert alert-info cef-asistencia-notice">{{ grupo_baja_aviso }}</div>
+            {% endif %}
+
             {% if asistencia_cargada %}
                 <div class="cef-asistencia-audit">
                     <button class="btn btn-link btn-sm p-0" type="button" aria-expanded="false" aria-controls="historialCambiosAsistencia" data-cef-asistencia-audit-toggle><span data-cef-asistencia-audit-label>Ver historial de modificaciones</span></button>

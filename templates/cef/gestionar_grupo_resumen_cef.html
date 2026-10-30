@@ -10,7 +10,7 @@
             <dl class="cef-definition-grid">
                 <div class="cef-definition-item">
                     <dt>Ciclo</dt>
-                    <dd>{{ grupo.ciclo.anio|default:"-" }}</dd>
+                    <dd>{{ grupo.ciclo.anio|stringformat:"s"|default:"-" }}</dd>
                 </div>
                 <div class="cef-definition-item">
                     <dt>Actividad</dt>
@@ -72,11 +72,11 @@
             <dl class="cef-definition-grid is-three-col">
                 <div class="cef-definition-item">
                     <dt>Cupo</dt>
-                    <dd>{{ grupo.cupo_maximo|default:"-" }}</dd>
+                    <dd>{{ grupo.cupo_maximo|default:"-" }}{% if grupo.cupo_maximo and inscripciones_activas >= grupo.cupo_maximo %} <span class="badge text-bg-warning">Completo</span>{% endif %}</dd>
                 </div>
                 <div class="cef-definition-item">
-                    <dt>Inscripciones</dt>
-                    <dd>{{ inscripciones|length }}</dd>
+                    <dt>Inscripciones activas</dt>
+                    <dd>{{ inscripciones_activas }}</dd>
                 </div>
                 <div class="cef-definition-item">
                     <dt>Profesores activos</dt>

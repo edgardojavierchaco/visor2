@@ -9,7 +9,7 @@
             <tbody>{% for periodo in alumnos_historial_resumen %}
                 <tr class="{% if not periodo.activo_banco_actual %}cef-row-inactive{% endif %}" data-cef-history-owner="alumno-{{ periodo.alumno_id }}">
                     <td><strong>{{ periodo.alumno_nombre_snapshot|default:"-" }}</strong></td><td>{{ periodo.alumno_documento_snapshot|default:"-" }}</td><td>{{ periodo.alumno_cuil_snapshot|default:"-" }}</td>
-                    <td><span class="badge text-bg-{% if periodo.activo_banco_actual %}success{% else %}secondary{% endif %}">{{ periodo.estado_actual_cef }}{% if not periodo.activo_banco_actual %} en el ciclo {{ cef_context.ciclo.anio }}{% endif %}</span></td>
+                    <td><span class="badge text-bg-{% if periodo.activo_banco_actual %}success{% else %}secondary{% endif %}">{{ periodo.estado_actual_cef }}{% if not periodo.activo_banco_actual %} en el ciclo {{ cef_context.ciclo.anio|stringformat:"s" }}{% endif %}</span></td>
                     <td class="cef-act-cell">
                         {% if cef_context.puede_operar %}
                             {% if periodo.activo_banco_actual %}
@@ -39,7 +39,7 @@
                             <thead><tr><th>Período</th><th>Ciclo</th><th>Estado</th><th>Fecha de alta</th><th>Fecha de baja</th><th>Motivo</th><th>Observaciones</th><th>Inscripciones a grupos durante el período</th></tr></thead>
                             <tbody>{% for movimiento in periodo.historial_periodos %}<tr class="{% if movimiento.estado != 'activo' %}cef-row-inactive{% endif %}">
                                 <td><strong>N.º {{ movimiento.numero_periodo }}</strong></td>
-                                <td><strong>{{ movimiento.ciclo.anio }}</strong></td>
+                                <td><strong>{{ movimiento.ciclo.anio|stringformat:"s" }}</strong></td>
                                 <td><span class="badge text-bg-{% if movimiento.estado == 'activo' and not movimiento.ciclo.cerrado %}success{% else %}secondary{% endif %}">{% if movimiento.ciclo.cerrado and movimiento.estado == 'activo' %}Activo al cierre{% else %}{{ movimiento.get_estado_display }}{% endif %}</span></td>
                                 <td>{{ movimiento.fecha_alta|date:"d/m/Y" }}</td>
                                 <td>{{ movimiento.fecha_baja|date:"d/m/Y"|default:"-" }}</td>

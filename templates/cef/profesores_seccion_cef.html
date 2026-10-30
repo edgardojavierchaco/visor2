@@ -57,17 +57,7 @@
 <div class="cef-panel">
     <div class="cef-panel-head">
         <h2 class="cef-panel-title">Profesores</h2>
-        {% if vista == 'actuales' and cef_context.puede_operar %}<div class="cef-panel-actions">
-            {% if cef_partial %}
-                <a class="btn btn-primary" href="{{ modal_action_url }}">
-                    <i class="fa-solid fa-chalkboard-user"></i> Agregar profesor
-                </a>
-            {% else %}
-                <button class="btn btn-primary" type="button" data-open-docentes-modal>
-                    <i class="fa-solid fa-chalkboard-user"></i> Agregar profesor
-                </button>
-            {% endif %}
-        </div>{% endif %}
+
     </div>
 
     <div class="cef-panel-body">
@@ -91,5 +81,5 @@
 
 {% if cef_partial and cef_context.puede_operar %}
     {% include "cef/asignar_profesor_grupo_modal_cef.html" %}
-    {% if vista == 'actuales' %}{% include "cef/profesor_baja_cef_modal.html" %}{% endif %}
+
 {% endif %}

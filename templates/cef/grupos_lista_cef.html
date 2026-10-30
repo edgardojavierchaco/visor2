@@ -60,7 +60,7 @@
                             </td>
                             <td><span class="badge text-bg-primary">{{ grupo.alumnos_activos }}</span></td>
                             <td><span class="badge text-bg-primary">{{ grupo.docentes_activos }}</span></td>
-                            <td>{{ grupo.cupo_maximo|default:"—" }}</td>
+                            <td>{{ grupo.cupo_maximo|default:"—" }}{% if grupo.cupo_maximo and grupo.alumnos_activos >= grupo.cupo_maximo %} <span class="badge text-bg-warning">Completo</span>{% endif %}</td>
                             <td class="cef-act-cell">
                                 <div class="dropdown" data-cef-row-actions>
                                     <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-cef-row-actions-toggle aria-expanded="false">

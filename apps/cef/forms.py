@@ -5,7 +5,7 @@ import re
 from django import forms
 from django.apps import apps
 from django.core.exceptions import ValidationError
-from django.utils import timezone
+from django.db.models import Q
 
 from .models import (
     CefActividad,
@@ -28,7 +28,13 @@ from .models import (
     CefRangoEtario,
     CefTurno,
 )
-from .services import validar_fecha_inscripcion_grupo
+from .services import (
+    fecha_operativa_predeterminada,
+    validar_cambio_inicio_ciclo,
+    validar_fechas_oficiales_ciclo,
+    validar_fecha_inscripcion_grupo,
+    validar_fecha_interactiva_ciclo,
+)
 
 
 def _solo_digitos(valor):
@@ -101,23 +107,14 @@ class CefCicloForm(forms.Form):
         max_length=120,
     )
     fecha_inicio = forms.DateField(
-        label="Fecha inicio (referencia)",
-        required=False,
+        label="Fecha de inicio oficial",
+        required=True,
         widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
     )
     fecha_fin = forms.DateField(
-        label="Fecha fin (referencia)",
+        label="Fecha de fin prevista",
         required=False,
         widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
-    )
-    activo = forms.BooleanField(
-        label="Activo",
-        required=False,
-        initial=True,
-    )
-    actual = forms.BooleanField(
-        label="Marcar como ciclo actual",
-        required=False,
     )
 
     def __init__(self, *args, **kwargs):
@@ -133,28 +130,33 @@ class CefCicloForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        fecha_inicio = cleaned_data.get("fecha_inicio")
-        fecha_fin = cleaned_data.get("fecha_fin")
-
-        if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
-            self.add_error(
-                "fecha_fin",
-                "La fecha de fin no puede ser anterior a la fecha de inicio.",
-            )
-
-        if cleaned_data.get("actual"):
-            cleaned_data["activo"] = True
-
+        if cleaned_data.get("anio") and not any(
+            campo in self.errors for campo in ("fecha_inicio", "fecha_fin")
+        ):
+            try:
+                validar_fechas_oficiales_ciclo(
+                    cleaned_data["anio"],
+                    cleaned_data.get("fecha_inicio"),
+                    cleaned_data.get("fecha_fin"),
+                )
+            except ValidationError as exc:
+                self.add_error(None, exc)
         return cleaned_data
 
     def save(self, user=None):
+        fecha_inicio, fecha_fin = validar_fechas_oficiales_ciclo(
+            self.cleaned_data["anio"],
+            self.cleaned_data.get("fecha_inicio"),
+            self.cleaned_data.get("fecha_fin"),
+        )
         return CefCiclo.objects.create(
             anio=self.cleaned_data["anio"],
             descripcion=self.cleaned_data.get("descripcion", ""),
-            fecha_inicio=self.cleaned_data.get("fecha_inicio"),
-            fecha_fin=self.cleaned_data.get("fecha_fin"),
-            activo=self.cleaned_data.get("activo", False),
-            actual=self.cleaned_data.get("actual", False),
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            activo=True,
+            actual=True,
+            cerrado=False,
             creado_por=user,
             actualizado_por=user,
         )
@@ -163,47 +165,93 @@ class CefCicloForm(forms.Form):
 class CefCicloEdicionForm(forms.ModelForm):
     class Meta:
         model = CefCiclo
-        fields = ["descripcion", "fecha_fin"]
+        fields = ["descripcion", "fecha_inicio", "fecha_fin"]
         widgets = {
+            "fecha_inicio": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "fecha_fin": forms.DateInput(
                 format="%Y-%m-%d",
                 attrs={"type": "date"},
             ),
         }
         labels = {
+            "fecha_inicio": "Fecha de inicio oficial",
             "descripcion": "Descripción",
-            "fecha_fin": "Fecha fin (referencia)",
+            "fecha_fin": "Fecha de fin prevista",
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._fecha_inicio_anterior = self.instance.fecha_inicio
+        self.fields["fecha_inicio"].required = True
         for field in self.fields.values():
             _aplicar_clases_bootstrap(field)
 
-    def clean_fecha_fin(self):
-        fecha_fin = self.cleaned_data.get("fecha_fin")
-        if (
-            self.instance.fecha_inicio
-            and fecha_fin
-            and fecha_fin < self.instance.fecha_inicio
-        ):
-            raise forms.ValidationError(
-                "La fecha de fin no puede ser anterior a la fecha de inicio."
-            )
-        return fecha_fin
+    def clean(self):
+        cleaned_data = super().clean()
+        if not any(campo in self.errors for campo in ("fecha_inicio", "fecha_fin")):
+            try:
+                fecha_inicio, _ = validar_fechas_oficiales_ciclo(
+                    self.instance.anio,
+                    cleaned_data.get("fecha_inicio"),
+                    cleaned_data.get("fecha_fin"),
+                )
+                validar_cambio_inicio_ciclo(
+                    self.instance,
+                    fecha_inicio,
+                    fecha_inicio_anterior=self._fecha_inicio_anterior,
+                )
+            except ValidationError as exc:
+                self.add_error(None, exc)
+        return cleaned_data
 
     def save(self, user=None):
         ciclo = super().save(commit=False)
+        validar_fechas_oficiales_ciclo(ciclo.anio, ciclo.fecha_inicio, ciclo.fecha_fin)
+        validar_cambio_inicio_ciclo(
+            ciclo, ciclo.fecha_inicio, fecha_inicio_anterior=self._fecha_inicio_anterior,
+        )
         ciclo.actualizado_por = user
         ciclo.save(
             update_fields=[
                 "descripcion",
+                "fecha_inicio",
                 "fecha_fin",
                 "actualizado_por",
                 "actualizado_en",
             ]
         )
         return ciclo
+
+
+class CefCicloAnualForm(forms.Form):
+    fecha_inicio = forms.DateField(
+        label="Fecha de inicio oficial",
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+    )
+    fecha_fin = forms.DateField(
+        label="Fecha de fin prevista",
+        required=False,
+        widget=forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+    )
+
+    def __init__(self, *args, anio_destino, **kwargs):
+        self.anio_destino = anio_destino
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            _aplicar_clases_bootstrap(field)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not any(campo in self.errors for campo in ("fecha_inicio", "fecha_fin")):
+            try:
+                validar_fechas_oficiales_ciclo(
+                    self.anio_destino,
+                    cleaned_data.get("fecha_inicio"),
+                    cleaned_data.get("fecha_fin"),
+                )
+            except ValidationError as exc:
+                self.add_error(None, exc)
+        return cleaned_data
 
 
 class CefAsistenciaFechaForm(forms.Form):
@@ -361,8 +409,11 @@ class CefGrupoForm(forms.ModelForm):
 
     def __init__(self, *args, ciclo=None, **kwargs):
         super().__init__(*args, **kwargs)
+        filtro_actividad = Q(activo=True)
+        if self.instance.pk:
+            filtro_actividad |= Q(pk=self.instance.actividad_id)
         self.fields["actividad"].queryset = (
-            CefActividad.objects.filter(activo=True)
+            CefActividad.objects.filter(filtro_actividad)
             .select_related("eje", "codigo_ra")
             .order_by("orden", "nombre")
         )
@@ -371,7 +422,23 @@ class CefGrupoForm(forms.ModelForm):
         self.fields["turno"].queryset = CefTurno.objects.filter(
             activo=True
         ).order_by("orden", "nombre")
-        self.fields["cupo_maximo"].required = False
+        if self.instance.pk:
+            for campo, modelo in (
+                ("nivel", CefNivelActividad),
+                ("rango_etario", CefRangoEtario),
+                ("turno", CefTurno),
+            ):
+                queryset = modelo.objects.filter(
+                    Q(activo=True) | Q(pk=getattr(self.instance, f"{campo}_id"))
+                )
+                self.fields[campo].queryset = (
+                    queryset.order_by("orden", "nombre") if campo == "turno"
+                    else queryset
+                )
+        self.fields["cupo_maximo"].required = True
+        self.fields["cupo_maximo"].error_messages["required"] = (
+            "Indicá un cupo máximo mayor a cero."
+        )
 
         for field in self.fields.values():
             _aplicar_clases_bootstrap(field)
@@ -776,6 +843,29 @@ class CefInscripcionForm(forms.ModelForm):
         return validar_fecha_inscripcion_grupo(self.grupo, fecha_inscripcion)
 
 
+class CefInscripcionRectificacionForm(CefInscripcionForm):
+    class Meta(CefInscripcionForm.Meta):
+        fields = ["fecha_inscripcion", "fecha_baja", "motivo_baja", "observaciones"]
+        widgets = {
+            **CefInscripcionForm.Meta.widgets,
+            "fecha_baja": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+        }
+        labels = {
+            **CefInscripcionForm.Meta.labels,
+            "fecha_baja": "Fecha de baja",
+            "motivo_baja": "Motivo de baja",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["fecha_baja"].required = True
+
+    def clean_fecha_baja(self):
+        return validar_fecha_interactiva_ciclo(
+            self.grupo.ciclo, self.cleaned_data.get("fecha_baja"),
+        )
+
+
 class CefBusquedaDocenteForm(forms.Form):
     cuil = forms.CharField(
         label="CUIL del profesor",
@@ -819,10 +909,56 @@ class CefDocenteGrupoForm(forms.ModelForm):
             "observaciones": "Observaciones",
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, grupo=None, ciclo=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.grupo = grupo or getattr(self.instance, "grupo", None)
+        self.ciclo = self.grupo.ciclo if self.grupo is not None else ciclo
         self.fields["fecha_desde"].required = True
         if not self.is_bound and not getattr(self.instance, "pk", None):
-            self.fields["fecha_desde"].initial = timezone.localdate
+            fecha_inicial = (
+                fecha_operativa_predeterminada(self.ciclo)
+                if self.ciclo is not None
+                else None
+            )
+            self.fields["fecha_desde"].initial = fecha_inicial
+            self.initial["fecha_desde"] = fecha_inicial
         for field in self.fields.values():
             _aplicar_clases_bootstrap(field)
+
+    def clean_fecha_desde(self):
+        grupo = self.grupo or getattr(self.instance, "grupo", None)
+        ciclo = grupo.ciclo if grupo is not None else self.ciclo
+        if ciclo is None:
+            raise forms.ValidationError(
+                "No se pudo validar el ciclo del grupo seleccionado."
+            )
+        return validar_fecha_interactiva_ciclo(
+            ciclo,
+            self.cleaned_data.get("fecha_desde"),
+            mensaje_requerida="Debe indicar la fecha de asignación del profesor.",
+            mensaje_anio="La fecha de asignación debe pertenecer al año del ciclo.",
+        )
+
+
+
+class CefDocenteGrupoRectificacionForm(CefDocenteGrupoForm):
+    class Meta(CefDocenteGrupoForm.Meta):
+        fields = ["rol", "fecha_desde", "fecha_hasta", "motivo_baja", "observaciones"]
+        widgets = {
+            **CefDocenteGrupoForm.Meta.widgets,
+            "fecha_hasta": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+        }
+        labels = {
+            **CefDocenteGrupoForm.Meta.labels,
+            "fecha_hasta": "Fecha de finalización",
+            "motivo_baja": "Motivo de baja",
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["fecha_hasta"].required = True
+
+    def clean_fecha_hasta(self):
+        return validar_fecha_interactiva_ciclo(
+            self.ciclo, self.cleaned_data.get("fecha_hasta"),
+        )

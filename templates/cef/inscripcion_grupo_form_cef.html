@@ -1,11 +1,11 @@
 {% extends "cef/base_operativo_cef.html" %}
 
-{% block cef_subtitle %}Edición de los datos ordinarios de la inscripción del alumno.{% endblock %}
+{% block cef_subtitle %}{% if rectificacion_historica %}Rectificación de un período histórico de inscripción. El estado continúa en baja.{% else %}Edición de los datos ordinarios de la inscripción del alumno.{% endif %}{% endblock %}
 
 {% block cef_content %}
 <div class="cef-panel">
     <div class="cef-panel-head">
-        <h2 class="cef-panel-title">Grupos <span>&raquo; Editar inscripción</span></h2>
+        <h2 class="cef-panel-title">Grupos <span>&raquo; {% if rectificacion_historica %}Rectificar inscripción histórica{% else %}Editar inscripción{% endif %}</span></h2>
         <div class="cef-panel-actions">
             <a class="btn btn-outline-secondary" href="{{ volver_url }}">
                 <i class="fa-solid fa-arrow-left"></i> {{ volver_label }}

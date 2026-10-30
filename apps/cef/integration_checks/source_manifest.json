@@ -1,0 +1,17 @@
+{
+  "__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "apps.py": "f945dec9618c3b7435347dad25fedec8f43bf1101e3cf6fd5ae1326fa95af70b",
+  "models.py": "5e4f975e26ad07f7eda4692ff228ac39b431af0066810da907003636e504d383",
+  "services.py": "4c063c84a8819c7f418046bee49b957647ea6ba3627e1302c048fa94fe4d40ff",
+  "services_asistencia.py": "ecddfa8821c98b2682608f4f4c358e7b56c8f6815377d89a42aea4550ee58294",
+  "services_anual.py": "507fc3a4c7316626f30835dc2daeef405d4b3b1744c94fa63999d6f84aacfaf2",
+  "forms.py": "70de37ac22a82cdd3a8e2f982b96759cbe954cfd4c7435083c2aef67fcae9d3c",
+  "permisos.py": "22ccb38509200254453fbc0817e7016b6c3885e90749a35d553dea60ab90107a",
+  "views_carga_grupo.py": "fa1dc2e1d17029169d2abf6161b210dd61a25c7e2d293fb0a34ba8f6e433277b",
+  "views_contexto.py": "99e3696fa1a5e4f03af35894a8cef9a00cffbe76ab72e25b07e5d14fb9c7cbe9",
+  "views_inscripcion_grupo.py": "dbd6e32b109904e9304b3e6a5c28a5a4985d6cd184a302d060e646c3de0390ac",
+  "views_docentes_grupo.py": "07d7a563e8949e5231255b2442ccc5a50afc058a49f993a1618a19aa47334668",
+  "views_alumnos.py": "6a4c160efa035196f13b8ebe6194a782cefaf590ef089df4ee455efa341c36d6",
+  "views_profesores.py": "eea5ac2f6d225ac793e3c2654c98f588875f68e1e8e253069d9e47b8d1c48cea",
+  "performance.py": "6868d89b43c2b004a4e16a9bb4704571d013f41d8e49abcb5fcfb7a18b7a62b2"
+}

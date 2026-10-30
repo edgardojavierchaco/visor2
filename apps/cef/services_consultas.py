@@ -1,15 +1,18 @@
 """Listados CEF y estadísticas predefinidas; comparten alcance y exportación."""
 
+import re
 from collections import defaultdict
 from dataclasses import replace
+from datetime import datetime
 from unicodedata import combining, normalize
 
-from django.db.models import DateField, Exists, OuterRef, Prefetch, Q, Sum, Value
+from django.core.paginator import Paginator
+from django.db.models import Count, DateField, Exists, OuterRef, Prefetch, Q, Sum, Value
 from django.http import QueryDict
 from django.utils import timezone
 
 from . import services_metricas as motor
-from .models import CefDocenteGrupo
+from .models import CefDocenteGrupo, CefGrupo
 
 
 GRUPO_FILTROS = ("actividad", "eje", "nivel", "rango_etario", "turno", "grupo", "dia")
@@ -40,7 +43,7 @@ def _columnas_persona(nombre, alumno):
         ("cuil", "CUIL", False, "text"), *CONTEXTO_COLUMNAS,
         ("grupos", "Grupos", True, "relations"),
         ("actividad", "Actividades", False, "text"), ("turno", "Turnos", False, "text"),
-        ("estado_banco", "Estado en el banco de alumnos del CEF" if alumno else "Estado en el banco de profesores del CEF", False, "text"),
+        ("estado_banco", "Estado en el CEF", False, "text"),
         ("estado_relacion", "Estado de inscripción" if alumno else "Estado de asignación", False, "text"),
     ]
     campos.extend((
@@ -116,13 +119,21 @@ ENTIDADES = {
 }
 
 BUSQUEDA_CAMPOS = {
-    "alumnos": {"persona": ("apellidos", "nombres"), "documento": ("nro_doc",), "cuil": ("cuil",)},
-    "profesores": {"persona": ("docente_nombre_snapshot",), "documento": ("docente_dni_snapshot",), "cuil": ("docente_cuil",)},
+    "alumnos": {"persona": ("apellidos", "nombres"), "documento": ("nro_doc",), "cuil": ("cuil",), "cef": ()},
+    "profesores": {"persona": ("docente_nombre_snapshot",), "documento": ("docente_dni_snapshot",), "cuil": ("docente_cuil",), "cef": ()},
     "grupos": {"grupo": ("nombre",), "actividad": ("actividad_nombre_snapshot", "actividad__nombre"), "cef": ()},
-    "asistencia": {"persona": ("inscripcion__alumno__apellidos", "inscripcion__alumno__nombres"),
+    "asistencia": {
+        "persona": ("inscripcion__alumno__apellidos", "inscripcion__alumno__nombres"),
         "documento": ("inscripcion__alumno__nro_doc",), "cuil": ("inscripcion__alumno__cuil",),
         "grupo": ("jornada__grupo__nombre",),
-        "actividad": ("jornada__grupo__actividad_nombre_snapshot", "jornada__grupo__actividad__nombre"), "cef": ()},
+        "actividad": ("jornada__grupo__actividad_nombre_snapshot", "jornada__grupo__actividad__nombre"),
+        "turno": ("jornada__grupo__turno_nombre_snapshot", "jornada__grupo__turno__nombre"),
+        "nivel": ("jornada__grupo__nivel_nombre_snapshot", "jornada__grupo__nivel__nombre"),
+        "rango_etario": ("jornada__grupo__rango_etario_nombre_snapshot", "jornada__grupo__rango_etario__nombre"),
+        "eje": ("jornada__grupo__eje_nombre_snapshot", "jornada__grupo__actividad__eje__nombre"),
+        "dias": ("jornada__grupo__dias_funcionamiento__dia_semana__nombre",),
+        "estado_grupo": ("jornada__grupo__estado",), "estado_asistencia": ("estado",), "cef": (),
+    },
     "inventario": {"material": ("inventario_material__material_nombre_snapshot", "inventario_material__material__nombre"),
         "estado_material": ("estado__nombre", "estado_descripcion"), "cef": ()},
     "datos": {"cueanexo": ("cueanexo",), "cef": ()},
@@ -130,6 +141,20 @@ BUSQUEDA_CAMPOS = {
 BUSQUEDA_ETIQUETAS = {"persona": "Alumno", "documento": "Documento", "cuil": "CUIL",
     "grupo": "Grupo", "actividad": "Actividad", "cef": "CEF", "material": "Material",
     "estado_material": "Estado", "cueanexo": "CUE-Anexo"}
+
+BUSQUEDA_ASISTENCIA_TODOS = (
+    "inscripcion__alumno__apellidos", "inscripcion__alumno__nombres",
+    "inscripcion__alumno__nro_doc", "inscripcion__alumno__cuil",
+    "jornada__grupo__nombre",
+    "jornada__grupo__actividad_nombre_snapshot", "jornada__grupo__actividad__nombre",
+    "jornada__grupo__eje_nombre_snapshot", "jornada__grupo__actividad__eje__nombre",
+    "jornada__grupo__nivel_nombre_snapshot", "jornada__grupo__nivel__nombre",
+    "jornada__grupo__rango_etario_nombre_snapshot", "jornada__grupo__rango_etario__nombre",
+    "jornada__grupo__turno_nombre_snapshot", "jornada__grupo__turno__nombre",
+    "jornada__grupo__dias_funcionamiento__dia_semana__nombre",
+    "jornada__grupo__estado", "estado",
+)
+BUSQUEDA_ASISTENCIA_ESPECIAL = {"ciclo", "fecha", "horario"}
 
 PREGUNTAS = {
     "alumnos_cef": ("alumnos", "¿Cuántos alumnos inscriptos tiene cada CEF?", "alumnos_inscriptos_activos", "cef", "", "bar"),
@@ -155,29 +180,175 @@ FECHAS = {
 def _campos_busqueda(entidad):
     campos = {columna["key"]: columna["label"] for columna in ENTIDADES[entidad]["columns"]}
     for campo in BUSQUEDA_CAMPOS[entidad]:
-        campos.setdefault(campo, BUSQUEDA_ETIQUETAS[campo])
+        if campo not in campos:
+            campos[campo] = BUSQUEDA_ETIQUETAS.get(campo, campo.replace("_", " ").capitalize())
     return campos
 
 
-def _buscar_filas(filas, texto, campo):
-    """Busca columnas calculadas sobre el resultado completo, antes de paginar."""
-    def normalizar(valor):
-        return "".join(c for c in normalize("NFD", str(valor).casefold()) if not combining(c))
+def _normalizar_busqueda(valor):
+    return "".join(c for c in normalize("NFD", str(valor).casefold()) if not combining(c))
 
-    terminos = normalizar(texto).replace(",", " ").split()
+
+def _texto_busqueda_fila(valor):
+    if valor is None or valor == "":
+        return motor.SIN_INFORMACION
+    if isinstance(valor, (int, float)):
+        return str(valor) + " " + motor._formatear_numero(valor, "")
+    return str(valor)
+
+
+def _buscar_filas(filas, texto, campo):
+    """Busca una columna calculada sobre el resultado completo, antes de paginar."""
+    terminos = _normalizar_busqueda(texto).replace(",", " ").split()
 
     def coincide(fila):
-        valor = fila.get(campo)
-        if valor is None or valor == "":
-            texto_valor = motor.SIN_INFORMACION
-        elif isinstance(valor, (int, float)):
-            texto_valor = str(valor) + " " + motor._formatear_numero(valor, "")
-        else:
-            texto_valor = str(valor)
-        texto_valor = normalizar(texto_valor)
+        texto_valor = _normalizar_busqueda(_texto_busqueda_fila(fila.get(campo)))
         return all(termino in texto_valor for termino in terminos)
 
     return [fila for fila in filas if coincide(fila)]
+
+
+def _buscar_filas_todos(filas, texto, campos):
+    """Busca sobre la fila pública completa para que "Todos" represente lo visible."""
+    terminos = _normalizar_busqueda(texto).replace(",", " ").split()
+
+    def coincide(fila):
+        texto_valor = _normalizar_busqueda(" ".join(
+            _texto_busqueda_fila(fila.get(campo)) for campo in campos
+        ))
+        return all(termino in texto_valor for termino in terminos)
+
+    return [fila for fila in filas if coincide(fila)]
+
+
+def _numero_grupo_busqueda(texto):
+    coincidencia = re.search(
+        r"\bgrupo\s+(?:n(?:ro)?\.?\s*)?(\d+)\b",
+        _normalizar_busqueda(texto),
+    )
+    return int(coincidencia.group(1)) if coincidencia else None
+
+
+def _fecha_busqueda(texto):
+    for formato in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(texto, formato).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _horas_busqueda(texto):
+    horas = []
+    for hora, minuto in re.findall(r"(?<!\d)(\d{1,2}):(\d{2})(?!\d)", str(texto)):
+        try:
+            valor = datetime.strptime(f"{hora}:{minuto}", "%H:%M").time()
+        except ValueError:
+            continue
+        if valor not in horas:
+            horas.append(valor)
+    return tuple(horas)
+
+
+def _cefs_busqueda(termino, cef_map):
+    termino_normalizado = _normalizar_busqueda(termino)
+    return [
+        key for key, datos in cef_map.items()
+        if termino_normalizado in _normalizar_busqueda(datos["label"])
+    ]
+
+
+def _busqueda_directa(entidad, campo):
+    return (
+        campo in BUSQUEDA_CAMPOS[entidad]
+        or (entidad == "asistencia" and campo in BUSQUEDA_ASISTENCIA_ESPECIAL)
+    )
+
+
+def _ids_personas_todos(entidad, banco, relaciones, cef_map, texto, raices_alumno=None):
+    """Reduce candidatos por ID/CUIL antes de construir las filas públicas."""
+    alumno = entidad == "alumnos"
+    identidad = "alumno_id" if alumno else "docente_cuil"
+    encontrados = None
+    sexo_map = motor._opciones_sexo_mapa({}) if alumno else {}
+
+    for termino in texto.replace(",", " ").split():
+        ids_termino = set()
+        cefs = _cefs_busqueda(termino, cef_map)
+
+        if alumno:
+            campos_banco = ("estado",)
+        else:
+            campos_banco = (
+                "docente_nombre_snapshot", "docente_dni_snapshot",
+                "docente_cuil", "estado",
+            )
+        condicion_banco = Q()
+        for campo in campos_banco:
+            condicion_banco |= Q(**{campo + "__icontains": termino})
+        condicion_banco |= Q(cueanexo__in=cefs)
+        if termino.isdigit():
+            condicion_banco |= Q(ciclo__anio=int(termino))
+        ids_termino.update(
+            banco.filter(condicion_banco).values_list(identidad, flat=True)
+        )
+
+        condicion_relacion = Q()
+        if not alumno:
+            for campo in ("docente_nombre_snapshot", "docente_dni_snapshot", "docente_cuil"):
+                condicion_relacion |= Q(**{campo + "__icontains": termino})
+        for campo in (
+            "grupo__actividad_nombre_snapshot", "grupo__actividad__nombre",
+            "grupo__turno_nombre_snapshot", "grupo__turno__nombre",
+            "estado",
+        ):
+            condicion_relacion |= Q(**{campo + "__icontains": termino})
+        if not alumno:
+            condicion_relacion |= Q(rol__icontains=termino)
+        condicion_relacion |= Q(grupo__cueanexo__in=cefs)
+        if termino.isdigit():
+            condicion_relacion |= Q(grupo__ciclo__anio=int(termino))
+        ids_termino.update(
+            relaciones.filter(condicion_relacion).values_list(identidad, flat=True)
+        )
+
+        if termino.isdigit():
+            cantidad = int(termino)
+            ids_termino.update(
+                relaciones.order_by().values(identidad)
+                .annotate(_consulta_grupos=Count("grupo_id", distinct=True))
+                .filter(_consulta_grupos=cantidad)
+                .values_list(identidad, flat=True)
+            )
+
+        if alumno and raices_alumno is not None:
+            condicion_raiz = (
+                Q(apellidos__icontains=termino)
+                | Q(nombres__icontains=termino)
+                | Q(nro_doc__icontains=termino)
+                | Q(cuil__icontains=termino)
+            )
+            if termino.isdigit():
+                condicion_raiz |= Q(_metrica_edad=int(termino))
+            fecha = _fecha_busqueda(termino)
+            if fecha is not None:
+                condicion_raiz |= Q(fecha_nacimiento=fecha)
+            termino_normalizado = _normalizar_busqueda(termino)
+            sexos = [
+                sexo_id for sexo_id, label in sexo_map.items()
+                if termino_normalizado in _normalizar_busqueda(label)
+            ]
+            if sexos:
+                condicion_raiz |= Q(sexo_id__in=sexos)
+            ids_termino.update(
+                raices_alumno.filter(condicion_raiz).values_list("pk", flat=True)
+            )
+
+        encontrados = ids_termino if encontrados is None else encontrados & ids_termino
+        if not encontrados:
+            break
+
+    return encontrados or set()
 
 
 def _filtro_definicion(entidad, clave, cef_map, cache, ciclos):
@@ -185,14 +356,14 @@ def _filtro_definicion(entidad, clave, cef_map, cache, ciclos):
     if clave in FECHAS:
         label = FECHAS[clave]
         if clave == "fecha_alta":
-            label = "Fecha de alta en el banco de alumnos del CEF" if entidad == "alumnos" else "Fecha de alta en el banco de profesores del CEF"
+            label = "Fecha de alta en el CEF"
         return {"key": clave, "label": label, "type": "date_range"}
     if clave in ESTADOS:
         area_estado = "asistencia" if clave == "estado_asistencia" else "inventario" if clave == "estado_material" else "grupos"
         definicion = motor._definicion_filtro(area_estado, "estado", cef_map, cache, ciclos)
         label = ESTADOS[clave]
         if clave == "estado_banco":
-            label = "Estado en el banco de alumnos del CEF" if entidad == "alumnos" else "Estado en el banco de profesores del CEF"
+            label = "Estado en el CEF"
         return dict(definicion, key=clave, label=label)
     definicion = motor._definicion_filtro(area, clave, cef_map, cache, ciclos)
     if clave == "edad":
@@ -319,20 +490,117 @@ def _filtrar(qs, consulta, descriptores):
     return motor._aplicar_filtros(qs, replace(consulta, filtros=filtros), {"filtros": descriptores})
 
 
-def _buscar(qs, texto, campos, campo_cef=None, cef_map=None, *, entidad=None, buscar_campo=""):
+def _buscar(
+    qs,
+    texto,
+    campos,
+    campo_cef=None,
+    cef_map=None,
+    *,
+    entidad=None,
+    buscar_campo="",
+    campo_numero_grupo=None,
+):
     if buscar_campo:
         campos = BUSQUEDA_CAMPOS[entidad][buscar_campo]
         if buscar_campo != "cef":
             campo_cef = None
+
+    numero_grupo = _numero_grupo_busqueda(texto) if campo_numero_grupo else None
+    requiere_distinct = any("dias_funcionamiento" in campo for campo in campos)
+
     for termino in texto.replace(",", " ").split():
         condicion = Q()
         for campo in campos:
             condicion |= Q(**{campo + "__icontains": termino})
         if campo_cef:
-            cefs = [key for key, datos in cef_map.items() if termino.casefold() in datos["label"].casefold()]
-            condicion |= Q(**{campo_cef + "__in": cefs})
+            condicion |= Q(**{campo_cef + "__in": _cefs_busqueda(termino, cef_map)})
+        if campo_numero_grupo and numero_grupo is not None:
+            condicion |= Q(**{campo_numero_grupo: numero_grupo})
+        elif campo_numero_grupo and termino.isdigit():
+            condicion |= Q(**{campo_numero_grupo: int(termino)})
+        elif campo_numero_grupo and _normalizar_busqueda(termino) == "grupo" and campos:
+            condicion |= Q(**{campos[0]: ""})
         qs = qs.filter(condicion)
-    return qs
+
+    return qs.distinct() if requiere_distinct else qs
+
+
+def _buscar_asistencia(qs, texto, cef_map, buscar_campo=""):
+    """Resuelve en SQL la búsqueda de Asistencia, incluida la opción Todos."""
+    prefijo = "jornada__grupo__"
+
+    if buscar_campo in BUSQUEDA_CAMPOS["asistencia"]:
+        return _buscar(
+            qs,
+            texto,
+            BUSQUEDA_ASISTENCIA_TODOS,
+            prefijo + "cueanexo",
+            cef_map,
+            entidad="asistencia",
+            buscar_campo=buscar_campo,
+            campo_numero_grupo=prefijo + "numero" if buscar_campo == "grupo" else None,
+        )
+
+    numero_grupo = _numero_grupo_busqueda(texto)
+    for termino in texto.replace(",", " ").split():
+        condicion = Q()
+
+        if not buscar_campo:
+            for campo in BUSQUEDA_ASISTENCIA_TODOS:
+                condicion |= Q(**{campo + "__icontains": termino})
+            condicion |= Q(**{prefijo + "cueanexo__in": _cefs_busqueda(termino, cef_map)})
+            if numero_grupo is not None:
+                condicion |= Q(**{prefijo + "numero": numero_grupo})
+            elif _normalizar_busqueda(termino) == "grupo":
+                condicion |= Q(**{prefijo + "nombre": ""})
+            if termino.isdigit():
+                numero = int(termino)
+                condicion |= Q(**{prefijo + "numero": numero})
+                condicion |= Q(**{prefijo + "ciclo__anio": numero})
+
+            fecha = _fecha_busqueda(termino)
+            if fecha is not None:
+                condicion |= Q(jornada__fecha=fecha)
+
+            horas = _horas_busqueda(termino)
+            if len(horas) >= 2:
+                condicion |= Q(**{
+                    prefijo + "hora_inicio": horas[0],
+                    prefijo + "hora_fin": horas[1],
+                })
+            elif horas:
+                condicion |= Q(**{prefijo + "hora_inicio": horas[0]})
+                condicion |= Q(**{prefijo + "hora_fin": horas[0]})
+
+        elif buscar_campo == "ciclo":
+            if termino.isdigit():
+                condicion = Q(**{prefijo + "ciclo__anio": int(termino)})
+            else:
+                condicion = Q(pk__in=[])
+
+        elif buscar_campo == "fecha":
+            fecha = _fecha_busqueda(termino)
+            condicion = Q(jornada__fecha=fecha) if fecha is not None else Q(pk__in=[])
+
+        elif buscar_campo == "horario":
+            horas = _horas_busqueda(termino)
+            if len(horas) >= 2:
+                condicion = Q(**{
+                    prefijo + "hora_inicio": horas[0],
+                    prefijo + "hora_fin": horas[1],
+                })
+            elif horas:
+                condicion = (
+                    Q(**{prefijo + "hora_inicio": horas[0]})
+                    | Q(**{prefijo + "hora_fin": horas[0]})
+                )
+            else:
+                condicion = Q(pk__in=[])
+
+        qs = qs.filter(condicion)
+
+    return qs.distinct()
 
 
 def _fecha(valor):
@@ -344,7 +612,8 @@ def _unicos(valores):
 
 
 def _contexto(cue, ciclo, cef_map):
-    return {"cef": motor._cef_resultado(cue, cef_map), "cueanexo": cue, "ciclo": ciclo.anio}
+    # Un ciclo es una etiqueta/año, no una cantidad: debe mostrarse siempre como 2026.
+    return {"cef": motor._cef_resultado(cue, cef_map), "cueanexo": cue, "ciclo": str(ciclo.anio)}
 
 
 def _cargar_grupos(qs, prefijo=""):
@@ -412,6 +681,9 @@ def _personas(entidad, consulta, cef_map, paginar, buscar_campo=""):
             identidad: OuterRef(identidad), "grupo__cueanexo": OuterRef("cueanexo"),
             "grupo__ciclo_id": OuterRef("ciclo_id"),
         })))
+    if buscar_campo == "cef" and consulta.buscar:
+        banco = _buscar(banco, consulta.buscar, (), "cueanexo", cef_map)
+        relaciones = _buscar(relaciones, consulta.buscar, (), "grupo__cueanexo", cef_map)
     if alumno:
         modelo = banco.model._meta.get_field("alumno").remote_field.model
         raices = modelo.objects.filter(
@@ -421,14 +693,40 @@ def _personas(entidad, consulta, cef_map, paginar, buscar_campo=""):
         raices = raices.annotate(_consulta_hoy=Value(timezone.localdate(), output_field=DateField()))
         raices = raices.annotate(_metrica_edad=motor._edad_historica_expresion("_consulta_hoy", "fecha_nacimiento"))
         raices = _filtrar(raices, consulta, {"sexo": "sexo_id", "edad": ("edad",)})
-        raices = _buscar(raices, consulta.buscar, ("apellidos", "nombres", "nro_doc", "cuil"), entidad=entidad, buscar_campo=buscar_campo).order_by("apellidos", "nombres", "pk")
+        if consulta.buscar and not buscar_campo:
+            ids_busqueda = _ids_personas_todos(
+                entidad, banco, relaciones, cef_map, consulta.buscar, raices
+            )
+            raices = raices.filter(pk__in=ids_busqueda)
+        else:
+            raices = _buscar(
+                raices,
+                consulta.buscar,
+                ("apellidos", "nombres", "nro_doc", "cuil"),
+                entidad=entidad,
+                buscar_campo=buscar_campo,
+            )
+        raices = raices.order_by("apellidos", "nombres", "pk")
         registros, paginacion = motor._paginar_filas(raices, consulta, paginar)
         ids = [r.pk for r in registros]
     else:
-        campos = ("docente_nombre_snapshot", "docente_dni_snapshot", "docente_cuil")
-        candidatos_banco = _buscar(banco, consulta.buscar, campos, entidad=entidad, buscar_campo=buscar_campo).order_by().values_list(identidad, flat=True)
-        candidatos_relacion = _buscar(relaciones, consulta.buscar, campos, entidad=entidad, buscar_campo=buscar_campo).order_by().values_list(identidad, flat=True)
-        raices = candidatos_banco.union(candidatos_relacion).order_by(identidad)
+        if consulta.buscar and not buscar_campo:
+            raices = sorted(
+                _ids_personas_todos(
+                    entidad, banco, relaciones, cef_map, consulta.buscar
+                )
+            )
+        else:
+            campos = ("docente_nombre_snapshot", "docente_dni_snapshot", "docente_cuil")
+            candidatos_banco = _buscar(
+                banco, consulta.buscar, campos,
+                entidad=entidad, buscar_campo=buscar_campo
+            ).order_by().values_list(identidad, flat=True)
+            candidatos_relacion = _buscar(
+                relaciones, consulta.buscar, campos,
+                entidad=entidad, buscar_campo=buscar_campo
+            ).order_by().values_list(identidad, flat=True)
+            raices = candidatos_banco.union(candidatos_relacion).order_by(identidad)
         ids, paginacion = motor._paginar_filas(raices, consulta, paginar)
         registros = ids
     bancos_por_id, relaciones_por_id = defaultdict(list), defaultdict(list)
@@ -482,12 +780,21 @@ def _registros(entidad, consulta, cef_map, paginar, buscar_campo=""):
     qs = _filtrar(qs, consulta, descriptores)
     if entidad in {"grupos", "asistencia"}:
         prefijo = "" if entidad == "grupos" else "jornada__grupo__"
-        campos = [prefijo + "nombre", prefijo + "actividad_nombre_snapshot", prefijo + "actividad__nombre"]
         if entidad == "asistencia":
-            campos += ["inscripcion__alumno__apellidos", "inscripcion__alumno__nombres",
-                       "inscripcion__alumno__nro_doc", "inscripcion__alumno__cuil"]
             qs = qs.select_related("inscripcion__alumno", "jornada")
-        qs = _buscar(qs, consulta.buscar, campos, prefijo + "cueanexo", cef_map, entidad=entidad, buscar_campo=buscar_campo)
+            qs = _buscar_asistencia(qs, consulta.buscar, cef_map, buscar_campo)
+        else:
+            campos = ("nombre", "actividad_nombre_snapshot", "actividad__nombre")
+            qs = _buscar(
+                qs,
+                consulta.buscar,
+                campos,
+                "cueanexo",
+                cef_map,
+                entidad=entidad,
+                buscar_campo=buscar_campo,
+                campo_numero_grupo="numero" if buscar_campo == "grupo" else None,
+            )
         qs = _cargar_grupos(qs, prefijo)
         if entidad == "grupos":
             qs = motor._anotar_alumnos_activos(qs).prefetch_related(Prefetch(
@@ -548,10 +855,21 @@ def ejecutar_listado(params, paginar=True):
     consulta, filtros, columnas = _resolver_listado(params, entidad, ciclos_db, cef_map)
     funcion = _personas if entidad in {"alumnos", "profesores"} else _registros
     buscar_campo = params.get("buscar_campo", "")
-    if buscar_campo and buscar_campo not in BUSQUEDA_CAMPOS[entidad]:
+    if consulta.buscar and not buscar_campo and entidad not in {"asistencia", "alumnos", "profesores"}:
+        # "Todos" debe representar la fila pública completa. Asistencia y
+        # personas se reducen antes en SQL/IDs para evitar materializar listados grandes.
+        filas, _, _ = funcion(entidad, replace(consulta, buscar=""), cef_map, False)
+        filas = _buscar_filas_todos(
+            filas,
+            consulta.buscar,
+            [columna["key"] for columna in ENTIDADES[entidad]["columns"]],
+        )
+        total = sum(fila["cantidad"] for fila in filas) if entidad == "inventario" else len(filas)
+        filas, paginacion = motor._paginar_filas(filas, consulta, paginar)
+    elif buscar_campo and not _busqueda_directa(entidad, buscar_campo):
         if consulta.buscar:
-            # Reutilizar la proyección pública: estados, fechas, totales y relaciones
-            # deben coincidir con lo mostrado, manteniendo el mismo alcance y filtros.
+            # Las columnas calculadas se buscan sobre la misma proyección que ve
+            # la persona usuaria, preservando filtros y alcance.
             filas, _, _ = funcion(entidad, replace(consulta, buscar=""), cef_map, False)
             filas = _buscar_filas(filas, consulta.buscar, buscar_campo)
             total = sum(fila["cantidad"] for fila in filas) if entidad == "inventario" else len(filas)
@@ -579,11 +897,213 @@ def ejecutar_listado(params, paginar=True):
         "table": {"kind": "records", "columns": columnas_resultado, "rows": filas, "pagination": paginacion,
             "detail_columns": detalle_columnas,
             "bank_columns": _columnas(*CONTEXTO_COLUMNAS,
-                ("estado_banco", "Estado en el banco de alumnos del CEF" if entidad == "alumnos" else "Estado en el banco de profesores del CEF", True, "text"),
-                ("desde", "Fecha de alta", True, "text"), ("hasta", "Fecha de baja", True, "text"))},
+                ("estado_banco", "Estado en el CEF", True, "text"),
+                ("desde", "Alta en el CEF", True, "text"), ("hasta", "Baja en el CEF", True, "text"))},
         "definition": "Resultados que coinciden con los CEF, ciclos, filtros y búsqueda seleccionados.",
         "notes": ["Una fila por persona. El detalle incluye sólo los grupos y registros en el CEF que coinciden con los filtros, dentro de los CEF y ciclos seleccionados."] if entidad in {"alumnos", "profesores"} else [],
     }
+
+
+
+
+def _cef_corto_estadistica(cef):
+    nombre = str(cef.get("nombre") or "")
+    coincidencia = re.search(r"\bN(?:RO\.?|[º°])?\s*0*(\d+)\b", nombre, re.IGNORECASE)
+    if coincidencia:
+        return "CEF " + coincidencia.group(1)
+    return "CEF " + str(cef.get("value") or "")
+
+
+def _cefs_cortos_estadistica(cefs):
+    bases = defaultdict(list)
+    for cef in cefs:
+        bases[_cef_corto_estadistica(cef)].append(str(cef.get("value") or ""))
+    resultado = {}
+    for cef in cefs:
+        value = str(cef.get("value") or "")
+        base = _cef_corto_estadistica(cef)
+        resultado[value] = base if len(bases[base]) == 1 else f"{base} · {value}"
+    return resultado
+
+
+def _grupo_corto_estadistica(grupo):
+    actividad = (
+        grupo.actividad_nombre_snapshot
+        or (grupo.actividad.nombre if grupo.actividad_id else "")
+        or "Actividad sin información"
+    )
+    nombre = (grupo.nombre or "").strip() or f"Grupo {grupo.numero}"
+    if _normalizar_busqueda(nombre).startswith(_normalizar_busqueda(actividad)):
+        return nombre
+    return f"{actividad} · {nombre}"
+
+
+def _paginar_estadistica_personalizada(filas, params, paginar):
+    if not paginar:
+        return filas, None
+    try:
+        tamano = int(params.get("tamano") or 25)
+    except (TypeError, ValueError):
+        tamano = 25
+    try:
+        pagina_solicitada = int(params.get("pagina") or 1)
+    except (TypeError, ValueError):
+        pagina_solicitada = 1
+    paginador = Paginator(filas, tamano)
+    pagina = paginador.get_page(pagina_solicitada)
+    return list(pagina.object_list), {
+        "page": pagina.number,
+        "page_size": tamano,
+        "total_rows": paginador.count,
+        "pages": paginador.num_pages,
+        "from": pagina.start_index(),
+        "to": pagina.end_index(),
+    }
+
+
+def _personalizar_ocupacion_grupos(resultado, params, paginar):
+    """Presentación legible de la ocupación cuando se cruzan varios CEF/ciclos."""
+    tabla = resultado.get("table") or {}
+    filas = list(tabla.get("rows") or [])
+    query = resultado.get("query") or {}
+    cefs = list(query.get("cefs") or [])
+    ciclos = list(query.get("ciclos") or [])
+    varios_cef = len(cefs) > 1
+    varios_ciclos = len(ciclos) > 1
+
+    ids = {
+        int(fila["grupo_key"])
+        for fila in filas
+        if str(fila.get("grupo_key") or "").isdigit()
+    }
+    grupos = {
+        grupo.pk: grupo
+        for grupo in CefGrupo.objects.filter(pk__in=ids).select_related("ciclo", "actividad")
+    }
+    cef_por_codigo = {str(cef.get("value") or ""): cef for cef in cefs}
+    cef_corto = _cefs_cortos_estadistica(cefs)
+    orden_cef = {str(cef.get("value") or ""): indice for indice, cef in enumerate(cefs)}
+    orden_ciclo = {
+        int(ciclo.get("anio")): indice
+        for indice, ciclo in enumerate(ciclos)
+        if ciclo.get("anio") is not None
+    }
+
+    filas_personalizadas = []
+    for fila in filas:
+        try:
+            grupo_id = int(fila.get("grupo_key"))
+        except (TypeError, ValueError):
+            grupo_id = None
+        grupo = grupos.get(grupo_id)
+        if grupo is None:
+            filas_personalizadas.append(dict(fila))
+            continue
+
+        codigo_cef = str(grupo.cueanexo)
+        actividad = (
+            grupo.actividad_nombre_snapshot
+            or (grupo.actividad.nombre if grupo.actividad_id else "")
+            or ""
+        )
+        nueva = dict(fila)
+        nueva["grupo"] = _grupo_corto_estadistica(grupo)
+        if varios_cef:
+            nueva["cef"] = cef_corto.get(codigo_cef, codigo_cef)
+        if varios_ciclos:
+            nueva["ciclo"] = grupo.ciclo.anio
+        nueva["_orden"] = (
+            orden_cef.get(codigo_cef, len(orden_cef)),
+            orden_ciclo.get(grupo.ciclo.anio, len(orden_ciclo)),
+            _normalizar_busqueda(actividad),
+            grupo.numero,
+            grupo.pk,
+        )
+        filas_personalizadas.append(nueva)
+
+    filas_personalizadas.sort(key=lambda fila: fila.get("_orden", (9999, 9999, "", 9999, 9999)))
+    for fila in filas_personalizadas:
+        fila.pop("_orden", None)
+
+    columnas_metricas = [
+        columna for columna in (tabla.get("columns") or [])
+        if columna.get("key") != "grupo"
+    ]
+    columnas = []
+    if varios_cef:
+        columnas.append({"key": "cef", "label": "CEF"})
+    if varios_ciclos:
+        columnas.append({"key": "ciclo", "label": "Ciclo"})
+    columnas.append({"key": "grupo", "label": "Grupo"})
+    columnas.extend(columnas_metricas)
+
+    filas_paginadas, paginacion = _paginar_estadistica_personalizada(
+        filas_personalizadas, params, paginar
+    )
+    tabla["columns"] = columnas
+    tabla["rows"] = filas_paginadas
+    tabla["pagination"] = paginacion
+
+    total = resultado.get("total") or {}
+    total["label"] = "Ocupación total de los grupos seleccionados"
+    cantidad_grupos = len(filas_personalizadas)
+    detalle = (
+        f"{motor._formatear_numero(total.get('numerator'), '')} inscripciones activas "
+        f"sobre un cupo total informado de "
+        f"{motor._formatear_numero(total.get('denominator'), '')}"
+    )
+    detalle += f" · {cantidad_grupos} " + ("grupo" if cantidad_grupos == 1 else "grupos")
+    total["detail"] = detalle
+
+    grafico = resultado.get("chart") or {}
+    claves = [str(clave) for clave in (grafico.get("keys") or [])]
+    if claves and not grafico.get("omitted"):
+        etiquetas = []
+        etiquetas_completas = []
+        categorias = []
+        for clave in claves:
+            grupo = grupos.get(int(clave)) if clave.isdigit() else None
+            if grupo is None:
+                etiquetas.append(clave)
+                etiquetas_completas.append(clave)
+                categorias.append({"key": clave, "label": "", "cycle": ""})
+                continue
+            codigo_cef = str(grupo.cueanexo)
+            grupo_corto = _grupo_corto_estadistica(grupo)
+            etiquetas.append(grupo_corto)
+            categorias.append({
+                "key": codigo_cef,
+                "label": cef_corto.get(codigo_cef, codigo_cef) if varios_cef else "",
+                "cycle": str(grupo.ciclo.anio) if varios_ciclos else "",
+            })
+
+            cef_completo = cef_por_codigo.get(codigo_cef, {}).get("label") or codigo_cef
+            etiquetas_completas.append(
+                f"{cef_completo} · {grupo_corto} · {grupo.ciclo.anio}"
+            )
+
+        # Sólo el gráfico sigue el orden CEF/ciclo/grupo ya resuelto para la tabla.
+        orden_grafico = {
+            str(fila.get("grupo_key")): indice
+            for indice, fila in enumerate(filas_personalizadas)
+        }
+        indices = sorted(
+            range(len(etiquetas)),
+            key=lambda indice: orden_grafico.get(claves[indice], len(orden_grafico) + indice),
+        )
+        grafico["labels"] = [etiquetas[indice] for indice in indices]
+        grafico["full_labels"] = [etiquetas_completas[indice] for indice in indices]
+        grafico["category_groups"] = [categorias[indice] for indice in indices]
+        grafico["keys"] = [claves[indice] for indice in indices]
+        for serie in grafico.get("series") or []:
+            datos = list(serie.get("data") or [])
+            serie["data"] = [datos[indice] if indice < len(datos) else None for indice in indices]
+        grafico["presentation"] = "grupos_ocupacion"
+        grafico["orientation"] = "vertical"
+        grafico["max_value"] = 100
+        grafico["value_suffix"] = " %"
+
+    return resultado
 
 
 def ejecutar_estadistica(params, paginar=True):
@@ -601,8 +1121,14 @@ def ejecutar_estadistica(params, paginar=True):
         raise motor.MetricasValidationError("La presentación de esta estadística ya está definida.")
     base.update({"area": ENTIDADES[entidad]["area"], "indicador": indicador, "agrupar": agrupar,
                  "comparar": comparar, "grafico": grafico, "vista": "resumen"})
-    resultado = motor.ejecutar_consulta_metricas(base, paginar_detalle=paginar)
+    personalizar_ocupacion = key == "grupos_ocupacion"
+    resultado = motor.ejecutar_consulta_metricas(
+        base,
+        paginar_detalle=False if personalizar_ocupacion else paginar,
+    )
     resultado.update(mode="estadisticas", entity=entidad, question=label)
+    if personalizar_ocupacion:
+        resultado = _personalizar_ocupacion_grupos(resultado, params, paginar)
     if entidad == "inventario":
         resultado["notes"].append(
             "Esta estadística incluye unidades con estado asociado al catálogo. "

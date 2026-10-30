@@ -16,7 +16,7 @@ from .models import (
 from .performance import perf_begin, perf_capture_queries, perf_finish
 
 
-PERMISOS_CEF_CACHE_VERSION = "v4"
+PERMISOS_CEF_CACHE_VERSION = "v6"
 PERMISOS_CEF_CACHE_TTL = 60
 ROLES_METRICAS_CEF = {
     "administrador",
@@ -52,14 +52,18 @@ def _resolver_permisos_cef(user):
 
 
 def get_permisos_cef_request(request):
-    """Reutiliza permisos CEF por request y por usuario durante un TTL corto."""
+    """Reutiliza permisos por request; revalida el alcance de Director y Profesor."""
     permisos = getattr(request, "_cef_permisos_usuario", None)
     if permisos is None:
         cache_key = _permisos_cef_cache_key(request.user)
         sentinel = object()
         permisos = cache.get(cache_key, sentinel) if cache_key else sentinel
 
-        if permisos is sentinel:
+        if (
+            permisos is sentinel
+            or permisos.get("es_director_cef", False)
+            or permisos.get("es_profesor_cef", False)
+        ):
             permisos = _resolver_permisos_cef(request.user)
             if cache_key:
                 cache.set(cache_key, permisos, PERMISOS_CEF_CACHE_TTL)

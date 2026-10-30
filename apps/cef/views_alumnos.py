@@ -444,7 +444,7 @@ def _inscribir_alumno_grupo_desde_historial(request, cef_context):
     if not cef_context["puede_operar"]:
         messages.error(
             request,
-            "El ciclo está cerrado. La información se encuentra en modo sólo lectura.",
+            (cef_context.get("mensaje_bloqueo_inicio") or ("El ciclo está cerrado. La información se encuentra en modo sólo lectura.")),
         )
         return
 
@@ -927,7 +927,7 @@ def _alumno_baja_modal(cef_context, alumno_banco_id):
 
 def _reincorporar_alumno_cef(request, cef_context):
     if not cef_context["puede_operar"]:
-        return None, "El ciclo está cerrado o no está listo para operar."
+        return None, (cef_context.get("mensaje_bloqueo_inicio") or ("El ciclo está cerrado o no está listo para operar."))
 
     periodo = _alumno_cef_seguro(
         request.POST.get("alumno_banco_id"),
@@ -1039,9 +1039,9 @@ def alumnos(request):
             return redirect(_url_alumnos(cef_context, "historial"))
         if not cef_context["puede_operar"]:
             message = (
-                "El ciclo está cerrado. La información se encuentra en modo sólo lectura."
+                (cef_context.get("mensaje_bloqueo_inicio") or ("El ciclo está cerrado. La información se encuentra en modo sólo lectura."
                 if cef_context["ciclo_cerrado"]
-                else "Seleccioná un CUE-Anexo y un ciclo lectivo para gestionar alumnos."
+                else "Seleccioná un CUE-Anexo y un ciclo lectivo para gestionar alumnos."))
             )
             if _is_ajax(request):
                 return JsonResponse({"ok": False, "message": message})

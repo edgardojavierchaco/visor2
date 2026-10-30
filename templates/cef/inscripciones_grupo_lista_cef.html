@@ -109,15 +109,18 @@
                                 <div class="cef-history-detail-panel">
                                     <div class="cef-history-detail-head"><strong><i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> Historial de inscripciones</strong><span>Inscripciones registradas: {{ inscripcion.historial_inscripciones|length }}</span></div>
                                     <div class="cef-table-wrap cef-history-detail-table-wrap"><table class="cef-dt cef-history-detail-table">
-                                    <thead><tr><th>Inscripción</th><th>Ciclo</th><th>Estado</th><th>Fecha de incorporación al grupo</th><th>Fecha de baja</th><th>Motivo</th><th>Observaciones</th></tr></thead>
+                                    <thead><tr><th>Inscripción</th><th>Ciclo</th><th>Estado</th><th>Fecha de incorporación al grupo</th><th>Fecha de baja</th><th>Motivo</th><th>Observaciones</th>{% if puede_rectificar_historial %}<th>Acciones</th>{% endif %}</tr></thead>
                                     <tbody>{% for periodo in inscripcion.historial_inscripciones %}<tr class="{% if periodo.estado != 'activo' %}cef-row-inactive{% endif %}">
                                         <td><strong>N.º {{ periodo.numero_inscripcion }}</strong></td>
-                                        <td><strong>{{ grupo.ciclo.anio }}</strong></td>
+                                        <td><strong>{{ grupo.ciclo.anio|stringformat:"s" }}</strong></td>
                                         <td><span class="badge text-bg-{% if periodo.estado == 'activo' %}success{% else %}secondary{% endif %}">{% if grupo.ciclo.cerrado and periodo.estado == 'activo' %}Activo al cierre{% else %}{{ periodo.get_estado_display }}{% endif %}</span></td>
                                         <td>{{ periodo.fecha_inscripcion|date:"d/m/Y" }}</td>
                                         <td>{{ periodo.fecha_baja|date:"d/m/Y"|default:"-" }}</td>
                                         <td>{{ periodo.motivo_baja|default:"Sin motivo" }}</td>
                                         <td>{{ periodo.observaciones|default:"-" }}</td>
+                                        {% if puede_rectificar_historial %}<td class="cef-act-cell">
+                                            {% if periodo.estado == 'baja' %}<a class="btn btn-outline-secondary btn-sm" href="{% url 'cef:editar_inscripcion_grupo' grupo.pk periodo.pk %}?cueanexo={{ grupo.cueanexo }}&ciclo={{ grupo.ciclo.pk }}&volver=gestionar&origen={{ origen }}&vista_alumnos=historial&vista_docentes={{ vista_docentes }}" title="Rectificar inscripción histórica"><i class="fa-solid fa-pen-to-square"></i> Rectificar</a>{% endif %}
+                                        </td>{% endif %}
                                     </tr>{% endfor %}</tbody>
                                     </table></div>
                                 </div>
