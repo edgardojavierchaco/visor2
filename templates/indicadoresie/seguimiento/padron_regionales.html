@@ -648,7 +648,7 @@
                 <tbody>
                     {% for item in escuelas %}
                     <tr>
-                        <td class="col-accion text-center">
+                        <td class="col-accion text-center" data-order="{% if not item.lat and not item.long %}0{% elif not item.lat or not item.long %}1{% else %}2{% endif %}">
                             {% if item.lat and item.long %}
                             <button
                                 type="button"
@@ -973,7 +973,7 @@ $(document).ready(async function () {
         language: { url: "https://cdn.datatables.net/plug-ins/2.0.3/i18n/es-AR.json" },
         pageLength: 10,
         dom: 'Brt',
-        order: [[1, 'asc']],
+        order: [[0, 'asc'], [1, 'asc']],
         columnDefs: [
             {
                 targets: 0,

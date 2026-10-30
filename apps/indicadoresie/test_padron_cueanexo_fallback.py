@@ -45,3 +45,15 @@ class PadronCueanexoFallbackTests(TestCase):
             with self.subTest(fragment=fragment):
                 rendered = Template(fragment).render(Context({'item': escuela}))
                 self.assertIn('220045600', rendered)
+
+    def test_original_numerico_se_convierte_solo_para_mostrar(self):
+        escuela = self._escuela(220012300, 220045600)
+        self.assertEqual(escuela.cueanexo_mostrado, '220012300')
+        self.assertEqual(escuela.cueanexo, 220012300)
+
+    def test_respaldo_numerico_si_original_esta_vacio(self):
+        for original in (None, '', '   '):
+            with self.subTest(original=original):
+                escuela = self._escuela(original, 220045600)
+                self.assertEqual(escuela.cueanexo_mostrado, '220045600')
+                self.assertEqual(escuela.cueanexo, original)

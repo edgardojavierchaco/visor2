@@ -149,7 +149,7 @@ class PadronRegional(models.Model):
     @property
     def cueanexo_mostrado(self):
         """CUE-Anexo para Datos Padrón; no cambia la clave primaria de la vista."""
-        return (self.cueanexo or '').strip() or (self.padron_cueanexo or '').strip()
+        return str(self.cueanexo or '').strip() or str(self.padron_cueanexo or '').strip()
 
     class Meta:
         managed = False
