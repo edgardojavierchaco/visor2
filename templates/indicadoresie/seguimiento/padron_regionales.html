@@ -654,8 +654,8 @@
                                 type="button"
                                 class="btn btn-outline-primary btn-sm btn-ver-mapa"
                                 title="Ver ubicación en mapa"
-                                aria-label="Ver ubicación del CUE-Anexo {{ item.cueanexo }}"
-                                data-cueanexo="{{ item.cueanexo|default:'' }}"
+                                aria-label="Ver ubicación del CUE-Anexo {{ item.cueanexo_mostrado }}"
+                                data-cueanexo="{{ item.cueanexo_mostrado|default:'' }}"
                                 data-lat="{{ item.lat|unlocalize }}"
                                 data-lng="{{ item.long|unlocalize }}"
                                 data-establecimiento="{{ item.nom_est|default:'' }}"
@@ -684,7 +684,7 @@
                             </button>
                             {% endif %}
                         </td>
-                        <td class="fw-bold text-primary">{{ item.cueanexo|default:"-" }}</td>
+                        <td class="fw-bold text-primary">{{ item.cueanexo_mostrado|default:"-" }}</td>
                         <td>{{ item.lat|default:"-" }}</td>
                         <td>{{ item.long|default:"-" }}</td>
                         <td class="td-left"><strong>{{ item.nom_est|default:"-" }}</strong></td>
@@ -1392,28 +1392,46 @@ $(document).ready(async function () {
         }
 
         if (!padronCueMap) {
-            const capaClaro = L.tileLayer(
-                'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                {
-                    maxZoom: 19,
-                    attribution: '© OpenStreetMap contributors'
-                }
-            );
+            const cartoKey = '{{ carto_basemaps_api_key|default:""|escapejs }}';
             const capaSatelite = L.tileLayer(
                 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
                 {
-                    maxZoom: 19
+                    maxZoom: 19,
+                    attribution: 'Tiles &copy; Esri'
                 }
             );
+            const capasBase = {};
+            let capaInicial = capaSatelite;
+
+            if (cartoKey) {
+                const capaCarto = L.tileLayer(
+                    'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=' +
+                    encodeURIComponent(cartoKey),
+                    {
+                        maxZoom: 20,
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+                            '&copy; <a href="https://carto.com/attributions/">CARTO</a>'
+                    }
+                );
+                capaCarto.on('tileerror', function () {
+                    if (padronCueMap && padronCueMap.hasLayer(capaCarto)) {
+                        console.warn('CARTO no pudo cargar el mapa; usando satélite.');
+                        padronCueMap.removeLayer(capaCarto);
+                        capaSatelite.addTo(padronCueMap);
+                    }
+                });
+                capasBase['Calles (CARTO)'] = capaCarto;
+                capaInicial = capaCarto;
+            } else {
+                console.warn('CARTO_BASEMAPS_API_KEY no está disponible; usando satélite.');
+            }
+            capasBase['Satélite'] = capaSatelite;
 
             padronCueMap = L.map(mapaContainer, {
-                layers: [capaClaro]
+                layers: [capaInicial]
             });
 
-            L.control.layers({
-                'Claro': capaClaro,
-                'Satélite': capaSatelite
-            }).addTo(padronCueMap);
+            L.control.layers(capasBase).addTo(padronCueMap);
 
             padronCueMap.on('popupopen', function (e) {
                 const popupNode = e.popup.getElement();

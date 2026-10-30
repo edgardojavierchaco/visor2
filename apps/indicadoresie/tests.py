@@ -1,16 +1,1 @@
-import smtplib
-
-
-def send_email():
-    try:
-        mailServer=smtplib.SMTP('smtp.gmail.com',587)
-        print(mailServer.ehlo())
-        mailServer.starttls()
-        print(mailServer.ehlo())
-        mailServer.login('visorgomez@gmail.com', 'Aperire.visor')
-        print('Conectado...')
-    except Exception as e:
-        print(e)
-
-
-send_email()
+# Vaciado por decision de Tyago (2026-10-23): era un script de correo, no un test.

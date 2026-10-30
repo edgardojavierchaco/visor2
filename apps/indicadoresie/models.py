@@ -146,6 +146,11 @@ class PadronRegional(models.Model):
     cuof_loc = models.TextField(blank=True, null=True)
     jornada = models.TextField(blank=True, null=True)
 
+    @property
+    def cueanexo_mostrado(self):
+        """CUE-Anexo para Datos Padrón; no cambia la clave primaria de la vista."""
+        return (self.cueanexo or '').strip() or (self.padron_cueanexo or '').strip()
+
     class Meta:
         managed = False
         db_table = 'v_capa_unica_ofertas_ant' 

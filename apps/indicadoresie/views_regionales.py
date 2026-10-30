@@ -1,4 +1,5 @@
 import json
+import os
 from django.views.generic import ListView
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
@@ -132,6 +133,8 @@ class PadronRegionalListView(ListView):
         context['titulo'] = "Padrón de Escuelas Regionales"
         # Forzamos la etiqueta para que no muestre zonas limitadas
         context['region_actual'] = "Todas las Regiones" 
+        # Clave de CARTO Basemaps para las teselas del navegador (restringir por dominio en CARTO).
+        context['carto_basemaps_api_key'] = os.getenv('CARTO_BASEMAPS_API_KEY', '').strip()
 
         # Serialización de mapas para JavaScript
         context['mapa_regiones'] = json.dumps(self.INV_TRADUCTOR_REGIONES)
